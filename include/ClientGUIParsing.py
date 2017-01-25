@@ -406,8 +406,8 @@ class EditNodes( wx.Panel ):
         
         menu_items = []
         
-        menu_items.append( ( 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
-        menu_items.append( ( 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
+        menu_items.append( ( 'normal', 'content node', 'A node that parses the given data for content.', self.AddContentNode ) )
+        menu_items.append( ( 'normal', 'link node', 'A node that parses the given data for a link, which it then pursues.', self.AddLinkNode ) )
         
         self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
         
@@ -1559,21 +1559,21 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
+        menu_items.append( ( 'normal', 'file lookup script', 'A script that fetches content for a known file.', self.AddFileLookupScript ) )
         
         self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
         
         menu_items = []
         
-        menu_items.append( ( 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
-        menu_items.append( ( 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
+        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
         
         self._export_button = ClientGUICommon.MenuButton( self, 'export', menu_items )
         
         menu_items = []
         
-        menu_items.append( ( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
-        menu_items.append( ( 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
         
         self._import_button = ClientGUICommon.MenuButton( self, 'import', menu_items )
         
@@ -2052,7 +2052,7 @@ class ScriptManagementControl( wx.Panel ):
         
         for url in urls:
             
-            ClientGUIMenus.AppendMenuItem( menu, url, 'launch this url in your browser', self, webbrowser.open, url )
+            ClientGUIMenus.AppendMenuItem( self, menu, url, 'launch this url in your browser', webbrowser.open, url )
             
         
         HydrusGlobals.client_controller.PopupMenu( self, menu )

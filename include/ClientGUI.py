@@ -757,12 +757,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             elif isinstance( o, types.BuiltinMethodType ): class_count[ o.__name__ ] += 1
             
         
-        HydrusData.Print( 'gc:' )
+        HydrusData.Print( 'gc types:' )
         
         for ( k, v ) in count.items():
             
             if v > 100: print ( k, v )
             
+        
+        HydrusData.Print( 'gc classes:' )
         
         for ( k, v ) in class_count.items():
             
@@ -865,24 +867,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def file():
             
-            ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self, self._ImportFiles )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'import files', 'Add new files to the database.', self._ImportFiles )
             menu.AppendSeparator()
-            ClientGUIMenus.AppendMenuItem( menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self, self._ManageImportFolders )
-            ClientGUIMenus.AppendMenuItem( menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self, self._ManageExportFolders )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
             
             menu.AppendSeparator()
             
             open = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( open, 'installation directory', 'Open the installation directory for this client.', self, self._OpenInstallFolder )
-            ClientGUIMenus.AppendMenuItem( open, 'database directory', 'Open the database directory for this instance of the client.', self, self._OpenDBFolder )
-            ClientGUIMenus.AppendMenuItem( open, 'quick export directory', 'Open the export directory so you can easily access the files you have exported.', self, self._OpenExportFolder )
+            ClientGUIMenus.AppendMenuItem( self, open, 'installation directory', 'Open the installation directory for this client.', self._OpenInstallFolder )
+            ClientGUIMenus.AppendMenuItem( self, open, 'database directory', 'Open the database directory for this instance of the client.', self._OpenDBFolder )
+            ClientGUIMenus.AppendMenuItem( self, open, 'quick export directory', 'Open the export directory so you can easily access the files you have exported.', self._OpenExportFolder )
             
             ClientGUIMenus.AppendMenu( menu, open, 'open' )
             
             menu.AppendSeparator()
             
-            ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self, self._ManageOptions )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'options', 'Change how the client operates.', self._ManageOptions )
             
             menu.AppendSeparator()
             
@@ -890,10 +892,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if not we_borked_linux_pyinstaller:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self, self.Exit, restart = True )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'restart', 'Shut the client down and then start it up again.', self.Exit, restart = True )
                 
             
-            ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self, self.Exit )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'exit', 'Shut the client down.', self.Exit )
             
             return ( menu, p( '&File' ), True )
             
@@ -921,14 +923,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     did_undo_stuff = True
                     
-                    ClientGUIMenus.AppendMenuItem( menu, undo_string, 'Undo last operation.', self, self._controller.pub, 'undo' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, undo_string, 'Undo last operation.', self._controller.pub, 'undo' )
                     
                 
                 if redo_string is not None:
                     
                     did_undo_stuff = True
                     
-                    ClientGUIMenus.AppendMenuItem( menu, redo_string, 'Redo last operation.', self, self._controller.pub, 'redo' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, redo_string, 'Redo last operation.', self._controller.pub, 'redo' )
                     
                 
                 if have_closed_pages:
@@ -940,7 +942,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     undo_pages = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( undo_pages, 'clear all', 'Remove all closed pages from memory.', self, self._DeleteAllClosedPages )
+                    ClientGUIMenus.AppendMenuItem( self, undo_pages, 'clear all', 'Remove all closed pages from memory.', self._DeleteAllClosedPages )
                     
                     undo_pages.AppendSeparator()
                     
@@ -958,7 +960,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     for ( index, name ) in args:
                         
-                        ClientGUIMenus.AppendMenuItem( undo_pages, name, 'Restore this page.', self, self._UnclosePage, index )
+                        ClientGUIMenus.AppendMenuItem( self, undo_pages, name, 'Restore this page.', self._UnclosePage, index )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, undo_pages, 'closed pages' )
@@ -974,8 +976,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def pages():
             
-            ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self, self._Refresh )
-            ClientGUIMenus.AppendMenuItem( menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self, self._ShowHideSplitters )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self._ShowHideSplitters )
             
             menu.AppendSeparator()
             
@@ -989,13 +991,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    ClientGUIMenus.AppendMenuItem( load, name, 'Close all other pages and load this session.', self, self._LoadGUISession, name )
+                    ClientGUIMenus.AppendMenuItem( self, load, name, 'Close all other pages and load this session.', self._LoadGUISession, name )
                     
                 
                 ClientGUIMenus.AppendMenu( sessions, load, 'load' )
                 
             
-            ClientGUIMenus.AppendMenuItem( sessions, 'save current', 'Save the existing open pages as a session.', self, self._SaveGUISession )
+            ClientGUIMenus.AppendMenuItem( self, sessions, 'save current', 'Save the existing open pages as a session.', self._SaveGUISession )
             
             if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
                 
@@ -1005,7 +1007,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if name != 'last session':
                         
-                        ClientGUIMenus.AppendMenuItem( delete, name, 'Delete this session.', self, self._DeleteGUISession, name )
+                        ClientGUIMenus.AppendMenuItem( self, delete, name, 'Delete this session.', self._DeleteGUISession, name )
                         
                     
                 
@@ -1016,7 +1018,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             menu.AppendSeparator()
             
-            ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self, self._ChooseNewPage )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self._ChooseNewPage )
             
             #
             
@@ -1032,17 +1034,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
             
-            ClientGUIMenus.AppendMenuItem( search_menu, 'my files', 'Open a new search tab for your files.', self, self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
-            ClientGUIMenus.AppendMenuItem( search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self, self._NewPageQuery, CC.TRASH_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._NewPageQuery, CC.TRASH_SERVICE_KEY )
             
             for service in file_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self, self._NewPageQuery, service.GetServiceKey() )
+                ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._NewPageQuery, service.GetServiceKey() )
                 
             
             search_menu.AppendSeparator()
             
-            ClientGUIMenus.AppendMenuItem( search_menu, 'duplicates (under construction!)', 'Open a new tab to discover and filter duplicate files.', self, self._NewPageDuplicateFilter )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'duplicates (under construction!)', 'Open a new tab to discover and filter duplicate files.', self._NewPageDuplicateFilter )
             
             ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
             
@@ -1054,12 +1056,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for service in petition_resolve_tag_services:
                     
-                    ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new tag petition tab for ' + service.GetName() + '.', self, self._NewPagePetitions, service.GetServiceKey() )
+                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new tag petition tab for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
                     
                 
                 for service in petition_resolve_file_services:
                     
-                    ClientGUIMenus.AppendMenuItem( petition_menu, service.GetName(), 'Open a new file petition tab for ' + service.GetName() + '.', self, self._NewPagePetitions, service.GetServiceKey() )
+                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new file petition tab for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
@@ -1069,23 +1071,23 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some raw urls.', self, self._NewPageImportURLs )
-            ClientGUIMenus.AppendMenuItem( download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self, self._NewPageImportThreadWatcher )
-            ClientGUIMenus.AppendMenuItem( download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self, self._NewPageImportPageOfImages )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._NewPageImportURLs )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._NewPageImportThreadWatcher )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._NewPageImportPageOfImages )
             
             gallery_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self, self._NewPageImportBooru )
-            ClientGUIMenus.AppendMenuItem( gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._NewPageImportBooru )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
             
             hf_submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
-            ClientGUIMenus.AppendMenuItem( hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
             
             ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
             
-            ClientGUIMenus.AppendMenuItem( gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
             
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
@@ -1093,26 +1095,26 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 pixiv_submenu = wx.Menu()
                 
-                ClientGUIMenus.AppendMenuItem( pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
-                ClientGUIMenus.AppendMenuItem( pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
                 
                 ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
             
-            ClientGUIMenus.AppendMenuItem( gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self, self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
             
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
             ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
             
             download_popup_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( download_popup_menu, 'a youtube video', 'Enter a YouTube URL and choose which formats you would like to download', self, self._StartYoutubeDownload )
+            ClientGUIMenus.AppendMenuItem( self, download_popup_menu, 'a youtube video', 'Enter a YouTube URL and choose which formats you would like to download', self._StartYoutubeDownload )
             
             has_ipfs = len( [ service for service in services if service.GetServiceType() == HC.IPFS ] )
             
             if has_ipfs:
                 
-                ClientGUIMenus.AppendMenuItem( download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self, self._StartIPFSDownload )
+                ClientGUIMenus.AppendMenuItem( self, download_popup_menu, 'an ipfs multihash', 'Enter an IPFS multihash and attempt to import whatever is returned.', self._StartIPFSDownload )
                 
             
             ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
@@ -1124,37 +1126,36 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def database():
             
-            ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self, self._SetPassword )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
             
             menu.AppendSeparator()
             
-            ClientGUIMenus.AppendMenuItem( menu, 'create a database backup', 'Back the database up to an external location.', self, self._controller.BackupDatabase )
-            ClientGUIMenus.AppendMenuItem( menu, 'restore a database backup', 'Restore the database from an external location.', self, self._controller.RestoreDatabase )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'create a database backup', 'Back the database up to an external location.', self._controller.BackupDatabase )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'restore a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
             
             menu.AppendSeparator()
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self, self._VacuumDatabase )
-            ClientGUIMenus.AppendMenuItem( submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self, self._AnalyzeDatabase )
-            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search data', 'Rebalance and update the data the database uses to find similar files.', self, self._MaintainSimilarFilesData )
-            ClientGUIMenus.AppendMenuItem( submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self, self._RebalanceClientFiles )
-            ClientGUIMenus.AppendMenuItem( submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self, self._ClearOrphans )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self._RebalanceClientFiles )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphans )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self, self._CheckDBIntegrity )
-            ClientGUIMenus.AppendMenuItem( submenu, 'file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self, self._CheckFileIntegrity )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self._CheckFileIntegrity )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self, self._RegenerateACCache )
-            ClientGUIMenus.AppendMenuItem( submenu, 'similar files search data', 'Delete and recreate the similar files search tree.', self, self._RegenerateSimilarFilesData )
-            ClientGUIMenus.AppendMenuItem( submenu, 'all thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self, self._RegenerateThumbnails )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search data', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesData )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'all thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self._RegenerateThumbnails )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
@@ -1205,8 +1206,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     submenu = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload ' + name + '\'s pending content.', self, self._UploadPending, service_key )
-                    ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear ' + name + '\'s pending content.', self, self._DeletePending, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'commit', 'Upload ' + name + '\'s pending content.', self._UploadPending, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'forget', 'Clear ' + name + '\'s pending content.', self._DeletePending, service_key )
                     
                     submessages = []
                     
@@ -1353,43 +1354,43 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def help():
             
-            ClientGUIMenus.AppendMenuItem( menu, 'help', 'Open hydrus\'s local help in your web browser.', self, webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
             
             dont_know = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self, self._AutoRepoSetup )
+            ClientGUIMenus.AppendMenuItem( self, dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self._AutoRepoSetup )
             
             ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
             
             links = wx.Menu()
             
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', self, CC.GlobalBMPs.file_repository, webbrowser.open, 'https://hydrusnetwork.github.io/hydrus/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', self, CC.GlobalBMPs.eight_chan, webbrowser.open, 'https://8ch.net/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', self, CC.GlobalBMPs.twitter, webbrowser.open, 'https://twitter.com/hydrusnetwork' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', self, CC.GlobalBMPs.tumblr, webbrowser.open, 'http://hydrus.tumblr.com/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', self, CC.GlobalBMPs.discord, webbrowser.open, 'https://discord.gg/vy8CUB4' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', self, CC.GlobalBMPs.patreon, webbrowser.open, 'https://www.patreon.com/hydrus_dev' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalBMPs.file_repository, webbrowser.open, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalBMPs.eight_chan, webbrowser.open, 'https://8ch.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalBMPs.twitter, webbrowser.open, 'https://twitter.com/hydrusnetwork' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalBMPs.tumblr, webbrowser.open, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalBMPs.discord, webbrowser.open, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalBMPs.patreon, webbrowser.open, 'https://www.patreon.com/hydrus_dev' )
             
             ClientGUIMenus.AppendMenu( menu, links, 'links' )
             
             debug = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self, self._DebugMakeSomePopups )
-            ClientGUIMenus.AppendMenuItem( debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self, wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuCheckItem( debug, 'db report mode', 'Have the db report query information, where supported.', self, HydrusGlobals.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', self, HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', self, HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', self, HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
-            ClientGUIMenus.AppendMenuItem( debug, 'print garbage', 'Print some information about the python garbage to the log.', self, self._DebugPrintGarbage )
-            ClientGUIMenus.AppendMenuItem( debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self, self._controller.ClearCaches )
-            ClientGUIMenus.AppendMenuItem( debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self, self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self, self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
-            ClientGUIMenus.AppendMenuItem( debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self, self._AutoServerSetup )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HydrusGlobals.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
             
-            ClientGUIMenus.AppendMenuItem( menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', self, wx.MessageBox, CC.SHORTCUT_HELP )
-            ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self, self._AboutWindow )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', wx.MessageBox, CC.SHORTCUT_HELP )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
             
             return ( menu, p( '&Help' ), True )
             
@@ -1525,25 +1526,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.CallToThread( do_it )
-        
-    
-    def _MaintainSimilarFilesData( self ):
-        
-        text = 'This will rebalance the similar files search data, improving search speed.'
-        text += os.linesep * 2
-        text += 'If there is work to do, it will report its status through a popup message. The gui may hang until it is done.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-            
-            result = dlg.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                stop_time = HydrusData.GetNow() + 60 * 10
-                
-                self._controller.Write( 'maintain_similar_files_tree', stop_time = stop_time )
-                
-            
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -2259,7 +2241,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _UnclosePage( self, closed_page_index ):
+    def _UnclosePage( self, closed_page_index = None ):
+        
+        if closed_page_index is None:
+            
+            if len( self._closed_pages ) == 0:
+                
+                return
+                
+            
+            closed_page_index = 0
+            
         
         with self._lock:
             
@@ -2712,6 +2704,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
             elif command == 'tab_menu_close_page': self._ClosePage( self._tab_right_click_index )
             elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
+            elif command == 'unclose_page':
+                
+                self._UnclosePage()
+                
             elif command == 'undo': self._controller.pub( 'undo' )
             else: event.Skip()
             
@@ -2993,7 +2989,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshAcceleratorTable( self ):
         
-        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
+        interested_actions = [ 'archive', 'inbox', 'close_page', 'filter', 'manage_ratings', 'manage_tags', 'new_page', 'unclose_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'undo', 'redo' ]
         
         entries = []
         

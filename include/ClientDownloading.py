@@ -233,7 +233,8 @@ def GetYoutubeFormats( youtube_url ):
     
 def THREADDownloadURL( job_key, url, url_string ):
     
-    job_key.SetVariable( 'popup_text_1', url_string + ' - initialising' )
+    job_key.SetVariable( 'popup_title', url_string )
+    job_key.SetVariable( 'popup_text_1', 'initialising' )
     
     ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
     
@@ -241,46 +242,20 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         response = ClientNetworking.RequestsGet( url, stream = True )
         
-        if 'content-length' in response.headers:
-            
-            gauge_range = int( response.headers[ 'content-length' ] )
-            
-        else:
-            
-            gauge_range = None
-            
-        
-        gauge_value = 0
-        
         with open( temp_path, 'wb' ) as f:
             
-            for chunk in response.iter_content( chunk_size = 65536 ):
-                
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    return
-                    
-                
-                f.write( chunk )
-                
-                gauge_value += len( chunk )
-                
-                if gauge_range is None: text = url_string + ' - ' + HydrusData.ConvertIntToBytes( gauge_value )
-                else: text = url_string + ' - ' + HydrusData.ConvertValueRangeToBytes( gauge_value, gauge_range )
-                
-                job_key.SetVariable( 'popup_text_1', text )
-                job_key.SetVariable( 'popup_gauge_1', ( gauge_value, gauge_range ) )
-                
+            ClientNetworking.StreamResponseToFile( job_key, response, f )
             
         
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetVariable( 'popup_text_1', 'importing ' + url_string )
+        job_key.SetVariable( 'popup_text_1', 'importing' )
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
         
         ( result, hash ) = client_files_manager.ImportFile( temp_path )
+        
+    except HydrusExceptions.CancelledException:
+        
+        return
         
     except HydrusExceptions.NetworkException:
         
@@ -297,25 +272,26 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         if result == CC.STATUS_SUCCESSFUL:
             
-            job_key.SetVariable( 'popup_text_1', url_string )
+            job_key.SetVariable( 'popup_text_1', 'successful!' )
             
         else:
             
-            job_key.SetVariable( 'popup_text_1', url_string + ' was already in the database!' )
+            job_key.SetVariable( 'popup_text_1', 'was already in the database!' )
             
         
         job_key.SetVariable( 'popup_files', { hash } )
         
     elif result == CC.STATUS_DELETED:
         
-        job_key.SetVariable( 'popup_text_1', url_string + ' had already been deleted!' )
+        job_key.SetVariable( 'popup_text_1', 'had already been deleted!' )
         
     
     job_key.Finish()
     
 def THREADDownloadURLs( job_key, urls, title ):
     
-    job_key.SetVariable( 'popup_text_1', title + ' - initialising' )
+    job_key.SetVariable( 'popup_title', title )
+    job_key.SetVariable( 'popup_text_1', 'initialising' )
     
     num_successful = 0
     num_redundant = 0
@@ -333,69 +309,52 @@ def THREADDownloadURLs( job_key, urls, title ):
             break
             
         
-        job_key.SetVariable( 'popup_text_1', title + ' - ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( urls ) ) )
+        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, len( urls ) ) )
         job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( urls ) ) )
         
         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
         try:
             
-            response = ClientNetworking.RequestsGet( url, stream = True )
-            
-            if 'content-length' in response.headers:
+            try:
                 
-                gauge_range = int( response.headers[ 'content-length' ] )
+                response = ClientNetworking.RequestsGet( url, stream = True )
                 
-            else:
-                
-                gauge_range = None
-                
-            
-            gauge_value = 0
-            
-            with open( temp_path, 'wb' ) as f:
-                
-                for chunk in response.iter_content( chunk_size = 65536 ):
+                with open( temp_path, 'wb' ) as f:
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        return
-                        
-                    
-                    f.write( chunk )
-                    
-                    gauge_value += len( chunk )
-                    
-                    if gauge_range is None: text = 'downloading - ' + HydrusData.ConvertIntToBytes( gauge_value )
-                    else: text = 'downloading - '  + HydrusData.ConvertValueRangeToBytes( gauge_value, gauge_range )
-                    
-                    job_key.SetVariable( 'popup_text_2', text )
-                    job_key.SetVariable( 'popup_gauge_2', ( gauge_value, gauge_range ) )
+                    ClientNetworking.StreamResponseToFile( job_key, response, f )
                     
                 
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            except HydrusExceptions.NetworkException:
+                
+                job_key.Cancel()
+                
+                raise
+                
             
-            job_key.SetVariable( 'popup_text_2', 'importing' )
-            
-            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
-            
-            ( result, hash ) = client_files_manager.ImportFile( temp_path )
-            
-        except HydrusExceptions.NetworkException:
-            
-            job_key.Cancel()
-            
-            raise
-            
-        except Exception as e:
-            
-            HydrusData.Print( url + ' failed to import!' )
-            HydrusData.PrintException( e )
-            
-            num_failed += 1
-            
-            continue
+            try:
+                
+                job_key.SetVariable( 'popup_text_2', 'importing' )
+                
+                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                
+                ( result, hash ) = client_files_manager.ImportFile( temp_path )
+                
+            except Exception as e:
+                
+                job_key.DeleteVariable( 'popup_text_2' )
+                
+                HydrusData.Print( url + ' failed to import!' )
+                HydrusData.PrintException( e )
+                
+                num_failed += 1
+                
+                continue
+                
             
         finally:
             
@@ -443,7 +402,7 @@ def THREADDownloadURLs( job_key, urls, title ):
         text_components.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed (errors written to log)' )
         
     
-    job_key.SetVariable( 'popup_text_1', title + ' - ' + ', '.join( text_components ) )
+    job_key.SetVariable( 'popup_text_1', ', '.join( text_components ) )
     
     if len( successful_hashes ) > 0:
         
@@ -1403,10 +1362,6 @@ class GalleryHentaiFoundry( Gallery ):
             tags.append( 'title:' + title )
             
         except: pass
-        
-        tag_links = soup.find_all( 'a', rel = 'tag' )
-        
-        for tag_link in tag_links: tags.append( tag_link.string )
         
         return ( image_url, tags )
         

@@ -424,6 +424,8 @@ class MediaList( object ):
     
     def _GetSortFunction( self, sort_by ):
         
+        reverse = False
+        
         ( sort_by_type, sort_by_data ) = sort_by
         
         def deal_with_none( x ):
@@ -434,11 +436,28 @@ class MediaList( object ):
         
         if sort_by_type == 'system':
             
-            if sort_by_data == CC.SORT_BY_RANDOM: sort_function = lambda x: random.random()
-            elif sort_by_data == CC.SORT_BY_SMALLEST: sort_function = lambda x: deal_with_none( x.GetSize() )
-            elif sort_by_data == CC.SORT_BY_LARGEST: sort_function = lambda x: -deal_with_none( x.GetSize() )
-            elif sort_by_data == CC.SORT_BY_SHORTEST: sort_function = lambda x: deal_with_none( x.GetDuration() )
-            elif sort_by_data == CC.SORT_BY_LONGEST: sort_function = lambda x: -deal_with_none( x.GetDuration() )
+            if sort_by_data == CC.SORT_BY_RANDOM:
+                
+                sort_function = lambda x: random.random()
+                
+            elif sort_by_data in ( CC.SORT_BY_SMALLEST, CC.SORT_BY_LARGEST ):
+                
+                sort_function = lambda x: deal_with_none( x.GetSize() )
+                
+                if sort_by_data == CC.SORT_BY_LARGEST:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data in ( CC.SORT_BY_SHORTEST, CC.SORT_BY_LONGEST ):
+                
+                sort_function = lambda x: deal_with_none( x.GetDuration() )
+                
+                if sort_by_data == CC.SORT_BY_LONGEST:
+                    
+                    reverse = True
+                    
+                
             elif sort_by_data in ( CC.SORT_BY_OLDEST, CC.SORT_BY_NEWEST ):
                 
                 file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
@@ -454,10 +473,77 @@ class MediaList( object ):
                     file_service_key = self._file_service_key
                     
                 
-                if sort_by_data == CC.SORT_BY_OLDEST: sort_function = lambda x: deal_with_none( x.GetTimestamp( file_service_key ) )
-                elif sort_by_data == CC.SORT_BY_NEWEST: sort_function = lambda x: -deal_with_none( x.GetTimestamp( file_service_key ) )
+                sort_function = lambda x: deal_with_none( x.GetTimestamp( file_service_key ) )
                 
-            elif sort_by_data == CC.SORT_BY_MIME: sort_function = lambda x: x.GetMime()
+                if sort_by_data == CC.SORT_BY_NEWEST:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data in ( CC.SORT_BY_HEIGHT_ASC, CC.SORT_BY_HEIGHT_DESC ):
+                
+                sort_function = lambda x: deal_with_none( x.GetResolution()[0] )
+                
+                if sort_by_data == CC.SORT_BY_HEIGHT_DESC:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data in ( CC.SORT_BY_WIDTH_ASC, CC.SORT_BY_WIDTH_DESC ):
+                
+                sort_function = lambda x: deal_with_none( x.GetResolution()[1] )
+                
+                if sort_by_data == CC.SORT_BY_WIDTH_DESC:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data in ( CC.SORT_BY_RATIO_ASC, CC.SORT_BY_RATIO_DESC ):
+                
+                def sort_function( x ):
+                    
+                    ( width, height ) = x.GetResolution()
+                    
+                    if width is None or height is None or width == 0 or height == 0:
+                        
+                        return -1
+                        
+                    else:
+                        
+                        return float( width ) / float( height )
+                        
+                    
+                
+                if sort_by_data == CC.SORT_BY_RATIO_DESC:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data in ( CC.SORT_BY_NUM_PIXELS_ASC, CC.SORT_BY_NUM_PIXELS_DESC ):
+                
+                def sort_function( x ):
+                    
+                    ( width, height ) = x.GetResolution()
+                    
+                    if width is None or height is None:
+                        
+                        return -1
+                        
+                    else:
+                        
+                        return width * height
+                        
+                    
+                
+                if sort_by_data == CC.SORT_BY_NUM_PIXELS_DESC:
+                    
+                    reverse = True
+                    
+                
+            elif sort_by_data == CC.SORT_BY_MIME:
+                
+                sort_function = lambda x: x.GetMime()
+                
             
         elif sort_by_type == 'namespaces':
             
@@ -474,26 +560,24 @@ class MediaList( object ):
             
             service_key = sort_by_data
             
-            def ratings_sort_function( service_key, reverse, x ):
+            def ratings_sort_function( service_key, x ):
                 
                 x_ratings_manager = x.GetRatingsManager()
                 
                 rating = deal_with_none( x_ratings_manager.GetRating( service_key ) )
                 
-                if reverse:
-                    
-                    rating *= -1
-                    
-                
                 return rating
                 
             
-            reverse = sort_by_type == 'rating_descend'
+            sort_function = lambda x: ratings_sort_function( service_key, x )
             
-            sort_function = lambda x: ratings_sort_function( service_key, reverse, x )
+            if sort_by_type == 'rating_descend':
+                
+                reverse = True
+                
             
         
-        return sort_function
+        return ( sort_function, reverse )
         
     
     def _RecalcHashes( self ):
@@ -889,15 +973,15 @@ class MediaList( object ):
             sort_by_fallback = sort_choices[ 0 ]
             
         
-        sort_function = self._GetSortFunction( sort_by_fallback )
+        ( sort_function, reverse ) = self._GetSortFunction( sort_by_fallback )
         
-        self._sorted_media.sort( sort_function )
+        self._sorted_media.sort( sort_function, reverse = reverse )
         
         # this is a stable sort, so the fallback order above will remain for equal items
         
-        sort_function = self._GetSortFunction( self._sort_by )
+        ( sort_function, reverse ) = self._GetSortFunction( self._sort_by )
         
-        self._sorted_media.sort( sort_function )
+        self._sorted_media.sort( sort_function = sort_function, reverse = reverse )
         
     
 class ListeningMediaList( MediaList ):
@@ -1590,27 +1674,16 @@ class MediaResult( object ):
 
 class SortedList( object ):
     
-    def __init__( self, initial_items = None, sort_function = None ):
+    def __init__( self, initial_items = None ):
         
         if initial_items is None: initial_items = []
         
-        do_sort = sort_function is not None
-        
-        if sort_function is None:
-            
-            sort_function = lambda x: x
-            
-        
-        self._sort_function = sort_function
+        self._sort_function = lambda x: x
+        self._sort_reverse = False
         
         self._sorted_list = list( initial_items )
         
         self._items_to_indices = None
-        
-        if do_sort:
-            
-            self.sort()
-            
         
     
     def __contains__( self, item ):
@@ -1700,14 +1773,20 @@ class SortedList( object ):
         self._DirtyIndices()
         
     
-    def sort( self, f = None ):
+    def sort( self, sort_function = None, reverse = False ):
         
-        if f is not None:
+        if sort_function is None:
             
-            self._sort_function = f
+            sort_function = self._sort_function
+            reverse = self._sort_reverse
+            
+        else:
+            
+            self._sort_function = sort_function
+            self._sort_reverse = reverse
             
         
-        self._sorted_list.sort( key = f )
+        self._sorted_list.sort( key = sort_function, reverse = reverse )
         
         self._DirtyIndices()
         

@@ -57,6 +57,8 @@ class Controller( object ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
         
+        HydrusPaths.MakeSureDirectoryExists( self._server_files_dir )
+        HydrusPaths.MakeSureDirectoryExists( self._updates_dir )
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
         HydrusGlobals.controller = self
@@ -290,7 +292,9 @@ class Controller( object ):
     
     def TidyUp( self ):
         
-        shutil.rmtree( self._db_dir )
+        time.sleep( 2 )
+        
+        HydrusPaths.DeletePath( self._db_dir )
         
     
     def ViewIsShutdown( self ):

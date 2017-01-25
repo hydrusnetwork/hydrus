@@ -6,6 +6,7 @@ import errno
 import httplib
 import os
 import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import socket
 import socks
 import ssl
@@ -17,6 +18,8 @@ import yaml
 import HydrusData
 import itertools
 import HydrusGlobals
+
+requests.packages.urllib3.disable_warnings( InsecureRequestWarning )
 
 def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
@@ -239,6 +242,51 @@ def SetProxy( proxytype, host, port, username = None, password = None ):
     socks.setdefaultproxy( proxy_type = proxytype, addr = host, port = port, username = username, password = password )
     
     socks.wrapmodule( httplib )
+    
+def StreamResponseToFile( job_key, response, f ):
+    
+    if 'content-length' in response.headers:
+        
+        gauge_range = int( response.headers[ 'content-length' ] )
+        
+    else:
+        
+        gauge_range = None
+        
+    
+    gauge_value = 0
+    
+    try:
+        
+        for chunk in response.iter_content( chunk_size = 65536 ):
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            f.write( chunk )
+            
+            gauge_value += len( chunk )
+            
+            if gauge_range is None:
+                
+                text = 'downloading - ' + HydrusData.ConvertIntToBytes( gauge_value )
+                
+            else:
+                
+                text = 'downloading - '  + HydrusData.ConvertValueRangeToBytes( gauge_value, gauge_range )
+                
+            
+            job_key.SetVariable( 'popup_download', ( text, gauge_value, gauge_range ) )
+            
+        
+    finally:
+        
+        job_key.DeleteVariable( 'popup_download' )
+        
     
 class HTTPConnectionManager( object ):
     
@@ -522,6 +570,11 @@ class HTTPConnection( object ):
             request_headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
             
         
+        if 'Accept' not in request_headers:
+            
+            request_headers[ 'Accept' ] = '*/*'
+            
+        
         path_and_query = HydrusData.ToByteString( path_and_query )
         
         request_headers = { str( k ) : str( v ) for ( k, v ) in request_headers.items() }
@@ -568,13 +621,6 @@ class HTTPConnection( object ):
             
             if attempt_number <= 3:
                 
-                if self._hydrus_network:
-                    
-                    # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
-                    
-                    self._scheme = 'https'
-                    
-                
                 self._RefreshConnection()
                 
                 return self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
@@ -616,13 +662,6 @@ class HTTPConnection( object ):
                 
                 if attempt_number <= 3:
                     
-                    if self._hydrus_network:
-                        
-                        # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
-                        
-                        self._scheme = 'https'
-                        
-                    
                     self._RefreshConnection()
                     
                     return self._GetInitialResponse( method, path_and_query, request_headers, body, attempt_number = attempt_number + 1 )
@@ -644,13 +683,6 @@ class HTTPConnection( object ):
             time.sleep( 5 )
             
             if attempt_number <= 3:
-                
-                if self._hydrus_network:
-                    
-                    # we are talking to a new hydrus server, which uses https, and hence an http call gives badstatusline
-                    
-                    self._scheme = 'https'
-                    
                 
                 self._RefreshConnection()
                 

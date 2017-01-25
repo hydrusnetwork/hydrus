@@ -131,6 +131,7 @@ def GetClientDefaultOptions():
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'B' ) ] = 'frame_back'
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'N' ) ] = 'frame_next'
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'T' ) ] = 'new_page'
+    shortcuts[ wx.ACCEL_CTRL ][ ord( 'U' ) ] = 'unclose_page'
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'W' ) ] = 'close_page'
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'R' ) ] = 'show_hide_splitters'
     shortcuts[ wx.ACCEL_CTRL ][ ord( 'S' ) ] = 'set_search_focus'
@@ -265,7 +266,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
     elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ):
         
-        namespaces = [ 'creator', 'title', '' ]
+        namespaces = [ 'creator', 'title' ]
         
         if site_type == HC.SITE_TYPE_HENTAI_FOUNDRY:
             
@@ -367,7 +368,7 @@ def GetDefaultBoorus():
     image_data = None
     tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
     
-    boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    #boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'mishimmie'
     search_url = 'http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
@@ -455,7 +456,7 @@ def GetDefaultBoorus():
     image_data = None
     tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium' }
     
-    boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    #boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'rule34hentai'
     search_url = 'http://rule34hentai.net/post/list/%tags%/%index%'

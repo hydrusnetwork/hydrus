@@ -2372,15 +2372,15 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
-        menu_items.append( ( 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
+        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
         
         self._export = ClientGUICommon.MenuButton( self, 'export', menu_items )
         
         menu_items = []
         
-        menu_items.append( ( 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
-        menu_items.append( ( 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
         
         self._import = ClientGUICommon.MenuButton( self, 'import', menu_items )
         
@@ -2439,7 +2439,8 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
         
-        pretty_site = HC.site_type_string_lookup[ gallery_identifier.GetSiteType() ]
+        pretty_site = gallery_identifier.ToString()
+        
         pretty_last_checked = HydrusData.ConvertTimestampToPrettySync( last_checked )
         
         pretty_period = HydrusData.ConvertTimeDeltaToPrettyString( period )

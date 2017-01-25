@@ -6,6 +6,7 @@ import ClientMedia
 import hashlib
 import httplib
 import HydrusConstants as HC
+import HydrusEncryption
 import HydrusPaths
 import HydrusServer
 import HydrusServerResources
@@ -15,6 +16,7 @@ import os
 import ServerFiles
 import ServerServer
 import shutil
+import ssl
 import stat
 import TestConstants
 import time
@@ -23,6 +25,7 @@ import unittest
 from twisted.internet import reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol
 from twisted.internet.defer import deferredGenerator, waitForDeferred
+import twisted.internet.ssl
 import HydrusData
 import HydrusGlobals
 
@@ -70,11 +73,23 @@ class TestServer( unittest.TestCase ):
         
         def TWISTEDSetup():
             
-            reactor.listenTCP( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ) )
+            self._ssl_cert_path = os.path.join( TestConstants.DB_DIR, 'server.crt' )
+            self._ssl_key_path = os.path.join( TestConstants.DB_DIR, 'server.key' )
+            
+            # if db test ran, this is still hanging around and read-only, so don't bother to fail overwriting
+            if not os.path.exists( self._ssl_cert_path ):
+                
+                HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+                
+            
+            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( self._ssl_key_path, self._ssl_cert_path )
+            
+            reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ), context_factory )
+            
             reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, ClientLocalServer.HydrusServiceLocal( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'hello' ) )
             reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -82,16 +97,20 @@ class TestServer( unittest.TestCase ):
         time.sleep( 1 )
         
     
-    @classmethod
-    def tearDownClass( self ):
+    def _test_basics( self, host, port, https = True ):
         
-        shutil.rmtree( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
-        shutil.rmtree( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
-        
-    
-    def _test_basics( self, host, port ):
-        
-        connection = httplib.HTTPConnection( host, port, timeout = 10 )
+        if https:
+            
+            context = ssl.SSLContext( ssl.PROTOCOL_SSLv23 )
+            context.options |= ssl.OP_NO_SSLv2
+            context.options |= ssl.OP_NO_SSLv3
+            
+            connection = httplib.HTTPSConnection( host, port, timeout = 10, context = context )
+            
+        else:
+            
+            connection = httplib.HTTPConnection( host, port, timeout = 10 )
+            
         
         #
         
@@ -174,6 +193,8 @@ class TestServer( unittest.TestCase ):
         
         path = ServerFiles.GetExpectedFilePath( self._file_hash )
         
+        HydrusPaths.MakeSureDirectoryExists( os.path.dirname( path ) )
+        
         with open( path, 'wb' ) as f: f.write( EXAMPLE_FILE )
         
         response = service.Request( HC.GET, 'file', { 'hash' : self._file_hash.encode( 'hex' ) } )
@@ -216,6 +237,8 @@ class TestServer( unittest.TestCase ):
         # thumbnail
         
         path = ServerFiles.GetExpectedThumbnailPath( self._file_hash )
+        
+        HydrusPaths.MakeSureDirectoryExists( os.path.dirname( path ) )
         
         with open( path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
         
@@ -593,7 +616,7 @@ class TestServer( unittest.TestCase ):
         host = '127.0.0.1'
         port = HC.DEFAULT_LOCAL_FILE_PORT
         
-        self._test_basics( host, port )
+        self._test_basics( host, port, https = False )
         self._test_local_file( host, port )
         
     
@@ -649,7 +672,7 @@ class TestServer( unittest.TestCase ):
         host = '127.0.0.1'
         port = HC.DEFAULT_LOCAL_BOORU_PORT
         
-        self._test_basics( host, port )
+        self._test_basics( host, port, https = False )
         self._test_local_booru( host, port )
         
     '''

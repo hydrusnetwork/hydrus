@@ -372,7 +372,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                text = str( e )
+                text = HydrusData.ToUnicode( e )
                 
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
@@ -724,6 +724,21 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                         
                         HydrusData.ShowText( 'While attempting to delete ' + path + ', the following error occured:' )
                         HydrusData.ShowException( e )
+                        
+                    
+                    txt_path = path + '.txt'
+                    
+                    if os.path.exists( txt_path ):
+                        
+                        try:
+                            
+                            ClientData.DeletePath( txt_path )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.ShowText( 'While attempting to delete ' + txt_path + ', the following error occured:' )
+                            HydrusData.ShowException( e )
+                            
                         
                     
                 

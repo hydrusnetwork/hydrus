@@ -346,7 +346,7 @@ def MakeFileWritable( path ):
                 
             
         
-    except:
+    except Exception as e:
         
         pass
         

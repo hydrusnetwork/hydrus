@@ -1196,10 +1196,6 @@ class TestServerDB( unittest.TestCase ):
             time.sleep( 0.1 )
             
         
-        # so they can be deleted later on no prob
-        os.chmod( self._db._ssl_cert_path, stat.S_IREAD | stat.S_IWRITE )
-        os.chmod( self._db._ssl_key_path, stat.S_IREAD | stat.S_IWRITE )
-        
         del self._db
         
     

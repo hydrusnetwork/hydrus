@@ -558,9 +558,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
-        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = True
+        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
         
         self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'maintain_similar_files_phashes_during_idle' ] = False
+        self._dictionary[ 'booleans' ][ 'maintain_similar_files_tree_during_idle' ] = False
+        self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
         
         #
         
@@ -1071,6 +1075,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def InvertBoolean( self, name ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'booleans' ][ name ] = not self._dictionary[ 'booleans' ][ name ]
+            
+        
+    
     def SetBoolean( self, name, value ):
         
         with self._lock:
@@ -1183,45 +1195,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions
-
-class CommandHandler( object ):
-    
-    def __init__( self, action_cache ):
-        
-        self._action_cache = action_cache
-        self._commands_to_callables = {}
-        
-    
-    def ProcessMenuEvent( self, menu_event ):
-        
-        event_id = menu_event.GetId()
-        
-        action = self._action_cache.GetAction( event_id )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command in self._commands_to_callables:
-                
-                callable = self._commands_to_callables[ command ]
-                
-                if data is None:
-                    
-                    wx.CallAfter( callable )
-                    
-                else:
-                    
-                    wx.CallAfter( callable, data )
-                    
-                
-            
-        
-    
-    def SetCallable( self, command, callable ):
-        
-        self._commands_to_callables[ command ] = callable
-        
 
 class Credentials( HydrusData.HydrusYAMLBase ):
     
@@ -1773,7 +1746,7 @@ class ServiceRestricted( ServiceRemote ):
             
             ( host, port ) = credentials.GetAddress()
             
-            url = 'http://' + host + ':' + str( port ) + path_and_query
+            url = 'https://' + host + ':' + str( port ) + path_and_query
             
             ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.client_controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, hydrus_network = True )
             
@@ -2340,6 +2313,8 @@ class ServiceRepository( ServiceRestricted ):
             job_key.SetVariable( 'popup_text_1', updates_text + ', and ' + content_text )
             
             HydrusData.Print( job_key.ToString() )
+            
+            job_key.Finish()
             
             time.sleep( 3 )
             

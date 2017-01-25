@@ -89,7 +89,7 @@ def ShutdownSiblingInstance( db_dir ):
         
         try:
             
-            connection = HydrusNetworking.GetLocalConnection( port )
+            connection = HydrusNetworking.GetLocalConnection( port, https = True )
             
             connection.request( 'GET', '/' )
             
@@ -310,7 +310,10 @@ class Controller( HydrusController.HydrusController ):
             
             already_bound = True
             
-        except: pass
+        except:
+            
+            pass
+            
         
         if already_bound:
             

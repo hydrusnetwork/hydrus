@@ -181,6 +181,8 @@ class TestDownloaders( unittest.TestCase ):
         self.assertEqual( info, expected_info )
         
     
+    '''
+    # hid this when sankaku started cloudflare 503ing and removed sankaku from the booru defaults
     def test_sankaku( self ):
         
         with open( os.path.join( HC.STATIC_DIR, 'testing', 'sankaku_gallery.html' ) ) as f: sankaku_gallery = f.read()
@@ -249,7 +251,7 @@ class TestDownloaders( unittest.TestCase ):
         
         self.assertEqual( data, 'swf file' )
         
-    
+    '''
     def test_booru_e621( self ):
         
         with open( os.path.join( HC.STATIC_DIR, 'testing', 'e621_gallery.html' ) ) as f: e621_gallery = f.read()
@@ -360,7 +362,7 @@ class TestDownloaders( unittest.TestCase ):
         
         info = ( data, tags )
         
-        expected_info = ('picture', [u'creator:Sparrow', u'title:Ashantae!', u'Shantae', u'Asha', u'Monster_World', u'cosplay', u'nips'])
+        expected_info = ('picture', [u'creator:Sparrow', u'title:Ashantae!'])
         
         self.assertEqual( info, expected_info )
         
@@ -379,7 +381,7 @@ class TestDownloaders( unittest.TestCase ):
         
         info = ( data, tags )
         
-        expected_info = ('scrap', [u'creator:Sparrow', u'title:Swegabe Sketches \u2013 Gabrielle 027', u'bukkake', u'horsecock', u'gokkun', u'prom_night'])
+        expected_info = ('scrap', [u'creator:Sparrow', u'title:Swegabe Sketches \u2013 Gabrielle 027'])
         
         self.assertEqual( info, expected_info )
         

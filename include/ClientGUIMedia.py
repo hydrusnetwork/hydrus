@@ -61,7 +61,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + u'\u2026' )
         
     
-def AddServiceKeysToMenu( menu, service_keys, phrase, description, event_handler, callable ):
+def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, callable ):
     
     services_manager = HydrusGlobals.client_controller.GetServicesManager()
     
@@ -73,7 +73,7 @@ def AddServiceKeysToMenu( menu, service_keys, phrase, description, event_handler
         
         label = phrase + ' ' + name
         
-        ClientGUIMenus.AppendMenuItem( menu, label, description, event_handler, callable, service_key )
+        ClientGUIMenus.AppendMenuItem( event_handler, menu, label, description, callable, service_key )
         
     else:
         
@@ -83,7 +83,7 @@ def AddServiceKeysToMenu( menu, service_keys, phrase, description, event_handler
             
             name = services_manager.GetName( service_key )
             
-            ClientGUIMenus.AppendMenuItem( submenu, name, description, event_handler, callable, service_key )
+            ClientGUIMenus.AppendMenuItem( event_handler, submenu, name, description, callable, service_key )
             
         
         ClientGUIMenus.AppendMenu( menu, submenu, phrase + u'\u2026' )
@@ -2334,7 +2334,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if thumbnail is None:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'Refresh the current search.', self, HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
             
             if len( self._sorted_media ) > 0:
                 
@@ -2344,15 +2344,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( self._selected_media ) < len( self._sorted_media ):
                     
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'all', 'Select everything.', self, self._Select, 'all' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
                     
                 
-                ClientGUIMenus.AppendMenuItem( select_menu, 'invert', 'Swap what is and is not selected.', self, self._Select, 'invert' )
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
                 
                 if media_has_archive and media_has_inbox:
                     
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'inbox', 'Select everything in the inbox.', self, self._Select, 'inbox' )
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'archive', 'Select everything that is archived.', self, self._Select, 'archive' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'inbox', 'Select everything in the inbox.', self._Select, 'inbox' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'archive', 'Select everything that is archived.', self._Select, 'archive' )
                     
                 
                 if len( all_specific_file_domains ) > 1:
@@ -2370,13 +2370,13 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         name = services_manager.GetName( service_key )
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, name, 'Select everything in ' + name + '.', self, self._Select, 'file_service', service_key )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
                         
                     
                 
                 if len( self._selected_media ) > 0:
                     
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'none', 'Deselect everything.', self, self._Select, 'none' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'none', 'Deselect everything.', self._Select, 'none' )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
@@ -2705,67 +2705,67 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if len( downloadable_file_service_keys ) > 0:
                         
-                        ClientGUIMenus.AppendMenuItem( remote_action_menu, download_phrase, 'Download all possible selected files.', self, self._DownloadSelected )
+                        ClientGUIMenus.AppendMenuItem( self, remote_action_menu, download_phrase, 'Download all possible selected files.', self._DownloadSelected )
                         
                     
                     if some_downloading:
                         
-                        ClientGUIMenus.AppendMenuItem( remote_action_menu, rescind_download_phrase, 'Stop downloading any of the selected files.', self, self._RescindDownloadSelected )
+                        ClientGUIMenus.AppendMenuItem( self, remote_action_menu, rescind_download_phrase, 'Stop downloading any of the selected files.', self._RescindDownloadSelected )
                         
                     
                     if len( uploadable_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self, self._UploadFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, uploadable_file_service_keys, upload_phrase, 'Upload all selected files to the file repository.', self._UploadFiles )
                         
                     
                     if len( pending_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self, self._RescindUploadFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, pending_file_service_keys, rescind_upload_phrase, 'Rescind the pending upload to the file repository.', self._RescindUploadFiles )
                         
                     
                     if len( petitionable_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self, self._PetitionFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, petitionable_file_service_keys, petition_phrase, 'Petition these files for deletion from the file repository.', self._PetitionFiles )
                         
                     
                     if len( petitioned_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self, self._RescindPetitionFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, petitioned_file_service_keys, rescind_petition_phrase, 'Rescind the petition to delete these files from the file repository.', self._RescindPetitionFiles )
                         
                     
                     if len( deletable_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self, self._Delete )
+                        AddServiceKeysToMenu( self, remote_action_menu, deletable_file_service_keys, remote_delete_phrase, 'Delete these files from the file repository.', self._Delete )
                         
                     
                     if len( modifyable_file_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self, self._ModifyUploaders )
+                        AddServiceKeysToMenu( self, remote_action_menu, modifyable_file_service_keys, modify_account_phrase, 'Modify the account(s) that uploaded these files to the file repository.', self._ModifyUploaders )
                         
                     
                     if len( pinnable_ipfs_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self, self._UploadFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, pinnable_ipfs_service_keys, pin_phrase, 'Pin these files to the ipfs service.', self._UploadFiles )
                         
                     
                     if len( pending_ipfs_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self, self._RescindUploadFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, pending_ipfs_service_keys, rescind_pin_phrase, 'Rescind the pending pin to the ipfs service.', self._RescindUploadFiles )
                         
                     
                     if len( unpinnable_ipfs_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self, self._PetitionFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, unpinnable_ipfs_service_keys, unpin_phrase, 'Unpin these files from the ipfs service.', self._PetitionFiles )
                         
                     
                     if len( petitioned_ipfs_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self, self._RescindPetitionFiles )
+                        AddServiceKeysToMenu( self, remote_action_menu, petitioned_ipfs_service_keys, rescind_unpin_phrase, 'Rescind the pending unpin from the ipfs service.', self._RescindPetitionFiles )
                         
                     
                     if multiple_selected and len( ipfs_service_keys ) > 0:
                         
-                        AddServiceKeysToMenu( remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self, self._UploadDirectory )
+                        AddServiceKeysToMenu( self, remote_action_menu, ipfs_service_keys, 'pin new directory to', 'Pin these files as a directory to the ipfs service.', self._UploadDirectory )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, remote_action_menu, 'remote services' )
@@ -2777,8 +2777,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     manage_menu = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( manage_menu, manage_tags_phrase, 'Manage tags for the selected files.', self, self._ManageTags )
-                    ClientGUIMenus.AppendMenuItem( manage_menu, manage_ratings_phrase, 'Manage ratings for the selected files.', self, self._ManageRatings )
+                    ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_tags_phrase, 'Manage tags for the selected files.', self._ManageTags )
+                    ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_ratings_phrase, 'Manage ratings for the selected files.', self._ManageRatings )
                     
                     ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
                     
@@ -2793,7 +2793,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         phrase = 'manage file\'s tags'
                         
                     
-                    ClientGUIMenus.AppendMenuItem( menu, phrase, 'Manage tags for the selected files.', self, self._ManageTags )
+                    ClientGUIMenus.AppendMenuItem( self, menu, phrase, 'Manage tags for the selected files.', self._ManageTags )
                     
                 
                 #
@@ -2804,7 +2804,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if selection_has_local_file_domain:
                         
-                        ClientGUIMenus.AppendMenuItem( filter_menu, 'archive/delete', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self, self._Filter )
+                        ClientGUIMenus.AppendMenuItem( self, filter_menu, 'archive/delete', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._Filter )
                         
                     
                     shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
@@ -2813,20 +2813,20 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         custom_shortcuts_menu = wx.Menu()
                         
-                        ClientGUIMenus.AppendMenuItem( custom_shortcuts_menu, 'manage', 'Manage your different custom filters and their shortcuts.', self, self._CustomFilter )
+                        ClientGUIMenus.AppendMenuItem( self, custom_shortcuts_menu, 'manage', 'Manage your different custom filters and their shortcuts.', self._CustomFilter )
                         
                         custom_shortcuts_menu.AppendSeparator()
                         
                         for shortcut_name in shortcut_names:
                             
-                            ClientGUIMenus.AppendMenuItem( custom_shortcuts_menu, shortcut_name, 'Open the ' + shortcut_name + ' custom filter.', self, self._CustomFilter, shortcut_name )
+                            ClientGUIMenus.AppendMenuItem( self, custom_shortcuts_menu, shortcut_name, 'Open the ' + shortcut_name + ' custom filter.', self._CustomFilter, shortcut_name )
                             
                         
                         ClientGUIMenus.AppendMenu( filter_menu, custom_shortcuts_menu, 'custom filters' )
                         
                     else:
                         
-                        ClientGUIMenus.AppendMenuItem( filter_menu, 'create a custom filter', 'Create a custom filter that uses non-default shortcuts.', self, self._CustomFilter )
+                        ClientGUIMenus.AppendMenuItem( self, filter_menu, 'create a custom filter', 'Create a custom filter that uses non-default shortcuts.', self._CustomFilter )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, filter_menu, 'filter' )
@@ -2836,25 +2836,25 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_inbox:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, archive_phrase, 'Archive the selected files.', self, self._Archive )
+                    ClientGUIMenus.AppendMenuItem( self, menu, archive_phrase, 'Archive the selected files.', self._Archive )
                     
                 
                 if selection_has_archive:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, inbox_phrase, 'Put the selected files back in the inbox.', self, self._Inbox )
+                    ClientGUIMenus.AppendMenuItem( self, menu, inbox_phrase, 'Put the selected files back in the inbox.', self._Inbox )
                     
                 
-                ClientGUIMenus.AppendMenuItem( menu, remove_phrase, 'Remove the selected files from the current view.', self, self._Remove )
+                ClientGUIMenus.AppendMenuItem( self, menu, remove_phrase, 'Remove the selected files from the current view.', self._Remove )
                 
                 if selection_has_local_file_domain:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self, self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
+                    ClientGUIMenus.AppendMenuItem( self, menu, local_delete_phrase, 'Delete the selected files from \'my files\'.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
                     
                 
                 if selection_has_trash:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self, self._Delete, CC.TRASH_SERVICE_KEY )
-                    ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self, self._Undelete )
+                    ClientGUIMenus.AppendMenuItem( self, menu, trash_delete_phrase, 'Delete the selected files from the trash, forcing an immediate physical delete from your hard drive.', self._Delete, CC.TRASH_SERVICE_KEY )
+                    ClientGUIMenus.AppendMenuItem( self, menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
                     
                 
                 # share
@@ -2863,7 +2863,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local:
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self, self._OpenExternally )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
                     
                 
                 share_menu = wx.Menu()
@@ -2975,7 +2975,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'Refresh the current search.', self, HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
                 
                 if len( self._sorted_media ) > 0:
                     
@@ -2985,15 +2985,15 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if len( self._selected_media ) < len( self._sorted_media ):
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, 'all', 'Select everything.', self, self._Select, 'all' )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
                         
                     
-                    ClientGUIMenus.AppendMenuItem( select_menu, 'invert', 'Swap what is and is not selected.', self, self._Select, 'invert' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
                     
                     if media_has_archive and media_has_inbox:
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, 'inbox', 'Select everything in the inbox.', self, self._Select, 'inbox' )
-                        ClientGUIMenus.AppendMenuItem( select_menu, 'archive', 'Select everything that is archived.', self, self._Select, 'archive' )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'inbox', 'Select everything in the inbox.', self._Select, 'inbox' )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'archive', 'Select everything that is archived.', self._Select, 'archive' )
                         
                     
                     if len( all_specific_file_domains ) > 1:
@@ -3011,13 +3011,13 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                             name = services_manager.GetName( service_key )
                             
-                            ClientGUIMenus.AppendMenuItem( select_menu, name, 'Select everything in ' + name + '.', self, self._Select, 'file_service', service_key )
+                            ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
                             
                         
                     
                     if len( self._selected_media ) > 0:
                         
-                        ClientGUIMenus.AppendMenuItem( select_menu, 'none', 'Deselect everything.', self, self._Select, 'none' )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'none', 'Deselect everything.', self._Select, 'none' )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
@@ -3033,10 +3033,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     similar_menu = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self, self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like this one.', self, self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like this one.', self, self._GetSimilarTo, HC.HAMMING_SIMILAR )
-                    ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self, self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
+                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
+                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'very similar', 'Search the database for files that look just like this one.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
+                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'similar', 'Search the database for files that look generally like this one.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
+                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
                     
                     ClientGUIMenus.AppendMenu( menu, similar_menu, 'find similar files' )
                     

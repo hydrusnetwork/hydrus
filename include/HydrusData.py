@@ -13,6 +13,7 @@ import psutil
 import random
 import shutil
 import sqlite3
+import struct
 import subprocess
 import sys
 import threading
@@ -685,25 +686,28 @@ def GetEmptyDataDict():
     
     return data
     
-def GetHammingDistance( phash1, phash2 ):
+def Get64BitHammingDistance( phash1, phash2 ):
     
-    distance = 0
+    # old way of doing this was:
+    #while xor > 0:
+    #    
+    #    distance += 1
+    #    xor &= xor - 1
+    #    
     
-    phash1 = bytearray( phash1 )
-    phash2 = bytearray( phash2 )
+    # convert to unsigned long long, then xor
+    # then through the power of stackexchange magic, we get number of bits in record time
     
-    for i in range( len( phash1 ) ):
-        
-        xor = phash1[i] ^ phash2[i]
-        
-        while xor > 0:
-            
-            distance += 1
-            xor &= xor - 1
-            
-        
+    n = struct.unpack( '!Q', phash1 )[0] ^ struct.unpack( '!Q', phash2 )[0]
     
-    return distance
+    n = ( n & 0x5555555555555555 ) + ( ( n & 0xAAAAAAAAAAAAAAAA ) >> 1 ) # 10101010, 01010101
+    n = ( n & 0x3333333333333333 ) + ( ( n & 0xCCCCCCCCCCCCCCCC ) >> 2 ) # 11001100, 00110011
+    n = ( n & 0x0F0F0F0F0F0F0F0F ) + ( ( n & 0xF0F0F0F0F0F0F0F0 ) >> 4 ) # 11110000, 00001111
+    n = ( n & 0x00FF00FF00FF00FF ) + ( ( n & 0xFF00FF00FF00FF00 ) >> 8 ) # etc...
+    n = ( n & 0x0000FFFF0000FFFF ) + ( ( n & 0xFFFF0000FFFF0000 ) >> 16 )
+    n = ( n & 0x00000000FFFFFFFF ) + ( ( n & 0xFFFFFFFF00000000 ) >> 32 )
+    
+    return n
     
 def GetNow(): return int( time.time() )
 
@@ -1508,6 +1512,20 @@ class BigJobPauser( object ):
             
             self._next_pause = GetNow() + self._period
             
+        
+    
+class Call( object ):
+    
+    def __init__( self, func, *args, **kwargs ):
+        
+        self._func = func
+        self._args = args
+        self._kwargs = kwargs
+        
+    
+    def __call__( self ):
+        
+        self._func( *self._args, **self._kwargs )
         
     
 class ClientToServerContentUpdatePackage( HydrusYAMLBase ):

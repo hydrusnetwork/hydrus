@@ -2,7 +2,6 @@ import cStringIO
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusThreading
-import lz4
 import os
 from PIL import _imaging
 from PIL import Image as PILImage

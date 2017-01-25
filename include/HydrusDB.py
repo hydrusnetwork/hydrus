@@ -367,8 +367,6 @@ class HydrusDB( object ):
         
         self._connection_timestamp = HydrusData.GetNow()
         
-        self._db.create_function( 'hydrus_hamming', 2, HydrusData.GetHammingDistance )
-        
         self._c = self._db.cursor()
         
         self._c.execute( 'PRAGMA main.cache_size = -10000;' )
@@ -513,6 +511,44 @@ class HydrusDB( object ):
     def _ReportStatus( self, text ):
         
         HydrusData.Print( text )
+        
+    
+    def _SelectFromList( self, select_statement, xs ):
+        
+        # issue here is that doing a simple blah_id = ? is real quick and cacheable but doing a lot of fetchone()s is slow
+        # blah_id IN ( 1, 2, 3 ) is fast to execute but not cacheable and doing the str() list splay takes time so there is initial lag
+        # doing the temporaryintegertable trick works well for gigantic lists you refer to frequently but it is super laggy when you sometimes are only selecting four things
+        # blah_id IN ( ?, ?, ? ) is fast and cacheable but there's a small limit (1024 is too many) to the number of params sql can handle
+        # so lets do the latter but break it into 256-strong chunks to get a good medium
+        
+        # this will take a select statement with %s like so:
+        # SELECT blah_id, blah FROM blahs WHERE blah_id IN %s;
+        
+        MAX_CHUNK_SIZE = 256
+        
+        # do this just so we aren't always reproducing this long string for gigantic lists
+        # and also so we aren't overmaking it when this gets spammed with a lot of len() == 1 calls
+        if len( xs ) >= MAX_CHUNK_SIZE:
+            
+            max_statement = select_statement % ( '(' + ','.join( '?' * MAX_CHUNK_SIZE ) + ')' )
+            
+        
+        for chunk in HydrusData.SplitListIntoChunks( xs, MAX_CHUNK_SIZE ):
+            
+            if len( chunk ) == MAX_CHUNK_SIZE:
+                
+                chunk_statement = max_statement
+                
+            else:
+                
+                chunk_statement = select_statement % ( '(' + ','.join( '?' * len( chunk ) ) + ')' )
+                
+            
+            for row in self._c.execute( chunk_statement, chunk ):
+                
+                yield row
+                
+            
         
     
     def _UpdateDB( self, version ):

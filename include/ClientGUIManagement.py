@@ -1450,8 +1450,12 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
-        menu_items.append( ( 'reset potentials', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
+        menu_items.append( ( 'normal', 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
+        menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        menu_items.append( ( 'check', 'regenerate file information in normal db maintenance', 'Tell the client to include file phash regeneration in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', 'maintain_similar_files_phashes_during_idle' ) )
+        menu_items.append( ( 'check', 'rebalance tree in normal db maintenance', 'Tell the client to balance the tree in its normal db maintenance cycles, whether you have that set to idle or shutdown time. It will not occur whille there are phashes still to regenerate.', 'maintain_similar_files_tree_during_idle' ) )
+        menu_items.append( ( 'check', 'find duplicate pairs at the current distance in normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time. It will not occur whille there are phashes still to regenerate or if the tree still needs rebalancing.', 'maintain_similar_files_duplicate_pairs_during_idle' ) )
         
         self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
@@ -1471,10 +1475,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        menu_items.append( ( 'exact match', 'Search for exact matches.', self._SetSearchDistanceExact ) )
-        menu_items.append( ( 'very similar', 'Search for very similar files.', self._SetSearchDistanceVerySimilar ) )
-        menu_items.append( ( 'similar', 'Search for similar files.', self._SetSearchDistanceSimilar ) )
-        menu_items.append( ( 'speculative', 'Search for files that are probably similar.', self._SetSearchDistanceSpeculative ) )
+        menu_items.append( ( 'normal', 'exact match', 'Search for exact matches.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_EXACT_MATCH ) ) )
+        menu_items.append( ( 'normal', 'very similar', 'Search for very similar files.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_VERY_SIMILAR ) ) )
+        menu_items.append( ( 'normal', 'similar', 'Search for similar files.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SIMILAR ) ) )
+        menu_items.append( ( 'normal', 'speculative', 'Search for files that are probably similar.', HydrusData.Call( self._SetSearchDistance, HC.HAMMING_SPECULATIVE ) ) )
         
         self._search_distance_button = ClientGUICommon.MenuButton( self._searching_panel, 'similarity', menu_items )
         
@@ -1492,6 +1496,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_unknown_duplicates = wx.StaticText( self._filtering_panel )
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
+        self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some pairs (prototype!)', self._ShowSomeDupes )
         
         #
         
@@ -1526,7 +1531,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         gridbox_2.AddGrowableCol( 0, 1 )
         
-        gridbox_2.AddF( self._num_searched, CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox_2.AddF( self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         gridbox_2.AddF( self._search_button, CC.FLAGS_VCENTER )
         
         self._searching_panel.AddF( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1537,6 +1542,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._filtering_panel.AddF( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_same_file_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.AddF( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1601,24 +1607,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._UpdateStatus()
         
     
-    def _SetSearchDistanceExact( self ):
+    def _ShowSomeDupes( self ):
         
-        self._SetSearchDistance( HC.HAMMING_EXACT_MATCH )
+        hashes = self._controller.Read( 'some_dupes' )
         
-    
-    def _SetSearchDistanceSimilar( self ):
+        media_results = self._controller.Read( 'media_results', hashes )
         
-        self._SetSearchDistance( HC.HAMMING_SIMILAR )
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, media_results )
         
-    
-    def _SetSearchDistanceSpeculative( self ):
-        
-        self._SetSearchDistance( HC.HAMMING_SPECULATIVE )
-        
-    
-    def _SetSearchDistanceVerySimilar( self ):
-        
-        self._SetSearchDistance( HC.HAMMING_VERY_SIMILAR )
+        self._controller.pub( 'swap_media_panel', self._page_key, panel )
         
     
     def _StartStopDBJob( self ):
@@ -1631,6 +1628,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._search_button.Disable()
             self._search_distance_button.Disable()
             self._search_distance_spinctrl.Disable()
+            self._show_some_dupes.Disable()
             
             self._job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -1667,6 +1665,17 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
     
     def _UpdateJob( self ):
+        
+        if self._job_key.TimeRunning() > 30:
+            
+            self._job_key.Cancel()
+            
+            self._job_key = None
+            
+            self._StartStopDBJob()
+            
+            return
+            
         
         if self._job_key.IsDone():
             
@@ -1740,7 +1749,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             num_done = total_num_files - num_phashes_to_regen
             
-            self._num_phashes_to_regen.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( num_done, total_num_files ) + 'eligible files up to date.' )
+            self._num_phashes_to_regen.SetLabelText( HydrusData.ConvertValueRangeToPrettyString( num_done, total_num_files ) + ' eligible files up to date.' )
             
             self._phashes_button.Enable()
             
@@ -1805,6 +1814,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential duplicates found.' )
         self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' same file pairs filtered.' )
         self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate file pairs filtered.' )
+        
+        if num_unknown > 0:
+            
+            self._show_some_dupes.Enable()
+            
+        else:
+            
+            self._show_some_dupes.Disable()
+            
         
     
     def EventSearchDistanceChanged( self, event ):

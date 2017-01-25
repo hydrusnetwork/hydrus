@@ -11,7 +11,6 @@ import HydrusPaths
 import HydrusSerialisable
 import itertools
 import json
-import lz4
 import os
 import Queue
 import random
@@ -608,7 +607,10 @@ class DB( HydrusDB.HydrusDB ):
                     
                     max_monthly_data = options[ 'max_monthly_data' ]
                     
-                    if max_monthly_data is not None and total_used_bytes > max_monthly_data: self._services_over_monthly_data.add( service_key )
+                    if max_monthly_data is not None and total_used_bytes > max_monthly_data:
+                        
+                        self._services_over_monthly_data.add( service_key )
+                        
                     
                 
             

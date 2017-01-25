@@ -274,7 +274,72 @@ class NewDialog( wx.Dialog ):
         
         self.Bind( wx.EVT_BUTTON, self.EventDialogButton )
         
+        self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
+        self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
+        self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
+        
+        self._menu_stack = []
+        self._menu_text_stack = []
+        
         HydrusGlobals.client_controller.ResetIdleTimer()
+        
+    
+    def EventMenuClose( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None and menu in self._menu_stack:
+            
+            index = self._menu_stack.index( menu )
+            
+            del self._menu_stack[ index ]
+            
+            previous_text = self._menu_text_stack.pop()
+            
+            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            
+            status_bar.SetStatusText( previous_text )
+            
+        
+    
+    def EventMenuHighlight( self, event ):
+        
+        status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+        
+        if len( self._menu_stack ) > 0:
+            
+            text = ''
+            
+            menu = self._menu_stack[-1]
+            
+            if menu is not None:
+                
+                menu_item = menu.FindItemById( event.GetMenuId() )
+                
+                if menu_item is not None:
+                    
+                    text = menu_item.GetHelp()
+                    
+                
+            
+            status_bar.SetStatusText( text )
+            
+        
+    
+    def EventMenuOpen( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None:
+            
+            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            
+            previous_text = status_bar.GetStatusText()
+            
+            self._menu_stack.append( menu )
+            
+            self._menu_text_stack.append( previous_text )
+            
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -474,7 +539,72 @@ class Frame( wx.Frame ):
         
         self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
         
+        self.Bind( wx.EVT_MENU_CLOSE, self.EventMenuClose )
+        self.Bind( wx.EVT_MENU_HIGHLIGHT_ALL, self.EventMenuHighlight )
+        self.Bind( wx.EVT_MENU_OPEN, self.EventMenuOpen )
+        
+        self._menu_stack = []
+        self._menu_text_stack = []
+        
         HydrusGlobals.client_controller.ResetIdleTimer()
+        
+    
+    def EventMenuClose( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None and menu in self._menu_stack:
+            
+            index = self._menu_stack.index( menu )
+            
+            del self._menu_stack[ index ]
+            
+            previous_text = self._menu_text_stack.pop()
+            
+            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            
+            status_bar.SetStatusText( previous_text )
+            
+        
+    
+    def EventMenuHighlight( self, event ):
+        
+        status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+        
+        if len( self._menu_stack ) > 0:
+            
+            text = ''
+            
+            menu = self._menu_stack[-1]
+            
+            if menu is not None:
+                
+                menu_item = menu.FindItemById( event.GetMenuId() )
+                
+                if menu_item is not None:
+                    
+                    text = menu_item.GetHelp()
+                    
+                
+            
+            status_bar.SetStatusText( text )
+            
+        
+    
+    def EventMenuOpen( self, event ):
+        
+        menu = event.GetMenu()
+        
+        if menu is not None:
+            
+            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            
+            previous_text = status_bar.GetStatusText()
+            
+            self._menu_stack.append( menu )
+            
+            self._menu_text_stack.append( previous_text )
+            
         
     
 class FrameThatResizes( Frame ):

@@ -3181,6 +3181,8 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             
         except HydrusExceptions.ForbiddenException as e:
             
+            HydrusData.ShowException( e )
+            
             self._status.SetLabelText( 'Did not work! ' + repr( e ) )
             
         

@@ -2242,7 +2242,7 @@ class DialogInputShortcut( Dialog ):
         
         self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
         
-        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
+        self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'unclose_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
         
         self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -4340,6 +4340,8 @@ class DialogSetupExport( Dialog ):
         
         self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
+        self._tag_txt_tag_services = []
+        
         t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
         
         self._tags_box.SetTagsBox( t )
@@ -4371,6 +4373,7 @@ class DialogSetupExport( Dialog ):
         
         self._export_tag_txts = wx.CheckBox( self, label = 'export tags in .txt files?' )
         self._export_tag_txts.SetToolTipString( text )
+        self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
         
         self._export = wx.Button( self, label = 'export' )
         self._export.Bind( wx.EVT_BUTTON, self.EventExport )
@@ -4525,11 +4528,18 @@ class DialogSetupExport( Dialog ):
                         
                         tags_manager = media.GetTagsManager()
                         
-                        tags = tags_manager.GetCurrent()
+                        tags = set()
                         
-                        filename = ClientExporting.GenerateExportFilename( media, terms )
+                        for service_key in self._tag_txt_tag_services:
+                            
+                            tags.update( tags_manager.GetCurrent( service_key ) )
+                            
                         
-                        txt_path = os.path.join( directory, filename + '.txt' )
+                        tags = list( tags )
+                        
+                        tags.sort()
+                        
+                        txt_path = path + '.txt'
                         
                         with open( txt_path, 'wb' ) as f:
                             
@@ -4562,6 +4572,38 @@ class DialogSetupExport( Dialog ):
             
         
         HydrusGlobals.client_controller.CallToThread( do_it )
+        
+    
+    def EventExportTagTxtsChanged( self, event ):
+        
+        if self._export_tag_txts.GetValue() == True:
+            
+            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            
+            tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+            
+            names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in tag_services }
+            
+            service_keys_to_names = { service_key : name for ( name, service_key ) in names_to_service_keys.items() }
+            
+            tag_service_names = names_to_service_keys.keys()
+            
+            tag_service_names.sort()
+            
+            with DialogCheckFromListOfStrings( self, 'select tag services', tag_service_names, self._tag_txt_tag_services ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    selected_names = dlg.GetChecked()
+                    
+                    self._tag_txt_tag_services = [ names_to_service_keys[ name ] for name in selected_names ]
+                    
+                else:
+                    
+                    self._export_tag_txts.SetValue( False )
+                    
+                
+            
         
     
     def EventOpenLocation( self, event ):

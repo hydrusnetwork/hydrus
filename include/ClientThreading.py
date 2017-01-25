@@ -21,6 +21,8 @@ class JobKey( object ):
         self._only_start_if_unbusy = only_start_if_unbusy
         self._stop_time = stop_time
         
+        self._start_time = HydrusData.GetNow()
+        
         self._deleted = threading.Event()
         self._deletion_time = None
         self._begun = threading.Event()
@@ -271,6 +273,11 @@ class JobKey( object ):
         with self._variable_lock: self._variables[ name ] = value
         
         time.sleep( 0.00001 )
+        
+    
+    def TimeRunning( self ):
+        
+        return HydrusData.GetNow() - self._start_time
         
     
     def ToString( self ):

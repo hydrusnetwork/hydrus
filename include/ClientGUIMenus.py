@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import collections
+import HydrusGlobals
 import wx
 
 menus_to_submenus = collections.defaultdict( set )
@@ -13,7 +14,7 @@ def AppendMenu( menu, submenu, label ):
     
     menus_to_submenus[ menu ].add( submenu )
     
-def AppendMenuBitmapItem( menu, label, description, event_handler, bitmap, callable, *args, **kwargs ):
+def AppendMenuBitmapItem( event_handler, menu, label, description, bitmap, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
@@ -25,11 +26,11 @@ def AppendMenuBitmapItem( menu, label, description, event_handler, bitmap, calla
     
     menu.AppendItem( menu_item )
     
-    BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs )
+    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
     
     return menu_item
     
-def AppendMenuCheckItem( menu, label, description, event_handler, initial_value, callable, *args, **kwargs ):
+def AppendMenuCheckItem( event_handler, menu, label, description, initial_value, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
@@ -37,17 +38,17 @@ def AppendMenuCheckItem( menu, label, description, event_handler, initial_value,
     
     menu_item.Check( initial_value )
     
-    BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs )
+    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
     
     return menu_item
     
-def AppendMenuItem( menu, label, description, event_handler, callable, *args, **kwargs ):
+def AppendMenuItem( event_handler, menu, label, description, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
     menu_item = menu.Append( wx.ID_ANY, label, description )
     
-    BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs )
+    BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
     
     return menu_item
     
@@ -62,7 +63,7 @@ def AppendMenuLabel( menu, label, description = None ):
     
     return menu_item
     
-def BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs ):
+def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
     l_callable = GetLambdaCallable( callable, *args, **kwargs )
     
@@ -71,6 +72,8 @@ def BindMenuItem( menu, event_handler, menu_item, callable, *args, **kwargs ):
     menus_to_menu_item_data[ menu ].add( ( menu_item, event_handler ) )
     
 def DestroyMenuItems( menu ):
+    
+    handler = HydrusGlobals.client_controller.GetApp()
     
     menu_item_data = menus_to_menu_item_data[ menu ]
     

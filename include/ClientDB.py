@@ -6,6 +6,7 @@ import ClientMedia
 import ClientRatings
 import ClientThreading
 import collections
+import gc
 import hashlib
 import httplib
 import itertools
@@ -24,7 +25,6 @@ import HydrusTagArchive
 import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
-import lz4
 import numpy
 import os
 import psutil
@@ -1538,7 +1538,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( ancestor_phash, ancestor_radius, ancestor_inner_id, ancestor_inner_population, ancestor_outer_id, ancestor_outer_population ) = self._c.execute( 'SELECT phash, radius, inner_id, inner_population, outer_id, outer_population FROM shape_perceptual_hashes, shape_vptree USING ( phash_id ) WHERE phash_id = ?;', ( ancestor_id, ) ).fetchone()
                 
-                distance_to_ancestor = HydrusData.GetHammingDistance( phash, ancestor_phash )
+                distance_to_ancestor = HydrusData.Get64BitHammingDistance( phash, ancestor_phash )
                 
                 if ancestor_radius is None or distance_to_ancestor <= ancestor_radius:
                     
@@ -1681,7 +1681,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                children = [ ( HydrusData.GetHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
+                children = [ ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
                 
                 children.sort()
                 
@@ -1772,7 +1772,48 @@ class DB( HydrusDB.HydrusDB ):
         return ( searched_distances_to_count, duplicate_types_to_count, num_phashes_to_regen, num_branches_to_regen )
         
     
-    def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None ):
+    def _CacheSimilarFilesGetSomeDupes( self ):
+        
+        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? ORDER BY RANDOM() LIMIT 1;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
+        
+        if result is None:
+            
+            return set()
+            
+        
+        ( random_hash_id, ) = random.sample( result, 1 ) # either the smaller or larger
+        
+        dupe_hash_ids = set()
+        
+        for ( smaller_hash_id, larger_hash_id ) in self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND ( smaller_hash_id = ? OR larger_hash_id = ? );', ( HC.DUPLICATE_UNKNOWN, random_hash_id, random_hash_id ) ):
+            
+            dupe_hash_ids.add( smaller_hash_id )
+            dupe_hash_ids.add( larger_hash_id )
+            
+        
+        dupe_hashes = self._GetHashes( dupe_hash_ids )
+        
+        return dupe_hashes
+        
+    
+    def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
+        
+        if abandon_if_other_work_to_do:
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
         
         pub_job_key = False
         job_key_pubbed = False
@@ -1784,11 +1825,13 @@ class DB( HydrusDB.HydrusDB ):
             pub_job_key = True
             
         
+        ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
+        
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) ]
         
         pairs_found = 0
         
-        num_to_do = len( hash_ids )
+        total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
@@ -1810,10 +1853,11 @@ class DB( HydrusDB.HydrusDB ):
                 return
                 
             
-            text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) + ', found ' + HydrusData.ConvertIntToPrettyString( pairs_found )
+            text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( pairs_found ) + ' potential duplicate pairs'
             
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
             job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+            job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
             
             duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
             
@@ -1843,11 +1887,13 @@ class DB( HydrusDB.HydrusDB ):
             pub_job_key = True
             
         
+        ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
+        
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
         
         client_files_manager = self._controller.GetClientFilesManager()
         
-        num_to_do = len( hash_ids )
+        total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
         
         for ( i, hash_id ) in enumerate( hash_ids ):
             
@@ -1869,10 +1915,16 @@ class DB( HydrusDB.HydrusDB ):
                 return
                 
             
-            text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do )
+            if i % 50 == 0:
+                
+                gc.collect()
+                
             
+            text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
+            
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
             job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+            job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
             
             try:
                 
@@ -1930,7 +1982,17 @@ class DB( HydrusDB.HydrusDB ):
         job_key.Delete( 30 )
         
     
-    def _CacheSimilarFilesMaintainTree( self, job_key = None, stop_time = None ):
+    def _CacheSimilarFilesMaintainTree( self, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
+        
+        if abandon_if_other_work_to_do:
+            
+            result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
+            
+            if result is not None:
+                
+                return
+                
+            
         
         pub_job_key = False
         job_key_pubbed = False
@@ -1994,8 +2056,24 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesMaintenanceDue( self ):
         
+        result = self._c.execute( 'SELECT 1 FROM shape_maintenance_phash_regen;' ).fetchone()
+        
+        if result is not None:
+            
+            return True
+            
+        
         result = self._c.execute( 'SELECT 1 FROM shape_maintenance_branch_regen;' ).fetchone()
-
+        
+        if result is not None:
+            
+            return True
+            
+        
+        search_distance = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+        
+        result = self._c.execute( 'SELECT 1 FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchone()
+        
         if result is not None:
             
             return True
@@ -2038,7 +2116,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( v_id, v_phash ) in viewpoints:
             
-            views = [ HydrusData.GetHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
+            views = [ HydrusData.Get64BitHammingDistance( v_phash, s_phash ) for ( s_id, s_phash ) in sample if v_id != s_id ]
             
             views.sort()
             
@@ -2202,97 +2280,110 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesSearch( self, hash_id, max_hamming_distance ):
         
-        search_radius = max_hamming_distance
-        
-        result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
-        
-        if result is None:
+        if max_hamming_distance == 0:
             
-            return []
+            similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN ( SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ? );', ( hash_id, ) ) ]
             
-        
-        ( root_node_phash_id, ) = result
-        
-        search_phashes = [ phash for ( phash, ) in self._c.execute( 'SELECT phash FROM shape_perceptual_hashes, shape_perceptual_hash_map USING ( phash_id ) WHERE hash_id = ?;', ( hash_id, ) ) ]
-        
-        if len( search_phashes ) == 0:
+        else:
             
-            return []
+            search_radius = max_hamming_distance
             
-        
-        potentials = [ ( root_node_phash_id, tuple( search_phashes ) ) ]
-        similar_phash_ids = set()
-        
-        num_cycles = 0
-        
-        while len( potentials ) > 0:
+            result = self._c.execute( 'SELECT phash_id FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
             
-            num_cycles += 1
-            
-            ( node_phash_id, search_phashes ) = potentials.pop( 0 )
-            
-            ( node_phash, node_radius, inner_phash_id, outer_phash_id ) = self._c.execute( 'SELECT phash, radius, inner_id, outer_id FROM shape_perceptual_hashes, shape_vptree USING ( phash_id ) WHERE phash_id = ?;', ( node_phash_id, ) ).fetchone()
-            
-            inner_search_phashes = []
-            outer_search_phashes = []
-            
-            for search_phash in search_phashes:
+            if result is None:
                 
-                # first check the node--is it similar?
+                return []
                 
-                node_hamming_distance = HydrusData.GetHammingDistance( search_phash, node_phash )
+            
+            ( root_node_phash_id, ) = result
+            
+            search_phashes = [ phash for ( phash, ) in self._c.execute( 'SELECT phash FROM shape_perceptual_hashes, shape_perceptual_hash_map USING ( phash_id ) WHERE hash_id = ?;', ( hash_id, ) ) ]
+            
+            if len( search_phashes ) == 0:
                 
-                if node_hamming_distance <= search_radius:
-                    
-                    similar_phash_ids.add( node_phash_id )
-                    
+                return []
                 
-                # now how about its children?
+            
+            next_potentials = { root_node_phash_id : tuple( search_phashes ) }
+            similar_phash_ids = set()
+            
+            num_cycles = 0
+            
+            while len( next_potentials ) > 0:
                 
-                if node_radius is not None:
+                current_potentials = next_potentials
+                next_potentials = {}
+                
+                num_cycles += 1
+                
+                select_statement = 'SELECT phash_id, phash, radius, inner_id, outer_id FROM shape_perceptual_hashes, shape_vptree USING ( phash_id ) WHERE phash_id IN %s;'
+                
+                for ( node_phash_id, node_phash, node_radius, inner_phash_id, outer_phash_id ) in self._SelectFromList( select_statement, current_potentials.keys() ):
                     
-                    # we have two spheres--node and search--their centers separated by node_hamming_distance
-                    # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
-                    # there are four possibles:
-                    # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
-                    # (----N---(-)-S--)      intersects with both
-                    # (----N-(--S-)-)        intersects with both
-                    # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                    search_phashes = current_potentials[ node_phash_id ]
                     
-                    spheres_disjoint = node_hamming_distance > node_radius + search_radius
-                    search_sphere_subset_of_node_sphere = node_hamming_distance + search_radius <= node_radius
+                    inner_search_phashes = []
+                    outer_search_phashes = []
                     
-                    if not spheres_disjoint: # i.e. they intersect at some point
+                    for search_phash in search_phashes:
                         
-                        inner_search_phashes.append( search_phash )
+                        # first check the node--is it similar?
+                        
+                        node_hamming_distance = HydrusData.Get64BitHammingDistance( search_phash, node_phash )
+                        
+                        if node_hamming_distance <= search_radius:
+                            
+                            similar_phash_ids.add( node_phash_id )
+                            
+                        
+                        # now how about its children?
+                        
+                        if node_radius is not None:
+                            
+                            # we have two spheres--node and search--their centers separated by node_hamming_distance
+                            # we want to search inside/outside the node_sphere if the search_sphere intersects with those spaces
+                            # there are four possibles:
+                            # (----N----)-(--S--)    intersects with outer only - distance between N and S > their radii
+                            # (----N---(-)-S--)      intersects with both
+                            # (----N-(--S-)-)        intersects with both
+                            # (---(-N-S--)-)         intersects with inner only - distance between N and S + radius_S does not exceed radius_N
+                            
+                            spheres_disjoint = node_hamming_distance > ( node_radius + search_radius )
+                            search_sphere_subset_of_node_sphere = ( node_hamming_distance + search_radius ) <= node_radius
+                            
+                            if not spheres_disjoint: # i.e. they intersect at some point
+                                
+                                inner_search_phashes.append( search_phash )
+                                
+                            
+                            if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                                
+                                outer_search_phashes.append( search_phash )
+                                
+                            
                         
                     
-                    if not search_sphere_subset_of_node_sphere: # i.e. search sphere intersects with non-node sphere space at some point
+                    if inner_phash_id is not None and len( inner_search_phashes ) > 0:
                         
-                        outer_search_phashes.append( search_phash )
+                        next_potentials[ inner_phash_id ] = tuple( inner_search_phashes )
+                        
+                    
+                    if outer_phash_id is not None and len( outer_search_phashes ) > 0:
+                        
+                        next_potentials[ outer_phash_id ] = tuple( outer_search_phashes )
                         
                     
                 
             
-            if inner_phash_id is not None and len( inner_search_phashes ) > 0:
+            if HydrusGlobals.db_report_mode:
                 
-                potentials.append( ( inner_phash_id, tuple( inner_search_phashes ) ) )
-                
-            
-            if outer_phash_id is not None and len( outer_search_phashes ) > 0:
-                
-                potentials.append( ( outer_phash_id, tuple( outer_search_phashes ) ) )
+                HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ConvertIntToPrettyString( num_cycles ) + ' cycles.' )
                 
             
-        
-        if HydrusGlobals.db_report_mode:
-            
-            HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ConvertIntToPrettyString( num_cycles ) + ' cycles.' )
-            
-        
-        with HydrusDB.TemporaryIntegerTable( self._c, similar_phash_ids, 'phash_id' ) as temp_table_name:
-            
-            similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_perceptual_hash_map, ' + temp_table_name + ' USING ( phash_id );' ) ]
+            with HydrusDB.TemporaryIntegerTable( self._c, similar_phash_ids, 'phash_id' ) as temp_table_name:
+                
+                similar_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_perceptual_hash_map, ' + temp_table_name + ' USING ( phash_id );' ) ]
+                
             
         
         return similar_hash_ids
@@ -7295,6 +7386,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self._CacheSimilarFilesGetMaintenanceStatus( *args, **kwargs )
+        elif action == 'some_dupes': result = self._CacheSimilarFilesGetSomeDupes( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
@@ -8839,7 +8931,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     else:
                         
-                        children = [ ( HydrusData.GetHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
+                        children = [ ( HydrusData.Get64BitHammingDistance( phash, child_phash ), child_id, child_phash ) for ( child_id, child_phash ) in children ]
                         
                         children.sort()
                         
@@ -8971,6 +9063,34 @@ class DB( HydrusDB.HydrusDB ):
             #
             
             self._c.execute( 'DELETE FROM web_sessions WHERE name = ?;', ( 'pixiv', ) )
+            
+        
+        if version == 241:
+            
+            try:
+                
+                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                for subscription in subscriptions:
+                    
+                    g_i = subscription._gallery_identifier
+                    
+                    if g_i.GetSiteType() == HC.SITE_TYPE_BOORU:
+                        
+                        if 'sankaku' in g_i.GetAdditionalInfo():
+                            
+                            subscription._paused = True
+                            
+                            self._SetJSONDump( subscription )
+                            
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'While attempting to pause all sankaku subs, I had this problem:' )
+                HydrusData.PrintException( e )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

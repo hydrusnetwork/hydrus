@@ -87,13 +87,13 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CallBlockingToWx( self, callable, *args, **kwargs ):
+    def CallBlockingToWx( self, func, *args, **kwargs ):
         
         def wx_code( job_key ):
             
             try:
                 
-                result = callable( *args, **kwargs )
+                result = func( *args, **kwargs )
                 
                 job_key.SetVariable( 'result', result )
                 
@@ -479,6 +479,11 @@ class Controller( HydrusController.HydrusController ):
         self.pub( 'refresh_status' )
         
     
+    def GetApp( self ):
+        
+        return self._app
+        
+    
     def GetClientFilesManager( self ):
         
         return self._client_files_manager
@@ -692,7 +697,43 @@ class Controller( HydrusController.HydrusController ):
             loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
-        self.WriteInterruptable( 'maintain_similar_files_tree', stop_time = stop_time )
+        if self._new_options.GetBoolean( 'maintain_similar_files_phashes_during_idle' ):
+            
+            phashes_stop_time = stop_time
+            
+            if phashes_stop_time is None:
+                
+                phashes_stop_time = HydrusData.GetNow() + 15
+                
+            
+            self.WriteInterruptable( 'maintain_similar_files_phashes', stop_time = phashes_stop_time )
+            
+        
+        if self._new_options.GetBoolean( 'maintain_similar_files_tree_during_idle' ):
+            
+            tree_stop_time = stop_time
+            
+            if tree_stop_time is None:
+                
+                tree_stop_time = HydrusData.GetNow() + 30
+                
+            
+            self.WriteInterruptable( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
+            
+        
+        if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
+            
+            search_distance = self._new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            
+            search_stop_time = stop_time
+            
+            if search_stop_time is None:
+                
+                search_stop_time = HydrusData.GetNow() + 60
+                
+            
+            self.WriteInterruptable( 'maintain_similar_files_duplicate_pairs', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
+            
         
         self.WriteInterruptable( 'vacuum', stop_time = stop_time )
         
