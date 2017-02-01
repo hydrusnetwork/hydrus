@@ -91,8 +91,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._notebook.Bind( wx.EVT_RIGHT_DOWN, self.EventNotebookMenu )
         self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
         
-        self._tab_right_click_index = -1
-        
         wx.GetApp().SetTopWindow( self )
         
         self.RefreshAcceleratorTable()
@@ -1241,26 +1239,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            pause_export_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_export_folders_sync' )
-            pause_import_folders_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_import_folders_sync' )
-            pause_repo_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_repo_sync' )
-            pause_subs_sync_id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'pause_subs_sync' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'export folders synchronisation', 'Pause the client\'s export folders.', HC.options[ 'pause_export_folders_sync' ], self._PauseSync, 'export_folders' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'import folders synchronisation', 'Pause the client\'s import folders.', HC.options[ 'pause_import_folders_sync' ], self._PauseSync, 'import_folders' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options[ 'pause_repo_sync' ], self._PauseSync, 'repo' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'subscriptions synchronisation', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
             
-            submenu.AppendCheckItem( pause_export_folders_sync_id, p( '&Export Folders Synchronisation' ), p( 'Pause the client\'s export folders.' ) )
-            submenu.AppendCheckItem( pause_import_folders_sync_id, p( '&Import Folders Synchronisation' ), p( 'Pause the client\'s import folders.' ) )
-            submenu.AppendCheckItem( pause_repo_sync_id, p( '&Repositories Synchronisation' ), p( 'Pause the client\'s synchronisation with hydrus repositories.' ) )
-            submenu.AppendCheckItem( pause_subs_sync_id, p( '&Subscriptions Synchronisation' ), p( 'Pause the client\'s synchronisation with website subscriptions.' ) )
-            
-            submenu.Check( pause_export_folders_sync_id, HC.options[ 'pause_export_folders_sync' ] )
-            submenu.Check( pause_import_folders_sync_id, HC.options[ 'pause_import_folders_sync' ] )
-            submenu.Check( pause_repo_sync_id, HC.options[ 'pause_repo_sync' ] )
-            submenu.Check( pause_subs_sync_id, HC.options[ 'pause_subs_sync' ] )
-            
-            menu.AppendMenu( CC.ID_NULL, p( 'Pause' ), submenu )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'review_services' ), p( '&Review Services' ), p( 'Look at the services your client connects to.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_services' ), p( '&Manage Services' ), p( 'Edit the services your client connects to.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
             
             tag_repositories = self._controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
@@ -1281,16 +1270,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the tag repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the tag repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the tag repository.' ) )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
                     
-                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    submenu.AppendSeparator()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get stats', 'Fetch operating statistics from the service.', self._Stats, service_key )
+                    
+                    submenu.AppendSeparator()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'post news', 'Post a news item to the tag repository.', self._PostNews, service_key )
+                    
+                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
                     
                 
                 for service in admin_file_services:
@@ -1299,17 +1292,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'new_accounts', service_key ), p( 'Create New &Accounts' ), p( 'Create new accounts.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_account_types', service_key ), p( '&Manage Account Types' ), p( 'Add, edit and delete account types for the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'modify_account', service_key ), p( '&Modify an Account' ), p( 'Modify a specific account\'s type and expiration.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'account_info', service_key ), p( '&Get an Account\'s Info' ), p( 'Fetch information about an account from the file repository.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fetch_ip', service_key ), p( '&Get an Uploader\'s IP Address' ), p( 'Fetch an uploader\'s ip address.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'stats', service_key ), p( '&Get Stats' ), p( 'Fetch operating statistics from the file repository.' ) )
-                    submenu.AppendSeparator()
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'post_news', service_key ), p( '&Post News' ), p( 'Post a news item to the file repository.' ) )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
                     
-                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    submenu.AppendSeparator()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get stats', 'Fetch operating statistics from the service.', self._Stats, service_key )
+                    
+                    submenu.AppendSeparator()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'post news', 'Post a news item to the tag repository.', self._PostNews, service_key )
+                    
+                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
                     
                 
                 for service in server_admins:
@@ -1318,35 +1315,50 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_server_services', service_key ), p( 'Manage &Services' ), p( 'Add, edit, and delete this server\'s services.' ) )
-                    submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'backup_service', service_key ), p( 'Make a &Backup' ), p( 'Back up this server\'s database.' ) )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'make a backup', 'Command the server to temporarily pause and back up its database.', self._BackupService, service_key )
                     
-                    admin_menu.AppendMenu( CC.ID_NULL, p( service.GetName() ), submenu )
+                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
                     
                 
-                menu.AppendMenu( CC.ID_NULL, p( 'Administrate Services' ), admin_menu )
+                ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
                 
             
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_censorship' ), p( '&Manage Tag Censorship' ), p( 'Set which tags you want to see from which services.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_siblings' ), p( '&Manage Tag Siblings' ), p( 'Set certain tags to be automatically replaced with other tags.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_tag_parents' ), p( '&Manage Tag Parents' ), p( 'Set certain tags to be automatically added with other tags.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag censorship', 'Set which tags you want to see from which services.', self._ManageTagCensorship )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
+            
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_parsing_scripts' ), p( 'Manage &Parsing Scripts' ), p( 'Manage how the client parses different types of web content.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_boorus' ), p( 'Manage &Boorus' ), p( 'Change the html parsing information for boorus to download from.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_pixiv_account' ), p( 'Manage &Pixiv Account' ), p( 'Set up your pixiv username and password.' ) )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_subscriptions' ), p( 'Manage &Subscriptions' ), p( 'Change the queries you want the client to regularly import from.' ) )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            
             menu.AppendSeparator()
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'manage_upnp' ), p( 'Manage Local UPnP' ) )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
             
             if len( tag_services ) + len( file_services ) > 0:
                 
                 menu.AppendSeparator()
+                
                 submenu = wx.Menu()
-                for service in tag_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-                for service in file_services: submenu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'news', service.GetServiceKey() ), p( service.GetName() ), p( 'Review ' + service.GetName() + '\'s past news.' ) )
-                menu.AppendMenu( CC.ID_NULL, p( 'News' ), submenu )
+                
+                for service in tag_services + file_services:
+                    
+                    name = service.GetName()
+                    service_key = service.GetServiceKey()
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Review past news from this service.', self._News, service_key )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'news' )
                 
             
             return ( menu, p( '&Services' ), True )
@@ -1381,6 +1393,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
@@ -1481,6 +1494,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             try:
                 
+                self._notebook.Disable()
+                
                 for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
                     
                     try:
@@ -1522,6 +1537,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 self._loading_session = False
                 self._media_status_override = None
+                
+                self._notebook.Enable()
+                
+                wx.CallAfter( self.Layout )
                 
             
         
@@ -2616,7 +2635,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFrameNewPage( self, event ):
         
-        self._ChooseNewPage()
+        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        
+        if flags == wx.NB_HITTEST_NOWHERE:
+            
+            self._ChooseNewPage()
+            
         
     
     def EventMenu( self, event ):
@@ -2675,10 +2699,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
             elif command == 'news': self._News( data )
-            elif command == 'pause_export_folders_sync': self._PauseSync( 'export_folders' )
-            elif command == 'pause_import_folders_sync': self._PauseSync( 'import_folders' )
-            elif command == 'pause_repo_sync': self._PauseSync( 'repo' )
-            elif command == 'pause_subs_sync': self._PauseSync( 'subs' )
             elif command == 'petitions': self._NewPagePetitions( data )
             elif command == 'post_news': self._PostNews( data )
             elif command == 'pubsub_profile_mode':
@@ -2702,8 +2722,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
             elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
-            elif command == 'tab_menu_close_page': self._ClosePage( self._tab_right_click_index )
-            elif command == 'tab_menu_rename_page': self._RenamePage( self._tab_right_click_index )
             elif command == 'unclose_page':
                 
                 self._UnclosePage()
@@ -2729,12 +2747,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if tab_index != -1:
             
-            self._tab_right_click_index = tab_index
-            
             menu = wx.Menu()
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_close_page' ), 'close page' )
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tab_menu_rename_page' ), 'rename page' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
             self._controller.PopupMenu( self, menu )
             
@@ -2861,6 +2877,43 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self.Destroy()
         
         return True
+        
+    
+    def FlushOutPredicates( self, predicates ):
+        
+        good_predicates = []
+        
+        for predicate in predicates:
+            
+            predicate = predicate.GetCountlessCopy()
+            
+            ( predicate_type, value, inclusive ) = predicate.GetInfo()
+            
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+                
+                with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        good_predicates.extend( dlg.GetPredicates() )
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                
+            elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_UNTAGGED:
+                
+                good_predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '=', 0 ) ) )
+                
+            else:
+                
+                good_predicates.append( predicate )
+                
+            
+        
+        return good_predicates
         
     
     def GetCurrentPage( self ):

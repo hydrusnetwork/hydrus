@@ -464,7 +464,7 @@ def ParseImageboardFileURLFromPost( thread_url, post ):
     url_filename = str( post[ 'tim' ] )
     url_ext = post[ 'ext' ]
     
-    file_original_filename = post[ 'filename' ] + url_ext
+    file_original_filename = post[ 'filename' ]
     file_url = GetImageboardFileURL( thread_url, url_filename, url_ext )
     
     if 'md5' in post:

@@ -8,6 +8,7 @@ import ClientFiles
 import ClientGUIACDropdown
 import ClientGUICollapsible
 import ClientGUICommon
+import ClientGUIListBoxes
 import ClientGUIDialogs
 import ClientDownloading
 import ClientGUIOptionsPanels
@@ -1612,7 +1613,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         predicates = file_search_context.GetPredicates()
         
-        self._predicates_box = ClientGUICommon.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
+        self._predicates_box = ClientGUIListBoxes.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
         
         self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
         
@@ -2681,8 +2682,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._paused = wx.CheckBox( self._folder_box )
         
-        self._seed_cache_button = wx.BitmapButton( self._folder_box, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._folder_box, CC.GlobalBMPs.seed_cache, self.ShowSeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         #
@@ -2755,7 +2755,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._period.SetValue( period )
         self._paused.SetValue( paused )
         
-        self._mimes.SetInfo( mimes )
+        self._mimes.SetValue( mimes )
         
         self._action_successful.SelectClientData( actions[ CC.STATUS_SUCCESSFUL ] )
         if CC.STATUS_SUCCESSFUL in action_locations:
@@ -2972,9 +2972,18 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        if self._path.GetPath() in ( '', None ):
+        path = self._path.GetPath()
+        
+        if path in ( '', None ):
             
-            wx.MessageBox( 'You must enter a folder path to import from!' )
+            wx.MessageBox( 'You must enter a path to import from!' )
+            
+            return
+            
+        
+        if HC.BASE_DIR.startswith( path ) or HydrusGlobals.client_controller.GetDBDir().startswith( path ):
+            
+            wx.MessageBox( 'You cannot set an import path that includes your install or database directory!' )
             
             return
             
@@ -3010,30 +3019,11 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._import_folder.GetSeedCache()
-        
-        dupe_seed_cache = seed_cache.Duplicate()
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._import_folder.SetSeedCache( dupe_seed_cache )
-                
-            
-        
-    
     def GetInfo( self ):
         
         name = self._name.GetValue()
         path = HydrusData.ToUnicode( self._path.GetPath() )
-        mimes = self._mimes.GetInfo()
+        mimes = self._mimes.GetValue()
         import_file_options = self._import_file_options.GetOptions()
         import_tag_options = self._import_tag_options.GetOptions()
         
@@ -3072,6 +3062,25 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._import_folder.SetTuple( name, path, mimes, import_file_options, import_tag_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
         
         return self._import_folder
+        
+    
+    def ShowSeedCache( self ):
+        
+        seed_cache = self._import_folder.GetSeedCache()
+        
+        dupe_seed_cache = seed_cache.Duplicate()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._import_folder.SetSeedCache( dupe_seed_cache )
+                
+            
         
     
 class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
@@ -5127,7 +5136,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             self._blacklist = ClientGUICommon.RadioBox( self, 'type', choice_pairs )
             
-            self._tags = ClientGUICommon.ListBoxTagsCensorship( self )
+            self._tags = ClientGUIListBoxes.ListBoxTagsCensorship( self )
             
             self._tag_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
             self._tag_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownTag )
@@ -5338,8 +5347,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            self._children = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
-            self._parents = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             
             expand_parents = True
             
@@ -5934,7 +5943,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             removed_callable = lambda tags: 1
             
-            self._old_siblings = ClientGUICommon.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = wx.StaticText( self )
             
             expand_parents = False

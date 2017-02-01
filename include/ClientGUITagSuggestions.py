@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIListBoxes
 import ClientGUIParsing
 import ClientParsing
 import ClientSearch
@@ -13,11 +14,11 @@ import HydrusGlobals
 import HydrusSerialisable
 import wx
 
-class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
+class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, activate_callable, sort_tags = True ):
         
-        ClientGUICommon.ListBoxTagsStrings.__init__( self, parent, sort_tags = sort_tags )
+        ClientGUIListBoxes.ListBoxTagsStrings.__init__( self, parent, sort_tags = sort_tags )
         
         self._activate_callable = activate_callable
         
@@ -47,7 +48,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
     # Maybe reinclude this if per-column autoresizing is desired and not completely buggy
     def SetTags( self, tags ):
         
-        ClientGUICommon.ListBoxTagsStrings.SetTags( self, tags )
+        ClientGUIListBoxes.ListBoxTagsStrings.SetTags( self, tags )
         
         width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
@@ -72,11 +73,11 @@ class ListBoxTagsSuggestionsFavourites( ClientGUICommon.ListBoxTagsStrings ):
         wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
         
     '''
-class ListBoxTagsSuggestionsRelated( ClientGUICommon.ListBoxTags ):
+class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTags ):
     
     def __init__( self, parent, activate_callable ):
         
-        ClientGUICommon.ListBoxTags.__init__( self, parent )
+        ClientGUIListBoxes.ListBoxTags.__init__( self, parent )
         
         self._activate_callable = activate_callable
         

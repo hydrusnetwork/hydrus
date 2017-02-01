@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
 import ClientGUICommon
+import ClientGUIListBoxes
 import ClientSearch
 import collections
 import HydrusConstants as HC
@@ -777,7 +778,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitDropDownList( self ):
         
-        return ClientGUICommon.ListBoxTagsAutocompleteDropdownRead( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsAutocompleteDropdownRead( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
         
     
     def _ParseSearchText( self ):
@@ -788,24 +789,26 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             inclusive = False
             
-            search_text = raw_entry[1:]
+            tag = raw_entry[1:]
             
         else:
             
             inclusive = True
             
-            search_text = raw_entry
+            tag = raw_entry
             
         
-        search_text = HydrusTags.CleanTag( search_text )
+        tag = HydrusTags.CleanTag( tag )
+        
+        search_text = ClientSearch.ConvertTagToSearchable( tag )
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
-        sibling = siblings_manager.GetSibling( self._tag_service_key, search_text )
+        sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
         
         if sibling is None:
             
-            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text, inclusive )
+            entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag, inclusive )
             
         else:
             
@@ -1122,13 +1125,15 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         raw_entry = self._text_ctrl.GetValue()
         
-        search_text = HydrusTags.CleanTag( raw_entry )
+        tag = HydrusTags.CleanTag( raw_entry )
         
-        entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, search_text )
+        search_text = ClientSearch.ConvertTagToSearchable( tag )
+        
+        entry_predicate = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag )
         
         siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
         
-        sibling = siblings_manager.GetSibling( self._tag_service_key, search_text )
+        sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
         
         if sibling is not None:
             
@@ -1237,7 +1242,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitDropDownList( self ):
         
-        return ClientGUICommon.ListBoxTagsAutocompleteDropdownWrite( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsAutocompleteDropdownWrite( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):

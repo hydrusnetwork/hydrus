@@ -8,6 +8,23 @@ import HydrusTags
 import re
 import wx
 
+IGNORED_TAG_SEARCH_CHARACTERS = u'[](){}"\''
+IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : None for char in IGNORED_TAG_SEARCH_CHARACTERS }
+
+def ConvertTagToSearchable( tag ):
+    
+    while tag.endswith( '*' ):
+        
+        tag = tag[:-1]
+        
+    
+    if not isinstance( tag, unicode ):
+        
+        tag = HydrusData.ToUnicode( tag )
+        
+    
+    return tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
+    
 def FilterPredicatesBySearchEntry( service_key, search_entry, predicates ):
     
     tags_to_predicates = {}
@@ -32,13 +49,24 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
     
     def compile_re( s ):
         
+        num_stars = s.count( '*' )
+        
+        is_wildcard_search = ( num_stars == 1 and not s.endswith( '*' ) ) or num_stars > 1
+        
         regular_parts_of_s = s.split( '*' )
         
         escaped_parts_of_s = [ re.escape( part ) for part in regular_parts_of_s ]
         
         s = '.*'.join( escaped_parts_of_s )
         
-        return re.compile( '(\\A|\\s)' + s + '(\\s|\\Z)', flags = re.UNICODE )
+        if is_wildcard_search:
+            
+            return re.compile( s, flags = re.UNICODE )
+            
+        else:
+            
+            return re.compile( '(\\A|\\s)' + s + '(\\s|\\Z)', flags = re.UNICODE )
+            
         
     
     if ':' in search_entry:
@@ -47,6 +75,8 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
         
         ( namespace_entry, search_entry ) = search_entry.split( ':', 1 )
         
+        namespace_entry = ConvertTagToSearchable( namespace_entry )
+        
         namespace_re_predicate = compile_re( namespace_entry )
         
     else:
@@ -54,7 +84,12 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
         search_namespace = False
         
     
-    if '*' not in search_entry: search_entry += '*'
+    search_entry = ConvertTagToSearchable( search_entry )
+    
+    if '*' not in search_entry:
+        
+        search_entry += '*'
+        
     
     re_predicate = compile_re( search_entry )
     
@@ -79,6 +114,8 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
                 
                 ( n, t ) = possible_tag.split( ':', 1 )
                 
+                n = ConvertTagToSearchable( n )
+                
                 if search_namespace and re.search( namespace_re_predicate, n ) is None:
                     
                     continue
@@ -95,6 +132,8 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
                 
                 comparee = possible_tag
                 
+            
+            comparee = ConvertTagToSearchable( comparee )
             
             if re.search( re_predicate, comparee ) is not None:
                 

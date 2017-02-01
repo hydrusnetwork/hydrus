@@ -298,7 +298,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
             mimes = ( mimes, )
             
         
-        self._mimes.SetInfo( mimes )
+        self._mimes.SetValue( mimes )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -310,7 +310,7 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        mimes = self._mimes.GetInfo()
+        mimes = self._mimes.GetValue()
         
         return mimes
         

@@ -26,30 +26,15 @@ class CollapsibleOptions( ClientGUICommon.StaticBox ):
         self._collapsible_panel.ExpandCollapse()
         
     
-    def GetInfo( self ):
-        
-        return self._options_panel.GetInfo()
-        
-    
     def GetOptions( self ):
         
         return self._options_panel.GetOptions()
-        
-    
-    def SetInfo( self, info ):
-        
-        self._options_panel.SetInfo( info )
         
     
     def SetOptions( self, options ):
         
         self._options_panel.SetOptions( options )
         
-    
-class CollapsibleOptionsHentaiFoundry( CollapsibleOptions ):
-    
-    options_panel_class = ClientGUIOptionsPanels.OptionsPanelHentaiFoundry
-    staticbox_title = 'import options - hentai foundry'
     
 class CollapsibleOptionsImportFiles( CollapsibleOptions ):
     

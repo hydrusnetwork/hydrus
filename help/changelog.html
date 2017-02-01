@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 243</h3></li>
+				<ul>
+					<li>updated more menu code to the new system</li>
+					<li>finished updating all main gui menubar and thumbnail menu code</li>
+					<li>all brackets, braces, parentheses, and single and double quotes are now ignored when matching search text to tag. inputting 'mercy' matches 'character:angela "mercy" ziegler' and entering '[[[intensifies]]]' matches '[intensifies]'</li>
+					<li>'*' searches will now return no autocomplete results, rather than trying to load absolutely everything</li>
+					<li>made wildcard searching significantly more permissable--it now implicitly applies a '*' to the beginning as well as the end of your search input</li>
+					<li>the main gui's notebook pages will now be disabled while a session loads</li>
+					<li>might have fixed a first-boot layout issue--otherwise added a layout entry to the debug menu for further testing of this problem</li>
+					<li>improved progress layout on file import dialog</li>
+					<li>created a more efficient way for threads to update gui elements</li>
+					<li>the file import dialog uses this new update system and parses lots of small files much faster as a result</li>
+					<li>the edit import folder dialog will now complain if you try to put in an import path that includes the install or db directory</li>
+					<li>ffmpeg mime parsing now catches and reports audio formats without any hassle</li>
+					<li>thread downloader no longer fetches file extension in filename tag 'filename:blah' instead of 'filename:blah.jpg'</li>
+					<li>changed png default zoom rules to copy jpg--the unusual zoom as default was more confusing than helpful</li>
+					<li>updated sqlite for windows--should be a decent bit faster</li>
+					<li>deleted a lot of old code that'll never be needed again</li>
+					<li>misc refactoring</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 242</h3></li>
 				<ul>
 					<li>optimised 'exact match' similar file queries to run a lot faster</li>

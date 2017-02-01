@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICanvas
 import ClientGUICommon
+import ClientGUIListBoxes
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
@@ -681,7 +682,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._tags = ClientGUICommon.ListBoxTagsSelectionHoverFrame( self, self._canvas_key )
+        self._tags = ClientGUIListBoxes.ListBoxTagsSelectionHoverFrame( self, self._canvas_key )
         
         vbox.AddF( self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         

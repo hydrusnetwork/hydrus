@@ -11,6 +11,7 @@ import ClientGUIACDropdown
 import ClientGUIFrames
 import ClientGUICommon
 import ClientGUICollapsible
+import ClientGUIListBoxes
 import ClientGUIPredicates
 import ClientGUITopLevelWindows
 import ClientThreading
@@ -28,6 +29,7 @@ import itertools
 import os
 import random
 import re
+import Queue
 import shutil
 import stat
 import string
@@ -1526,17 +1528,13 @@ class DialogInputLocalFiles( Dialog ):
         
         self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
         
-        self._gauge = ClientGUICommon.Gauge( self )
+        self._progress = ClientGUICommon.TextAndGauge( self )
         
-        self._gauge_text = wx.StaticText( self, label = '' )
+        self._progress_pause = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.pause, self.PauseProgress )
+        self._progress_pause.Disable()
         
-        self._gauge_pause = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.pause )
-        self._gauge_pause.Bind( wx.EVT_BUTTON, self.EventGaugePause )
-        self._gauge_pause.Disable()
-        
-        self._gauge_cancel = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.stop )
-        self._gauge_cancel.Bind( wx.EVT_BUTTON, self.EventGaugeCancel )
-        self._gauge_cancel.Disable()
+        self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.StopProgress )
+        self._progress_cancel.Disable()
         
         self._add_files_button = ClientGUICommon.BetterButton( self, 'add files', self.AddPaths )
         
@@ -1562,10 +1560,9 @@ class DialogInputLocalFiles( Dialog ):
         
         gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        gauge_sizer.AddF( self._gauge_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gauge_sizer.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gauge_sizer.AddF( self._gauge_pause, CC.FLAGS_VCENTER )
-        gauge_sizer.AddF( self._gauge_cancel, CC.FLAGS_VCENTER )
+        gauge_sizer.AddF( self._progress, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gauge_sizer.AddF( self._progress_pause, CC.FLAGS_VCENTER )
+        gauge_sizer.AddF( self._progress_cancel, CC.FLAGS_VCENTER )
         
         file_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1598,6 +1595,8 @@ class DialogInputLocalFiles( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
+        self._lock = threading.Lock()
+        
         self._processing_queue = []
         self._currently_parsing = False
         
@@ -1606,13 +1605,16 @@ class DialogInputLocalFiles( Dialog ):
         
         self._job_key = ClientThreading.JobKey()
         
-        self._dialog_key = HydrusData.GenerateKey()
+        self._parsed_path_queue = Queue.Queue()
         
-        HydrusGlobals.client_controller.sub( self, 'AddParsedPath', 'DialogInputLocalFiles_AddParsedPath' )
-        HydrusGlobals.client_controller.sub( self, 'DoneParsing', 'DialogInputLocalFiles_DoneParsing' )
-        HydrusGlobals.client_controller.sub( self, 'SetGaugeInfo', 'DialogInputLocalFiles_SetGaugeInfo' )
+        self._add_path_updater = ClientGUICommon.ThreadToGUIUpdater( self._paths_list, self.AddParsedPaths )
+        self._progress_updater = ClientGUICommon.ThreadToGUIUpdater( self._progress, self._progress.SetValue )
+        self._done_parsing_updater = ClientGUICommon.ThreadToGUIUpdater( self._progress_cancel, self.DoneParsing )
         
-        if len( paths ) > 0: self._AddPathsToList( paths )
+        if len( paths ) > 0:
+            
+            self._AddPathsToList( paths )
+            
         
         wx.CallAfter( self._add_button.SetFocus )
         
@@ -1632,8 +1634,8 @@ class DialogInputLocalFiles( Dialog ):
             
             if len( self._processing_queue ) == 0:
                 
-                self._gauge_pause.Disable()
-                self._gauge_cancel.Disable()
+                self._progress_pause.Disable()
+                self._progress_cancel.Disable()
                 
                 self._add_button.Enable()
                 self._tag_button.Enable()
@@ -1644,8 +1646,8 @@ class DialogInputLocalFiles( Dialog ):
                 
                 paths = self._processing_queue.pop( 0 )
                 
-                self._gauge_pause.Enable()
-                self._gauge_cancel.Enable()
+                self._progress_pause.Enable()
+                self._progress_cancel.Enable()
                 
                 self._add_button.Disable()
                 self._tag_button.Disable()
@@ -1675,9 +1677,11 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def AddParsedPath( self, dialog_key, path, mime, size ):
+    def AddParsedPaths( self ):
         
-        if dialog_key == self._dialog_key:
+        while not self._parsed_path_queue.empty():
+            
+            ( path, mime, size ) = self._parsed_path_queue.get()
             
             pretty_mime = HC.mime_string_lookup[ mime ]
             pretty_size = HydrusData.ConvertIntToBytes( size )
@@ -1705,14 +1709,11 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
-    def DoneParsing( self, dialog_key ):
+    def DoneParsing( self ):
         
-        if dialog_key == self._dialog_key:
-            
-            self._currently_parsing = False
-            
-            self._ProcessQueue()
-            
+        self._currently_parsing = False
+        
+        self._ProcessQueue()
         
     
     def EventCancel( self, event ):
@@ -1720,37 +1721,6 @@ class DialogInputLocalFiles( Dialog ):
         self._TidyUp()
         
         self.EndModal( wx.ID_CANCEL )
-        
-    
-    def EventGaugeCancel( self, event ):
-        
-        self._job_key.Cancel()
-        
-        self._gauge_pause.Disable()
-        self._gauge_cancel.Disable()
-        
-        self._add_button.Enable()
-        self._tag_button.Enable()
-        
-    
-    def EventGaugePause( self, event ):
-        
-        self._job_key.PausePlay()
-        
-        if self._job_key.IsPaused():
-            
-            self._add_button.Enable()
-            self._tag_button.Enable()
-            
-            self._gauge_pause.SetBitmap( CC.GlobalBMPs.play )
-            
-        else:
-            
-            self._add_button.Disable()
-            self._tag_button.Disable()
-            
-            self._gauge_pause.SetBitmap( CC.GlobalBMPs.pause )
-            
         
     
     def EventOK( self, event ):
@@ -1793,6 +1763,26 @@ class DialogInputLocalFiles( Dialog ):
             
         
     
+    def PauseProgress( self ):
+        
+        self._job_key.PausePlay()
+        
+        if self._job_key.IsPaused():
+            
+            self._add_button.Enable()
+            self._tag_button.Enable()
+            
+            self._progress_pause.SetBitmap( CC.GlobalBMPs.play )
+            
+        else:
+            
+            self._add_button.Disable()
+            self._tag_button.Disable()
+            
+            self._progress_pause.SetBitmap( CC.GlobalBMPs.pause )
+            
+        
+    
     def RemovePaths( self ):
         
         self._paths_list.RemoveAllSelected()
@@ -1801,24 +1791,20 @@ class DialogInputLocalFiles( Dialog ):
         self._current_paths_set = set( self._current_paths )
         
     
-    def SetGaugeInfo( self, dialog_key, gauge_range, gauge_value, text ):
+    def StopProgress( self ):
         
-        if dialog_key == self._dialog_key:
-            
-            if gauge_range is None: self._gauge.Pulse()
-            else:
-                
-                self._gauge.SetRange( gauge_range )
-                self._gauge.SetValue( gauge_value )
-                
-            
-            self._gauge_text.SetLabelText( text )
-            
+        self._job_key.Cancel()
+        
+        self._progress_pause.Disable()
+        self._progress_cancel.Disable()
+        
+        self._add_button.Enable()
+        self._tag_button.Enable()
         
     
     def THREADParseImportablePaths( self, raw_paths, job_key ):
         
-        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, None, None, u'Parsing files and folders.' )
+        self._progress_updater.Update( 'Finding all files', None, None )
         
         file_paths = ClientFiles.GetAllPaths( raw_paths )
         
@@ -1839,7 +1825,9 @@ class DialogInputLocalFiles( Dialog ):
             
             if i % 500 == 0: gc.collect()
             
-            HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, num_file_paths, i, u'Done ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths ) )
+            message = 'Parsed ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths )
+            
+            self._progress_updater.Update( message, i, num_file_paths )
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1865,7 +1853,9 @@ class DialogInputLocalFiles( Dialog ):
                 
                 num_good_files += 1
                 
-                HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_AddParsedPath', self._dialog_key, path, mime, size )
+                self._parsed_path_queue.put( ( path, mime, size ) )
+                
+                self._add_path_updater.Update()
                 
             else:
                 
@@ -1925,8 +1915,9 @@ class DialogInputLocalFiles( Dialog ):
         
         HydrusData.Print( message )
         
-        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_SetGaugeInfo', self._dialog_key, num_file_paths, num_file_paths, message )
-        HydrusGlobals.client_controller.pub( 'DialogInputLocalFiles_DoneParsing', self._dialog_key )
+        self._progress_updater.Update( message, num_file_paths, num_file_paths )
+        
+        self._done_parsing_updater.Update()
         
     
 class DialogInputNamespaceRegex( Dialog ):
@@ -2294,7 +2285,7 @@ class DialogInputTags( Dialog ):
         
         self._service_key = service_key
         
-        self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self, service_key = service_key )
+        self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key = service_key )
         
         expand_parents = True
         
@@ -3496,7 +3487,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
                 
-                self._tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, self.TagsRemoved )
+                self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, self.TagsRemoved )
                 
                 expand_parents = True
                 
@@ -3508,7 +3499,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._paths_to_single_tags = collections.defaultdict( set )
                 
-                self._single_tags = ClientGUICommon.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, self.SingleTagsRemoved )
+                self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, self.SingleTagsRemoved )
                 
                 expand_parents = True
                 
@@ -4342,7 +4333,7 @@ class DialogSetupExport( Dialog ):
         
         self._tag_txt_tag_services = []
         
-        t = ClientGUICommon.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
+        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
         
         self._tags_box.SetTagsBox( t )
         

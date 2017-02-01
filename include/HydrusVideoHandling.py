@@ -160,6 +160,29 @@ def GetMimeFromFFMPEG( path ):
             
             return HC.VIDEO_MPEG
             
+        elif mime_text == 'flac':
+            
+            return HC.AUDIO_FLAC
+            
+        elif mime_text == 'mp3':
+            
+            return HC.AUDIO_MP3
+            
+        elif mime_text == 'ogg':
+            
+            return HC.AUDIO_OGG
+            
+        elif mime_text == 'asf':
+            
+            if info[ 'video_found' ]:
+                
+                return HC.VIDEO_WMV
+                
+            else:
+                
+                return HC.AUDIO_WMA
+                
+            
         
     
     return HC.APPLICATION_UNKNOWN
@@ -294,7 +317,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         
     
     # get the output line that speaks about video
-    lines_video = [l for l in lines if ' Video: ' in l]
+    lines_video = [ l for l in lines if ' Video: ' in l and not ( ' Video: png' in l or ' Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
     
     result['video_found'] = ( lines_video != [] )
     

@@ -993,6 +993,22 @@ class MessageDB( object ):
         
     '''
 
+def ConvertWildcardToSQLiteLikeParameter( wildcard ):
+    
+    like_param = wildcard.replace( '*', '%' )
+    
+    if not like_param.startswith( '%' ):
+        
+        like_param = '%' + like_param
+        
+    
+    if not like_param.endswith( '%' ):
+        
+        like_param += '%'
+        
+    
+    return like_param
+    
 def GenerateCombinedFilesMappingsCacheTableName( service_id ):
     
     return 'external_caches.combined_files_ac_cache_' + str( service_id )
@@ -1860,6 +1876,8 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
             
             duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+            
+            # double-check the files exist in shape_search_cache, as I think stale branches are producing deleted file pairs here
             
             self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
             
@@ -3580,19 +3598,7 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            normal_characters = set( 'abcdefghijklmnopqrstuvwxyz0123456789' )
-            
-            search_text_can_be_matched = True
-            
-            for character in search_text:
-                
-                if character not in normal_characters:
-                    
-                    search_text_can_be_matched = False
-                    
-                    break
-                    
-                
+            search_text_can_be_matched = '*' not in ClientSearch.ConvertTagToSearchable( search_text )
             
             def GetPossibleTagIds( half_complete_tag ):
                 
@@ -3604,22 +3610,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if search_text_can_be_matched:
                     
-                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + half_complete_tag + '*"', ) ) ]
+                    tags_fts4_valid_search_text = HydrusData.ToUnicode( half_complete_tag ).translate( ClientSearch.IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
+                    
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT docid FROM tags_fts4 WHERE tag MATCH ?;', ( '"' + tags_fts4_valid_search_text + '*"', ) ) ]
                     
                 else:
                     
-                    possible_tag_ids_half_complete_tag = half_complete_tag
+                    like_param = ConvertWildcardToSQLiteLikeParameter( half_complete_tag )
                     
-                    if '*' in possible_tag_ids_half_complete_tag:
-                        
-                        possible_tag_ids_half_complete_tag = possible_tag_ids_half_complete_tag.replace( '*', '%' )
-                        
-                    else:
-                        
-                        possible_tag_ids_half_complete_tag += '%'
-                        
-                    
-                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? OR tag LIKE ?;', ( possible_tag_ids_half_complete_tag, '% ' + possible_tag_ids_half_complete_tag ) ) ]
+                    return [ tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( like_param, ) ) ]
                     
                 
             
@@ -3627,7 +3626,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( namespace, half_complete_tag ) = search_text.split( ':', 1 )
                 
-                if half_complete_tag == '':
+                if ClientSearch.ConvertTagToSearchable( half_complete_tag ) in ( '', '*' ):
                     
                     return set()
                     
@@ -3635,9 +3634,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if '*' in namespace:
                         
-                        wildcard_namespace = namespace.replace( '*', '%' )
-                
-                        possible_namespace_ids = [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( wildcard_namespace, ) ) ]
+                        like_param = ConvertWildcardToSQLiteLikeParameter( namespace )
+                        
+                        possible_namespace_ids = [ namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) ]
                         
                         predicates_phrase_1 = 'namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids )
                         
@@ -3663,6 +3662,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             else:
+                
+                if ClientSearch.ConvertTagToSearchable( search_text ) in ( '', '*' ):
+                    
+                    return set()
+                    
                 
                 possible_tag_ids = GetPossibleTagIds( search_text )
                 
@@ -4583,9 +4587,9 @@ class DB( HydrusDB.HydrusDB ):
             
             if '*' in w:
                 
-                w = w.replace( '*', '%' )
+                like_param = ConvertWildcardToSQLiteLikeParameter( w )
                 
-                return { namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( w, ) ) }
+                return { namespace_id for ( namespace_id, ) in self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace LIKE ?;', ( like_param, ) ) }
                 
             else:
                 
@@ -4599,9 +4603,9 @@ class DB( HydrusDB.HydrusDB ):
             
             if '*' in w:
                 
-                w = w.replace( '*', '%' )
+                like_param = ConvertWildcardToSQLiteLikeParameter( w )
                 
-                return { tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ? or tag LIKE ?;', ( w, '% ' + w ) ) }
+                return { tag_id for ( tag_id, ) in self._c.execute( 'SELECT tag_id FROM tags WHERE tag LIKE ?;', ( like_param, ) ) }
                 
             else:
                 

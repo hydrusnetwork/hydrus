@@ -5,6 +5,7 @@ import ClientDownloading
 import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIListBoxes
 import ClientGUIPredicates
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
@@ -273,7 +274,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._gui_colours[ name ] = ctrl
                 
             
-            self._namespace_colours = ClientGUICommon.ListBoxTagsColourOptions( self, HC.options[ 'namespace_colours' ] )
+            self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( self, HC.options[ 'namespace_colours' ] )
             
             self._edit_namespace_colour = wx.Button( self, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
@@ -2083,7 +2084,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._suggested_favourites_services.Append( tag_service.GetName(), tag_service.GetServiceKey() )
                 
             
-            self._suggested_favourites = ClientGUICommon.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel )
+            self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel )
             
             self._current_suggested_favourites_service = None
             
@@ -3012,7 +3013,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            self._tags_box = ClientGUICommon.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             

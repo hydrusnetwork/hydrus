@@ -2874,40 +2874,44 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local:
                     
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), copy_phrase )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
                     
                     copy_hash_menu = wx.Menu()
                     
-                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
-                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'md5' ) , 'md5' )
-                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha1' ) , 'sha1' )
-                    copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha512' ) , 'sha512' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
                     
-                    copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
                     
                     if multiple_selected:
                         
                         copy_hash_menu = wx.Menu()
                         
-                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'sha256' ) , 'sha256 (hydrus default)' )
-                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'md5' ) , 'md5' )
-                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'sha1' ) , 'sha1' )
-                        copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'sha512' ) , 'sha512' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
                         
-                        copy_menu.AppendMenu( CC.ID_NULL, 'hashes', copy_hash_menu )
+                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
                         
                     
                 else:
                     
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 hash' )
-                    if multiple_selected: copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hashes', 'sha256' ) , 'sha256 hashes' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                    
+                    if multiple_selected:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                        
                     
                 
                 for ipfs_service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote().intersection( ipfs_service_keys ):
                     
                     name = service_keys_to_names[ ipfs_service_key ]
                     
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_service_filename', ipfs_service_key ) , name + ' multihash' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihash', 'Copy the selected file\'s multihash to the clipboard.', self._CopyServiceFilenameToClipboard, ipfs_service_key )
                     
                 
                 if multiple_selected:
@@ -2916,7 +2920,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         name = service_keys_to_names[ ipfs_service_key ]
                         
-                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_service_filenames', ipfs_service_key ) , name + ' multihashes' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, name + ' multihashes', 'Copy the selected files\' multihashes to the clipboard.', self._CopyServiceFilenamesToClipboard, ipfs_service_key )
                         
                     
                 
@@ -2924,39 +2928,35 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None:
                         
-                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ) , 'image' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
                         
                     
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ) , 'path' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy the selected file\'s path to the clipboard.', self._CopyPathToClipboard )
                     
                 
                 if multiple_selected and selection_has_local:
                     
-                    copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_paths' ) , 'paths' )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'paths', 'Copy the selected files\' paths to the clipboard.', self._CopyPathsToClipboard )
                     
                 
                 if focussed_is_local:
                     
                     if HC.options[ 'local_port' ] is not None:
                         
-                        copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ) , 'local url' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'local url', 'Copy the selected file\'s local (client-hosted) url to the clipboard.', self._CopyLocalUrlToClipboard )
                         
                     
                 
-                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_known_urls' ), 'known urls (prototype)' )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'known urls (prototype)', 'Copy the selected file\'s known urls to the clipboard.', self._CopyKnownURLsToClipboard )
                 
-                share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
-                
-                #
-                
-                #share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_thread_dumper' ), dump_phrase )
+                ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
                 
                 #
                 
                 export_menu  = wx.Menu()
                 
-                export_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'export_files' ), export_phrase )
-                export_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'export_tags' ), 'tags' )
+                ClientGUIMenus.AppendMenuItem( self, export_menu, export_phrase, 'Export the selected files to an external folder.', self._ExportFiles )
+                ClientGUIMenus.AppendMenuItem( self, export_menu, 'tags', 'Export the selected files\' tags to an external database.', self._ExportTags )
                 
                 share_menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
                 
@@ -2964,12 +2964,12 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if local_booru_is_running:
                     
-                    share_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'share_on_local_booru' ), 'on local booru' )
+                    ClientGUIMenus.AppendMenuItem( self, share_menu, 'on local booru', 'Share the selected files on your client\'s local booru.', self._ShareOnLocalBooru )
                     
                 
                 #
                 
-                menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
+                ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
                 
                 #
                 
@@ -3025,7 +3025,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 menu.AppendSeparator()
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'show_selection_in_new_query_page' ), 'open selection in a new page' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewQueryPage )
                 
                 if self._focussed_media.HasImages():
                     
