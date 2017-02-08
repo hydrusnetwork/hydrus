@@ -527,20 +527,29 @@ class ListBoxTags( ListBox ):
         
         namespace_colours = self._GetNamespaceColours()
         
-        if ':' in tag_string:
-            
-            ( namespace, sub_tag ) = tag_string.split( ':', 1 )
+        ( namespace, subtag ) = HydrusTags.SplitTag( tag_string )
+        
+        if namespace != '':
             
             if namespace.startswith( '-' ): namespace = namespace[1:]
-            if namespace.startswith( '(+) ' ): namespace = namespace[4:]
-            if namespace.startswith( '(-) ' ): namespace = namespace[4:]
-            if namespace.startswith( '(X) ' ): namespace = namespace[4:]
-            if namespace.startswith( '    ' ): namespace = namespace[4:]
+            elif namespace.startswith( '(+) ' ): namespace = namespace[4:]
+            elif namespace.startswith( '(-) ' ): namespace = namespace[4:]
+            elif namespace.startswith( '(X) ' ): namespace = namespace[4:]
+            elif namespace.startswith( '    ' ): namespace = namespace[4:]
             
-            if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
-            else: ( r, g, b ) = namespace_colours[ None ]
+            if namespace in namespace_colours:
+                
+                ( r, g, b ) = namespace_colours[ namespace ]
+                
+            else:
+                
+                ( r, g, b ) = namespace_colours[ None ]
+                
             
-        else: ( r, g, b ) = namespace_colours[ '' ]
+        else:
+            
+            ( r, g, b ) = namespace_colours[ '' ]
+            
         
         return ( r, g, b )
         
@@ -599,9 +608,9 @@ class ListBoxTags( ListBox ):
                             text = HydrusData.ToUnicode( term )
                             
                         
-                        if command == 'copy_sub_terms' and ':' in text:
+                        if command == 'copy_sub_terms':
                             
-                            ( namespace_gumpf, text ) = text.split( ':', 1 )
+                            ( namespace_gumpf, text ) = HydrusTags.SplitTag( text )
                             
                         
                         texts.append( text )
@@ -752,9 +761,11 @@ class ListBoxTags( ListBox ):
                 
                 if len( self._selected_terms ) == 1:
                     
-                    if ':' in selection_string:
+                    ( namespace, subtag ) = HydrusTags.SplitTag( selection_string )
+                    
+                    if namespace != '':
                         
-                        sub_selection_string = '"' + selection_string.split( ':', 1 )[1]
+                        sub_selection_string = '"' + subtag
                         
                         menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy ' + sub_selection_string )
                         
@@ -1741,11 +1752,9 @@ class ListBoxTagsSelection( ListBoxTags ):
                     
                     tag = self._strings_to_terms[ unordered_string ]
                     
-                    if ':' in tag:
-                        
-                        ( namespace, subtag ) = tag.split( ':', 1 )
-                        
-                    else:
+                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    if namespace == '':
                         
                         namespace = '{' # '{' is above 'z' in ascii, so this works for most situations
                         

@@ -256,6 +256,12 @@ def GetDevice( path ):
     
     return None
     
+def GetFreeSpace( path ):
+    
+    disk_usage = psutil.disk_usage( path )
+    
+    return disk_usage.free
+    
 def GetTempFile(): return tempfile.TemporaryFile()
 def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
 def GetTempPath( suffix = '' ):

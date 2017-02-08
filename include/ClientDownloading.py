@@ -1073,15 +1073,15 @@ class GalleryDeviantArt( Gallery ):
         
         soup = GetSoup( html )
         
-        thumbs_container = soup.find( class_ = 'zones-container' )
+        thumbs_container = soup.find( 'div', class_ = 'torpedo-container' )
         
         artist = url_base.split( 'http://' )[1].split( '.deviantart.com' )[0]
         
-        links = thumbs_container.find_all( 'a', class_ = 'thumb' )
+        thumbs = thumbs_container.find_all( 'span', class_ = 'thumb' )
         
-        for link in links:
+        for thumb in thumbs:
             
-            url = link[ 'href' ] # something in the form of blah.da.com/art/blah-123456
+            url = thumb[ 'href' ] # something in the form of blah.da.com/art/blah-123456
             
             urls.append( url )
             
@@ -1089,19 +1089,17 @@ class GalleryDeviantArt( Gallery ):
             
             tags.append( 'creator:' + artist )
             
-            try: # starts_with_thumb picks up some false positives, but they break
+            title_tag = thumb.find( 'span', class_ = 'title' )
+            
+            if title_tag is not None:
                 
-                raw_title = link[ 'title' ] # sweet dolls by AngeniaC, date, blah blah blah
+                title = title_tag.string
                 
-                raw_title_reversed = raw_title[::-1] # trAtnaiveD no CainegnA yb sllod teews
+                if title is not None and title != '':
+                    
+                    tags.append( 'title:' + title )
+                    
                 
-                ( creator_and_gumpf_reversed, title_reversed ) = raw_title_reversed.split( ' yb ', 1 )
-                
-                title = title_reversed[::-1] # sweet dolls
-                
-                tags.append( 'title:' + title )
-                
-            except: pass
             
             SetExtraURLInfo( url, tags )
             

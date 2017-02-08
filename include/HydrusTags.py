@@ -16,14 +16,18 @@ def CensorshipMatch( tag, censorships ):
         
         if censorship == '': # '' - all non namespaced tags
             
-            if ':' not in tag:
+            ( namespace, subtag ) = SplitTag( tag )
+            
+            if namespace == '':
                 
                 return True
                 
             
         elif censorship == ':': # ':' - all namespaced tags
             
-            if ':' in tag:
+            ( namespace, subtag ) = SplitTag( tag )
+            
+            if namespace != '':
                 
                 return True
                 
@@ -32,7 +36,9 @@ def CensorshipMatch( tag, censorships ):
             
             if censorship.endswith( ':' ): # 'series:' - namespaced tags
                 
-                if tag.startswith( censorship ):
+                ( namespace, subtag ) = SplitTag( tag )
+                
+                if namespace == censorship:
                     
                     return True
                     
@@ -49,21 +55,11 @@ def CensorshipMatch( tag, censorships ):
             
             # 'table' - normal tag, or namespaced version of same
             
-            if ':' in tag:
+            ( namespace, subtag ) = SplitTag( tag )
+            
+            if subtag == censorship:
                 
-                ( namespace, comparison_tag ) = tag.split( ':', 1 )
-                
-                if comparison_tag == censorship:
-                    
-                    return True
-                    
-                
-            else:
-                
-                if tag == censorship:
-                    
-                    return True
-                    
+                return True
                 
             
         
@@ -72,7 +68,7 @@ def CensorshipMatch( tag, censorships ):
     
 def ConvertTagToSortable( t ):
     
-    if t[0].isdecimal():
+    if len( t ) > 0 and t[0].isdecimal():
         
         # We want to maintain that:
         # 0 < 0a < 0b < 1 ( lexicographic comparison )
@@ -110,22 +106,23 @@ def FilterNamespaces( tags, namespaces ):
     
     for tag in tags:
         
-        if ':' in tag:
-            
-            ( namespace, subtag ) = tag.split( ':', 1 )
-            
-            processed_tags[ namespace ].add( tag )
-            
-        else: processed_tags[ '' ].add( tag )
+        ( namespace, subtag ) = SplitTag( tag )
+        
+        processed_tags[ namespace ].add( tag )
         
     
     result = set()
     
     for namespace in namespaces:
         
-        if namespace in ( '', None ): result.update( processed_tags[ '' ] )
-        
-        result.update( processed_tags[ namespace ] )
+        if namespace == None:
+            
+            result.update( processed_tags[ '' ] )
+            
+        else:
+            
+            result.update( processed_tags[ namespace ] )
+            
         
     
     return result
@@ -142,16 +139,12 @@ def CheckTagNotEmpty( tag ):
     
     empty_tag = False
     
-    if tag == '': empty_tag = True
+    ( namespace, subtag ) = SplitTag( tag )
     
-    if ':' in tag:
+    if subtag == '':
         
-        ( namespace, subtag ) = tag.split( ':', 1 )
+        raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
         
-        if subtag == '': empty_tag = True
-        
-    
-    if empty_tag: raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
 
 def CleanTag( tag ):
     
@@ -204,22 +197,22 @@ def CleanTags( tags ):
     
     return clean_tags
     
-def CombineTag( namespace, tag ):
+def CombineTag( namespace, subtag ):
     
     if namespace == '':
         
-        if tag.startswith( ':' ):
+        if subtag.startswith( ':' ):
             
-            return ':' + tag
+            return ':' + subtag
             
         else:
             
-            return tag
+            return subtag
             
         
     else:
         
-        return namespace + ':' + tag
+        return namespace + ':' + subtag
         
     
 def RenderTag( tag ):
@@ -231,5 +224,16 @@ def RenderTag( tag ):
     else:
         
         return tag
+        
+    
+def SplitTag( tag ):
+    
+    if ':' in tag:
+        
+        return tag.split( ':', 1 )
+        
+    else:
+        
+        return ( '', tag )
         
     

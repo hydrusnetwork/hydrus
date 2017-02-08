@@ -828,9 +828,12 @@ class ClientFilesManager( object ):
             
         
     
-    def DelayedDeleteFiles( self, hashes ):
+    def DelayedDeleteFiles( self, hashes, time_to_delete ):
         
-        time.sleep( 2 )
+        while not HydrusData.TimeHasPassed( time_to_delete ):
+            
+            time.sleep( 0.5 )
+            
         
         with self._lock:
             
@@ -849,9 +852,12 @@ class ClientFilesManager( object ):
                 
             
     
-    def DelayedDeleteThumbnails( self, hashes ):
+    def DelayedDeleteThumbnails( self, hashes, time_to_delete ):
         
-        time.sleep( 2 )
+        while not HydrusData.TimeHasPassed( time_to_delete ):
+            
+            time.sleep( 0.5 )
+            
         
         with self._lock:
             

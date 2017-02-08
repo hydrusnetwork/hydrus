@@ -1697,16 +1697,15 @@ class CanvasWithDetails( Canvas ):
                     display_string += ' (-)'
                     
                 
-                if ':' in tag:
+                ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                
+                if namespace in namespace_colours:
                     
-                    ( namespace, sub_tag ) = tag.split( ':', 1 )
-                    
-                    if namespace in namespace_colours: ( r, g, b ) = namespace_colours[ namespace ]
-                    else: ( r, g, b ) = namespace_colours[ None ]
+                    ( r, g, b ) = namespace_colours[ namespace ]
                     
                 else:
                     
-                    ( r, g, b ) = namespace_colours[ '' ]
+                    ( r, g, b ) = namespace_colours[ None ]
                     
                 
                 dc.SetTextForeground( wx.Colour( r, g, b ) )

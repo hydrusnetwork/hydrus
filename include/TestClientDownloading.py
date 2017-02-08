@@ -25,53 +25,6 @@ class TestDownloaders( unittest.TestCase ):
         HydrusGlobals.test_controller.SetHTTP( self.old_http )
         
     
-    def test_deviantart( self ):
-        
-        with open( os.path.join( HC.STATIC_DIR, 'testing', 'da_gallery.html' ) ) as f: da_gallery = f.read()
-        with open( os.path.join( HC.STATIC_DIR, 'testing', 'da_page.html' ) ) as f: da_page = f.read()
-        
-        HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/gallery/?catpath=/&offset=0', da_gallery )
-        HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', da_page )
-        
-        HydrusGlobals.test_controller.GetHTTP().SetResponse( HC.GET, 'http://fc00.deviantart.net/fs71/f/2015/013/3/c/3c026edbe356b22c802e7be0db6fbd0b-d8dt0go.jpg', 'image file' )
-        
-        #
-        
-        gallery = ClientDownloading.GalleryDeviantArt()
-        
-        #
-        
-        ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( 'sakimichan', 0 )
-        
-        expected_gallery_urls = ['http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040', 'http://sakimichan.deviantart.com/art/Johnny-Bravo-505601401', 'http://sakimichan.deviantart.com/art/Daphne-505394693', 'http://sakimichan.deviantart.com/art/kim-Possible-505195132', 'http://sakimichan.deviantart.com/art/Levi-s-evil-plan-504966437', 'http://sakimichan.deviantart.com/art/Velma-504483448', 'http://sakimichan.deviantart.com/art/Scoobydoo-504238131', 'http://sakimichan.deviantart.com/art/Kerrigan-chilling-503477012', 'http://sakimichan.deviantart.com/art/Kiki-498525851', 'http://sakimichan.deviantart.com/art/Waiter-Howl-502377515', 'http://sakimichan.deviantart.com/art/Modern-Loki-497985045', 'http://sakimichan.deviantart.com/art/Emma-501919103', 'http://sakimichan.deviantart.com/art/Lola-494941222', 'http://sakimichan.deviantart.com/art/Elsas-501262184', 'http://sakimichan.deviantart.com/art/Tsunade-499517356', 'http://sakimichan.deviantart.com/art/A-little-cold-out-commission-498326494', 'http://sakimichan.deviantart.com/art/Girl-496999831', 'http://sakimichan.deviantart.com/art/Green-elf-496797148', 'http://sakimichan.deviantart.com/art/Itachi-496625357', 'http://sakimichan.deviantart.com/art/Sesshomaru-495474394', 'http://sakimichan.deviantart.com/art/Mononoke-years-later-502160436', 'http://sakimichan.deviantart.com/art/Jinx-488513585', 'http://sakimichan.deviantart.com/art/Alex-in-wonderland-485819661', 'http://sakimichan.deviantart.com/art/Ariels-476991263' ]
-        
-        self.assertEqual( page_of_urls, expected_gallery_urls )
-        self.assertFalse( definitely_no_more_pages )
-        
-        #
-        
-        tags = ['title:Sailor moon in PJs', 'creator:sakimichan']
-        
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-        
-        try:
-            
-            tags = gallery.GetFileAndTags( temp_path, 'http://sakimichan.deviantart.com/art/Sailor-moon-in-PJs-506918040' )
-            
-            with open( temp_path, 'rb' ) as f: data = f.read()
-            
-        finally:
-            
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-            
-        
-        info = ( data, tags )
-        
-        expected_info = ('image file', tags)
-        
-        self.assertEqual( info, expected_info )
-        
-    
     def test_newgrounds( self ):
         
         with open( os.path.join( HC.STATIC_DIR, 'testing', 'newgrounds_gallery_games.html' ) ) as f: newgrounds_gallery_games = f.read()

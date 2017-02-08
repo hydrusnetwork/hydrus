@@ -204,8 +204,6 @@ class Controller( HydrusController.HydrusController ):
                         
                         self._services[ service_key ] = reactor.listenSSL( port, service_object, context_factory )
                         
-                        #self._services[ service_key ] = reactor.listenTCP( port, service_object )
-                        
                         try:
                             
                             connection = HydrusNetworking.GetLocalConnection( port )
@@ -291,7 +289,7 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'ClearBans', ServerDaemons.DAEMONClearBans, period = 3600 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'DeleteOrphans', ServerDaemons.DAEMONDeleteOrphans, period = 86400 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'GenerateUpdates', ServerDaemons.DAEMONGenerateUpdates, period = 600 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 86400 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckDataUsage', ServerDaemons.DAEMONCheckDataUsage, period = 3600 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'UPnP', ServerDaemons.DAEMONUPnP, ( 'notify_new_options', ), period = 43200 ) )
             
         

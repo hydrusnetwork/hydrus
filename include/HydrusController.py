@@ -67,16 +67,18 @@ class HydrusController( object ):
                 
             
         
-        if len( self._call_to_threads ) > 100:
+        if len( self._call_to_threads ) < 10:
             
-            raise Exception( 'Too many call to threads!' )
+            call_to_thread = HydrusThreading.THREADCallToThread( self )
             
-        
-        call_to_thread = HydrusThreading.THREADCallToThread( self )
-        
-        self._call_to_threads.append( call_to_thread )
-        
-        call_to_thread.start()
+            self._call_to_threads.append( call_to_thread )
+            
+            call_to_thread.start()
+            
+        else:
+            
+            call_to_thread = random.choice( self._call_to_threads )
+            
         
         return call_to_thread
         

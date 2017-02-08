@@ -1130,11 +1130,13 @@ class Controller( HydrusController.HydrusController ):
     
     def THREADDoFileQuery( self, query_key, search_context ):
         
+        QUERY_CHUNK_SIZE = 256
+        
         query_hash_ids = self.Read( 'file_query_ids', search_context )
         
         media_results = []
         
-        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, 256 ):
+        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
             
             if query_key.IsCancelled(): return
             

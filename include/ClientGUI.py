@@ -642,7 +642,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         selection = self._notebook.GetSelection()
         
-        if selection != wx.NOT_FOUND: self._ClosePage( selection, polite = polite )
+        if selection != wx.NOT_FOUND:
+            
+            self._ClosePage( selection, polite = polite )
+            
         
     
     def _ClosePage( self, selection, polite = True ):
@@ -651,12 +654,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.ResetPageChangeTimer()
         
         if selection == -1 or selection > self._notebook.GetPageCount() - 1:
-            
-            return
-            
-        
-        # issue with having all pages closed
-        if HC.PLATFORM_OSX and self._notebook.GetPageCount() == 1:
             
             return
             
@@ -1478,7 +1475,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
-            try: page.TestAbleToClose()
+            try:
+                
+                page.TestAbleToClose()
+                
             except HydrusExceptions.PermissionException:
                 
                 return
@@ -1494,7 +1494,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             try:
                 
-                self._notebook.Disable()
+                if not HC.PLATFORM_LINUX:
+                    
+                    # on linux, this stops session pages from accepting keyboard input, wew
+                    
+                    wx.CallAfter( self._notebook.Disable )
+                    
                 
                 for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
                     
@@ -1528,19 +1533,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     
                 
-                if HC.PLATFORM_OSX:
-                    
-                    wx.CallAfter( self._ClosePage, 0 )
-                    
-                
             finally:
                 
                 self._loading_session = False
                 self._media_status_override = None
                 
-                self._notebook.Enable()
-                
-                wx.CallAfter( self.Layout )
+                if not HC.PLATFORM_LINUX:
+                    
+                    wx.CallAfter( self._notebook.Enable )
+                    
                 
             
         

@@ -1,5 +1,6 @@
 import ClientCaches
 import ClientConstants as CC
+import ClientData
 import ClientGUICommon
 import ClientGUIListBoxes
 import ClientSearch
@@ -854,19 +855,19 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 must_do_a_search = True
                 
             
-            if ':' in search_text:
-                
-                ( namespace, half_complete_tag ) = search_text.split( ':', 1 )
+            ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
+            
+            if namespace != '':
                 
                 if namespace != self._current_namespace:
                     
                     self._current_namespace = namespace # do a new search, no matter what half_complete tag is
                     
-                    if half_complete_tag != '': must_do_a_search = True
+                    if half_complete_subtag != '': must_do_a_search = True
                     
                 else:
                     
-                    if self._cache_text == self._current_namespace + ':' and half_complete_tag != '':
+                    if self._cache_text == self._current_namespace + ':' and half_complete_subtag != '':
                         
                         must_do_a_search = True
                         
@@ -874,14 +875,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             else:
                 
-                self._current_namespace = ''
-                
-                half_complete_tag = search_text
+                self._current_namespace = namespace
                 
             
             siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
             
-            if half_complete_tag == '':
+            if half_complete_subtag == '':
                 
                 self._cache_text = self._current_namespace + ':'
                 
@@ -908,7 +907,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     include_current = self._file_search_context.IncludeCurrentTags()
                     include_pending = self._file_search_context.IncludePendingTags()
                     
-                    if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
+                    if len( half_complete_subtag ) < num_autocomplete_chars and '*' not in search_text:
                         
                         predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = True, collapse_siblings = True )
                         
@@ -977,6 +976,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         predicates = siblings_manager.CollapsePredicates( self._tag_service_key, predicates )
                         
                     
+                    if self._current_namespace == '':
+                        
+                        predicates = ClientData.MergePredicates( predicates, add_namespaceless = True )
+                        
+                    
                     self._next_updatelist_is_probably_fast = True
                     
                 
@@ -989,14 +993,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
                 if self._current_namespace != '':
                     
-                    if '*' not in self._current_namespace and half_complete_tag == '':
+                    if '*' not in self._current_namespace and half_complete_subtag == '':
                         
                         matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_NAMESPACE, self._current_namespace, inclusive ) )
                         
                     
-                    if half_complete_tag != '':
+                    if half_complete_subtag != '':
                         
-                        if '*' in self._current_namespace or ( '*' in half_complete_tag and half_complete_tag != '*' ):
+                        if '*' in self._current_namespace or ( '*' in half_complete_subtag and half_complete_subtag != '*' ):
                             
                             matches.insert( 0, ClientSearch.Predicate( HC.PREDICATE_TYPE_WILDCARD, search_text, inclusive ) )
                             
@@ -1182,11 +1186,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             must_do_a_search = False
             
-            if ':' in search_text:
+            ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
+            
+            if namespace != '':
                 
-                ( namespace, other_half ) = search_text.split( ':', 1 )
-                
-                if other_half != '' and namespace != self._current_namespace:
+                if half_complete_subtag != '' and namespace != self._current_namespace:
                     
                     self._current_namespace = namespace # do a new search, no matter what half_complete tag is
                     
@@ -1195,20 +1199,18 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
             else:
                 
-                self._current_namespace = ''
+                self._current_namespace = namespace
                 
             
-            half_complete_tag = search_text
-            
-            if len( half_complete_tag ) < num_autocomplete_chars and '*' not in search_text:
+            if len( half_complete_subtag ) < num_autocomplete_chars and '*' not in search_text:
                 
                 predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False, collapse_siblings = False )
                 
             else:
                 
-                if must_do_a_search or self._cache_text == '' or not half_complete_tag.startswith( self._cache_text ):
+                if must_do_a_search or self._cache_text == '' or not half_complete_subtag.startswith( self._cache_text ):
                     
-                    self._cache_text = half_complete_tag
+                    self._cache_text = half_complete_subtag
                     
                     self._cached_results = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, add_namespaceless = False, collapse_siblings = False )
                     
@@ -1218,7 +1220,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 self._next_updatelist_is_probably_fast = True
                 
             
-            matches = ClientSearch.FilterPredicatesBySearchEntry( self._tag_service_key, half_complete_tag, predicates )
+            matches = ClientSearch.FilterPredicatesBySearchEntry( self._tag_service_key, half_complete_subtag, predicates )
             
             matches = ClientSearch.SortPredicates( matches )
             

@@ -50,28 +50,28 @@ def CanVacuum( db_path, stop_time = None ):
         temp_dir = tempfile.gettempdir()
         ( db_dir, db_filename ) = os.path.split( db_path )
         
-        temp_disk_usage = psutil.disk_usage( temp_dir )
+        temp_disk_free_space = HydrusPaths.GetFreeSpace( temp_dir )
         
         a = HydrusPaths.GetDevice( temp_dir )
         b = HydrusPaths.GetDevice( db_dir )
         
         if HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir ):
             
-            if temp_disk_usage.free < db_size * 2.2:
+            if temp_disk_free_space < db_size * 2.2:
                 
                 return False
                 
             
         else:
             
-            if temp_disk_usage.free < db_size * 1.1:
+            if temp_disk_free_space < db_size * 1.1:
                 
                 return False
                 
             
-            db_disk_usage = psutil.disk_usage( db_dir )
+            db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
             
-            if db_disk_usage.free < db_size * 1.1:
+            if db_disk_free_space < db_size * 1.1:
                 
                 return False
                 
@@ -549,6 +549,11 @@ class HydrusDB( object ):
                 yield row
                 
             
+        
+    
+    def _SelectFromListFetchAll( self, select_statement, xs ):
+        
+        return [ row for row in self._SelectFromList( select_statement, xs ) ]
         
     
     def _UpdateDB( self, version ):

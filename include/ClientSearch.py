@@ -69,29 +69,29 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
             
         
     
-    if ':' in search_entry:
+    search_entry = ConvertTagToSearchable( search_entry )
+    
+    ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_entry )
+    
+    if namespace != '':
         
         search_namespace = True
         
-        ( namespace_entry, search_entry ) = search_entry.split( ':', 1 )
-        
-        namespace_entry = ConvertTagToSearchable( namespace_entry )
-        
-        namespace_re_predicate = compile_re( namespace_entry )
+        namespace_re_predicate = compile_re( ConvertTagToSearchable( namespace ) )
         
     else:
         
         search_namespace = False
         
-    
-    search_entry = ConvertTagToSearchable( search_entry )
-    
-    if '*' not in search_entry:
-        
-        search_entry += '*'
+        namespace_re_predicate = None
         
     
-    re_predicate = compile_re( search_entry )
+    if '*' not in half_complete_subtag:
+        
+        half_complete_subtag += '*'
+        
+    
+    half_complete_subtag_re_predicate = compile_re( half_complete_subtag )
     
     sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
     
@@ -110,18 +110,16 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
         
         for possible_tag in possible_tags:
             
-            if ':' in possible_tag:
+            ( possible_namespace, possible_subtag ) = HydrusTags.SplitTag( possible_tag )
+            
+            if possible_namespace != '':
                 
-                ( n, t ) = possible_tag.split( ':', 1 )
+                possible_namespace = ConvertTagToSearchable( possible_namespace )
                 
-                n = ConvertTagToSearchable( n )
-                
-                if search_namespace and re.search( namespace_re_predicate, n ) is None:
+                if search_namespace and re.search( namespace_re_predicate, possible_namespace ) is None:
                     
                     continue
                     
-                
-                comparee = t
                 
             else:
                 
@@ -130,14 +128,12 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
                     continue
                     
                 
-                comparee = possible_tag
-                
             
-            comparee = ConvertTagToSearchable( comparee )
+            possible_subtag = ConvertTagToSearchable( possible_subtag )
             
-            if re.search( re_predicate, comparee ) is not None:
+            if re.search( half_complete_subtag_re_predicate, possible_subtag ) is not None:
                 
-                result.append( tag )
+                result.append( possible_tag )
                 
                 break
                 
@@ -791,9 +787,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return ( self._min_current_count, self._max_current_count, self._min_pending_count, self._max_pending_count )
         
     
-    def GetCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+    def GetCopy( self ):
+        
+        return Predicate( self._predicate_type, self._value, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+        
     
-    def GetCountlessCopy( self ): return Predicate( self._predicate_type, self._value, self._inclusive )
+    def GetCountlessCopy( self ):
+        
+        return Predicate( self._predicate_type, self._value, self._inclusive )
+        
     
     def GetCount( self, current_or_pending = None ):
         
@@ -830,7 +832,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._inclusive
         
     
-    def GetInfo( self ): return ( self._predicate_type, self._value, self._inclusive )
+    def GetInfo( self ):
+        
+        return ( self._predicate_type, self._value, self._inclusive )
+        
     
     def GetInverseCopy( self ):
         
@@ -1137,9 +1142,29 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return base
         
     
+    def GetUnnamespacedCopy( self ):
+        
+        if self._predicate_type == HC.PREDICATE_TYPE_TAG:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( self._value )
+            
+            return Predicate( self._predicate_type, subtag, self._inclusive, self._min_current_count, self._min_pending_count, self._max_current_count, self._max_pending_count )
+            
+        
+        return self.GetCopy()
+        
+    
     def GetValue( self ): return self._value
     
-    def SetInclusive( self, inclusive ): self._inclusive = inclusive
+    def HasNonZeroCount( self ):
+        
+        return self._min_current_count > 0 or self._min_pending_count > 0
+        
+    
+    def SetInclusive( self, inclusive ):
+        
+        self._inclusive = inclusive
+        
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE ] = Predicate
 

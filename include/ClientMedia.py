@@ -1835,7 +1835,9 @@ class TagsManagerSimple( object ):
             combined_current = combined_statuses_to_tags[ HC.CURRENT ]
             combined_pending = combined_statuses_to_tags[ HC.PENDING ]
             
-            self._combined_namespaces_cache = HydrusData.BuildKeyToSetDict( tag.split( ':', 1 ) for tag in combined_current.union( combined_pending ) if ':' in tag )
+            pairs = ( HydrusTags.SplitTag( tag ) for tag in combined_current.union( combined_pending ) )
+            
+            self._combined_namespaces_cache = HydrusData.BuildKeyToSetDict( ( namespace, subtag ) for ( namespace, subtag ) in pairs if namespace != '' )
             
         
         result = { namespace : self._combined_namespaces_cache[ namespace ] for namespace in namespaces }
@@ -1854,19 +1856,17 @@ class TagsManagerSimple( object ):
         
         combined = combined_current.union( combined_pending )
         
+        pairs = [ HydrusTags.SplitTag( tag ) for tag in combined ]
+        
         slice = []
         
-        for namespace in namespaces:
+        for desired_namespace in namespaces:
             
-            tags = [ tag for tag in combined if tag.startswith( namespace + ':' ) ]
+            subtags = [ HydrusTags.ConvertTagToSortable( subtag ) for ( namespace, subtag ) in pairs if namespace == desired_namespace ]
             
-            tags = [ tag.split( ':', 1 )[1] for tag in tags ]
+            subtags.sort()
             
-            tags = HydrusTags.SortNumericTags( tags )
-            
-            tags = tuple( ( HydrusTags.ConvertTagToSortable( tag ) for tag in tags ) )
-            
-            slice.append( tags )
+            slice.append( tuple( subtags ) )
             
         
         return tuple( slice )

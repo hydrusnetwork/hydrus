@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 244</h3></li>
+				<ul>
+					<li>updated client database to compact ( namespace_id, tag_id ) pair into a single id for storage</li>
+					<li>added some bells and whistles to the update code</li>
+					<li>added a free space check and messagebox warning before the update</li>
+					<li>updated db, service, and a/c cache creation code to reflect new schema</li>
+					<li>updated absolutely everything else in the db to reflect the new schema</li>
+					<li>for users with plenty of tags, the db should now be about 33% smaller!</li>
+					<li>unified how unnamespaced tag searching counts are totalled</li>
+					<li>unnamespaced tag searching counts are now totalled when the tags are fetched from the in-view ui media</li>
+					<li>unified how tags are split into ( namespace, subtag ) across the program</li>
+					<li>fixed deviantart gallery thumbnail parser</li>
+					<li>fixed linux session load page key event handling bug</li>
+					<li>os x can now support notebooks with zero pages open</li>
+					<li>fixed an issue where os x was losing the first page of some session loads</li>
+					<li>fixed some similar files shutdown work false positive calculation</li>
+					<li>reduced server bandwidth check period from 24 hours to 1 hour</li>
+					<li>improved calltothread scheduling under heavy load</li>
+					<li>improved scheduling of how files are physically deleted</li>
+					<li>numerous laggy temp_table replacement/cleanup</li>
+					<li>more temp_table replacement</li>
+					<li>misc efficiency improvements and general db code cleanup</li>
+					<li>misc path code cleanup</li>
+				</ul>
 				<li><h3>version 243</h3></li>
 				<ul>
 					<li>updated more menu code to the new system</li>

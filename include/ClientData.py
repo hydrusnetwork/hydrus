@@ -326,7 +326,7 @@ def MergeCounts( min_a, max_a, min_b, max_b ):
     
     return ( min_answer, max_answer )
     
-def MergePredicates( predicates ):
+def MergePredicates( predicates, add_namespaceless = False ):
     
     master_predicate_dict = {}
     
@@ -343,6 +343,45 @@ def MergePredicates( predicates ):
             master_predicate_dict[ predicate ] = predicate
             
         
+    
+    if add_namespaceless:
+        
+        # we want to include the count for namespaced tags in the namespaceless version when:
+        # there exists more than one instance of the subtag with different namespaces, including '', that has nonzero count
+        
+        unnamespaced_predicate_dict = {}
+        subtag_nonzero_instance_counter = collections.Counter()
+        
+        for predicate in master_predicate_dict.values():
+            
+            if predicate.HasNonZeroCount():
+                
+                unnamespaced_predicate = predicate.GetUnnamespacedCopy()
+                
+                subtag_nonzero_instance_counter[ unnamespaced_predicate ] += 1
+                
+                if unnamespaced_predicate in unnamespaced_predicate_dict:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ].AddCounts( unnamespaced_predicate )
+                    
+                else:
+                    
+                    unnamespaced_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate
+                    
+                
+            
+        
+        for ( unnamespaced_predicate, count ) in subtag_nonzero_instance_counter.items():
+            
+            # if there were indeed several instances of this subtag, overwrte the master dict's instance with our new count total
+            
+            if count > 1:
+                
+                master_predicate_dict[ unnamespaced_predicate ] = unnamespaced_predicate_dict[ unnamespaced_predicate ]
+                
+            
+        
+    
     
     return master_predicate_dict.values()
     
@@ -439,22 +478,17 @@ def SortTagsList( tags, sort_type ):
         
         def key( tag ):
             
-            if ':' in tag:
+            # '{' is above 'z' in ascii, so this works for most situations
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            if namespace == '':
                 
-                ( namespace, subtag ) = tag.split( ':', 1 )
-                
-                if namespace == '':
-                    
-                    return ( '{', subtag )
-                    
-                else:
-                    
-                    return ( namespace, subtag )
-                    
+                return ( '{', subtag )
                 
             else:
                 
-                return ( '{', tag ) # '{' is above 'z' in ascii, so this works for most situations
+                return ( namespace, subtag )
                 
             
         

@@ -7,6 +7,7 @@ import HydrusData
 import HydrusGlobals
 import HydrusPaths
 import HydrusSerialisable
+import HydrusTags
 import os
 import re
 import stat
@@ -29,7 +30,11 @@ def GenerateExportFilename( media, terms ):
             
             tags = tags_manager.GetNamespaceSlice( ( term, ) )
             
-            filename += ', '.join( [ tag.split( ':' )[1] for tag in tags ] )
+            subtags = [ HydrusTags.SplitTag( tag )[1] for tag in tags ]
+            
+            subtags.sort()
+            
+            filename += ', '.join( subtags )
             
         elif term_type == 'predicate':
             
@@ -40,8 +45,14 @@ def GenerateExportFilename( media, terms ):
                 
                 tags = list( current.union( pending ) )
                 
-                if term == 'nn tags': tags = [ tag for tag in tags if ':' not in tag ]
-                else: tags = [ tag if ':' not in tag else tag.split( ':' )[1] for tag in tags ]
+                if term == 'nn tags':
+                    
+                    tags = [ tag for tag in tags if ':' not in tag ]
+                    
+                else:
+                    
+                    tags = [ HydrusTags.SplitTag( tag )[1] for tag in tags ]
+                    
                 
                 tags.sort()
                 
@@ -56,9 +67,12 @@ def GenerateExportFilename( media, terms ):
             
         elif term_type == 'tag':
             
-            if ':' in term: term = term.split( ':' )[1]
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
-            if tags_manager.HasTag( term ): filename += term
+            if tags_manager.HasTag( subtag ):
+                
+                filename += subtag
+                
             
         
     
