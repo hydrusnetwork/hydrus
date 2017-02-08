@@ -133,7 +133,7 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
             
             if re.search( half_complete_subtag_re_predicate, possible_subtag ) is not None:
                 
-                result.append( possible_tag )
+                result.append( tag )
                 
                 break
                 
