@@ -8,8 +8,9 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
-				<li><h3>version 245</h3></li>				<ul>
-					<li>?fixed a v244 update problem for clients updating from <v238</li>
+				<li><h3>version 245</h3></li>
+				<ul>
+					<li>fixed a v244 update problem for clients updating from <v238</li>
 					<li>some misc stuff:</li>
 					<li>if you start editing many subscriptions, cancelling a single dialog will break the chain of loading new dialogs</li>
 					<li>reduced some redundancy in regular client file import</li>
@@ -17,7 +18,7 @@
 					<li>if the client ever merges one directory to another (such as in external file locations migration) and any files fail to merge, the source will no longer be deleted</li>
 					<li>created new flexible bandwidth tracking and ruling objects</li>
 					<li>updated how repository updates work, splitting the old explicit and self-contained content update package system to a new implicit definitions/content split system and an improved one-step-sync metadata propagation</li>
-					<li>updating now takes approximately 30% as much bandwidth as before</li>
+					<li>updating now takes approximately 23% as much bandwidth as before</li>
 					<li>update files are now stored in client_files and server_files like any other file (client_updates and server_updates folders will be deleted on update)</li>
 					<li>the server will print update generation info to its log</li>
 					<li>unfortunately, updates cannot be converted, so a complete resync of update files is required. the smaller update size and better bandwidth controls should mitigate the problem somewhat</li>

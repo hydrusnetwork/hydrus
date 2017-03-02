@@ -9154,7 +9154,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if 'tag_archive_sync' in info and info[ 'tag_archive_sync' ] is not None:
                             
-                            dictionary[ 'tag_archive_sync' ] = info[ 'tag_archive_sync' ]
+                            dictionary[ 'tag_archive_sync' ] = [ ( portable_path, list( namespaces ) ) for ( portable_path, namespaces ) in info[ 'tag_archive_sync' ].items() ]
                             
                         
                     
