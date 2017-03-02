@@ -113,17 +113,15 @@ def DAEMONDownloadFiles( controller ):
                     continue
                     
                 
-                if file_repository.CanDownload(): 
+                if file_repository.IsFunctional():
                     
                     try:
-                        
-                        request_args = { 'hash' : hash.encode( 'hex' ) }
                         
                         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                         
                         try:
                             
-                            file_repository.Request( HC.GET, 'file', request_args = request_args, temp_path = temp_path )
+                            file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
                             
                             controller.WaitUntilPubSubsEmpty()
                             
@@ -175,12 +173,6 @@ def DAEMONDownloadFiles( controller ):
         
         job_key.Delete()
         
-    
-def DAEMONFlushServiceUpdates( controller, list_of_service_keys_to_service_updates ):
-    
-    service_keys_to_service_updates = HydrusData.MergeKeyToListDicts( list_of_service_keys_to_service_updates )
-    
-    controller.WriteSynchronous( 'service_updates', service_keys_to_service_updates )
     
 def DAEMONMaintainTrash( controller ):
     
@@ -245,63 +237,17 @@ def DAEMONRebalanceClientFiles( controller ):
     
     controller.GetClientFilesManager().Rebalance()
     
+def DAEMONSaveDirtyObjects( controller ):
+    
+    controller.SaveDirtyObjects()
+    
 def DAEMONSynchroniseAccounts( controller ):
     
     services = controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
     
-    options = controller.GetOptions()
-    
-    do_notify = False
-    
     for service in services:
         
-        service_key = service.GetServiceKey()
-        service_type = service.GetServiceType()
-        
-        account = service.GetInfo( 'account' )
-        credentials = service.GetCredentials()
-        
-        if service_type in HC.REPOSITORIES:
-            
-            if options[ 'pause_repo_sync' ]: continue
-            
-            info = service.GetInfo()
-            
-            if info[ 'paused' ]: continue
-            
-        
-        if account.IsStale() and credentials.HasAccessKey() and not service.HasRecentError():
-            
-            try:
-                
-                response = service.Request( HC.GET, 'account' )
-                
-                account = response[ 'account' ]
-                
-                account.MakeFresh()
-                
-                controller.WriteSynchronous( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, account ) ] } )
-                
-                do_notify = True
-                
-            except HydrusExceptions.NetworkException as e:
-                
-                HydrusData.Print( 'Failed to refresh account for ' + service.GetName() + ':' )
-                
-                HydrusData.Print( e )
-                
-            except Exception:
-                
-                HydrusData.Print( 'Failed to refresh account for ' + service.GetName() + ':' )
-                
-                HydrusData.Print( traceback.format_exc() )
-                
-            
-        
-    
-    if do_notify:
-        
-        controller.pub( 'notify_new_permissions' )
+        service.SyncAccount()
         
     
 def DAEMONSynchroniseRepositories( controller ):
@@ -319,12 +265,13 @@ def DAEMONSynchroniseRepositories( controller ):
                 break
                 
             
-            service.Sync( only_when_idle = True )
+            service.Sync( only_process_when_idle = True )
             
         
         time.sleep( 5 )
         
     
+
 def DAEMONSynchroniseSubscriptions( controller ):
     
     options = controller.GetOptions()
@@ -365,33 +312,31 @@ def DAEMONUPnP( controller ):
     
     for service in services:
         
-        info = service.GetInfo()
-        
-        internal_port = info[ 'port' ]
-        upnp = info[ 'upnp' ]
+        internal_port = service.GetPort()
         
         if ( local_ip, internal_port ) in our_mappings:
             
             current_external_port = our_mappings[ ( local_ip, internal_port ) ]
             
-            if upnp is None or current_external_port != upnp: HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+            upnp_port = service.GetUPnPPort()
+            
+            if upnp_port is None or current_external_port != upnp_port:
+                
+                HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+                
             
         
     
     for service in services:
         
-        info = service.GetInfo()
+        internal_port = service.GetPort()
+        upnp_port = service.GetUPnPPort()
         
-        internal_port = info[ 'port' ]
-        upnp = info[ 'upnp' ]
-        
-        if upnp is not None:
+        if upnp_port is not None:
             
             if ( local_ip, internal_port ) not in our_mappings:
                 
                 service_type = service.GetServiceType()
-                
-                external_port = upnp
                 
                 protocol = 'TCP'
                 
@@ -401,11 +346,11 @@ def DAEMONUPnP( controller ):
                 
                 try:
                     
-                    HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, external_port, protocol, description, duration = duration )
+                    HydrusNATPunch.AddUPnPMapping( local_ip, internal_port, upnp_port, protocol, description, duration = duration )
                     
                 except HydrusExceptions.FirewallException:
                     
-                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + external_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
+                    HydrusData.Print( 'The UPnP Daemon tried to add ' + local_ip + ':' + internal_port + '->external:' + upnp_port + ' but it failed due to router error. Please try it manually to get a full log of what happened.' )
                     
                     return
                     

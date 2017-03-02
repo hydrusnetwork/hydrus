@@ -588,6 +588,16 @@ class ClientFilesManager( object ):
             
         
     
+    def LocklessAddFileFromString( self, hash, mime, data ):
+        
+        dest_path = self._GenerateExpectedFilePath( hash, mime )
+        
+        with open( dest_path, 'wb' ) as f:
+            
+            f.write( data )
+            
+        
+    
     def LocklessAddFile( self, hash, mime, source_path ):
         
         dest_path = self._GenerateExpectedFilePath( hash, mime )
@@ -627,6 +637,10 @@ class ClientFilesManager( object ):
         
     
     def ClearOrphans( self, move_location = None ):
+        
+        HydrusData.ShowText( 'sorry, clear orphans does not work right now!' )
+        
+        return
         
         with self._lock:
             
@@ -944,14 +958,11 @@ class ClientFilesManager( object ):
             
         
     
-    def HaveFullSizeThumbnail( self, hash ):
+    def LocklessHasFullSizeThumbnail( self, hash ):
         
-        with self._lock:
-            
-            path = self._GenerateExpectedFullSizeThumbnailPath( hash )
-            
-            return os.path.exists( path )
-            
+        path = self._GenerateExpectedFullSizeThumbnailPath( hash )
+        
+        return os.path.exists( path )
         
     
     def Rebalance( self, partial = True, stop_time = None ):
@@ -1300,12 +1311,10 @@ class LocalBooruCache( object ):
     
     def _CheckDataUsage( self ):
         
-        info = self._local_booru_service.GetInfo()
-        
-        max_monthly_data = info[ 'max_monthly_data' ]
-        used_monthly_data = info[ 'used_monthly_data' ]
-        
-        if max_monthly_data is not None and used_monthly_data > max_monthly_data: raise HydrusExceptions.ForbiddenException( 'This booru has used all its monthly data. Please try again next month.' )
+        if not self._local_booru_service.BandwidthOk():
+            
+            raise HydrusExceptions.ForbiddenException( 'This booru has used all its monthly data. Please try again next month.' )
+            
         
     
     def _CheckFileAuthorised( self, share_key, hash ):
@@ -1974,6 +1983,16 @@ class ServicesManager( object ):
             
         
     
+    def _SetServices( self, services ):
+        
+        self._keys_to_services = { service.GetServiceKey() : service for service in services }
+        
+        compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
+        
+        self._services_sorted = list( services )
+        self._services_sorted.sort( cmp = compare_function )
+        
+    
     def Filter( self, service_keys, desired_types ):
         
         with self._lock:
@@ -2043,14 +2062,8 @@ class ServicesManager( object ):
             
             services = self._controller.Read( 'services' )
             
-            self._keys_to_services = { service.GetServiceKey() : service for service in services }
+            self._SetServices( services )
             
-            compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
-            
-            self._services_sorted = list( services )
-            self._services_sorted.sort( cmp = compare_function )
-            
-        
     
     def ServiceExists( self, service_key ):
         
@@ -2239,7 +2252,7 @@ class TagParentsManager( object ):
         
         for ( service_key, statuses_to_pairs ) in collapsed_service_keys_to_statuses_to_pairs.items():
             
-            pairs_flat = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+            pairs_flat = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
             service_keys_to_pairs_flat[ service_key ] = pairs_flat
             
@@ -2377,7 +2390,7 @@ class TagSiblingsManager( object ):
         
         for ( service_key, statuses_to_pairs ) in service_keys_to_statuses_to_pairs.items():
             
-            all_pairs = statuses_to_pairs[ HC.CURRENT ].union( statuses_to_pairs[ HC.PENDING ] )
+            all_pairs = statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] )
             
             combined_pairs.update( all_pairs )
             

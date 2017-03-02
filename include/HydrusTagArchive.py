@@ -76,7 +76,7 @@ class HydrusTagArchive( object ):
         self._c.execute( 'CREATE TABLE hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES );' )
         self._c.execute( 'CREATE UNIQUE INDEX hashes_hash_index ON hashes ( hash );' )
         
-        self._c.execute( 'CREATE TABLE mappings ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY( hash_id, tag_id ) );' )
+        self._c.execute( 'CREATE TABLE mappings ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) );' )
         self._c.execute( 'CREATE INDEX mappings_hash_id_index ON mappings ( hash_id );' )
         
         self._c.execute( 'CREATE TABLE namespaces ( namespace TEXT );' )

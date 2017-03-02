@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientFiles
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals
 import HydrusServerResources
 import os
@@ -9,7 +10,7 @@ from twisted.web.static import File as FileResource
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
-class HydrusResourceCommandBooru( HydrusServerResources.HydrusResourceCommand ):
+class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
     def _recordDataUsage( self, request ):
         
@@ -18,26 +19,22 @@ class HydrusResourceCommandBooru( HydrusServerResources.HydrusResourceCommand ):
         if request.method == 'GET': method = HC.GET
         else: method = HC.POST
         
-        if ( HC.LOCAL_BOORU, method, path ) in HC.BANDWIDTH_CONSUMING_REQUESTS:
+        num_bytes = request.hydrus_request_data_usage
+        
+        self._service.RequestMade( num_bytes )
+        
+    
+    def _checkService( self, request ):
+        
+        HydrusServerResources.HydrusResource._checkService( self, request )
+        
+        if not self._service.BandwidthOk():
             
-            num_bytes = request.hydrus_request_data_usage
-            
-            HydrusGlobals.client_controller.pub( 'service_updates_delayed', { CC.LOCAL_BOORU_SERVICE_KEY : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_REQUEST_MADE, num_bytes ) ] } )
+            raise HydrusExceptions.BandwidthException( 'This service has run out of bandwidth. Please try again later.' )
             
         
     
-    def _callbackCheckRestrictions( self, request ):
-        
-        self._checkServerBusy()
-        
-        self._checkUserAgent( request )
-        
-        self._domain.CheckValid( request.getClientIP() )
-        
-        return request
-        
-    
-class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
+class HydrusResourceBooruFile( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
@@ -57,7 +54,7 @@ class HydrusResourceCommandBooruFile( HydrusResourceCommandBooru ):
         return response_context
         
     
-class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
+class HydrusResourceBooruGallery( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
@@ -141,7 +138,7 @@ class HydrusResourceCommandBooruGallery( HydrusResourceCommandBooru ):
         return response_context
         
     
-class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
+class HydrusResourceBooruPage( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
@@ -230,7 +227,7 @@ class HydrusResourceCommandBooruPage( HydrusResourceCommandBooru ):
         return response_context
         
     
-class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
+class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
     
     def _threadDoGETJob( self, request ):
         
@@ -245,22 +242,26 @@ class HydrusResourceCommandBooruThumbnail( HydrusResourceCommandBooru ):
         
         mime = media_result.GetMime()
         
+        response_context_mime = HC.IMAGE_PNG
+        
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
             client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
             
             path = client_files_manager.GetFullSizeThumbnailPath( hash )
             
+            response_context_mime = HC.APPLICATION_UNKNOWN
+            
         elif mime in HC.AUDIO: path = os.path.join( HC.STATIC_DIR, 'audio.png' )
         elif mime == HC.APPLICATION_PDF: path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
         else: path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        response_context = HydrusServerResources.ResponseContext( 200, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = response_context_mime, path = path )
         
         return response_context
         
     
-class HydrusResourceCommandLocalFile( HydrusServerResources.HydrusResourceCommand ):
+class HydrusResourceLocalFile( HydrusServerResources.HydrusResource ):
     
     def _threadDoGETJob( self, request ):
         
@@ -270,12 +271,12 @@ class HydrusResourceCommandLocalFile( HydrusServerResources.HydrusResourceComman
         
         path = client_files_manager.GetFilePath( hash )
         
-        response_context = HydrusServerResources.ResponseContext( 200, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_UNKNOWN, path = path )
         
         return response_context
         
     
-class HydrusResourceCommandLocalThumbnail( HydrusServerResources.HydrusResourceCommand ):
+class HydrusResourceLocalThumbnail( HydrusServerResources.HydrusResource ):
     
     def _threadDoGETJob( self, request ):
         
@@ -285,7 +286,7 @@ class HydrusResourceCommandLocalThumbnail( HydrusServerResources.HydrusResourceC
         
         path = client_files_manager.GetFullSizeThumbnailPath( hash )
         
-        response_context = HydrusServerResources.ResponseContext( 200, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.APPLICATION_UNKNOWN, path = path )
         
         return response_context
         

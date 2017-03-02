@@ -13,6 +13,7 @@ import ClientGUITopLevelWindows
 import ClientMedia
 import collections
 import HydrusExceptions
+import HydrusNetwork
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -237,13 +238,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _CopyLocalUrlToClipboard( self ):
-        
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._focussed_media.GetDisplayMedia().GetHash().encode( 'hex' )
-        
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', local_url )
-        
-    
     def _CopyPathToClipboard( self ):
         
         display_media = self._focussed_media.GetDisplayMedia()
@@ -285,7 +279,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if service.GetServiceType() == HC.IPFS:
             
-            multihash_prefix = service.GetInfo( 'multihash_prefix' )
+            multihash_prefix = service.GetMultihashPrefix()
             
             filename = multihash_prefix + filename
             
@@ -301,7 +295,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if service.GetServiceType() == HC.IPFS:
             
-            prefix = service.GetInfo( 'multihash_prefix' )
+            prefix = service.GetMultihashPrefix()
             
         
         hashes = self._GetSelectedHashes( has_location = service_key )
@@ -875,11 +869,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _ModifyUploaders( self, file_service_key ):
         
+        wx.MessageBox( 'this does not work yet!' )
+        
+        return
+        
         hashes = self._GetSelectedHashes()
         
         if hashes is not None and len( hashes ) > 0:   
             
-            contents = [ HydrusData.Content( HC.CONTENT_TYPE_FILES, [ hash ] ) for hash in hashes ]
+            contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ hash ] ) for hash in hashes ]
             
             subject_identifiers = [ HydrusData.AccountIdentifier( content = content ) for content in contents ]
             
@@ -1340,7 +1338,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 ( action, row ) = service_update.ToTuple()
                 
-                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ): self._RecalculateVirtualSize()
+                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ):
+                    
+                    self._RecalculateVirtualSize()
+                    
                 
                 self._PublishSelectionChange( force_reload = True )
                 
@@ -2408,19 +2409,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 local_booru_service = [ service for service in services if service.GetServiceType() == HC.LOCAL_BOORU ][0]
                 
-                local_booru_is_running = local_booru_service.GetInfo()[ 'port' ] is not None
+                local_booru_is_running = local_booru_service.GetPort() is not None
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
                 focussed_is_local = CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
                 
                 file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
-                download_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GET_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
-                upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_DATA ) or repository.GetInfo( 'account' ).IsUnknownAccount() }
-                petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) }
-                petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.POST_PETITIONS ) } - petition_resolve_permission_file_service_keys
-                user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS ) }
-                admin_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) }
+                upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
+                petition_resolve_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_OVERRULE ) }
+                petition_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_PETITION ) } - petition_resolve_permission_file_service_keys
+                user_manage_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ) }
                 ipfs_service_keys = { service.GetServiceKey() for service in ipfs_services }
                 
                 focussed_is_ipfs = True in ( service_key in ipfs_service_keys for service_key in self._focussed_media.GetLocationsManager().GetCurrentRemote() )
@@ -2552,18 +2551,18 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     # FILE REPOS
                     
-                    # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or admin )
+                    # we can upload (set pending) to a repo_id when we have permission, a file is local, not current, not pending, and either ( not deleted or we_can_overrule )
                     
                     if locations_manager.IsLocal():
                         
-                        uploadable_file_service_keys.update( upload_permission_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - admin_permission_file_service_keys ) )
+                        uploadable_file_service_keys.update( upload_permission_file_service_keys - locations_manager.GetCurrentRemote() - locations_manager.GetPendingRemote() - ( locations_manager.GetDeletedRemote() - petition_resolve_permission_file_service_keys ) )
                         
                     
                     # we can download (set pending to local) when we have permission, a file is not local and not already downloading and current
                     
                     if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
                         
-                        downloadable_file_service_keys.update( download_permission_file_service_keys & locations_manager.GetCurrentRemote() )
+                        downloadable_file_service_keys.update( file_service_keys & locations_manager.GetCurrentRemote() )
                         
                     
                     # we can petition when we have permission and a file is current and it is not already petitioned
@@ -2937,14 +2936,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 if multiple_selected and selection_has_local:
                     
                     ClientGUIMenus.AppendMenuItem( self, copy_menu, 'paths', 'Copy the selected files\' paths to the clipboard.', self._CopyPathsToClipboard )
-                    
-                
-                if focussed_is_local:
-                    
-                    if HC.options[ 'local_port' ] is not None:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'local url', 'Copy the selected file\'s local (client-hosted) url to the clipboard.', self._CopyLocalUrlToClipboard )
-                        
                     
                 
                 ClientGUIMenus.AppendMenuItem( self, copy_menu, 'known urls (prototype)', 'Copy the selected file\'s known urls to the clipboard.', self._CopyKnownURLsToClipboard )

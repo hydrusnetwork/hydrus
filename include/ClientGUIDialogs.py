@@ -20,6 +20,7 @@ import gc
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusNATPunch
+import HydrusNetwork
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
@@ -76,8 +77,6 @@ def ExportToHTA( parent, service_key, hashes ):
     message += os.linesep * 2
     message += 'If you do not know what this stuff means, click \'normal\'.'
     
-    hash_type = None
-    
     with DialogYesNo( parent, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
         
         result = dlg.ShowModal()
@@ -90,15 +89,21 @@ def ExportToHTA( parent, service_key, hashes ):
                 
             else:
                 
-                with DialogSelectFromListOfStrings( parent, 'Select the hash type', [ 'md5', 'sha1', 'sha512' ] ) as hash_dlg:
+                list_of_tuples = []
+                
+                list_of_tuples.append( ( 'md5', HydrusTagArchive.HASH_TYPE_MD5 ) )
+                list_of_tuples.append( ( 'sha1', HydrusTagArchive.HASH_TYPE_SHA1 ) )
+                list_of_tuples.append( ( 'sha512', HydrusTagArchive.HASH_TYPE_SHA512 ) )
+                
+                with DialogSelectFromList( parent, 'Select the hash type', list_of_tuples ) as hash_dlg:
                     
                     if hash_dlg.ShowModal() == wx.ID_OK:
                         
-                        s = hash_dlg.GetString()
+                        hash_type = hash_dlg.GetChoice()
                         
-                        if s == 'md5': hash_type = HydrusTagArchive.HASH_TYPE_MD5
-                        elif s == 'sha1': hash_type = HydrusTagArchive.HASH_TYPE_SHA1
-                        elif s == 'sha512': hash_type = HydrusTagArchive.HASH_TYPE_SHA512
+                    else:
+                        
+                        return
                         
                     
                 
@@ -128,9 +133,10 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
     if service_type == HC.TAG_REPOSITORY:
         
-        account = service.GetInfo( 'account' )
-        
-        if not account.HasPermission( HC.RESOLVE_PETITIONS ): can_delete = False
+        if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            can_delete = False
+            
         
     
     if can_delete:
@@ -235,20 +241,24 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
             
         
     
-def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
+def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
     if service_keys is None:
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( service_types )
         
-        if permission is not None: services = [ service for service in services if service.GetInfo( 'account' ).HasPermission( permission ) ]
-        
         service_keys = [ service.GetServiceKey() for service in services ]
         
     
-    if unallowed is not None: service_keys.difference_update( unallowed )
+    if unallowed is not None:
+        
+        service_keys.difference_update( unallowed )
+        
     
-    if len( service_keys ) == 0: return None
+    if len( service_keys ) == 0:
+        
+        return None
+        
     elif len( service_keys ) == 1:
         
         ( service_key, ) = service_keys
@@ -259,12 +269,20 @@ def SelectServiceKey( permission = None, service_types = HC.ALL_SERVICES, servic
         
         services = { HydrusGlobals.client_controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
         
-        names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in services }
+        list_of_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        with DialogSelectFromListOfStrings( HydrusGlobals.client_controller.GetGUI(), 'select service', names_to_service_keys.keys() ) as dlg:
+        with DialogSelectFromList( HydrusGlobals.client_controller.GetGUI(), 'select service', list_of_tuples ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK: return names_to_service_keys[ dlg.GetString() ]
-            else: return None
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                service_key = dlg.GetChoice()
+                
+                return service_key
+                
+            else:
+                
+                return None
+                
             
         
     
@@ -760,9 +778,9 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._num = wx.SpinCtrl( self, min = 1, max = 10000, size = ( 80, -1 ) )
         
-        self._account_types = wx.Choice( self, size = ( 400, -1 ) )
+        self._account_types = ClientGUICommon.BetterChoice( self )
         
-        self._lifetime = wx.Choice( self )
+        self._lifetime = ClientGUICommon.BetterChoice( self )
         
         self._ok = wx.Button( self, label = 'Ok' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -781,10 +799,18 @@ class DialogGenerateNewAccounts( Dialog ):
         
         account_types = response[ 'account_types' ]
         
-        for account_type in account_types: self._account_types.Append( account_type.ConvertToString(), account_type )
-        self._account_types.SetSelection( 0 ) # admin
+        for account_type in account_types:
+            
+            self._account_types.Append( account_type.GetTitle(), account_type )
+            
         
-        for ( str, value ) in HC.lifetimes: self._lifetime.Append( str, value )
+        self._account_types.Select( 0 )
+        
+        for ( str, value ) in HC.lifetimes:
+            
+            self._lifetime.Append( str, value )
+            
+        
         self._lifetime.SetSelection( 3 ) # one year
         
         #
@@ -819,19 +845,26 @@ class DialogGenerateNewAccounts( Dialog ):
         
         num = self._num.GetValue()
         
-        account_type = self._account_types.GetClientData( self._account_types.GetSelection() )
+        account_type = self._account_types.GetChoice()
         
-        title = account_type.GetTitle()
+        account_type_key = account_type.GetAccountTypeKey()
         
-        lifetime = self._lifetime.GetClientData( self._lifetime.GetSelection() )
+        lifetime = self._lifetime.GetChoice()
+        
+        if lifetime is None:
+            
+            expires = None
+            
+        else:
+            
+            expires = HydrusData.GetNow() + lifetime
+            
         
         service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
         try:
             
-            request_args = { 'num' : num, 'title' : title }
-            
-            if lifetime is not None: request_args[ 'lifetime' ] = lifetime
+            request_args = { 'num' : num, 'account_type_key' : account_type_key, 'expires' : expires }
             
             response = service.Request( HC.GET, 'registration_keys', request_args )
             
@@ -839,7 +872,10 @@ class DialogGenerateNewAccounts( Dialog ):
             
             ClientGUIFrames.ShowKeys( 'registration', registration_keys )
             
-        finally: self.EndModal( wx.ID_OK )
+        finally:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
 class DialogInputImportTagOptions( Dialog ):
@@ -1011,10 +1047,13 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._SetActions()
                 
-                if self._action is None: self._ratings_numerical_remove.SetValue( True )
+                if self._action is None:
+                    
+                    self._ratings_numerical_remove.SetValue( True )
+                    
                 else:
                     
-                    num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
+                    num_stars = self._current_ratings_numerical_service.GetNumStars()
                     
                     slider_value = int( round( self._action * num_stars ) )
                     
@@ -1116,9 +1155,9 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._current_ratings_numerical_service = service
                 
-                num_stars = service.GetInfo( 'num_stars' )
+                num_stars = service.GetNumStars()
                 
-                allow_zero = service.GetInfo( 'allow_zero' )
+                allow_zero = service.AllowZero()
                 
                 if allow_zero:
                     
@@ -1191,8 +1230,8 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._pretty_action = HydrusData.ToUnicode( value )
                 
-                num_stars = self._current_ratings_numerical_service.GetInfo( 'num_stars' )
-                allow_zero = self._current_ratings_numerical_service.GetInfo( 'allow_zero' )
+                num_stars = self._current_ratings_numerical_service.GetNumStars()
+                allow_zero = self._current_ratings_numerical_service.AllowZero()
                 
                 if allow_zero:
                     
@@ -1475,13 +1514,14 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
-        info = self._service.GetInfo()
-        
         external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
         
-        external_port = info[ 'upnp' ]
+        external_port = self._service.GetUPnPPort()
         
-        if external_port is None: external_port = info[ 'port' ]
+        if external_port is None:
+            
+            external_port = self._service.GetPort()
+            
         
         url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
@@ -1492,11 +1532,9 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
-        info = self._service.GetInfo()
-        
         internal_ip = '127.0.0.1'
         
-        internal_port = info[ 'port' ]
+        internal_port = self._service.GetPort()
         
         url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
@@ -2017,134 +2055,6 @@ class DialogInputNamespaceRegex( Dialog ):
         return ( namespace, regex )
         
     
-class DialogInputNewAccountType( Dialog ):
-    
-    def __init__( self, parent, account_type = None ):
-        
-        if account_type is None:
-            
-            title = ''
-            permissions = [ HC.GET_DATA ]
-            max_num_bytes = 104857600
-            max_num_requests = 1000
-            
-        else:
-            
-            title = account_type.GetTitle()
-            permissions = account_type.GetPermissions()
-            max_num_bytes = account_type.GetMaxBytes()
-            max_num_requests = account_type.GetMaxRequests()
-            
-        
-        Dialog.__init__( self, parent, 'edit account type' )
-        
-        self._title = wx.TextCtrl( self )
-        
-        self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
-        
-        self._permissions = wx.ListBox( self._permissions_panel )
-        
-        self._permission_choice = wx.Choice( self._permissions_panel )
-        
-        self._add_permission = wx.Button( self._permissions_panel, label = 'add' )
-        self._add_permission.Bind( wx.EVT_BUTTON, self.EventAddPermission )
-        
-        self._remove_permission = wx.Button( self._permissions_panel, label = 'remove' )
-        self._remove_permission.Bind( wx.EVT_BUTTON, self.EventRemovePermission )
-        
-        self._max_num_mb = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly data (MB)', multiplier = 1048576 )
-        self._max_num_mb.SetValue( max_num_bytes )
-        
-        self._max_num_requests = ClientGUICommon.NoneableSpinCtrl( self, 'max monthly requests' )
-        self._max_num_requests.SetValue( max_num_requests )
-        
-        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        self._title.SetValue( title )
-        
-        for permission in permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
-        
-        for permission in HC.CREATABLE_PERMISSIONS: self._permission_choice.Append( HC.permissions_string_lookup[ permission ], permission )
-        self._permission_choice.SetSelection( 0 )
-        
-        #
-        
-        t_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        t_box.AddF( wx.StaticText( self, label = 'title: ' ), CC.FLAGS_SMALL_INDENT )
-        t_box.AddF( self._title, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        perm_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        perm_buttons_box.AddF( self._permission_choice, CC.FLAGS_VCENTER )
-        perm_buttons_box.AddF( self._add_permission, CC.FLAGS_VCENTER )
-        perm_buttons_box.AddF( self._remove_permission, CC.FLAGS_VCENTER )
-        
-        self._permissions_panel.AddF( self._permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._permissions_panel.AddF( perm_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        b_box.AddF( self._apply, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( t_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._permissions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._max_num_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._max_num_requests, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( 800, y ) )
-        
-        wx.CallAfter( self._apply.SetFocus )
-        
-    
-    def EventAddPermission( self, event ):
-        
-        selection = self._permission_choice.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            permission = self._permission_choice.GetClientData( selection )
-            
-            existing_permissions = [ self._permissions.GetClientData( i ) for i in range( self._permissions.GetCount() ) ]
-            
-            if permission not in existing_permissions: self._permissions.Append( HC.permissions_string_lookup[ permission ], permission )
-            
-        
-    
-    def EventRemovePermission( self, event ):
-        
-        selection = self._permissions.GetSelection()
-        
-        if selection != wx.NOT_FOUND: self._permissions.Delete( selection )
-        
-    
-    def GetAccountType( self ):
-        
-        title = self._title.GetValue()
-        
-        permissions = [ self._permissions.GetClientData( i ) for i in range( self._permissions.GetCount() ) ]
-        
-        max_num_bytes = self._max_num_mb.GetValue()
-        
-        max_num_requests = self._max_num_requests.GetValue()
-        
-        return HydrusData.AccountType( title, permissions, ( max_num_bytes, max_num_requests ) )
-        
-    
 class DialogInputNewFormField( Dialog ):
     
     def __init__( self, parent, form_field = None ):
@@ -2357,11 +2267,11 @@ class DialogInputTags( Dialog ):
     
 class DialogInputTimeDelta( Dialog ):
     
-    def __init__( self, parent, initial_value, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+    def __init__( self, parent, initial_value, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
         
         Dialog.__init__( self, parent, 'input time delta' )
         
-        self._time_delta = ClientGUICommon.TimeDeltaCtrl( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds )
+        self._time_delta = ClientGUICommon.TimeDeltaCtrl( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds, monthly_allowed = monthly_allowed )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -2554,22 +2464,16 @@ class DialogModifyAccounts( Dialog ):
         
         for ( string, value ) in HC.lifetimes:
             
-            if value is not None: self._add_to_expires.Append( string, value ) # don't want 'add no limit'
+            if value is not None:
+                
+                self._add_to_expires.Append( string, value ) # don't want 'add no limit'
+                
             
         
         self._add_to_expires.SetSelection( 1 ) # three months
         
         for ( string, value ) in HC.lifetimes: self._set_expires.Append( string, value )
         self._set_expires.SetSelection( 1 ) # three months
-        
-        #
-        
-        if not self._service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ):
-            
-            self._account_types_ok.Disable()
-            self._add_to_expires_ok.Disable()
-            self._set_expires_ok.Disable()
-            
         
         #
         
@@ -2616,19 +2520,12 @@ class DialogModifyAccounts( Dialog ):
         wx.CallAfter( self._exit.SetFocus )
         
     
-    def _DoModification( self, action, **kwargs ):
+    def _DoModification( self ):
         
-        request_args = HydrusSerialisable.SerialisableDictionary()
+        # change this to saveaccounts or whatever. the previous func changes the accounts, and then we push that change
+        # generate accounts, with the modification having occured
         
-        for ( k, v ) in kwargs.items():
-            
-            request_args[ k ] = v
-            
-        
-        request_args[ 'subject_identifiers' ] = HydrusSerialisable.SerialisableList( self._subject_identifiers )
-        request_args[ 'action' ] = action
-        
-        self._service.Request( HC.POST, 'account', request_args )
+        self._service.Request( HC.POST, 'account', { 'accounts' : self._accounts } )
         
         if len( self._subject_identifiers ) == 1:
             
@@ -2644,7 +2541,10 @@ class DialogModifyAccounts( Dialog ):
         if len( self._subject_identifiers ) > 1: wx.MessageBox( 'Done!' )
         
     
-    def EventAddToExpires( self, event ): self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
+    def EventAddToExpires( self, event ):
+        
+        self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
+        
     
     def EventBan( self, event ):
         
@@ -2654,7 +2554,10 @@ class DialogModifyAccounts( Dialog ):
             
         
     
-    def EventChangeAccountType( self, event ): self._DoModification( HC.CHANGE_ACCOUNT_TYPE, title = self._account_types.GetClientData( self._account_types.GetSelection() ).GetTitle() )
+    def EventChangeAccountType( self, event ):
+        
+        self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetChoice() )
+        
     
     def EventSetExpires( self, event ):
         
@@ -2671,91 +2574,6 @@ class DialogModifyAccounts( Dialog ):
             
             if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
             
-        
-    
-class DialogNews( Dialog ):
-    
-    def __init__( self, parent, service_key ):
-        
-        Dialog.__init__( self, parent, 'news' )
-        
-        self._news = ClientGUICommon.SaneMultilineTextCtrl( self, style = wx.TE_READONLY )
-        
-        self._previous = wx.Button( self, label = '<' )
-        self._previous.Bind( wx.EVT_BUTTON, self.EventPrevious )
-        
-        self._news_position = wx.TextCtrl( self )
-        
-        self._next = wx.Button( self, label = '>' )
-        self._next.Bind( wx.EVT_BUTTON, self.EventNext )
-        
-        self._done = wx.Button( self, id = wx.ID_CANCEL, label = 'Done' )
-        
-        #
-        
-        self._newslist = HydrusGlobals.client_controller.Read( 'news', service_key )
-        
-        self._current_news_position = len( self._newslist )
-        
-        self._ShowNews()
-        
-        #
-        
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        buttonbox.AddF( self._previous, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._news_position, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._next, CC.FLAGS_VCENTER )
-        
-        donebox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        donebox.AddF( self._done, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._news, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( donebox, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x + 200, 580 ) )
-        
-        wx.CallAfter( self._done.SetFocus )
-        
-    
-    def _ShowNews( self ):
-        
-        if self._current_news_position == 0:
-            
-            self._news.SetValue( '' )
-            
-            self._news_position.SetValue( 'No News' )
-            
-        else:
-            
-            ( news, timestamp ) = self._newslist[ self._current_news_position - 1 ]
-            
-            self._news.SetValue( time.ctime( timestamp ) + ' (' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + '):' + os.linesep * 2 + news )
-            
-            self._news_position.SetValue( HydrusData.ConvertIntToPrettyString( self._current_news_position ) + ' / ' + HydrusData.ConvertIntToPrettyString( len( self._newslist ) ) )
-            
-        
-    
-    def EventNext( self, event ):
-        
-        if self._current_news_position < len( self._newslist ): self._current_news_position += 1
-        
-        self._ShowNews()
-        
-    
-    def EventPrevious( self, event ):
-        
-        if self._current_news_position > 1: self._current_news_position -= 1
-        
-        self._ShowNews()
         
     
 class DialogPageChooser( Dialog ):
@@ -2794,7 +2612,9 @@ class DialogPageChooser( Dialog ):
         
         self._services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
         
-        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and service.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+        repository_petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
+        
+        self._petition_service_keys = [ service.GetServiceKey() for service in self._services if service.GetServiceType() in HC.REPOSITORIES and True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_petition_permissions ) ]
         
         self._InitButtons( 'home' )
         
@@ -3059,9 +2879,7 @@ class DialogPathsToTags( Dialog ):
         
         for service in services:
             
-            account = service.GetInfo( 'account' )
-            
-            if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
+            if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_CREATE ):
                 
                 service_key = service.GetServiceKey()
                 
@@ -3799,107 +3617,6 @@ class DialogPathsToTags( Dialog ):
             
         
     
-class DialogRegisterService( Dialog ):
-    
-    def __init__( self, parent, service_type ):
-        
-        Dialog.__init__( self, parent, 'register account', position = 'center' )
-        
-        self._service_type = service_type
-        
-        self._address = wx.TextCtrl( self )
-        self._registration_key = wx.TextCtrl( self )
-        
-        self._register_button = wx.Button( self, label = 'register' )
-        self._register_button.Bind( wx.EVT_BUTTON, self.EventRegister )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        
-        #
-        
-        self._address.SetValue( 'hostname:port' )
-        self._registration_key.SetValue( 'r0000000000000000000000000000000000000000000000000000000000000000' )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( wx.StaticText( self, label = 'Please fill out the forms with the appropriate information for your service.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        rows = []
-        
-        rows.append( ( 'address: ', self._address ) )
-        rows.append( ( 'registration key: ', self._registration_key ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        buttonbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        buttonbox.AddF( self._register_button, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        self._register = False
-        
-        wx.CallAfter( self._register_button.SetFocus )
-        
-    
-    def EventRegister( self, event ):
-        
-        address = self._address.GetValue()
-        
-        try:
-            
-            ( host, port ) = address.split( ':' )
-            
-            port = int( port )
-            
-        except:
-            
-            wx.MessageBox( 'Could not parse that address!' )
-            
-            return
-            
-        
-        registration_key_encoded = self._registration_key.GetValue()
-        
-        if registration_key_encoded[0] == 'r': registration_key_encoded = registration_key_encoded[1:]
-        
-        try: registration_key = registration_key_encoded.decode( 'hex' )
-        except:
-            
-            wx.MessageBox( 'Could not parse that registration key!' )
-            
-            return
-            
-        
-        service_key = HydrusData.GenerateKey()
-        name = 'temp registering service'
-        
-        info = { 'host' : host, 'port' : port }
-        
-        service = ClientData.GenerateService( service_key, self._service_type, name, info )
-        
-        response = service.Request( HC.GET, 'access_key', request_headers = { 'Hydrus-Key' : registration_key_encoded } )
-        
-        access_key = response[ 'access_key' ]
-        
-        self._credentials = ClientData.Credentials( host, port, access_key )
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def GetCredentials( self ): return self._credentials
-    
 class DialogSelectBooru( Dialog ):
     
     def __init__( self, parent ):
@@ -4194,27 +3911,26 @@ class DialogCheckFromListOfStrings( Dialog ):
     
     def GetChecked( self ): return self._strings.GetCheckedStrings()
     
-class DialogSelectFromListOfStrings( Dialog ):
+class DialogSelectFromList( Dialog ):
     
-    def __init__( self, parent, title, list_of_strings ):
+    def __init__( self, parent, title, list_of_tuples ):
         
         Dialog.__init__( self, parent, title )
         
-        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        self._list = wx.ListBox( self )
+        self._list.Bind( wx.EVT_KEY_DOWN, self.EventListKeyDown )
+        self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
         
-        self._strings = wx.ListBox( self )
-        self._strings.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        self._strings.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
+        list_of_tuples.sort()
         
-        self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetDefault()
-        
-        for s in list_of_strings: self._strings.Append( s )
+        for ( label, value ) in list_of_tuples:
+            
+            self._list.Append( label, value )
+            
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -4225,31 +3941,49 @@ class DialogSelectFromListOfStrings( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-    
-    def EventKeyDown( self, event ):
-        
-        if event.KeyCode == wx.WXK_SPACE:
-            
-            selection = self._strings.GetSelection()
-            
-            if selection != wx.NOT_FOUND: self.EndModal( wx.ID_OK )
-            
-        else: event.Skip()
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
     
-    def EventOK( self, event ):
+    def EventCharHook( self, event ):
         
-        selection = self._strings.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
+        if event.KeyCode == wx.WXK_ESCAPE:
             
-            self.EndModal( wx.ID_OK )
+            self.EndModal( wx.ID_CANCEL )
+            
+        else:
+            
+            event.Skip()
             
         
     
-    def EventSelect( self, event ): self.EndModal( wx.ID_OK )
+    def EventListKeyDown( self, event ):
+        
+        if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            selection = self._list.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                self.EndModal( wx.ID_OK )
+                
+            
+        else:
+            
+            event.Skip()
+            
+        
     
-    def GetString( self ): return self._strings.GetStringSelection()
+    def EventSelect( self, event ):
+        
+        self.EndModal( wx.ID_OK )
+        
+    
+    def GetChoice( self ):
+        
+        selection = self._list.GetSelection()
+        
+        return self._list.GetClientData( selection )
+        
     
 class DialogSelectYoutubeURL( Dialog ):
     

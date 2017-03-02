@@ -42,7 +42,7 @@ def MergeTagsManagers( tags_managers ):
         
         for ( service_key, statuses_to_tags ) in items:
             
-            filtered = { status : tags for ( status, tags ) in statuses_to_tags.items() if status in ( HC.CURRENT, HC.PENDING ) }
+            filtered = { status : tags for ( status, tags ) in statuses_to_tags.items() if status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) }
             
             yield ( service_key, filtered )
             
@@ -930,8 +930,14 @@ class MediaList( object ):
                 
                 ( action, row ) = service_update.ToTuple()
                 
-                if action == HC.SERVICE_UPDATE_DELETE_PENDING: self.DeletePending( service_key )
-                elif action == HC.SERVICE_UPDATE_RESET: self.ResetService( service_key )
+                if action == HC.SERVICE_UPDATE_DELETE_PENDING:
+                    
+                    self.DeletePending( service_key )
+                    
+                elif action == HC.SERVICE_UPDATE_RESET:
+                    
+                    self.ResetService( service_key )
+                    
                 
             
         
@@ -1832,8 +1838,8 @@ class TagsManagerSimple( object ):
     
             combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
             
-            combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-            combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+            combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+            combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
             
             pairs = ( HydrusTags.SplitTag( tag ) for tag in combined_current.union( combined_pending ) )
             
@@ -1851,8 +1857,8 @@ class TagsManagerSimple( object ):
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
-        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
         
         combined = combined_current.union( combined_pending )
         
@@ -1878,8 +1884,8 @@ class TagsManagerSimple( object ):
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
-        combined_current = combined_statuses_to_tags[ HC.CURRENT ]
-        combined_pending = combined_statuses_to_tags[ HC.PENDING ]
+        combined_current = combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+        combined_pending = combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
         
         combined = combined_current.union( combined_pending )
         
@@ -1920,10 +1926,10 @@ class TagsManager( TagsManagerSimple ):
                 
                 statuses_to_tags = siblings_manager.CollapseStatusesToTags( service_key, statuses_to_tags )
                 
-                combined_statuses_to_tags[ HC.CURRENT ].update( statuses_to_tags[ HC.CURRENT ] )
-                combined_statuses_to_tags[ HC.PENDING ].update( statuses_to_tags[ HC.PENDING ] )
-                combined_statuses_to_tags[ HC.PETITIONED ].update( statuses_to_tags[ HC.PETITIONED ] )
-                combined_statuses_to_tags[ HC.DELETED ].update( statuses_to_tags[ HC.DELETED ] )
+                combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].update( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+                combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].update( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+                combined_statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].update( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] )
+                combined_statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].update( statuses_to_tags[ HC.CONTENT_STATUS_DELETED ] )
                 
             
             self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_statuses_to_tags
@@ -1938,10 +1944,10 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        if len( statuses_to_tags[ HC.PENDING ] ) + len( statuses_to_tags[ HC.PETITIONED ] ) > 0:
+        if len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] ) + len( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] ) > 0:
             
-            statuses_to_tags[ HC.PENDING ] = set()
-            statuses_to_tags[ HC.PETITIONED ] = set()
+            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] = set()
+            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] = set()
             
             self._combined_is_calculated = False
             
@@ -1975,7 +1981,7 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.CURRENT ] )
+        return set( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
         
     
     def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
@@ -1987,7 +1993,7 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.DELETED ] )
+        return set( statuses_to_tags[ HC.CONTENT_STATUS_DELETED ] )
         
     
     def GetNumTags( self, service_key, include_current_tags = True, include_pending_tags = False ):
@@ -2001,8 +2007,8 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self.GetStatusesToTags( service_key )
         
-        if include_current_tags: num_tags += len( statuses_to_tags[ HC.CURRENT ] )
-        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.PENDING ] )
+        if include_current_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+        if include_pending_tags: num_tags += len( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
         
         return num_tags
         
@@ -2016,7 +2022,7 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.PENDING ] )
+        return set( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
         
     
     def GetPetitioned( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
@@ -2028,7 +2034,7 @@ class TagsManager( TagsManagerSimple ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.PETITIONED ] )
+        return set( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] )
         
     
     def GetServiceKeysToStatusesToTags( self ):
@@ -2054,7 +2060,7 @@ class TagsManager( TagsManagerSimple ):
         
         combined_statuses_to_tags = self._service_keys_to_statuses_to_tags[ CC.COMBINED_TAG_SERVICE_KEY ]
         
-        return tag in combined_statuses_to_tags[ HC.CURRENT ] or tag in combined_statuses_to_tags[ HC.PENDING ]
+        return tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] or tag in combined_statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
         
     
     def NewSiblings( self ):
@@ -2079,37 +2085,37 @@ class TagsManager( TagsManagerSimple ):
         
         if action == HC.CONTENT_UPDATE_ADD:
             
-            statuses_to_tags[ HC.CURRENT ].add( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].add( tag )
             
-            statuses_to_tags[ HC.DELETED ].discard( tag )
-            statuses_to_tags[ HC.PENDING ].discard( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].discard( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
-            statuses_to_tags[ HC.DELETED ].add( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_DELETED ].add( tag )
             
-            statuses_to_tags[ HC.CURRENT ].discard( tag )
-            statuses_to_tags[ HC.PETITIONED ].discard( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ].discard( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
             
         elif action == HC.CONTENT_UPDATE_PEND:
             
-            if tag not in statuses_to_tags[ HC.CURRENT ]:
+            if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                statuses_to_tags[ HC.PENDING ].add( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
                 
             
         elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
             
-            statuses_to_tags[ HC.PENDING ].discard( tag )
+            statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].discard( tag )
             
         elif action == HC.CONTENT_UPDATE_PETITION:
             
-            if tag in statuses_to_tags[ HC.CURRENT ]:
+            if tag in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                statuses_to_tags[ HC.PETITIONED ].add( tag )
+                statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
                 
             
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.PETITIONED ].discard( tag )
+        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION: statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].discard( tag )
         
         self._combined_is_calculated = False
         

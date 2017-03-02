@@ -26,7 +26,7 @@ SERIALISABLE_TYPE_GALLERY_IMPORT = 20
 SERIALISABLE_TYPE_DICTIONARY = 21
 SERIALISABLE_TYPE_CLIENT_OPTIONS = 22
 SERIALISABLE_TYPE_CONTENT = 23
-SERIALISABLE_TYPE_SERVER_TO_CLIENT_PETITION = 24
+SERIALISABLE_TYPE_PETITION = 24
 SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER = 25
 SERIALISABLE_TYPE_LIST = 26
 SERIALISABLE_TYPE_PARSE_FORMULA_HTML = 27
@@ -35,6 +35,14 @@ SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK = 29
 SERIALISABLE_TYPE_PARSE_NODE_CONTENT = 30
 SERIALISABLE_TYPE_PARSE_FORMULA_JSON = 31
 SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP = 32
+SERIALISABLE_TYPE_BYTES_DICT = 33
+SERIALISABLE_TYPE_CONTENT_UPDATE = 34
+SERIALISABLE_TYPE_CREDENTIALS = 35
+SERIALISABLE_TYPE_DEFINITIONS_UPDATE = 36
+SERIALISABLE_TYPE_METADATA = 37
+SERIALISABLE_TYPE_BANDWIDTH_RULES = 38
+SERIALISABLE_TYPE_BANDWIDTH_TRACKER = 39
+SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE = 40
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -100,7 +108,7 @@ class SerialisableBase( object ):
         
         obj_string = self.DumpToString()
         
-        return lz4.dumps( obj_string )
+        return zlib.compress( obj_string, 9 )
         
     
     def DumpToString( self ):
@@ -243,6 +251,61 @@ class SerialisableDictionary( SerialisableBase, dict ):
         
     
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_DICTIONARY ] = SerialisableDictionary
+
+class SerialisableBytesDictionary( SerialisableBase, dict ):
+    
+    SERIALISABLE_TYPE = SERIALISABLE_TYPE_BYTES_DICT
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, *args, **kwargs ):
+        
+        dict.__init__( self, *args, **kwargs )
+        SerialisableBase.__init__( self )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        pairs = []
+        
+        for ( key, value ) in self.items():
+            
+            encoded_key = key.encode( 'hex' )
+            
+            if isinstance( value, ( list, tuple, set ) ):
+                
+                encoded_value = [ item.encode( 'hex' ) for item in value ]
+                
+            else:
+                
+                encoded_value = value.encode( 'hex' )
+                
+            
+            pairs.append( ( encoded_key, encoded_value ) )
+            
+        
+        return pairs
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        for ( encoded_key, encoded_value ) in serialisable_info:
+            
+            key = encoded_key.decode( 'hex' )
+            
+            if isinstance( encoded_value, ( list, tuple, set ) ):
+                
+                value = [ encoded_item.decode( 'hex' ) for encoded_item in encoded_value ]
+                
+            else:
+                
+                value = encoded_value.decode( 'hex' )
+                
+            
+            self[ key ] = value
+            
+        
+    
+SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_BYTES_DICT ] = SerialisableBytesDictionary
 
 class SerialisableList( SerialisableBase, list ):
     

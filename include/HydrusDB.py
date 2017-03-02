@@ -314,6 +314,35 @@ class HydrusDB( object ):
         raise NotImplementedError()
         
     
+    def _CreateIndex( self, table_name, columns, unique = False ):
+        
+        if '.' in table_name:
+            
+            table_name_simple = table_name.split( '.' )[1]
+            
+        else:
+            
+            table_name_simple = table_name
+            
+        
+        index_name = table_name + '_' + '_'.join( columns ) + '_index'
+        
+        if unique:
+            
+            create_phrase = 'CREATE UNIQUE INDEX '
+            
+        else:
+            
+            create_phrase = 'CREATE INDEX '
+            
+        
+        on_phrase = ' ON ' + table_name_simple + ' (' + ', '.join( columns ) + ');'
+        
+        statement = create_phrase + index_name + on_phrase
+        
+        self._c.execute( statement )
+        
+    
     def _GetRowCount( self ):
         
         row_count = self._c.rowcount

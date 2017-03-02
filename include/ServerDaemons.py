@@ -18,64 +18,20 @@ import sys
 import threading
 import time
 import traceback
-import yaml
 
-def DAEMONCheckDataUsage( controller ):
+def DAEMONSaveDirtyObjects( controller ):
     
-    controller.WriteSynchronous( 'check_data_usage' )
-    
-def DAEMONCheckMonthlyData( controller ):
-    
-    controller.WriteSynchronous( 'check_monthly_data' )
-    
-def DAEMONClearBans( controller ):
-    
-    controller.WriteSynchronous( 'clear_bans' )
+    controller.SaveDirtyObjects()
     
 def DAEMONDeleteOrphans( controller ):
     
     controller.WriteSynchronous( 'delete_orphans' )
     
-def DAEMONFlushRequestsMade( controller, all_requests ):
-    
-    controller.WriteSynchronous( 'flush_requests_made', all_requests )
-    
 def DAEMONGenerateUpdates( controller ):
     
     if not HydrusGlobals.server_busy:
         
-        update_ends = controller.Read( 'update_ends' )
-        
-        for ( service_key, biggest_end ) in update_ends.items():
-            
-            if HydrusGlobals.view_shutdown:
-                
-                return
-                
-            
-            now = HydrusData.GetNow()
-            
-            next_begin = biggest_end + 1
-            next_end = biggest_end + HC.UPDATE_DURATION
-            
-            HydrusGlobals.server_busy = True
-            
-            while next_end < now:
-                
-                controller.WriteSynchronous( 'create_update', service_key, next_begin, next_end )
-                
-                biggest_end = next_end
-                
-                now = HydrusData.GetNow()
-                
-                next_begin = biggest_end + 1
-                next_end = biggest_end + HC.UPDATE_DURATION
-                
-            
-            HydrusGlobals.server_busy = False
-            
-            time.sleep( 1 )
-            
+        HydrusGlobals.server_controller.SyncRepositories()
         
     
 def DAEMONUPnP( controller ):

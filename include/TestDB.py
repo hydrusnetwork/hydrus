@@ -15,6 +15,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
+import HydrusNetwork
 import HydrusSerialisable
 import itertools
 import os
@@ -27,7 +28,6 @@ import tempfile
 import time
 import threading
 import unittest
-import yaml
 import wx
 
 class TestClientDB( unittest.TestCase ):
@@ -125,7 +125,7 @@ class TestClientDB( unittest.TestCase ):
         preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
         preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
@@ -138,7 +138,7 @@ class TestClientDB( unittest.TestCase ):
         preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
         preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'car', min_current_count = 1 ) )
         
-        for p in result: self.assertEqual( p.GetCount( HC.CURRENT ), 1 )
+        for p in result: self.assertEqual( p.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( set( result ), preds )
         
@@ -156,7 +156,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( read_pred, ) = result
         
-        self.assertEqual( read_pred.GetCount( HC.CURRENT ), 1 )
+        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( pred, read_pred )
         
@@ -168,7 +168,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( read_pred, ) = result
         
-        self.assertEqual( read_pred.GetCount( HC.CURRENT ), 1 )
+        self.assertEqual( read_pred.GetCount( HC.CONTENT_STATUS_CURRENT ), 1 )
         
         self.assertEqual( pred, read_pred )
         
@@ -335,10 +335,10 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, None, 1 ) )
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( False, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_PENDING, CC.LOCAL_FILE_SERVICE_KEY ), 0 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( hash, 'sha256' ), 1 ) )
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_HASH, ( ( '0123456789abcdef' * 4 ).decode( 'hex' ), 'sha256' ), 0 ) )
@@ -604,7 +604,7 @@ class TestClientDB( unittest.TestCase ):
         
         session.AddPage( 'files', management_controller, [] )
         
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CURRENT, HydrusData.GenerateKey() ) ) ] )
+        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, HydrusData.GenerateKey() ) ) ] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
         
@@ -856,32 +856,6 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( result, ( False, [ ':', 'series:' ] ) )
         
     
-    def test_news( self ):
-        
-        result = self._read( 'news', CC.LOCAL_TAG_SERVICE_KEY )
-        
-        self.assertEqual( result, [] )
-        
-        #
-        
-        news = []
-        
-        news.append( ( 'hello', HydrusData.GetNow() - 30000 ) )
-        news.append( ( 'hello again', HydrusData.GetNow() - 20000 ) )
-        
-        service_updates = dict()
-        
-        service_updates[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_NEWS, news ) ]
-        
-        self._write( 'service_updates', service_updates )
-        
-        #
-        
-        result = self._read( 'news', CC.LOCAL_TAG_SERVICE_KEY )
-        
-        self.assertItemsEqual( result, news )
-        
-    
     def test_nums_pending( self ):
         
         result = self._read( 'nums_pending' )
@@ -921,7 +895,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'pending', service_key )
         
-        self.assertIsInstance( result, HydrusData.ClientToServerContentUpdatePackage )
+        self.assertIsInstance( result, HydrusNetwork.ClientToServerContentUpdatePackage )
         
         #
         

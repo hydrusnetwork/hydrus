@@ -472,6 +472,8 @@ LOCAL_TAG_SERVICE_KEY = 'local tags'
 
 LOCAL_FILE_SERVICE_KEY = 'local files'
 
+LOCAL_UPDATE_SERVICE_KEY = 'repository updates'
+
 LOCAL_BOORU_SERVICE_KEY = 'local booru'
 
 TRASH_SERVICE_KEY = 'trash'

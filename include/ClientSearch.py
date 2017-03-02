@@ -631,12 +631,12 @@ class FileSystemPredicates( object ):
                 
                 if operator == True:
                     
-                    if current_or_pending == HC.CURRENT: self._file_services_to_include_current.append( service_key )
+                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_include_current.append( service_key )
                     else: self._file_services_to_include_pending.append( service_key )
                     
                 else:
                     
-                    if current_or_pending == HC.CURRENT: self._file_services_to_exclude_current.append( service_key )
+                    if current_or_pending == HC.CONTENT_STATUS_CURRENT: self._file_services_to_exclude_current.append( service_key )
                     else: self._file_services_to_exclude_pending.append( service_key )
                     
                 
@@ -803,11 +803,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return self._min_current_count + self._min_pending_count
             
-        elif current_or_pending == HC.CURRENT:
+        elif current_or_pending == HC.CONTENT_STATUS_CURRENT:
             
             return self._min_current_count
             
-        elif current_or_pending == HC.PENDING:
+        elif current_or_pending == HC.CONTENT_STATUS_PENDING:
             
             return self._min_pending_count
             
@@ -1076,7 +1076,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if operator == True: base += u'is'
                     else: base += u'is not'
                     
-                    if current_or_pending == HC.PENDING: base += u' pending to '
+                    if current_or_pending == HC.CONTENT_STATUS_PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
                     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )

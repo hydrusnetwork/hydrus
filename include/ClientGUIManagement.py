@@ -2074,7 +2074,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
         self._service = self._controller.GetServicesManager().GetService( self._petition_service_key )
-        self._can_ban = self._service.GetInfo( 'account' ).HasPermission( HC.MANAGE_USERS )
+        self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
         
         self._num_petitions = None
         self._current_petition = None
@@ -2287,6 +2287,8 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventGetPetition( self, event ):
         
+        return
+        
         def do_it():
             
             self._current_petition = self._service.Request( HC.GET, 'petition' )
@@ -2303,10 +2305,15 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventModifyPetitioner( self, event ):
         
-        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg: dlg.ShowModal()
+        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg:
+            
+            dlg.ShowModal()
+            
         
     
     def EventRefreshNumPetitions( self, event ):
+        
+        return
         
         def do_it():
             

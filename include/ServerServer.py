@@ -12,9 +12,9 @@ class HydrusRequestRestricted( HydrusServer.HydrusRequest ):
     
 class HydrusServiceRestricted( HydrusServer.HydrusService ):
     
-    def __init__( self, service_key, service_type, message ):
+    def __init__( self, service ):
         
-        HydrusServer.HydrusService.__init__( self, service_key, service_type, message )
+        HydrusServer.HydrusService.__init__( self, service )
         
         self.requestFactory = HydrusRequestRestricted
         
@@ -23,15 +23,15 @@ class HydrusServiceRestricted( HydrusServer.HydrusService ):
         
         root = HydrusServer.HydrusService._InitRoot( self )
         
-        root.putChild( 'access_key', ServerServerResources.HydrusResourceCommandAccessKey( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'access_key_verification', ServerServerResources.HydrusResourceCommandAccessKeyVerification( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'session_key', ServerServerResources.HydrusResourceCommandSessionKey( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'access_key', ServerServerResources.HydrusResourceAccessKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'access_key_verification', ServerServerResources.HydrusResourceAccessKeyVerification( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'session_key', ServerServerResources.HydrusResourceSessionKey( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
-        root.putChild( 'account', ServerServerResources.HydrusResourceCommandRestrictedAccount( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'account_info', ServerServerResources.HydrusResourceCommandRestrictedAccountInfo( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'account_types', ServerServerResources.HydrusResourceCommandRestrictedAccountTypes( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'registration_keys', ServerServerResources.HydrusResourceCommandRestrictedRegistrationKeys( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'stats', ServerServerResources.HydrusResourceCommandRestrictedStats( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'account', ServerServerResources.HydrusResourceRestrictedAccount( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'account_info', ServerServerResources.HydrusResourceRestrictedAccountInfo( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        #root.putChild( 'account_modification', ServerServerResources.HydrusResourceRestrictedAccountModification( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'account_types', ServerServerResources.HydrusResourceRestrictedAccountTypes( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'registration_keys', ServerServerResources.HydrusResourceRestrictedRegistrationKeys( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         return root
         
@@ -43,11 +43,9 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         root = HydrusServiceRestricted._InitRoot( self )
         
         root.putChild( 'busy', ServerServerResources.HydrusResourceBusyCheck() )
-        root.putChild( 'backup', ServerServerResources.HydrusResourceCommandRestrictedBackup( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'init', ServerServerResources.HydrusResourceCommandInit( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'services', ServerServerResources.HydrusResourceCommandRestrictedServices( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'services_info', ServerServerResources.HydrusResourceCommandRestrictedServicesInfo( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'shutdown', ServerServerResources.HydrusResourceCommandShutdown( self._service_key, self._service_type, HydrusServer.LOCAL_DOMAIN ) )
+        root.putChild( 'backup', ServerServerResources.HydrusResourceRestrictedBackup( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'services', ServerServerResources.HydrusResourceRestrictedServices( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'shutdown', ServerServerResources.HydrusResourceShutdown( self._service, HydrusServer.LOCAL_DOMAIN ) )
         
         return root
         
@@ -58,12 +56,11 @@ class HydrusServiceRepository( HydrusServiceRestricted ):
         
         root = HydrusServiceRestricted._InitRoot( self )
         
-        root.putChild( 'news', ServerServerResources.HydrusResourceCommandRestrictedNews( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'num_petitions', ServerServerResources.HydrusResourceCommandRestrictedNumPetitions( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'petition', ServerServerResources.HydrusResourceCommandRestrictedPetition( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'content_update_package', ServerServerResources.HydrusResourceCommandRestrictedContentUpdate( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'immediate_content_update_package', ServerServerResources.HydrusResourceCommandRestrictedImmediateContentUpdate( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'service_update_package', ServerServerResources.HydrusResourceCommandRestrictedServiceUpdate( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
+        #root.putChild( 'num_petitions', ServerServerResources.HydrusResourceRestrictedNumPetitions( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        #root.putChild( 'petition', ServerServerResources.HydrusResourceRestrictedPetition( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'update', ServerServerResources.HydrusResourceRestrictedUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        #root.putChild( 'immediate_update', ServerServerResources.HydrusResourceRestrictedImmediateUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'metadata', ServerServerResources.HydrusResourceRestrictedMetadataUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         return root
         
@@ -74,11 +71,14 @@ class HydrusServiceRepositoryFile( HydrusServiceRepository ):
         
         root = HydrusServiceRepository._InitRoot( self )
         
-        root.putChild( 'file', ServerServerResources.HydrusResourceCommandRestrictedRepositoryFile( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'ip', ServerServerResources.HydrusResourceCommandRestrictedIP( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( 'thumbnail', ServerServerResources.HydrusResourceCommandRestrictedRepositoryThumbnail( self._service_key, self._service_type, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'file', ServerServerResources.HydrusResourceRestrictedRepositoryFile( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'ip', ServerServerResources.HydrusResourceRestrictedIP( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( 'thumbnail', ServerServerResources.HydrusResourceRestrictedRepositoryThumbnail( self._service, HydrusServer.REMOTE_DOMAIN ) )
         
         return root
         
     
-class HydrusServiceRepositoryTag( HydrusServiceRepository ): pass
+class HydrusServiceRepositoryTag( HydrusServiceRepository ):
+    
+    pass
+    

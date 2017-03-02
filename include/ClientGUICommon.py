@@ -1295,14 +1295,23 @@ class MenuButton( BetterButton ):
                 
                 menu.AppendSeparator()
                 
+            elif item_type == 'label':
+                
+                ClientGUIMenus.AppendMenuLabel( menu, title, description )
+                
             
         
         HydrusGlobals.client_controller.PopupMenu( self, menu )
         
     
+    def SetMenuItems( self, menu_items ):
+        
+        self._menu_items = menu_items
+        
+    
 class NoneableSpinCtrl( wx.Panel ):
     
-    def __init__( self, parent, message, none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
         
         wx.Panel.__init__( self, parent )
         
@@ -2511,8 +2520,8 @@ class RatingNumerical( wx.Window ):
         
         self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
         
-        self._num_stars = self._service.GetInfo( 'num_stars' )
-        self._allow_zero = self._service.GetInfo( 'allow_zero' )
+        self._num_stars = self._service.GetNumStars()
+        self._allow_zero = self._service.AllowZero()
         
         my_width = ClientRatings.GetNumericalWidth( self._service_key )
         
@@ -3215,6 +3224,13 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         indices = self.GetAllSelected()
         
+        self.RemoveIndices( indices )
+        
+    
+    def RemoveIndices( self, indices ):
+        
+        indices.sort()
+        
         indices.reverse() # so we don't screw with the indices of deletees below
         
         for index in indices:
@@ -3768,7 +3784,7 @@ class ThreadToGUIUpdater( object ):
 
 class TimeDeltaButton( wx.Button ):
     
-    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
         
         wx.Button.__init__( self, parent )
         
@@ -3777,6 +3793,7 @@ class TimeDeltaButton( wx.Button ):
         self._show_hours = hours
         self._show_minutes = minutes
         self._show_seconds = seconds
+        self._monthly_allowed = monthly_allowed
         
         self._value = self._min
         
@@ -3791,51 +3808,58 @@ class TimeDeltaButton( wx.Button ):
         
         value = self._value
         
-        if self._show_days:
+        if value is None:
             
-            days = value / 86400
+            text = 'monthly'
             
-            if days > 0:
+        else:
+            
+            if self._show_days:
                 
-                text_components.append( HydrusData.ConvertIntToPrettyString( days ) + ' days' )
+                days = value / 86400
                 
-            
-            value %= 86400
-            
-        
-        if self._show_hours:
-            
-            hours = value / 3600
-            
-            if hours > 0:
+                if days > 0:
+                    
+                    text_components.append( HydrusData.ConvertIntToPrettyString( days ) + ' days' )
+                    
                 
-                text_components.append( HydrusData.ConvertIntToPrettyString( hours ) + ' hours' )
+                value %= 86400
                 
             
-            value %= 3600
-            
-        
-        if self._show_minutes:
-            
-            minutes = value / 60
-            
-            if minutes > 0:
+            if self._show_hours:
                 
-                text_components.append( HydrusData.ConvertIntToPrettyString( minutes ) + ' minutes' )
+                hours = value / 3600
                 
-            
-            value %= 60
-            
-        
-        if self._show_seconds:
-            
-            if value > 0 or len( text_components ) == 0:
+                if hours > 0:
+                    
+                    text_components.append( HydrusData.ConvertIntToPrettyString( hours ) + ' hours' )
+                    
                 
-                text_components.append( HydrusData.ConvertIntToPrettyString( value ) + ' seconds' )
+                value %= 3600
                 
             
-        
-        text = ' '.join( text_components )
+            if self._show_minutes:
+                
+                minutes = value / 60
+                
+                if minutes > 0:
+                    
+                    text_components.append( HydrusData.ConvertIntToPrettyString( minutes ) + ' minutes' )
+                    
+                
+                value %= 60
+                
+            
+            if self._show_seconds:
+                
+                if value > 0 or len( text_components ) == 0:
+                    
+                    text_components.append( HydrusData.ConvertIntToPrettyString( value ) + ' seconds' )
+                    
+                
+            
+            text = ' '.join( text_components )
+            
         
         self.SetLabelText( text )
         
@@ -3844,7 +3868,7 @@ class TimeDeltaButton( wx.Button ):
         
         import ClientGUIDialogs
         
-        with ClientGUIDialogs.DialogInputTimeDelta( self, self._value, min = self._min, days = self._show_days, hours = self._show_hours, minutes = self._show_minutes, seconds = self._show_seconds ) as dlg:
+        with ClientGUIDialogs.DialogInputTimeDelta( self, self._value, min = self._min, days = self._show_days, hours = self._show_hours, minutes = self._show_minutes, seconds = self._show_seconds, monthly_allowed = self._monthly_allowed ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -3875,7 +3899,7 @@ class TimeDeltaButton( wx.Button ):
     
 class TimeDeltaCtrl( wx.Panel ):
     
-    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False ):
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
         
         wx.Panel.__init__( self, parent )
         
@@ -3884,13 +3908,14 @@ class TimeDeltaCtrl( wx.Panel ):
         self._show_hours = hours
         self._show_minutes = minutes
         self._show_seconds = seconds
+        self._monthly_allowed = monthly_allowed
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         if self._show_days:
             
             self._days = wx.SpinCtrl( self, min = 0, max = 360, size = ( 50, -1 ) )
-            self._days.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            self._days.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._days, CC.FLAGS_VCENTER )
             hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_VCENTER )
@@ -3899,7 +3924,7 @@ class TimeDeltaCtrl( wx.Panel ):
         if self._show_hours:
             
             self._hours = wx.SpinCtrl( self, min = 0, max = 23, size = ( 45, -1 ) )
-            self._hours.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            self._hours.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._hours, CC.FLAGS_VCENTER )
             hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_VCENTER )
@@ -3908,7 +3933,7 @@ class TimeDeltaCtrl( wx.Panel ):
         if self._show_minutes:
             
             self._minutes = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
-            self._minutes.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            self._minutes.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._minutes, CC.FLAGS_VCENTER )
             hbox.AddF( wx.StaticText( self, label = 'minutes' ), CC.FLAGS_VCENTER )
@@ -3917,23 +3942,84 @@ class TimeDeltaCtrl( wx.Panel ):
         if self._show_seconds:
             
             self._seconds = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
-            self._seconds.Bind( wx.EVT_SPINCTRL, self.EventSpin )
+            self._seconds.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._seconds, CC.FLAGS_VCENTER )
             hbox.AddF( wx.StaticText( self, label = 'seconds' ), CC.FLAGS_VCENTER )
             
         
+        if self._monthly_allowed:
+            
+            self._monthly = wx.CheckBox( self )
+            self._monthly.Bind( wx.EVT_CHECKBOX, self.EventChange )
+            
+            hbox.AddF( self._monthly, CC.FLAGS_VCENTER )
+            hbox.AddF( wx.StaticText( self, label = 'monthly' ), CC.FLAGS_VCENTER )
+            
+        
         self.SetSizer( hbox )
         
     
-    def EventSpin( self, event ):
+    def _UpdateEnables( self ):
         
         value = self.GetValue()
         
-        if value < self._min:
+        if value is None:
+            
+            if self._show_days:
+                
+                self._days.Disable()
+                
+            
+            if self._show_hours:
+                
+                self._hours.Disable()
+                
+            
+            if self._show_minutes:
+                
+                self._minutes.Disable()
+                
+            
+            if self._show_seconds:
+                
+                self._seconds.Disable()
+                
+            
+        else:
+            
+            if self._show_days:
+                
+                self._days.Enable()
+                
+            
+            if self._show_hours:
+                
+                self._hours.Enable()
+                
+            
+            if self._show_minutes:
+                
+                self._minutes.Enable()
+                
+            
+            if self._show_seconds:
+                
+                self._seconds.Enable()
+                
+            
+        
+    
+    def EventChange( self, event ):
+        
+        value = self.GetValue()
+        
+        if value is not None and value < self._min:
             
             self.SetValue( self._min )
             
+        
+        self._UpdateEnables()
         
         new_event = TimeDeltaEvent( 0 )
         
@@ -3941,6 +4027,11 @@ class TimeDeltaCtrl( wx.Panel ):
         
     
     def GetValue( self ):
+        
+        if self._monthly_allowed and self._monthly.GetValue():
+            
+            return None
+            
         
         value = 0
         
@@ -3969,36 +4060,53 @@ class TimeDeltaCtrl( wx.Panel ):
     
     def SetValue( self, value ):
         
-        if value < self._min:
+        if self._monthly_allowed:
             
-            value = self._min
-            
-        
-        if self._show_days:
-            
-            self._days.SetValue( value / 86400 )
-            
-            value %= 86400
-            
-        
-        if self._show_hours:
-            
-            self._hours.SetValue( value / 3600 )
-            
-            value %= 3600
+            if value is None:
+                
+                self._monthly.SetValue( True )
+                
+            else:
+                
+                self._monthly.SetValue( False )
+                
             
         
-        if self._show_minutes:
+        if value is not None:
             
-            self._minutes.SetValue( value / 60 )
+            if value < self._min:
+                
+                value = self._min
+                
             
-            value %= 60
+            if self._show_days:
+                
+                self._days.SetValue( value / 86400 )
+                
+                value %= 86400
+                
+            
+            if self._show_hours:
+                
+                self._hours.SetValue( value / 3600 )
+                
+                value %= 3600
+                
+            
+            if self._show_minutes:
+                
+                self._minutes.SetValue( value / 60 )
+                
+                value %= 60
+                
+            
+            if self._show_seconds:
+                
+                self._seconds.SetValue( value )
+                
             
         
-        if self._show_seconds:
-            
-            self._seconds.SetValue( value )
-            
+        self._UpdateEnables()
         
     
 class RadioBox( StaticBox ):

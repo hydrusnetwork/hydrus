@@ -1,5 +1,6 @@
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusNetwork
 import HydrusPaths
 import HydrusSerialisable
 import errno
@@ -27,9 +28,12 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
         
         access_key = credentials.GetAccessKey()
         
-        if access_key != '': request_headers[ 'Hydrus-Key' ] = access_key.encode( 'hex' )
+        request_headers[ 'Hydrus-Key' ] = access_key.encode( 'hex' )
         
-    else: raise Exception( 'No access key!' )
+    else:
+        
+        raise Exception( 'No access key!' )
+        
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
     
@@ -49,8 +53,6 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
     
     if 'server' not in response_headers or service_string not in response_headers[ 'server' ]:
         
-        HydrusGlobals.client_controller.Write( 'service_updates', { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_ACCOUNT, HydrusData.GetUnknownAccount() ) ] })
-        
         raise HydrusExceptions.WrongServiceTypeException( 'Target was not a ' + service_string + '!' )
         
     
@@ -62,57 +64,17 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
     
     if network_version != HC.NETWORK_VERSION:
         
-        if network_version > HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
-        else: message = 'The server is out of date; please ask its admin to update to the latest release.'
+        if network_version > HC.NETWORK_VERSION:
+            
+            message = 'Your client is out of date; please download the latest release.'
+            
+        else:
+            
+            message = 'The server is out of date; please ask its admin to update to the latest release.'
+            
         
         raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
         
-    
-def ConvertHydrusGETArgsToQuery( request_args ):
-    
-    if 'subject_identifier' in request_args:
-        
-        subject_identifier = request_args[ 'subject_identifier' ]
-        
-        del request_args[ 'subject_identifier' ]
-        
-        if subject_identifier.HasAccountKey():
-            
-            account_key = subject_identifier.GetData()
-            
-            request_args[ 'subject_account_key' ] = account_key.encode( 'hex' )
-            
-        elif subject_identifier.HasContent():
-            
-            content = subject_identifier.GetData()
-            
-            content_type = content.GetContentType()
-            content_data = content.GetContent()
-            
-            if content_type == HC.CONTENT_TYPE_FILES:
-                
-                hash = content_data[0]
-                
-                request_args[ 'subject_hash' ] = hash.encode( 'hex' )
-                
-            elif content_type == HC.CONTENT_TYPE_MAPPING:
-                
-                ( tag, hash ) = content_data
-                
-                request_args[ 'subject_hash' ] = hash.encode( 'hex' )
-                request_args[ 'subject_tag' ] = tag.encode( 'hex' )
-                
-            
-        
-    
-    if 'title' in request_args:
-        
-        request_args[ 'title' ] = request_args[ 'title' ].encode( 'hex' )
-        
-    
-    query = '&'.join( [ key + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ] )
-    
-    return query
     
 def RequestsGet( url, params = None, stream = False, headers = None ):
     
@@ -532,6 +494,7 @@ class HTTPConnection( object ):
             elif response.status == 404: raise HydrusExceptions.NotFoundException( parsed_response )
             elif response.status == 419: raise HydrusExceptions.SessionException( parsed_response )
             elif response.status == 426: raise HydrusExceptions.NetworkVersionException( parsed_response )
+            elif response.status == 509: raise HydrusExceptions.BandwidthException( parsed_response )
             elif response.status in ( 500, 501, 502, 503 ):
                 
                 server_header = response.getheader( 'Server' )
@@ -850,19 +813,11 @@ class HTTPConnection( object ):
                 try: parsed_response = data.decode( charset )
                 except: parsed_response = data
                 
-            elif content_type == 'application/x-yaml':
-                
-                try: parsed_response = yaml.safe_load( data )
-                except yaml.error.YAMLError as e:
-                    
-                    raise HydrusExceptions.NetworkVersionException( 'Failed to parse a response object!' + os.linesep + HydrusData.ToUnicode( e ) )
-                    
-                
             elif content_type == 'application/json':
                 
                 if hydrus_service:
                     
-                    parsed_response = HydrusSerialisable.CreateFromNetworkString( data )
+                    parsed_response = HydrusNetwork.ParseBodyString( data )
                     
                 else:
                     

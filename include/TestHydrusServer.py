@@ -7,6 +7,7 @@ import hashlib
 import httplib
 import HydrusConstants as HC
 import HydrusEncryption
+import HydrusNetwork
 import HydrusPaths
 import HydrusServer
 import HydrusServerResources
@@ -44,18 +45,15 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._file_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', {} )
-        self._tag_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', {} )
-        self._admin_service = ClientData.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', {} )
+        self._file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo' )
+        self._tag_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo' )
+        self._admin_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin' )
         
         services_manager = HydrusGlobals.test_controller.GetServicesManager()
         
         services_manager._keys_to_services[ self._file_service.GetServiceKey() ] = self._file_service
         services_manager._keys_to_services[ self._tag_service.GetServiceKey() ] = self._tag_service
         services_manager._keys_to_services[ self._admin_service.GetServiceKey() ] = self._admin_service
-        
-        HydrusPaths.MakeSureDirectoryExists( ServerFiles.GetExpectedUpdateDir( self._file_service.GetServiceKey() ) )
-        HydrusPaths.MakeSureDirectoryExists( ServerFiles.GetExpectedUpdateDir( self._tag_service.GetServiceKey() ) )
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
@@ -363,20 +361,6 @@ class TestServer( unittest.TestCase ):
         
         service_key = service.GetServiceKey()
         
-        # news
-        
-        news = 'this is the news'
-        
-        service.Request( HC.POST, 'news', { 'news' : news } )
-        
-        written = HydrusGlobals.test_controller.GetWrite( 'news' )
-        
-        [ ( args, kwargs ) ] = written
-        
-        ( written_service_key, written_news ) = args
-        
-        self.assertEqual( news, written_news )
-        
         # num_petitions
         
         num_petitions = 23
@@ -392,7 +376,7 @@ class TestServer( unittest.TestCase ):
         action = HC.CONTENT_UPDATE_PETITION
         account_identifier = HydrusData.AccountIdentifier( account_key = HydrusData.GenerateKey() )
         reason = 'it sucks'
-        contents = [ HydrusData.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ]
+        contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ]
         
         petition = HydrusData.ServerToClientPetition( action = action, petitioner_account_identifier = account_identifier, reason = reason, contents = contents )
         
@@ -411,7 +395,7 @@ class TestServer( unittest.TestCase ):
         update.SetBeginEnd( begin, begin + HC.UPDATE_DURATION - 1 )
         update.SetSubindexCount( subindex_count )
         
-        path = ServerFiles.GetExpectedServiceUpdatePackagePath( service_key, begin )
+        path = ServerFiles.GetFilePath( hash )
         
         with open( path, 'wb' ) as f: f.write( update.DumpToNetworkString() )
         
@@ -437,7 +421,7 @@ class TestServer( unittest.TestCase ):
         
         response = service.Request( HC.GET, 'content_update_package', { 'begin' : begin, 'subindex' : subindex } )
         
-        self.assertEqual( response.GetNumContentUpdates(), update.GetNumContentUpdates() )
+        raise Exception( 'change this to numrows or whatever' )
         
         try: os.remove( path )
         except: pass
@@ -463,11 +447,7 @@ class TestServer( unittest.TestCase ):
         
         HydrusGlobals.test_controller.SetRead( 'access_key', self._access_key )
         
-        request_headers = {}
-        
-        request_headers[ 'Hydrus-Key' ] = registration_key.encode( 'hex' )
-        
-        response = service.Request( HC.GET, 'access_key', request_headers = request_headers )
+        response = service.Request( HC.GET, 'access_key', { 'registration_key' : registration_key } )
         
         self.assertEqual( response[ 'access_key' ], self._access_key )
         
@@ -539,23 +519,9 @@ class TestServer( unittest.TestCase ):
         
         HydrusGlobals.test_controller.SetRead( 'registration_keys', [ registration_key ] )
         
-        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'title' : 'blah' } )
+        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'account_type_key' : os.urandom( 32 ).encode( 'hex' ), 'expires' : HydrusData.GetNow() + 1200 } )
         
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
-        
-        response = service.Request( HC.GET, 'registration_keys', { 'num' : 1, 'title' : 'blah', 'lifetime' : 100 } )
-        
-        self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
-        
-        # stats
-        
-        stats = { 'message' : 'hello' }
-        
-        HydrusGlobals.test_controller.SetRead( 'stats', stats )
-        
-        response = service.Request( HC.GET, 'stats' )
-        
-        self.assertEqual( response[ 'stats' ], stats )
         
     
     def _test_server_admin( self, service, host, port ):
@@ -569,9 +535,9 @@ class TestServer( unittest.TestCase ):
         
         access_key = HydrusData.GenerateKey()
         
-        HydrusGlobals.test_controller.SetRead( 'init', access_key )
+        HydrusGlobals.test_controller.SetRead( 'access_key', access_key )
         
-        response = service.Request( HC.GET, 'init' )
+        response = service.Request( HC.GET, 'access_key', 'init' )
         
         self.assertEqual( response[ 'access_key' ], access_key )
         

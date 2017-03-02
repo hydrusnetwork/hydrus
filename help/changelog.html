@@ -8,6 +8,98 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 245</h3></li>				<ul>
+					<li>?fixed a v244 update problem for clients updating from <v238</li>
+					<li>some misc stuff:</li>
+					<li>if you start editing many subscriptions, cancelling a single dialog will break the chain of loading new dialogs</li>
+					<li>reduced some redundancy in regular client file import</li>
+					<li>improved how the dialog for selection from a list of strings works</li>
+					<li>if the client ever merges one directory to another (such as in external file locations migration) and any files fail to merge, the source will no longer be deleted</li>
+					<li>created new flexible bandwidth tracking and ruling objects</li>
+					<li>updated how repository updates work, splitting the old explicit and self-contained content update package system to a new implicit definitions/content split system and an improved one-step-sync metadata propagation</li>
+					<li>updating now takes approximately 30% as much bandwidth as before</li>
+					<li>update files are now stored in client_files and server_files like any other file (client_updates and server_updates folders will be deleted on update)</li>
+					<li>the server will print update generation info to its log</li>
+					<li>unfortunately, updates cannot be converted, so a complete resync of update files is required. the smaller update size and better bandwidth controls should mitigate the problem somewhat</li>
+					<li>the server has been compacted across all content types--its mappings db file should shrink about 12%</li>
+					<li>due to new service-specific ids, server.master.db should increase in size, typically about 50%</li>
+					<li>harmonised how GET and POST/response args are built and parsed across the network</li>
+					<li>server administration initialisation is now simpler, done with 'init' registration key</li>
+					<li>leading and trailing spaces are now removed from both the namespace and subtag components of namespaced tags, meaning 'title: blah' will be collapsed to 'title:blah'. tag repositories will clean their existing tags on update</li>
+					<li>invalid serverside tags will be replaced with valid placeholders on server update</li>
+					<li>refactored, harmonised and simplified some server request code</li>
+					<li>Eris makes a triumphant return to the root welcome page ('/' request of any service) with improved self-description text as well</li>
+					<li>updated how bandwidth is tracked and overseen</li>
+					<li>all requests now consume bandwidth</li>
+					<li>fewer requests are actually constrained by bandwidth--at the moment, it is only update files and file/thumbnail downloads, as these represent the overwhelming majority of bandwidth consumption and are not at all critical to service operation--this may change in the future, but it suits our purposes for now</li>
+					<li>bandwidth tracking code is more sane across the board</li>
+					<li>the server's administration service now tracks server-wide bandwidth as it happens</li>
+					<li>service and server-wide bandwidth rules are consulted as soon as the request begins</li>
+					<li>improved some server response rendering</li>
+					<li>permissions are more flexible and content-specific</li>
+					<li>improved how file repositories check and process file requests</li>
+					<li>created a gui control for managing bandwidth rules</li>
+					<li>updated the serverside service object</li>
+					<li>the serverside service object now contains bandwidth rules and tracking</li>
+					<li>updated how the server deals with services on a db level</li>
+					<li>refactored and cleaned a ton of server db code</li>
+					<li>updated how services are edited over the network</li>
+					<li>updated how the server associates its services with its http pipeline</li>
+					<li>converted clientside server service management gui to the new panel system</li>
+					<li>updated gui code for clientside server service management</li>
+					<li>converted clientside server service management db code to the new system</li>
+					<li>improved how bandwidth errors are reported</li>
+					<li>updated the account type object</li>
+					<li>the account type object now contains bandwidth rules and a more flexible permissions system</li>
+					<li>updated how the server deals with account types on a db level</li>
+					<li>converted clientside server account type management gui to the new panel system</li>
+					<li>updated gui code for clientside server account type management</li>
+					<li>serverside account types are now fetched from a cache, reducing memory sprawl</li>
+					<li>updated the account object</li>
+					<li>the account object now contains a bandwidth tracker</li>
+					<li>updated how the server deals with accounts on a db level</li>
+					<li>updated the clientside server object</li>
+					<li>the clientside server object now contains bandwidth rules and a tracker and has improved error management, recovery, and reporting</li>
+					<li>updated how the client deals with services on a db level</li>
+					<li>improved how serverside bandwidth errors are caught</li>
+					<li>all clientside services start with a 50MB/day bandwidth limit</li>
+					<li>existing repositories will get a 250MB/month, 50MB/day default bandwidth limit, just to help us get over the hump--see the release post for info on how to get all the updates anyway</li>
+					<li>updated manage services dialog extensively</li>
+					<li>service account registration now occurs through a simple button on the normal clientside service edit panel</li>
+					<li>all services can now be renamed</li>
+					<li>updated the content processing pipeline</li>
+					<li>prepared code for future merging of file and tag repositories</li>
+					<li>added future support for pend-petitions for files and mappings and simple creation permissions for tag siblings and parents</li>
+					<li>the clientside content processing pipeline now operates inside a single database transaction, reducing a great deal of previously redundant hard drive activity</li>
+					<li>the serverside content processing pipeline now creates per-service timestamped content definitions</li>
+					<li>the clientside content processing pipeline now maintains and appropriately consults a cache for server definitions</li>
+					<li>pre-process disk cache is more intelligent</li>
+					<li>updated review services to match the new service objects</li>
+					<li>service review panels now show more information about error state and so on</li>
+					<li>service review panels should now update as soon as services change</li>
+					<li>you can now force sync repositories from review services</li>
+					<li>you can now pause/resume repositories from review services</li>
+					<li>you can now export repository update files from review services</li>
+					<li>you can now import repository update files from the services menu</li>
+					<li>repository thumbnail download now uses a cache for faster thumbnail ownership testing</li>
+					<li>culled a lot of old code and experiments</li>
+					<li>deleted all the old messaging depot code and db table cruft</li>
+					<li>removed optimised petition processing</li>
+					<li>serverside deleteorphans is temporarily disabled</li>
+					<li>hydrus client-repository relationship no longer supports news</li>
+					<li>removed the 'stats' admin service call--it will come back as a account review page</li>
+					<li>clientside clear orphans is temporarily disabled</li>
+					<li>clientside local file/thumbnail server is disabled for now</li>
+					<li>custom service 'messages' for the root page are no longer available</li>
+					<li>some things are not working yet--they will be back in soon</li>
+					<li>content presentation on review services</li>
+					<li>service reset, other advanced content service controls</li>
+					<li>ipfs controls on review services</li>
+					<li>local booru controls on review services</li>
+					<li>most service-specific panels on manage services</li>
+					<li>petition resolution</li>
+					<li>serverside account modification, including banning</li>
+				</ul>
 				<li><h3>version 244</h3></li>
 				<ul>
 					<li>updated client database to compact ( namespace_id, tag_id ) pair into a single id for storage</li>

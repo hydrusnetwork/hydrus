@@ -48,8 +48,8 @@ options = {}
 
 # Misc
 
-NETWORK_VERSION = 17
-SOFTWARE_VERSION = 244
+NETWORK_VERSION = 18
+SOFTWARE_VERSION = 245
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -62,6 +62,19 @@ lifetimes = [ ( 'one month', 31 * 86400 ), ( 'three months', 3 * 31 * 86400 ), (
 
 # Enums
 
+BANDWIDTH_TYPE_DATA = 0
+BANDWIDTH_TYPE_REQUESTS = 1
+
+bandwidth_type_string_lookup = {}
+
+bandwidth_type_string_lookup[ BANDWIDTH_TYPE_DATA ] = 'data'
+bandwidth_type_string_lookup[ BANDWIDTH_TYPE_REQUESTS ] = 'requests'
+
+CONTENT_STATUS_CURRENT = 0
+CONTENT_STATUS_PENDING = 1
+CONTENT_STATUS_DELETED = 2
+CONTENT_STATUS_PETITIONED = 3
+
 CONTENT_TYPE_MAPPINGS = 0
 CONTENT_TYPE_TAG_SIBLINGS = 1
 CONTENT_TYPE_TAG_PARENTS = 2
@@ -71,6 +84,30 @@ CONTENT_TYPE_MAPPING = 5
 CONTENT_TYPE_DIRECTORIES = 6
 CONTENT_TYPE_URLS = 7
 CONTENT_TYPE_VETO = 8
+CONTENT_TYPE_ACCOUNTS = 9
+CONTENT_TYPE_OPTIONS = 10
+CONTENT_TYPE_SERVICES = 11
+CONTENT_TYPE_UNKNOWN = 12
+CONTENT_TYPE_ACCOUNT_TYPES = 13
+
+content_type_string_lookup = {}
+
+content_type_string_lookup[ CONTENT_TYPE_MAPPINGS ] = 'mappings'
+content_type_string_lookup[ CONTENT_TYPE_TAG_SIBLINGS ] = 'tag siblings'
+content_type_string_lookup[ CONTENT_TYPE_TAG_PARENTS ] = 'tag parents'
+content_type_string_lookup[ CONTENT_TYPE_FILES ] = 'files'
+content_type_string_lookup[ CONTENT_TYPE_RATINGS ] = 'ratings'
+content_type_string_lookup[ CONTENT_TYPE_MAPPING ] = 'mapping'
+content_type_string_lookup[ CONTENT_TYPE_DIRECTORIES ] = 'directories'
+content_type_string_lookup[ CONTENT_TYPE_URLS ] = 'urls'
+content_type_string_lookup[ CONTENT_TYPE_VETO ] = 'veto'
+content_type_string_lookup[ CONTENT_TYPE_ACCOUNTS ] = 'accounts'
+content_type_string_lookup[ CONTENT_TYPE_OPTIONS ] = 'options'
+content_type_string_lookup[ CONTENT_TYPE_SERVICES ] = 'services'
+content_type_string_lookup[ CONTENT_TYPE_UNKNOWN ] = 'unknown'
+content_type_string_lookup[ CONTENT_TYPE_ACCOUNT_TYPES ] = 'account types'
+
+REPOSITORY_CONTENT_TYPES = [ CONTENT_TYPE_FILES, CONTENT_TYPE_MAPPINGS, CONTENT_TYPE_TAG_PARENTS, CONTENT_TYPE_TAG_SIBLINGS ]
 
 CONTENT_UPDATE_ADD = 0
 CONTENT_UPDATE_DELETE = 1
@@ -102,6 +139,9 @@ content_update_string_lookup[ CONTENT_UPDATE_RATING ] = 'rating'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PEND ] = 'deny pend'
 content_update_string_lookup[ CONTENT_UPDATE_DENY_PETITION ] = 'deny petition'
 content_update_string_lookup[ CONTENT_UPDATE_UNDELETE ] = 'undelete'
+
+DEFINITIONS_TYPE_HASHES = 0
+DEFINITIONS_TYPE_TAGS = 1
 
 DUPLICATE_UNKNOWN = 0
 DUPLICATE_NOT_DUPLICATE = 1
@@ -163,6 +203,42 @@ permissions_string_lookup[ GENERAL_ADMIN ] = 'general administration'
 permissions_string_lookup[ EDIT_SERVICES ] = 'edit services'
 permissions_string_lookup[ UNKNOWN_PERMISSION ] = 'unknown'
 
+# new permissions
+
+PERMISSION_ACTION_PETITION = 0
+PERMISSION_ACTION_CREATE = 1
+PERMISSION_ACTION_OVERRULE = 2
+
+permission_pair_string_lookup = {}
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, None ) ] = 'cannot change accounts'
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_CREATE ) ] = 'can create accounts'
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNTS, PERMISSION_ACTION_OVERRULE ) ] = 'can manage accounts completely'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, None ) ] = 'cannot change account types'
+permission_pair_string_lookup[ ( CONTENT_TYPE_ACCOUNT_TYPES, PERMISSION_ACTION_OVERRULE ) ] = 'can manage account types completely'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, None ) ] = 'cannot change services'
+permission_pair_string_lookup[ ( CONTENT_TYPE_SERVICES, PERMISSION_ACTION_OVERRULE ) ] = 'can manage services completely'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, None ) ] = 'can only download files'
+permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing files'
+permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_CREATE ) ] = 'can upload new files and petition existing ones'
+permission_pair_string_lookup[ ( CONTENT_TYPE_FILES, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete files and process petitions'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, None ) ] = 'can only download mappings'
+permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to remove existing mappings'
+permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_CREATE ) ] = 'can upload new mappings and petition existing ones'
+permission_pair_string_lookup[ ( CONTENT_TYPE_MAPPINGS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete mappings and process petitions'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, None ) ] = 'can only download tag parents'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag parents'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_PARENTS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete tag parents and process petitions'
+
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, None ) ] = 'can only download tag siblings'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_PETITION ) ] = 'can petition to add or remove tag siblings'
+permission_pair_string_lookup[ ( CONTENT_TYPE_TAG_SIBLINGS, PERMISSION_ACTION_OVERRULE ) ] = 'can upload and delete tag siblings and process petitions'
+
 TAG_REPOSITORY = 0
 FILE_REPOSITORY = 1
 LOCAL_FILE_DOMAIN = 2
@@ -198,7 +274,7 @@ service_string_lookup[ COMBINED_TAG ] = 'virtual combined tag service'
 service_string_lookup[ COMBINED_FILE ] = 'virtual combined file service'
 service_string_lookup[ LOCAL_BOORU ] = 'hydrus local booru'
 service_string_lookup[ IPFS ] = 'ipfs daemon'
-service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration'
+service_string_lookup[ SERVER_ADMIN ] = 'hydrus server administration service'
 service_string_lookup[ NULL_SERVICE ] = 'null service'
 
 LOCAL_FILE_SERVICES = [ LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, COMBINED_LOCAL_FILE ]
@@ -212,8 +288,8 @@ RESTRICTED_SERVICES = list( REPOSITORIES ) + [ SERVER_ADMIN, MESSAGE_DEPOT ]
 REMOTE_SERVICES = list( RESTRICTED_SERVICES ) + [ IPFS ]
 FILE_SERVICES = list( LOCAL_FILE_SERVICES ) + [ FILE_REPOSITORY, IPFS ]
 TAG_SERVICES = [ LOCAL_TAG, TAG_REPOSITORY ]
-NONADDREMOVEABLE_SERVICES = [ LOCAL_BOORU, LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, LOCAL_TAG ]
-NONRENAMEABLE_SERVICES = [ LOCAL_BOORU, LOCAL_FILE_TRASH_DOMAIN, LOCAL_TAG ]
+ADDREMOVABLE_SERVICES = [ LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, FILE_REPOSITORY, TAG_REPOSITORY, SERVER_ADMIN, IPFS ]
+NONEDITABLE_SERVICES = [ LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, LOCAL_TAG, COMBINED_FILE, COMBINED_TAG, COMBINED_LOCAL_FILE ]
 AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES = [ LOCAL_FILE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN, COMBINED_LOCAL_FILE, FILE_REPOSITORY ]
 ALL_SERVICES = list( REMOTE_SERVICES ) + list( LOCAL_SERVICES ) + [ COMBINED_FILE, COMBINED_TAG ]
 
@@ -227,12 +303,6 @@ SUPERBAN = 1
 CHANGE_ACCOUNT_TYPE = 2
 ADD_TO_EXPIRES = 3
 SET_EXPIRES = 4
-
-CURRENT = 0
-PENDING = 1
-DELETED = 2
-PETITIONED = 3
-DELETED_PENDING = 4
 
 HIGH_PRIORITY = 0
 LOW_PRIORITY = 2
@@ -265,18 +335,8 @@ SERVICE_INFO_NUM_PENDING_TAG_PARENTS = 19
 SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS = 20
 SERVICE_INFO_NUM_SHARES = 21
 
-SERVICE_UPDATE_ACCOUNT = 0
-SERVICE_UPDATE_DELETE_PENDING = 1
-SERVICE_UPDATE_ERROR = 2
-SERVICE_UPDATE_BEGIN_END = 3
-SERVICE_UPDATE_RESET = 4
-SERVICE_UPDATE_REQUEST_MADE = 5
-SERVICE_UPDATE_LAST_CHECK = 6
-SERVICE_UPDATE_NEWS = 7
-SERVICE_UPDATE_NEXT_DOWNLOAD_TIMESTAMP = 8
-SERVICE_UPDATE_NEXT_PROCESSING_TIMESTAMP = 9
-SERVICE_UPDATE_SUBINDEX_COUNT = 10
-SERVICE_UPDATE_PAUSE = 11
+SERVICE_UPDATE_DELETE_PENDING = 0
+SERVICE_UPDATE_RESET = 1
 
 ADD = 0
 DELETE = 1
@@ -324,10 +384,12 @@ UNDETERMINED_PNG = 24
 VIDEO_MPEG = 25
 VIDEO_MOV = 26
 VIDEO_AVI = 27
+APPLICATION_HYDRUS_UPDATE_DEFINITIONS = 28
+APPLICATION_HYDRUS_UPDATE_CONTENT = 29
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV, APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
 SEARCHABLE_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
 
 IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
@@ -370,6 +432,8 @@ mime_enum_lookup[ 'application/pdf' ] = APPLICATION_PDF
 mime_enum_lookup[ 'application/zip' ] = APPLICATION_ZIP
 mime_enum_lookup[ 'application/json' ] = APPLICATION_JSON
 mime_enum_lookup[ 'application/hydrus-encrypted-zip' ] = APPLICATION_HYDRUS_ENCRYPTED_ZIP
+mime_enum_lookup[ 'application/hydrus-update-content' ] = APPLICATION_HYDRUS_UPDATE_CONTENT
+mime_enum_lookup[ 'application/hydrus-update-definitions' ] = APPLICATION_HYDRUS_UPDATE_DEFINITIONS
 mime_enum_lookup[ 'application' ] = APPLICATIONS
 mime_enum_lookup[ 'audio/mp3' ] = AUDIO_MP3
 mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
@@ -404,6 +468,8 @@ mime_string_lookup[ APPLICATION_JSON ] = 'application/json'
 mime_string_lookup[ APPLICATION_PDF ] = 'application/pdf'
 mime_string_lookup[ APPLICATION_ZIP ] = 'application/zip'
 mime_string_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = 'application/hydrus-encrypted-zip'
+mime_string_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = 'application/hydrus-update-content'
+mime_string_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = 'application/hydrus-update-definitions'
 mime_string_lookup[ APPLICATIONS ] = 'application'
 mime_string_lookup[ AUDIO_MP3 ] = 'audio/mp3'
 mime_string_lookup[ AUDIO_OGG ] = 'audio/ogg'
@@ -439,6 +505,8 @@ mime_ext_lookup[ APPLICATION_JSON ] = '.json'
 mime_ext_lookup[ APPLICATION_PDF ] = '.pdf'
 mime_ext_lookup[ APPLICATION_ZIP ] = '.zip'
 mime_ext_lookup[ APPLICATION_HYDRUS_ENCRYPTED_ZIP ] = '.zip.encrypted'
+mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_CONTENT ] = ''
+mime_ext_lookup[ APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ''
 mime_ext_lookup[ AUDIO_MP3 ] = '.mp3'
 mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
@@ -523,58 +591,12 @@ site_type_string_lookup[ SITE_TYPE_PIXIV_ARTIST_ID ] = 'pixiv artist id'
 site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
 
-# request checking
-
-BANDWIDTH_CONSUMING_REQUESTS = set()
-
-BANDWIDTH_CONSUMING_REQUESTS.add( ( LOCAL_BOORU, GET, 'gallery' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( LOCAL_BOORU, GET, 'page' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( LOCAL_BOORU, GET, 'file' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( LOCAL_BOORU, GET, 'thumbnail' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'immediate_content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, GET, 'service_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( TAG_REPOSITORY, POST, 'content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'file' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'immediate_content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'service_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, GET, 'thumbnail' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'content_update_package' ) )
-BANDWIDTH_CONSUMING_REQUESTS.add( ( FILE_REPOSITORY, POST, 'file' ) )
-
 # default options
 
 DEFAULT_LOCAL_FILE_PORT = 45865
 DEFAULT_LOCAL_BOORU_PORT = 45866
 DEFAULT_SERVER_ADMIN_PORT = 45870
 DEFAULT_SERVICE_PORT = 45871
-
-DEFAULT_OPTIONS = {}
-
-DEFAULT_OPTIONS[ SERVER_ADMIN ] = {}
-DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'max_monthly_data' ] = None
-DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'max_storage' ] = None
-DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'message' ] = 'hydrus server administration service'
-DEFAULT_OPTIONS[ SERVER_ADMIN ][ 'upnp' ] = None
-
-DEFAULT_OPTIONS[ FILE_REPOSITORY ] = {}
-DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'max_monthly_data' ] = None
-DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'max_storage' ] = None
-DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'log_uploader_ips' ] = False
-DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'message' ] = 'hydrus file repository'
-DEFAULT_OPTIONS[ FILE_REPOSITORY ][ 'upnp' ] = None
-
-DEFAULT_OPTIONS[ TAG_REPOSITORY ] = {}
-DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'max_monthly_data' ] = None
-DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'message' ] = 'hydrus tag repository'
-DEFAULT_OPTIONS[ TAG_REPOSITORY ][ 'upnp' ] = None
-
-DEFAULT_OPTIONS[ MESSAGE_DEPOT ] = {}
-DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'max_monthly_data' ] = None
-DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'max_storage' ] = None
-DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'message' ] = 'hydrus message depot'
-DEFAULT_OPTIONS[ MESSAGE_DEPOT ][ 'upnp' ] = None
 
 SERVER_ADMIN_KEY = 'server admin'
 

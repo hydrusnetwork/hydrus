@@ -2,12 +2,12 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusImageHandling
+import HydrusNetwork
 import HydrusPaths
 import HydrusSerialisable
 import os
 import time
 import traceback
-import yaml
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.web.server import NOT_DONE_YET
@@ -16,28 +16,188 @@ from twisted.web.static import File as FileResource, NoRangeStaticProducer
 import HydrusData
 import HydrusGlobals
 
-CLIENT_ROOT_MESSAGE = '''<html>
-    <head>
-        <title>hydrus client</title>
-    </head>
-    <body>
-        <p>This hydrus client uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
-        <p>It only serves requests from 127.0.0.1.</p>
-    </body>
-</html>'''
-
-ROOT_MESSAGE_BEGIN = '''<html>
-    <head>
-        <title>hydrus service</title>
-    </head>
-    <body>
-        <p>This hydrus service uses software version ''' + str( HC.SOFTWARE_VERSION ) + ''' and network version ''' + str( HC.NETWORK_VERSION ) + '''.</p>
-        <p>'''
-
-ROOT_MESSAGE_END = '''</p>
-    </body>
-</html>'''
-
+def GenerateEris( service, domain ):
+    
+    name = service.GetName()
+    service_type = service.GetServiceType()
+    
+    welcome_text_1 = 'This is <b>' + name + '</b>,'
+    welcome_text_2 = 'a ' + HC.service_string_lookup[ service_type ] + '.'
+    welcome_text_3 = 'Software version ' + str( HC.SOFTWARE_VERSION )
+    welcome_text_4 = 'Network version ' + str( HC.NETWORK_VERSION )
+    
+    if domain.IsLocal():
+        
+        welcome_text_5 = 'It only responds to requests from localhost.'
+        
+    else:
+        
+        welcome_text_5 = 'It responds to requests from any host.'
+        
+    
+    return '''<html><head><title>''' + name + '''</title></head><body><pre>
+                         <font color="red">8888  8888888</font>
+                  <font color="red">888888888888888888888888</font>
+               <font color="red">8888</font>:::<font color="red">8888888888888888888888888</font>
+             <font color="red">8888</font>::::::<font color="red">8888888888888888888888888888</font>
+            <font color="red">88</font>::::::::<font color="red">888</font>:::<font color="red">8888888888888888888888888</font>
+          <font color="red">88888888</font>::::<font color="red">8</font>:::::::::::<font color="red">88888888888888888888</font>
+        <font color="red">888 8</font>::<font color="red">888888</font>::::::::::::::::::<font color="red">88888888888   888</font>
+           <font color="red">88</font>::::<font color="red">88888888</font>::::<font color="gray">m</font>::::::::::<font color="red">88888888888    8</font>
+         <font color="red">888888888888888888</font>:<font color="gray">M</font>:::::::::::<font color="red">8888888888888</font>
+        <font color="red">88888888888888888888</font>::::::::::::<font color="gray">M</font><font color="red">88888888888888</font>
+        <font color="red">8888888888888888888888</font>:::::::::<font color="gray">M</font><font color="red">8888888888888888</font>
+         <font color="red">8888888888888888888888</font>:::::::<font color="gray">M</font><font color="red">888888888888888888</font>
+        <font color="red">8888888888888888</font>::<font color="red">88888</font>::::::<font color="gray">M</font><font color="red">88888888888888888888</font>
+      <font color="red">88888888888888888</font>:::<font color="red">88888</font>:::::<font color="gray">M</font><font color="red">888888888888888   8888</font>
+     <font color="red">88888888888888888</font>:::<font color="red">88888</font>::::<font color="gray">M</font>::<font color="black">;o</font><font color="maroon">*</font><font color="green">M</font><font color="maroon">*</font><font color="black">o;</font><font color="red">888888888    88</font>
+    <font color="red">88888888888888888</font>:::<font color="red">8888</font>:::::<font color="gray">M</font>:::::::::::<font color="red">88888888    8</font>
+   <font color="red">88888888888888888</font>::::<font color="red">88</font>::::::<font color="gray">M</font>:<font color="gray">;</font>:::::::::::<font color="red">888888888</font>
+  <font color="red">8888888888888888888</font>:::<font color="red">8</font>::::::<font color="gray">M</font>::<font color="gray">aAa</font>::::::::<font color="gray">M</font><font color="red">8888888888       8</font>
+  <font color="red">88   8888888888</font>::<font color="red">88</font>::::<font color="red">8</font>::::<font color="gray">M</font>:::::::::::::<font color="red">888888888888888 8888</font>
+ <font color="red">88  88888888888</font>:::<font color="red">8</font>:::::::::<font color="gray">M</font>::::::::::;::<font color="red">88</font><font color="black">:</font><font color="red">88888888888888888</font>
+ <font color="red">8  8888888888888</font>:::::::::::<font color="gray">M</font>::<font color="violet">&quot;@@@@@@@&quot;</font>::::<font color="red">8</font><font color="gray">w</font><font color="red">8888888888888888</font>
+  <font color="red">88888888888</font>:<font color="red">888</font>::::::::::<font color="gray">M</font>:::::<font color="violet">&quot;@a@&quot;</font>:::::<font color="gray">M</font><font color="red">8</font><font color="gray">i</font><font color="red">888888888888888</font>
+ <font color="red">8888888888</font>::::<font color="red">88</font>:::::::::<font color="gray">M</font><font color="red">88</font>:::::::::::::<font color="gray">M</font><font color="red">88</font><font color="gray">z</font><font color="red">88888888888888888</font>
+<font color="red">8888888888</font>:::::<font color="red">8</font>:::::::::<font color="gray">M</font><font color="red">88888</font>:::::::::<font color="gray">MM</font><font color="red">888</font><font color="gray">!</font><font color="red">888888888888888888</font>
+<font color="red">888888888</font>:::::<font color="red">8</font>:::::::::<font color="gray">M</font><font color="red">8888888</font><font color="gray">MAmmmAMVMM</font><font color="red">888</font><font color="gray">*</font><font color="red">88888888   88888888</font>
+<font color="red">888888</font> <font color="gray">M</font>:::::::::::::::<font color="gray">M</font><font color="red">888888888</font>:::::::<font color="gray">MM</font><font color="red">88888888888888   8888888</font>
+<font color="red">8888</font>   <font color="gray">M</font>::::::::::::::<font color="gray">M</font><font color="red">88888888888</font>::::::<font color="gray">MM</font><font color="red">888888888888888    88888</font>
+ <font color="red">888</font>   <font color="gray">M</font>:::::::::::::<font color="gray">M</font><font color="red">8888888888888</font><font color="gray">M</font>:::::<font color="gray">mM</font><font color="red">888888888888888    8888</font>
+  <font color="red">888</font>  <font color="gray">M</font>::::::::::::<font color="gray">M</font><font color="red">8888</font>:<font color="red">888888888888</font>::::<font color="gray">m</font>::<font color="gray">Mm</font><font color="red">88888 888888   8888</font>
+   <font color="red">88</font>  <font color="gray">M</font>::::::::::::<font color="red">8888</font>:<font color="red">88888888888888888</font>::::::<font color="gray">Mm</font><font color="red">8   88888   888</font>
+   <font color="red">88</font>  <font color="gray">M</font>::::::::::<font color="red">8888</font><font color="gray">M</font>::<font color="red">88888</font>::<font color="red">888888888888</font>:::::::<font color="gray">Mm</font><font color="red">88888    88</font>
+   <font color="red">8</font>   <font color="gray">MM</font>::::::::<font color="red">8888</font><font color="gray">M</font>:::<font color="red">8888</font>:::::<font color="red">888888888888</font>::::::::<font color="gray">Mm</font><font color="red">8     4</font>              ''' + welcome_text_1 + '''
+       <font color="red">8</font><font color="gray">M</font>:::::::<font color="red">8888</font><font color="gray">M</font>:::::<font color="red">888</font>:::::::<font color="red">88</font>:::<font color="red">8888888</font>::::::::<font color="gray">Mm</font>    <font color="red">2</font>              ''' + welcome_text_2 + '''
+      <font color="red">88</font><font color="gray">MM</font>:::::<font color="red">8888</font><font color="gray">M</font>:::::::<font color="red">88</font>::::::::<font color="red">8</font>:::::<font color="red">888888</font>:::<font color="gray">M</font>:::::<font color="gray">M</font>
+     <font color="red">8888</font><font color="gray">M</font>:::::<font color="red">888</font><font color="gray">MM</font>::::::::<font color="red">8</font>:::::::::::<font color="gray">M</font>::::<font color="red">8888</font>::::<font color="gray">M</font>::::<font color="gray">M</font>                  ''' + welcome_text_3 + '''
+    <font color="red">88888</font><font color="gray">M</font>:::::<font color="red">88</font>:<font color="gray">M</font>::::::::::<font color="red">8</font>:::::::::::<font color="gray">M</font>:::<font color="red">8888</font>::::::<font color="gray">M</font>::<font color="gray">M</font>                  ''' + welcome_text_4 + '''
+   <font color="red">88 888</font><font color="gray">MM</font>:::<font color="red">888</font>:<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">M</font>:<font color="red">8888</font>:::::::::<font color="gray">M</font>:
+   <font color="red">8 88888</font><font color="gray">M</font>:::<font color="red">88</font>::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MM</font>:<font color="red">88</font>::::::::::::<font color="gray">M</font>                 ''' + welcome_text_5 + '''
+     <font color="red">88888</font><font color="gray">M</font>:::<font color="red">88</font>::<font color="gray">M</font>::::::::::<font color="thistle">*88*</font>::::::::::<font color="gray">M</font>:<font color="red">88</font>::::::::::::::<font color="gray">M</font>
+    <font color="red">888888</font><font color="gray">M</font>:::<font color="red">88</font>::<font color="gray">M</font>:::::::::<font color="thistle">88@@88</font>:::::::::<font color="gray">M</font>::<font color="red">88</font>::::::::::::::<font color="gray">M</font>
+    <font color="red">888888</font><font color="gray">MM</font>::<font color="red">88</font>::<font color="gray">MM</font>::::::::<font color="thistle">88@@88</font>:::::::::<font color="gray">M</font>:::<font color="red">8</font>::::::::::::::<font color="thistle">*8</font>
+    <font color="red">88888</font>  <font color="gray">M</font>:::<font color="red">8</font>::<font color="gray">MM</font>:::::::::<font color="thistle">*88*</font>::::::::::<font color="gray">M</font>:::::::::::::::::<font color="thistle">88@@</font>
+    <font color="red">8888</font>   <font color="gray">MM</font>::::::<font color="gray">MM</font>:::::::::::::::::::::<font color="gray">MM</font>:::::::::::::::::<font color="thistle">88@@</font>
+     <font color="red">888</font>    <font color="gray">M</font>:::::::<font color="gray">MM</font>:::::::::::::::::::<font color="gray">MM</font>::<font color="gray">M</font>::::::::::::::::<font color="thistle">*8</font>
+     <font color="red">888</font>    <font color="gray">MM</font>:::::::<font color="gray">MMM</font>::::::::::::::::<font color="gray">MM</font>:::<font color="gray">MM</font>:::::::::::::::<font color="gray">M</font>
+      <font color="red">88</font>     <font color="gray">M</font>::::::::<font color="gray">MMMM</font>:::::::::::<font color="gray">MMMM</font>:::::<font color="gray">MM</font>::::::::::::<font color="gray">MM</font>
+       <font color="red">88</font>    <font color="gray">MM</font>:::::::::<font color="gray">MMMMMMMMMMMMMMM</font>::::::::<font color="gray">MMM</font>::::::::<font color="gray">MMM</font>
+        <font color="red">88</font>    <font color="gray">MM</font>::::::::::::<font color="gray">MMMMMMM</font>::::::::::::::<font color="gray">MMMMMMMMMM</font>
+         <font color="red">88   8</font><font color="gray">MM</font>::::::::::::::::::::::::::::::::::<font color="gray">MMMMMM</font>
+          <font color="red">8   88</font><font color="gray">MM</font>::::::::::::::::::::::<font color="gray">M</font>:::<font color="gray">M</font>::::::::<font color="gray">MM</font>
+              <font color="red">888</font><font color="gray">MM</font>::::::::::::::::::<font color="gray">MM</font>::::::<font color="gray">MM</font>::::::<font color="gray">MM</font>
+             <font color="red">88888</font><font color="gray">MM</font>:::::::::::::::<font color="gray">MMM</font>:::::::<font color="gray">mM</font>:::::<font color="gray">MM</font>
+             <font color="red">888888</font><font color="gray">MM</font>:::::::::::::<font color="gray">MMM</font>:::::::::<font color="gray">MMM</font>:::<font color="gray">M</font>
+            <font color="red">88888888</font><font color="gray">MM</font>:::::::::::<font color="gray">MMM</font>:::::::::::<font color="gray">MM</font>:::<font color="gray">M</font>
+           <font color="red">88 8888888</font><font color="gray">M</font>:::::::::<font color="gray">MMM</font>::::::::::::::<font color="gray">M</font>:::<font color="gray">M</font>
+           <font color="red">8  888888</font> <font color="gray">M</font>:::::::<font color="gray">MM</font>:::::::::::::::::<font color="gray">M</font>:::<font color="gray">M</font>:
+              <font color="red">888888</font> <font color="gray">M</font>::::::<font color="gray">M</font>:::::::::::::::::::<font color="gray">M</font>:::<font color="gray">MM</font>
+             <font color="red">888888</font>  <font color="gray">M</font>:::::<font color="gray">M</font>::::::::::::::::::::::::<font color="gray">M</font>:<font color="gray">M</font>
+             <font color="red">888888</font>  <font color="gray">M</font>:::::<font color="gray">M</font>:::::::::<font color="gray">@</font>::::::::::::::<font color="gray">M</font>::<font color="gray">M</font>
+             <font color="red">88888</font>   <font color="gray">M</font>::::::::::::::<font color="gray">@@</font>:::::::::::::::<font color="gray">M</font>::<font color="gray">M</font>
+            <font color="red">88888</font>   <font color="gray">M</font>::::::::::::::<font color="gray">@@@</font>::::::::::::::::<font color="gray">M</font>::<font color="gray">M</font>
+           <font color="red">88888</font>   <font color="gray">M</font>:::::::::::::::<font color="gray">@@</font>::::::::::::::::::<font color="gray">M</font>::<font color="gray">M</font>
+          <font color="red">88888</font>   <font color="gray">M</font>:::::<font color="gray">m</font>::::::::::<font color="gray">@</font>::::::::::<font color="gray">Mm</font>:::::::<font color="gray">M</font>:::<font color="gray">M</font>
+          <font color="red">8888</font>   <font color="gray">M</font>:::::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MM</font>:::::::<font color="gray">M</font>:::<font color="gray">M</font>
+         <font color="red">8888</font>   <font color="gray">M</font>:::::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MMM</font>::::::::<font color="gray">M</font>:::<font color="gray">M</font>
+        <font color="red">888</font>    <font color="gray">M</font>:::::<font color="gray">Mm</font>::::::::::::::::::::::<font color="gray">MMM</font>:::::::::<font color="gray">M</font>::::<font color="gray">M</font>
+      <font color="red">8888</font>    <font color="gray">MM</font>::::<font color="gray">Mm</font>:::::::::::::::::::::<font color="gray">MMMM</font>:::::::::<font color="gray">m</font>::<font color="gray">m</font>:::<font color="gray">M</font>
+     <font color="red">888</font>      <font color="gray">M</font>:::::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font>::::::::::::<font color="gray">M</font>::<font color="gray">mm</font>:::<font color="gray">M</font>
+  <font color="red">8888</font>       <font color="gray">MM</font>:::::::::::::::::::::::::<font color="gray">MM</font>:::::::::::::<font color="gray">mM</font>::<font color="gray">MM</font>:::<font color="gray">M</font>:
+             <font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">M</font>:::::::::::::::<font color="gray">mM</font>::<font color="gray">MM</font>:::<font color="gray">Mm</font>
+            <font color="gray">MM</font>::::::<font color="gray">m</font>:::::::::::::::::::::::::::::::::::<font color="gray">M</font>::<font color="gray">MM</font>:::<font color="gray">MM</font>
+            <font color="gray">M</font>::::::::<font color="gray">M</font>:::::::::::::::::::::::::::::::::::<font color="gray">M</font>::<font color="gray">M</font>:::<font color="gray">MM</font>
+           <font color="gray">MM</font>:::::::::<font color="gray">M</font>:::::::::::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">M</font>:<font color="gray">M</font>:::<font color="gray">MM</font>
+           <font color="gray">M</font>:::::::::::<font color="gray">M</font><font color="maroon">88</font>:::::::::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MM</font>::<font color="gray">MMM</font> 
+           <font color="gray">M</font>::::::::::::<font color="maroon">8888888888</font><font color="gray">M</font>::::::::::::::::::::::::<font color="gray">MM</font>::<font color="gray">MM</font> 
+           <font color="gray">M</font>:::::::::::::<font color="maroon">88888888</font><font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">M</font>::<font color="gray">MM</font>
+           <font color="gray">M</font>::::::::::::::<font color="maroon">888888</font><font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">M</font>::<font color="gray">MM</font>
+           <font color="gray">M</font>:::::::::::::::<font color="maroon">88888</font><font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">M</font>:<font color="gray">MM</font>
+           <font color="gray">M</font>:::::::::::::::::<font color="maroon">88</font><font color="gray">M</font>::::::::::::::::::::::::::<font color="gray">MMM</font>
+           <font color="gray">M</font>:::::::::::::::::::<font color="gray">M</font>::::::::::::::::::::::::::<font color="gray">MMM</font>
+           <font color="gray">MM</font>:::::::::::::::::<font color="gray">M</font>::::::::::::::::::::::::::<font color="gray">MMM</font>
+            <font color="gray">M</font>:::::::::::::::::<font color="gray">M</font>::::::::::::::::::::::::::<font color="gray">MMM</font>
+            <font color="gray">MM</font>:::::::::::::::<font color="gray">M</font>::::::::::::::::::::::::::<font color="gray">MMM</font>
+             <font color="gray">M</font>:::::::::::::::<font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">MMM</font>
+             <font color="gray">MM</font>:::::::::::::<font color="gray">M</font>:::::::::::::::::::::::::<font color="gray">MMM</font>
+              <font color="gray">M</font>:::::::::::::<font color="gray">M</font>::::::::::::::::::::::::<font color="gray">MMM</font>
+              <font color="gray">MM</font>:::::::::::<font color="gray">M</font>::::::::::::::::::::::::<font color="gray">MMM</font>
+               <font color="gray">M</font>:::::::::::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MMM</font>
+               <font color="gray">MM</font>:::::::::<font color="gray">M</font>:::::::::::::::::::::::<font color="gray">MMM</font>
+                <font color="gray">M</font>:::::::::<font color="gray">M</font>::::::::::::::::::::::<font color="gray">MMM</font>
+                <font color="gray">MM</font>:::::::<font color="gray">M</font>::::::::::::::::::::::<font color="gray">MMM</font>
+                 <font color="gray">MM</font>::::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">MMM</font>
+                 <font color="gray">MM</font>:::::<font color="gray">M</font>:::::::::::::::::::::<font color="gray">MMM</font>
+                  <font color="gray">MM</font>::::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font> 
+                  <font color="gray">MM</font>:::<font color="gray">M</font>::::::::::::::::::::<font color="gray">MMM</font>
+                   <font color="gray">MM</font>::<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>
+                   <font color="gray">MM</font>:<font color="gray">M</font>:::::::::::::::::::<font color="gray">MMM</font>
+                    <font color="gray">MMM</font>::::::::::::::::::<font color="gray">MMM</font>
+                    <font color="gray">MM</font>::::::::::::::::::<font color="gray">MMM</font>
+                     <font color="gray">M</font>:::::::::::::::::<font color="gray">MMM</font>
+                    <font color="gray">MM</font>::::::::::::::::<font color="gray">MMM</font>
+                    <font color="gray">MM</font>:::::::::::::::<font color="gray">MMM</font>
+                    <font color="gray">MM</font>::::<font color="gray">M</font>:::::::::<font color="gray">MMM</font>:
+                    <font color="gray">mMM</font>::::<font color="gray">MM</font>:::::::<font color="gray">MMMM</font>
+                     <font color="gray">MMM</font>:::::::::::<font color="gray">MMM</font>:<font color="gray">M</font>
+                     <font color="gray">mMM</font>:::<font color="gray">M</font>:::::::<font color="gray">M</font>:<font color="gray">M</font>:<font color="gray">M</font>
+                      <font color="gray">MM</font>::<font color="gray">MMMM</font>:::::::<font color="gray">M</font>:<font color="gray">M</font>
+                      <font color="gray">MM</font>::<font color="gray">MMM</font>::::::::<font color="gray">M</font>:<font color="gray">M</font>
+                      <font color="gray">mMM</font>::<font color="gray">MM</font>::::::::<font color="gray">M</font>:<font color="gray">M</font>
+                       <font color="gray">MM</font>::<font color="gray">MM</font>:::::::::<font color="gray">M</font>:<font color="gray">M</font>
+                       <font color="gray">MM</font>::<font color="gray">MM</font>::::::::::<font color="gray">M</font>:<font color="gray">m</font>
+                       <font color="gray">MM</font>:::<font color="gray">M</font>:::::::::::<font color="gray">MM</font>
+                       <font color="gray">MMM</font>:::::::::::::::<font color="gray">M</font>:
+                       <font color="gray">MMM</font>:::::::::::::::<font color="gray">M</font>:
+                       <font color="gray">MMM</font>::::::::::::::::<font color="gray">M</font>
+                       <font color="gray">MMM</font>::::::::::::::::<font color="gray">M</font>
+                       <font color="gray">MMM</font>::::::::::::::::<font color="gray">Mm</font>
+                        <font color="gray">MM</font>::::::::::::::::<font color="gray">MM</font>
+                        <font color="gray">MMM</font>:::::::::::::::<font color="gray">MM</font>
+                        <font color="gray">MMM</font>:::::::::::::::<font color="gray">MM</font>
+                        <font color="gray">MMM</font>:::::::::::::::<font color="gray">MM</font>
+                        <font color="gray">MMM</font>:::::::::::::::<font color="gray">MM</font>
+                         <font color="gray">MM</font>::::::::::::::<font color="gray">MMM</font>
+                         <font color="gray">MMM</font>:::::::::::::<font color="gray">MM</font>
+                         <font color="gray">MMM</font>:::::::::::::<font color="gray">MM</font>
+                         <font color="gray">MMM</font>::::::::::::<font color="gray">MM</font>
+                          <font color="gray">MM</font>::::::::::::<font color="gray">MM</font>
+                          <font color="gray">MM</font>::::::::::::<font color="gray">MM</font>
+                          <font color="gray">MM</font>:::::::::::<font color="gray">MM</font>
+                          <font color="gray">MMM</font>::::::::::<font color="gray">MM</font>
+                          <font color="gray">MMM</font>::::::::::<font color="gray">MM</font>
+                           <font color="gray">MM</font>:::::::::<font color="gray">MM</font>
+                           <font color="gray">MMM</font>::::::::<font color="gray">MM</font>
+                           <font color="gray">MMM</font>::::::::<font color="gray">MM</font>
+                            <font color="gray">MM</font>::::::::<font color="gray">MM</font>
+                            <font color="gray">MMM</font>::::::<font color="gray">MM</font>
+                            <font color="gray">MMM</font>::::::<font color="gray">MM</font>
+                             <font color="gray">MM</font>::::::<font color="gray">MM</font>
+                             <font color="gray">MM</font>::::::<font color="gray">MM</font>
+                              <font color="gray">MM</font>:::::<font color="gray">MM</font>
+                              <font color="gray">MM</font>:::::<font color="gray">MM</font>:
+                              <font color="gray">MM</font>:::::<font color="gray">M</font>:<font color="gray">M</font>
+                              <font color="gray">MM</font>:::::<font color="gray">M</font>:<font color="gray">M</font>
+                              :<font color="gray">M</font>::::::<font color="gray">M</font>:
+                             <font color="gray">M</font>:<font color="gray">M</font>:::::::<font color="gray">M</font>
+                            <font color="gray">M</font>:::<font color="gray">M</font>::::::<font color="gray">M</font>
+                           <font color="gray">M</font>::::<font color="gray">M</font>::::::<font color="gray">M</font>
+                          <font color="gray">M</font>:::::<font color="gray">M</font>:::::::<font color="gray">M</font>
+                         <font color="gray">M</font>::::::<font color="gray">MM</font>:::::::<font color="gray">M</font>
+                         <font color="gray">M</font>:::::::<font color="gray">M</font>::::::::<font color="gray">M</font>
+                         <font color="gray">M;</font>:<font color="gray">;</font>::::<font color="gray">M</font>:::::::::<font color="gray">M</font>
+                         <font color="gray">M</font>:<font color="gray">m</font>:<font color="gray">;</font>:::<font color="gray">M</font>::::::::::<font color="gray">M</font>
+                         <font color="gray">MM</font>:<font color="gray">m</font>:<font color="gray">m</font>::<font color="gray">M</font>::::::::<font color="gray">;</font>:<font color="gray">M</font>
+                          <font color="gray">MM</font>:<font color="gray">m</font>::<font color="gray">MM</font>:::::::<font color="gray">;</font>:<font color="gray">;M</font>
+                           <font color="gray">MM</font>::<font color="gray">MMM</font>::::::<font color="gray">;</font>:<font color="gray">m</font>:<font color="gray">M</font>
+                            <font color="gray">MMMM MM</font>::::<font color="gray">m</font>:<font color="gray">m</font>:<font color="gray">MM</font>
+                                  <font color="gray">MM</font>::::<font color="gray">m</font>:<font color="gray">MM</font>
+                                   <font color="gray">MM</font>::::<font color="gray">MM</font>
+                                    <font color="gray">MM</font>::<font color="gray">MM</font>
+                                     <font color="gray">MMMM</font>
+</pre></body></html>'''
+    
 def ParseFileArguments( path ):
     
     HydrusImageHandling.ConvertToPngIfBmp( path )
@@ -103,107 +263,98 @@ class HydrusDomain( object ):
     
     def CheckValid( self, client_ip ):
         
-        if self._local_only and client_ip != '127.0.0.1': raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+        if self._local_only and client_ip != '127.0.0.1':
+            
+            raise HydrusExceptions.ForbiddenException( 'Only local access allowed!' )
+            
         
     
-class HydrusResourceWelcome( Resource ):
+    def IsLocal( self ):
+        
+        return self._local_only
+        
     
-    def __init__( self, service_type, message ):
+class HydrusResource( Resource ):
+    
+    def __init__( self, service, domain ):
         
         Resource.__init__( self )
         
-        if service_type == HC.COMBINED_LOCAL_FILE: body = CLIENT_ROOT_MESSAGE
-        else: body = ROOT_MESSAGE_BEGIN + message + ROOT_MESSAGE_END
-        
-        self._body = HydrusData.ToByteString( body )
-        
-        self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
-        
-    
-    def render_GET( self, request ):
-        
-        request.setResponseCode( 200 )
-        
-        request.setHeader( 'Server', self._server_version_string )
-        
-        return self._body
-        
-    
-class HydrusResourceCommand( Resource ):
-    
-    def __init__( self, service_key, service_type, domain ):
-        
-        Resource.__init__( self )
-        
-        self._service_key = service_key
-        self._service_type = service_type
+        self._service = service
+        self._service_key = self._service.GetServiceKey()
         self._domain = domain
         
+        service_type = self._service.GetServiceType()
+        
         self._server_version_string = HC.service_string_lookup[ service_type ] + '/' + str( HC.NETWORK_VERSION )
         
     
-    def _checkServerBusy( self ):
+    def _callbackCheckRestrictions( self, request ):
+        
+        self._domain.CheckValid( request.getClientIP() )
+        
+        self._checkService( request )
+        
+        self._checkUserAgent( request )
+        
+        return request
+        
+    
+    def _checkService( self, request ):
         
         if HydrusGlobals.server_busy:
             
             raise HydrusExceptions.ServerBusyException( 'This server is busy, please try again later.' )
             
         
-    
-    def _callbackCheckRestrictions( self, request ):
-        
-        self._checkServerBusy()
-        
-        self._checkUserAgent( request )
-        
-        self._domain.CheckValid( request.getClientIP() )
-        
         return request
+        
+    
+    def _checkUserAgent( self, request ):
+        
+        request.is_hydrus_user_agent = False
+        
+        if request.requestHeaders.hasHeader( 'User-Agent' ):
+            
+            user_agent_texts = request.requestHeaders.getRawHeaders( 'User-Agent' )
+            
+            user_agent_text = user_agent_texts[0]
+            
+            try:
+                
+                user_agents = user_agent_text.split( ' ' )
+                
+            except: return # crazy user agent string, so just assume not a hydrus client
+            
+            for user_agent in user_agents:
+                
+                if '/' in user_agent:
+                    
+                    ( client, network_version ) = user_agent.split( '/', 1 )
+                    
+                    if client == 'hydrus':
+                        
+                        request.is_hydrus_user_agent = True
+                        
+                        network_version = int( network_version )
+                        
+                        if network_version == HC.NETWORK_VERSION: return
+                        else:
+                            
+                            if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
+                            else: message = 'This server is out of date; please ask its admin to update to the latest release.'
+                            
+                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
+                            
+                        
+                    
+                
+            
         
     
     def _callbackParseGETArgs( self, request ):
         
-        hydrus_args = {}
-        
-        for name in request.args:
-            
-            values = request.args[ name ]
-            
-            value = values[0]
-            
-            if name in ( 'begin', 'expires', 'lifetime', 'num', 'service_type', 'service_port', 'since', 'subindex', 'timespan' ):
-                
-                try: hydrus_args[ name ] = int( value )
-                except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as an integer, but it failed.' )
-                
-            elif name in ( 'access_key', 'title', 'subject_account_key', 'contact_key', 'hash', 'subject_hash', 'subject_tag', 'message_key', 'share_key' ):
-                
-                try: hydrus_args[ name ] = value.decode( 'hex' )
-                except: raise HydrusExceptions.ForbiddenException( 'I was expecting to parse \'' + name + '\' as a hex-encoded string, but it failed.' )
-                
-            
-        
-        if 'subject_account_key' in hydrus_args:
-            
-            hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( account_key = hydrus_args[ 'subject_account_key' ] )
-            
-        elif 'subject_hash' in hydrus_args:
-            
-            hash = hydrus_args[ 'subject_hash' ]
-            
-            if 'subject_tag' in hydrus_args:
-                
-                tag = hydrus_args[ 'subject_tag' ]
-                
-                content = HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) )
-                
-            else:
-                
-                content = HydrusData.Content( HC.CONTENT_TYPE_FILES, [ hash ] )
-                
-            
-            hydrus_args[ 'subject_identifier' ] = HydrusData.AccountIdentifier( content = content )
-            
+        hydrus_args = HydrusNetwork.ParseGETArgs( request.args )
         
         request.hydrus_args = hydrus_args
         
@@ -224,27 +375,24 @@ class HydrusResourceCommand( Resource ):
             
             content_type = content_types[0]
             
-            try: mime = HC.mime_enum_lookup[ content_type ]
-            except: raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
+            try:
+                
+                mime = HC.mime_enum_lookup[ content_type ]
+                
+            except:
+                
+                raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
+                
             
-            if mime == HC.APPLICATION_YAML:
-                
-                yaml_string = request.content.read()
-                
-                request.hydrus_request_data_usage += len( yaml_string )
-                
-                hydrus_args = yaml.safe_load( yaml_string )
-                
-            elif mime == HC.APPLICATION_JSON:
+            if mime == HC.APPLICATION_JSON:
                 
                 json_string = request.content.read()
                 
                 request.hydrus_request_data_usage += len( json_string )
                 
-                hydrus_args = HydrusSerialisable.CreateFromNetworkString( json_string )
+                hydrus_args = HydrusNetwork.ParseBodyString( json_string )
                 
             else:
-                
                 
                 ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
                 
@@ -279,49 +427,33 @@ class HydrusResourceCommand( Resource ):
         
         request.setResponseCode( status_code )
         
-        for ( k, v, kwargs ) in response_context.GetCookies(): request.addCookie( k, v, **kwargs )
+        for ( k, v, kwargs ) in response_context.GetCookies():
+            
+            request.addCookie( k, v, **kwargs )
+            
         
         do_finish = True
         
-        if response_context.HasBody():
-            
-            ( mime, body ) = response_context.GetMimeBody()
-            
-            content_type = HC.mime_string_lookup[ mime ]
-            
-            content_length = len( body )
-            
-            request.setHeader( 'Content-Type', content_type )
-            request.setHeader( 'Content-Length', str( content_length ) )
-            
-            request.write( HydrusData.ToByteString( body ) )
-            
-        elif response_context.HasPath():
+        if response_context.HasPath():
             
             path = response_context.GetPath()
             
             size = os.path.getsize( path )
             
-            if response_context.IsJSON():
-                
-                mime = HC.APPLICATION_JSON
-                
-                content_type = HC.mime_string_lookup[ mime ]
-                
-                content_disposition = 'inline'
-                
-            else:
+            mime = response_context.GetMime()
+            
+            if mime == HC.APPLICATION_UNKNOWN:
                 
                 mime = HydrusFileHandling.GetMime( path )
                 
-                ( base, filename ) = os.path.split( path )
-                
-                content_type = HC.mime_string_lookup[ mime ]
-                
-                content_disposition = 'inline; filename="' + filename + '"'
-                
+            
+            content_type = HC.mime_string_lookup[ mime ]
             
             content_length = size
+            
+            ( base, filename ) = os.path.split( path )
+            
+            content_disposition = 'inline; filename="' + filename + '"'
             
             # can't be unicode!
             request.setHeader( 'Content-Type', str( content_type ) )
@@ -329,7 +461,7 @@ class HydrusResourceCommand( Resource ):
             request.setHeader( 'Content-Disposition', str( content_disposition ) )
             
             request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
-            request.setHeader( 'Cache-Control', str( 86400 * 365  ) )
+            request.setHeader( 'Cache-Control', str( 86400 * 365 ) )
             
             fileObject = open( path, 'rb' )
             
@@ -338,6 +470,24 @@ class HydrusResourceCommand( Resource ):
             producer.start()
             
             do_finish = False
+            
+        elif response_context.HasBody():
+            
+            mime = response_context.GetMime()
+            
+            body = response_context.GetBody()
+            
+            content_type = HC.mime_string_lookup[ mime ]
+            
+            content_length = len( body )
+            
+            content_disposition = 'inline'
+            
+            request.setHeader( 'Content-Type', content_type )
+            request.setHeader( 'Content-Length', str( content_length ) )
+            request.setHeader( 'Content-Disposition', content_disposition )
+            
+            request.write( HydrusData.ToByteString( body ) )
             
         else:
             
@@ -388,48 +538,6 @@ class HydrusResourceCommand( Resource ):
         return d
         
     
-    def _checkUserAgent( self, request ):
-        
-        request.is_hydrus_user_agent = False
-        
-        if request.requestHeaders.hasHeader( 'User-Agent' ):
-            
-            user_agent_texts = request.requestHeaders.getRawHeaders( 'User-Agent' )
-            
-            user_agent_text = user_agent_texts[0]
-            
-            try:
-                
-                user_agents = user_agent_text.split( ' ' )
-                
-            except: return # crazy user agent string, so just assume not a hydrus client
-            
-            for user_agent in user_agents:
-                
-                if '/' in user_agent:
-                    
-                    ( client, network_version ) = user_agent.split( '/', 1 )
-                    
-                    if client == 'hydrus':
-                        
-                        request.is_hydrus_user_agent = True
-                        
-                        network_version = int( network_version )
-                        
-                        if network_version == HC.NETWORK_VERSION: return
-                        else:
-                            
-                            if network_version < HC.NETWORK_VERSION: message = 'Your client is out of date; please download the latest release.'
-                            else: message = 'This server is out of date; please ask its admin to update to the latest release.'
-                            
-                            raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! This server\'s network version is ' + str( HC.NETWORK_VERSION ) + ', whereas your client\'s is ' + str( network_version ) + '! ' + message )
-                            
-                        
-                    
-                
-            
-        
-    
     def _errbackDisconnected( self, failure, request_deferred ):
         
         request_deferred.cancel()
@@ -454,33 +562,41 @@ class HydrusResourceCommand( Resource ):
         
         self._CleanUpTempFile( request )
         
-        do_yaml = True
+        default_mime = HC.TEXT_HTML
+        default_encoding = HydrusData.ToByteString
         
-        try:
+        if failure.type == KeyError:
             
-            # the error may have occured before user agent was set up!
-            if not request.is_hydrus_user_agent: do_yaml = False
+            response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
             
-        except: pass
-        
-        if do_yaml:
+        elif failure.type == HydrusExceptions.BandwidthException:
             
-            default_mime = HC.APPLICATION_YAML
-            default_encoding = lambda x: yaml.safe_dump( HydrusData.ToUnicode( x ) )
+            response_context = ResponseContext( 509, mime = default_mime, body = default_encoding( failure.value ) )
             
-        else:
+        elif failure.type == HydrusExceptions.PermissionException:
             
-            default_mime = HC.TEXT_HTML
-            default_encoding = lambda x: HydrusData.ToByteString( x )
+            response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
             
-        
-        if failure.type == KeyError: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
-        elif failure.type == HydrusExceptions.PermissionException: response_context = ResponseContext( 401, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.ForbiddenException: response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.NotFoundException: response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.NetworkVersionException: response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.ServerBusyException: response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
-        elif failure.type == HydrusExceptions.SessionException: response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
+        elif failure.type == HydrusExceptions.ForbiddenException:
+            
+            response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
+            
+        elif failure.type in ( HydrusExceptions.NotFoundException, HydrusExceptions.DataMissing ):
+            
+            response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
+            
+        elif failure.type == HydrusExceptions.NetworkVersionException:
+            
+            response_context = ResponseContext( 426, mime = default_mime, body = default_encoding( failure.value ) )
+            
+        elif failure.type == HydrusExceptions.ServerBusyException:
+            
+            response_context = ResponseContext( 503, mime = default_mime, body = default_encoding( failure.value ) )
+            
+        elif failure.type == HydrusExceptions.SessionException:
+            
+            response_context = ResponseContext( 419, mime = default_mime, body = default_encoding( failure.value ) )
+            
         else:
             
             HydrusData.DebugPrint( failure.getTraceback() )
@@ -495,19 +611,35 @@ class HydrusResourceCommand( Resource ):
     
     def _parseAccessKey( self, request ):
         
-        if not request.requestHeaders.hasHeader( 'Hydrus-Key' ): raise HydrusExceptions.PermissionException( 'No hydrus key header found!' )
+        if not request.requestHeaders.hasHeader( 'Hydrus-Key' ):
+            
+            raise HydrusExceptions.PermissionException( 'No hydrus key header found!' )
+            
         
         hex_keys = request.requestHeaders.getRawHeaders( 'Hydrus-Key' )
         
         hex_key = hex_keys[0]
         
-        try: access_key = hex_key.decode( 'hex' )
-        except: raise HydrusExceptions.ForbiddenException( 'Could not parse the hydrus key!' )
+        try:
+            
+            access_key = hex_key.decode( 'hex' )
+            
+        except:
+            
+            raise HydrusExceptions.ForbiddenException( 'Could not parse the hydrus key!' )
+            
         
         return access_key
         
     
-    def _recordDataUsage( self, request ): pass
+    def _recordDataUsage( self, request ):
+        
+        num_bytes = request.hydrus_request_data_usage
+        
+        self._service.RequestMade( num_bytes )
+        
+        HydrusGlobals.controller.RequestMade( num_bytes )
+        
     
     def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
     
@@ -575,25 +707,48 @@ class HydrusResourceCommand( Resource ):
         return NOT_DONE_YET
         
     
+class HydrusResourceWelcome( HydrusResource ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        body = GenerateEris( self._service, self._domain )
+        
+        response_context = ResponseContext( 200, mime = HC.TEXT_HTML, body = body )
+        
+        return response_context
+        
+    
 class ResponseContext( object ):
     
-    def __init__( self, status_code, mime = HC.APPLICATION_YAML, body = None, path = None, is_json = False, cookies = None ):
+    def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None ):
         
-        if cookies is None: cookies = []
+        if isinstance( body, HydrusSerialisable.SerialisableBase ):
+            
+            body = body.DumpToNetworkString()
+            
+        
+        if cookies is None:
+            
+            cookies = []
+            
         
         self._status_code = status_code
         self._mime = mime
         self._body = body
         self._path = path
-        self._is_json = is_json
         self._cookies = cookies
+        
+    
+    def GetBody( self ):
+        
+        return self._body
         
     
     def GetCookies( self ): return self._cookies
     
     def GetLength( self ): return len( self._body )
     
-    def GetMimeBody( self ): return ( self._mime, self._body )
+    def GetMime( self ): return self._mime
     
     def GetPath( self ): return self._path
     
@@ -602,6 +757,4 @@ class ResponseContext( object ):
     def HasBody( self ): return self._body is not None
     
     def HasPath( self ): return self._path is not None
-    
-    def IsJSON( self ): return self._is_json
     

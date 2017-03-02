@@ -47,17 +47,3 @@ def GetAllPaths( raw_paths ):
     
     return file_paths
     
-def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
-    
-    return os.path.join( GetExpectedUpdateDir( service_key ), str( begin ) + '_' + str( subindex ) + '.json' )
-    
-def GetExpectedServiceUpdatePackagePath( service_key, begin ):
-    
-    return os.path.join( GetExpectedUpdateDir( service_key ), str( begin ) + '_metadata.json' )
-    
-def GetExpectedUpdateDir( service_key ):
-    
-    updates_dir = HydrusGlobals.client_controller.GetUpdatesDir()
-    
-    return os.path.join( updates_dir, service_key.encode( 'hex' ) )
-    

@@ -12,69 +12,12 @@ import threading
 import time
 import traceback
 import urllib
-import yaml
 from twisted.internet.threads import deferToThread
 import HydrusData
 import HydrusGlobals
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
-'''
-class HydrusMessagingSessionManagerServer( object ):
-    
-    def __init__( self ):
-        
-        existing_sessions = HydrusGlobals.controller.Read( 'messaging_sessions' )
-        
-        self._service_keys_to_sessions = collections.defaultdict( dict )
-        
-        for ( service_key, session_tuples ) in existing_sessions:
-            
-            self._service_keys_to_sessions[ service_key ] = { session_key : ( account, name, expires ) for ( session_key, account, name, expires ) in session_tuples }
-            
-        
-        self._lock = threading.Lock()
-        
-    
-    def GetIdentityAndName( self, service_key, session_key ):
-        
-        with self._lock:
-            
-            if session_key not in self._service_keys_to_sessions[ service_key ]: raise HydrusExceptions.SessionException( 'Did not find that session!' )
-            else:
-                
-                ( account, name, expires ) = self._service_keys_to_sessions[ service_key ][ session_key ]
-                
-                if HydrusData.TimeHasPassed( expires ):
-                    
-                    del self._service_keys_to_sessions[ service_key ][ session_key ]
-                    
-                    raise HydrusExceptions.SessionException( 'Session expired! Try again!' )
-                    
-                
-                return ( account.GetAccountKey(), name )
-                
-            
-        
-    
-    def AddSession( self, service_key, access_key, name ):
-        
-        session_key = HydrusData.GenerateKey()
-        
-        account_key = HydrusGlobals.controller.Read( 'account_key_from_access_key', service_key, access_key )
-        
-        account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
-        
-        now = HydrusData.GetNow()
-        
-        expires = now + HYDRUS_SESSION_LIFETIME
-        
-        with self._lock: self._service_keys_to_sessions[ service_key ][ session_key ] = ( account, name, expires )
-        
-        HydrusGlobals.controller.Write( 'messaging_session', service_key, session_key, account_key, name, expires )
-        
-        return session_key
-        
-    '''
+
 class HydrusSessionManagerServer( object ):
     
     def __init__( self ):
@@ -83,6 +26,7 @@ class HydrusSessionManagerServer( object ):
         
         self.RefreshAllAccounts()
         
+        HydrusGlobals.controller.sub( self, 'RefreshAccounts', 'update_session_accounts' )
         HydrusGlobals.controller.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
         
     
@@ -96,7 +40,7 @@ class HydrusSessionManagerServer( object ):
             
             if account_key not in account_keys_to_accounts:
                 
-                account = HydrusGlobals.controller.Read( 'account', account_key )
+                account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
                 
                 account_keys_to_accounts[ account_key ] = account
                 
@@ -141,6 +85,26 @@ class HydrusSessionManagerServer( object ):
             
         
     
+    def GetDirtyAccounts( self ):
+        
+        with self._lock:
+            
+            service_keys_to_dirty_accounts = {}
+            
+            for ( service_key, account_keys_to_accounts ) in self._service_keys_to_account_keys_to_accounts.items():
+                
+                dirty_accounts = [ account_key for account_key in account_keys_to_accounts.values() if account_key.IsDirty() ]
+                
+                if len( dirty_accounts ) > 0:
+                    
+                    service_keys_to_dirty_accounts[ service_key ] = dirty_accounts
+                    
+                
+            
+            return service_keys_to_dirty_accounts
+            
+        
+    
     def RefreshAccounts( self, service_key, account_keys = None ):
         
         with self._lock:
@@ -154,24 +118,33 @@ class HydrusSessionManagerServer( object ):
             
             for account_key in account_keys:
                 
-                account = HydrusGlobals.controller.Read( 'account', account_key )
+                account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
                 
                 account_keys_to_accounts[ account_key ] = account
                 
             
         
     
-    def RefreshAllAccounts( self ):
+    def RefreshAllAccounts( self, service_key = None ):
         
         with self._lock:
             
-            self._service_keys_to_session_keys_to_sessions = collections.defaultdict( dict )
-            
-            self._service_keys_to_account_keys_to_accounts = collections.defaultdict( dict )
-            
-            #
-            
-            existing_sessions = HydrusGlobals.controller.Read( 'sessions' )
+            if service_key is None:
+                
+                self._service_keys_to_session_keys_to_sessions = collections.defaultdict( dict )
+                
+                self._service_keys_to_account_keys_to_accounts = collections.defaultdict( dict )
+                
+                existing_sessions = HydrusGlobals.controller.Read( 'sessions' )
+                
+            else:
+                
+                del self._service_keys_to_session_keys_to_sessions[ service_key ]
+                
+                del self._service_keys_to_account_keys_to_accounts[ service_key ]
+                
+                existing_sessions = HydrusGlobals.controller.Read( 'sessions', service_key )
+                
             
             for ( session_key, service_key, account, expires ) in existing_sessions:
                 
@@ -184,3 +157,15 @@ class HydrusSessionManagerServer( object ):
             
         
     
+    def UpdateAccounts( self, service_key, accounts ):
+        
+        with self._lock:
+            
+            account_keys_to_accounts = self._service_keys_to_account_keys_to_accounts[ service_key ]
+            
+            for account in accounts:
+                
+                account_keys_to_accounts[ account.GetAccountKey() ] = account
+                
+            
+        

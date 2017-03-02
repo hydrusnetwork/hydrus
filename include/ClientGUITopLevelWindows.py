@@ -2,6 +2,7 @@ import ClientCaches
 import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals
 import os
 import wx
@@ -503,6 +504,15 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
         
     
     def EventOk( self, event ):
+        
+        try:
+            
+            value = self._panel.GetValue()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         

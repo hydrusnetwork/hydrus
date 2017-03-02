@@ -407,7 +407,7 @@ class Controller( HydrusController.HydrusController ):
                     return
                     
                 
-                service.Sync( only_when_idle = False, stop_time = stop_time )
+                service.SyncProcessUpdates( only_when_idle = False, stop_time = stop_time )
                 
             
         
@@ -511,11 +511,6 @@ class Controller( HydrusController.HydrusController ):
         return self._services_manager
         
     
-    def GetUpdatesDir( self ):
-        
-        return self._db.GetUpdatesDir()
-        
-    
     def GoodTimeToDoForegroundWork( self ):
         
         return not self._gui.CurrentlyBusy()
@@ -573,7 +568,6 @@ class Controller( HydrusController.HydrusController ):
         self.CallBlockingToWx( wx_code )
         
         self.sub( self, 'Clipboard', 'clipboard' )
-        self.sub( self, 'RestartServer', 'restart_server' )
         self.sub( self, 'RestartBooru', 'restart_booru' )
         
     
@@ -626,28 +620,25 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitView( self )
         
-        self._local_service = None
-        self._booru_service = None
+        self._booru_port_connection = None
         
-        self.RestartServer()
         self.RestartBooru()
         
         if not self._no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SaveDirtyObjects', ClientDaemons.DAEMONSaveDirtyObjects, ( 'important_dirt_to_clean', ), period = 30 ) )
             
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseSubscriptions', ClientDaemons.DAEMONSynchroniseSubscriptions, ( 'notify_restart_subs_sync_daemon', 'notify_new_subscriptions' ), init_wait = 60, pre_call_wait = 3 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'CheckImportFolders', ClientDaemons.DAEMONCheckImportFolders, ( 'notify_restart_import_folders_daemon', 'notify_new_import_folders' ), period = 180 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'CheckExportFolders', ClientDaemons.DAEMONCheckExportFolders, ( 'notify_restart_export_folders_daemon', 'notify_new_export_folders' ), period = 180 ) )
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'MaintainTrash', ClientDaemons.DAEMONMaintainTrash, init_wait = 120 ) )
+            self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600, pre_call_wait = 1 ) )
             
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'RebalanceClientFiles', ClientDaemons.DAEMONRebalanceClientFiles, period = 3600 ) )
-            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'SynchroniseRepositories', ClientDaemons.DAEMONSynchroniseRepositories, ( 'notify_restart_repo_sync_daemon', 'notify_new_permissions' ), period = 4 * 3600, pre_call_wait = 3 ) )
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_call_wait = 6 ) )
-            
-            self._daemons.append( HydrusThreading.DAEMONQueue( self, 'FlushRepositoryUpdates', ClientDaemons.DAEMONFlushServiceUpdates, 'service_updates_delayed', period = 5 ) )
             
         
         if self._db.IsFirstStart():
@@ -822,6 +813,11 @@ class Controller( HydrusController.HydrusController ):
         else: return text.lower()
         
     
+    def RefreshServices( self ):
+        
+        self._services_manager.RefreshServices()
+        
+    
     def ResetIdleTimer( self ):
         
         self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
@@ -836,9 +832,7 @@ class Controller( HydrusController.HydrusController ):
         
         service = self.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
-        info = service.GetInfo()
-        
-        port = info[ 'port' ]
+        port = service.GetPort()
         
         def TWISTEDRestartServer():
             
@@ -863,7 +857,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         import ClientLocalServer
                         
-                        self._booru_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'This is the local booru.' ) )
+                        self._booru_port_connection = reactor.listenTCP( port, ClientLocalServer.HydrusServiceBooru( service ) )
                         
                         try:
                             
@@ -886,7 +880,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            if self._booru_service is None:
+            if self._booru_port_connection is None:
                 
                 if port is not None:
                     
@@ -895,78 +889,7 @@ class Controller( HydrusController.HydrusController ):
                 
             else:
                 
-                deferred = defer.maybeDeferred( self._booru_service.stopListening )
-                
-                if port is not None:
-                    
-                    deferred.addCallback( StartServer )
-                    
-                
-            
-        
-        reactor.callFromThread( TWISTEDRestartServer )
-        
-    
-    def RestartServer( self ):
-        
-        port = self._options[ 'local_port' ]
-        
-        def TWISTEDRestartServer():
-            
-            def StartServer( *args, **kwargs ):
-                
-                try:
-                    
-                    try:
-                        
-                        connection = HydrusNetworking.GetLocalConnection( port )
-                        connection.close()
-                        
-                        text = 'The client\'s local server could not start because something was already bound to port ' + str( port ) + '.'
-                        text += os.linesep * 2
-                        text += 'This usually means another hydrus client is already running and occupying that port. It could be a previous instantiation of this client that has yet to shut itself down.'
-                        text += os.linesep * 2
-                        text += 'You can change the port this client tries to host its local server on in file->options.'
-                        
-                        HydrusData.ShowText( text )
-                        
-                    except:
-                        
-                        import ClientLocalServer
-                        
-                        self._local_service = reactor.listenTCP( port, ClientLocalServer.HydrusServiceLocal( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'This is the local file service.' ), interface = '127.0.0.1' )
-                        
-                        try:
-                            
-                            connection = HydrusNetworking.GetLocalConnection( port )
-                            connection.close()
-                            
-                        except Exception as e:
-                            
-                            text = 'Tried to bind port ' + str( port ) + ' for the local server, but it failed:'
-                            text += os.linesep * 2
-                            text += HydrusData.ToUnicode( e )
-                            
-                            HydrusData.ShowText( text )
-                            
-                        
-                    
-                except Exception as e:
-                    
-                    wx.CallAfter( HydrusData.ShowException, e )
-                    
-                
-            
-            if self._local_service is None:
-                
-                if port is not None:
-                    
-                    StartServer()
-                    
-                
-            else:
-                
-                deferred = defer.maybeDeferred( self._local_service.stopListening )
+                deferred = defer.maybeDeferred( self._booru_port_connection.stopListening )
                 
                 if port is not None:
                     
@@ -1046,6 +969,29 @@ class Controller( HydrusController.HydrusController ):
         HydrusData.Print( 'shutting down controller...' )
         
     
+    def SaveDirtyObjects( self ):
+        
+        with HydrusGlobals.dirty_object_lock:
+            
+            dirty_services = [ service for service in self._services_manager.GetServices() if service.IsDirty() ]
+            
+            if len( dirty_services ) > 0:
+                
+                self.WriteSynchronous( 'dirty_services', dirty_services )
+                
+            
+        
+    
+    def SetServices( self, services ):
+        
+        with HydrusGlobals.dirty_object_lock:
+            
+            self.WriteSynchronous( 'update_services', services )
+            
+            self._services_manager.RefreshServices()
+            
+        
+    
     def ShutdownView( self ):
         
         if not HydrusGlobals.emergency_exit:
@@ -1112,16 +1058,13 @@ class Controller( HydrusController.HydrusController ):
             return True
             
         
-        if not self._options[ 'pause_repo_sync' ]:
+        services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
+        
+        for service in services:
             
-            services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
-            
-            for service in services:
+            if service.CanDoIdleShutdownWork():
                 
-                if service.CanDownloadUpdate() or service.CanProcessUpdate():
-                    
-                    return True
-                    
+                return True
                 
             
         

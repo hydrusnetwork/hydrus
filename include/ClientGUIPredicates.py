@@ -138,7 +138,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], style = wx.RA_SPECIFY_ROWS )
         
-        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CURRENT ), ( 'pending to', HC.PENDING ) ], style = wx.RA_SPECIFY_ROWS )
+        self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], style = wx.RA_SPECIFY_ROWS )
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.FILE_SERVICES )
         

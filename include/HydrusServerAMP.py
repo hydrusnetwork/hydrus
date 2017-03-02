@@ -16,7 +16,6 @@ import ServerFiles
 import SocketServer
 import traceback
 import urllib
-import yaml
 from twisted.internet import reactor, defer
 from twisted.internet.threads import deferToThread
 from twisted.protocols import amp

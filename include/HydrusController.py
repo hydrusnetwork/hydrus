@@ -257,7 +257,15 @@ class HydrusController( object ):
         finally: self._currently_doing_pubsub = False
         
     
-    def Read( self, action, *args, **kwargs ): return self._Read( action, *args, **kwargs )
+    def Read( self, action, *args, **kwargs ):
+        
+        return self._Read( action, *args, **kwargs )
+        
+    
+    def RequestMade( self, num_bytes ):
+        
+        pass
+        
     
     def ShutdownModel( self ):
         

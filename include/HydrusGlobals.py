@@ -1,3 +1,5 @@
+import threading
+
 controller = None
 client_controller = None
 server_controller = None
@@ -17,3 +19,5 @@ restart = False
 emergency_exit = False
 
 do_not_catch_char_hook = False
+
+dirty_object_lock = threading.Lock()

@@ -987,13 +987,6 @@ class Canvas( wx.Window ):
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', hex_hash )
         
     
-    def _CopyLocalUrlToClipboard( self ):
-        
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
-        
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', local_url )
-        
-    
     def _CopyFileToClipboard( self ):
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
@@ -1971,11 +1964,6 @@ class CanvasPanel( Canvas ):
                 
             
             copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
-            
-            if HC.options[ 'local_port' ] is not None:
-                
-                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
-                
             
             share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
             
@@ -3139,11 +3127,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
         
-        if HC.options[ 'local_port' ] is not None:
-            
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_local_url' ), 'local url' )
-            
-        
         share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
         
         menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
@@ -3235,13 +3218,6 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
         self._hover_commands.AddCommand( 'edit shortcuts', self.EventShortcuts )
         
         HydrusGlobals.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        
-    
-    def _CopyLocalUrlToClipboard( self ):
-        
-        local_url = 'http://127.0.0.1:' + str( HC.options[ 'local_port' ] ) + '/file?hash=' + self._current_display_media.GetHash().encode( 'hex' )
-        
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', local_url )
         
     
     def _CopyPathToClipboard( self ):

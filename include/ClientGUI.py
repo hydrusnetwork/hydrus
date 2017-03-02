@@ -20,10 +20,12 @@ import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
 import ClientSearch
+import ClientServices
 import ClientThreading
 import collections
 import cv2
 import gc
+import hashlib
 import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
@@ -31,6 +33,7 @@ import HydrusPaths
 import HydrusGlobals
 import HydrusImageHandling
 import HydrusNATPunch
+import HydrusNetwork
 import HydrusNetworking
 import HydrusSerialisable
 import HydrusTagArchive
@@ -242,7 +245,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 service = self._controller.GetServicesManager().GetService( service_key )
                 
-                response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key.encode( 'hex' ) } )
+                response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key } )
                 
                 account_info = response[ 'account_info' ]
                 
@@ -279,34 +282,43 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _AutoRepoSetup( self ):
         
         def do_it():
-        
+            
             edit_log = []
             
             service_key = HydrusData.GenerateKey()
             service_type = HC.TAG_REPOSITORY
             name = 'public tag repository'
             
-            info = {}
+            tag_repo = ClientServices.GenerateService( service_key, service_type, name )
             
-            info[ 'host' ] = 'hydrus.no-ip.org'
-            info[ 'port' ] = 45871
-            info[ 'access_key' ] = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
+            host = 'hydrus.no-ip.org'
+            port = 45871
+            access_key = '4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f'.decode( 'hex' )
             
-            edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
+            credentials = HydrusNetwork.Credentials( host, port, access_key )
+            
+            tag_repo.SetCredentials( credentials )
             
             service_key = HydrusData.GenerateKey()
             service_type = HC.FILE_REPOSITORY
             name = 'read-only art file repository'
             
-            info = {}
+            file_repo = ClientServices.GenerateService( service_key, service_type, name )
             
-            info[ 'host' ] = 'hydrus.no-ip.org'
-            info[ 'port' ] = 45872
-            info[ 'access_key' ] = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
+            host = 'hydrus.no-ip.org'
+            port = 45872
+            access_key = '8f8a3685abc19e78a92ba61d84a0482b1cfac176fd853f46d93fe437a95e40a5'.decode( 'hex' )
             
-            edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
+            credentials = HydrusNetwork.Credentials( host, port, access_key )
             
-            self._controller.WriteSynchronous( 'update_services', edit_log )
+            file_repo.SetCredentials( credentials )
+            
+            all_services = self._controller.GetServicesManager().GetServices()
+            
+            all_services.append( tag_repo )
+            all_services.append( file_repo )
+            
+            self._controller.SetServices( all_services )
             
             HydrusData.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
             
@@ -353,6 +365,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     HydrusData.ShowText( u'Starting server\u2026' )
                     
+                    db_dir = '-d=' + self._controller.GetDBDir()
+                    
                     if HC.PLATFORM_WINDOWS:
                         
                         server_frozen_path = os.path.join( HC.BASE_DIR, 'server.exe' )
@@ -364,8 +378,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if os.path.exists( server_frozen_path ):
                     
-                        if HC.PLATFORM_WINDOWS: subprocess.Popen( [ server_frozen_path ] )
-                        else: subprocess.Popen( [ server_frozen_path ] )
+                        subprocess.Popen( [ server_frozen_path, db_dir ] )
                         
                     else:
                         
@@ -381,7 +394,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             python_executable = python_executable.replace( 'pythonw', 'python' )
                             
                         
-                        subprocess.Popen( [ python_executable, os.path.join( HC.BASE_DIR, 'server.py' ) ] )
+                        subprocess.Popen( [ python_executable, os.path.join( HC.BASE_DIR, 'server.py' ), db_dir ] )
                         
                     
                     time_waited = 0
@@ -425,30 +438,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             service_type = HC.SERVER_ADMIN
             name = 'local server admin'
             
-            info = {}
+            admin_service = ClientServices.GenerateService( admin_service_key, service_type, name )
             
-            info[ 'host' ] = host
-            info[ 'port' ] = port
+            credentials = HydrusNetwork.Credentials( host, port )
             
-            service = ClientData.GenerateService( admin_service_key, service_type, name, info )
+            admin_service.SetCredentials( credentials )
             
-            response = service.Request( HC.GET, 'init' )
+            response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : 'init' } )
             
             access_key = response[ 'access_key' ]
             
+            credentials = HydrusNetwork.Credentials( host, port, access_key )
+            
+            admin_service.SetCredentials( credentials )
+            
             #
             
-            info[ 'access_key' ] = access_key
+            all_services = list( self._controller.GetServicesManager().GetServices() )
             
-            edit_log = [ HydrusData.EditLogActionAdd( ( admin_service_key, service_type, name, info ) ) ]
+            all_services.append( admin_service )
             
-            self._controller.WriteSynchronous( 'update_services', edit_log )
+            self._controller.SetServices( all_services )
+            
+            admin_service = self._controller.GetServicesManager().GetService( admin_service_key ) # let's refresh it
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
             wx.CallAfter( ClientGUIFrames.ShowKeys, 'access', ( access_key, ) )
-            
-            admin_service = self._controller.GetServicesManager().GetService( admin_service_key )
             
             #
             
@@ -456,22 +472,34 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HydrusData.ShowText( u'Creating tag and file services\u2026' )
             
-            tag_options = HC.DEFAULT_OPTIONS[ HC.TAG_REPOSITORY ]
-            tag_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT
+            response = admin_service.Request( HC.GET, 'services' )
             
-            file_options = HC.DEFAULT_OPTIONS[ HC.FILE_REPOSITORY ]
-            file_options[ 'port' ] = HC.DEFAULT_SERVICE_PORT + 1
+            serverside_services = response[ 'services' ]
             
-            edit_log = []
+            service_key = HydrusData.GenerateKey()
             
-            edit_log.append( ( HC.ADD, ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, tag_options ) ) )
-            edit_log.append( ( HC.ADD, ( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, file_options ) ) )
+            tag_service = HydrusNetwork.GenerateService( service_key, HC.TAG_REPOSITORY, 'tag service', HC.DEFAULT_SERVICE_PORT )
             
-            response = admin_service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
+            serverside_services.append( tag_service )
             
-            service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
+            service_key = HydrusData.GenerateKey()
             
-            self._controller.WriteSynchronous( 'update_server_services', admin_service_key, [], edit_log, service_keys_to_access_keys )
+            file_service = HydrusNetwork.GenerateService( service_key, HC.FILE_REPOSITORY, 'file service', HC.DEFAULT_SERVICE_PORT + 1 )
+            
+            serverside_services.append( file_service )
+            
+            response = admin_service.Request( HC.POST, 'services', { 'services' : serverside_services } )
+            
+            service_keys_to_access_keys = response[ 'service_keys_to_access_keys' ]
+            
+            deletee_service_keys = []
+            
+            with HydrusGlobals.dirty_object_lock:
+                
+                self._controller.WriteSynchronous( 'update_server_services', admin_service_key, serverside_services, service_keys_to_access_keys, deletee_service_keys )
+                
+                self._controller.RefreshServices()
+                
             
             HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
             
@@ -840,7 +868,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 service = self._controller.GetServicesManager().GetService( service_key )
                 
-                with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash.encode( 'hex' ) } )
+                with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
                 
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
@@ -1021,13 +1049,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             services = self._controller.GetServicesManager().GetServices()
             
-            tag_repositories = [ service for service in services if service.GetServiceType() == HC.TAG_REPOSITORY ]
+            petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
             
-            petition_resolve_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+            repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
             
-            file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
+            file_repositories = [ service for service in repositories if service.GetServiceType() == HC.FILE_REPOSITORY ]
             
-            petition_resolve_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.RESOLVE_PETITIONS ) ]
+            petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
             
             ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._NewPageQuery, CC.TRASH_SERVICE_KEY )
@@ -1045,18 +1073,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            if len( petition_resolve_tag_services ) > 0 or len( petition_resolve_file_services ) > 0:
+            if len( petition_resolvable_repositories ) > 0:
                 
                 petition_menu = wx.Menu()
                 
-                for service in petition_resolve_tag_services:
+                for service in petition_resolvable_repositories:
                     
-                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new tag petition tab for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
-                    
-                
-                for service in petition_resolve_file_services:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new file petition tab for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
+                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
@@ -1248,60 +1271,50 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
             
-            tag_repositories = self._controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            admin_tag_services = [ repository for repository in tag_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE ) ]
             
-            file_repositories = self._controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
-            admin_file_services = [ repository for repository in file_repositories if repository.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            repositories = self._controller.GetServicesManager().GetServices( HC.REPOSITORIES )
+            admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
             
             servers_admin = self._controller.GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
-            server_admins = [ service for service in servers_admin if service.GetInfo( 'account' ).HasPermission( HC.GENERAL_ADMIN ) ]
+            server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ) ]
             
-            if len( admin_tag_services ) > 0 or len( admin_file_services ) > 0 or len( server_admins ) > 0:
+            if len( admin_repositories ) > 0 or len( server_admins ) > 0:
                 
                 admin_menu = wx.Menu()
                 
-                for service in admin_tag_services:
+                for service in admin_repositories:
                     
                     submenu = wx.Menu()
                     
                     service_key = service.GetServiceKey()
                     
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
                     
-                    submenu.AppendSeparator()
+                    if can_create_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                        
                     
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get stats', 'Fetch operating statistics from the service.', self._Stats, service_key )
+                    if can_overrule_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                        
                     
-                    submenu.AppendSeparator()
+                    if can_overrule_accounts and service.GetServiceType() == HC.FILE_REPOSITORY:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
+                        
                     
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'post news', 'Post a news item to the tag repository.', self._PostNews, service_key )
-                    
-                    ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
-                    
-                
-                for service in admin_file_services:
-                    
-                    submenu = wx.Menu()
-                    
-                    service_key = service.GetServiceKey()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
-                    
-                    submenu.AppendSeparator()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'get stats', 'Fetch operating statistics from the service.', self._Stats, service_key )
-                    
-                    submenu.AppendSeparator()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'post news', 'Post a news item to the tag repository.', self._PostNews, service_key )
+                    if can_overrule_account_types:
+                        
+                        submenu.AppendSeparator()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                        
                     
                     ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
                     
@@ -1312,14 +1325,47 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     service_key = service.GetServiceKey()
                     
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
-                    ClientGUIMenus.AppendMenuItem( self, submenu, 'make a backup', 'Command the server to temporarily pause and back up its database.', self._BackupService, service_key )
+                    can_create_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+                    can_overrule_accounts = service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
+                    can_overrule_account_types = service.HasPermission( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE )
+                    
+                    if can_create_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'create new accounts', 'Create new account keys for this service.', self._GenerateNewAccounts, service_key )
+                        
+                    
+                    if can_overrule_accounts:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'get an account\'s info', 'Fetch information about an account from the service.', self._AccountInfo, service_key )
+                        
+                    
+                    if can_overrule_account_types:
+                        
+                        submenu.AppendSeparator()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
+                        
+                    
+                    can_overrule_services = service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
+                    
+                    if can_overrule_services:
+                        
+                        submenu.AppendSeparator()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                        ClientGUIMenus.AppendMenuItem( self, submenu, 'make a backup', 'Command the server to temporarily pause and back up its database.', self._BackupService, service_key )
+                        
                     
                     ClientGUIMenus.AppendMenu( admin_menu, submenu, service.GetName() )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
                 
+            
+            menu.AppendSeparator()
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
             
             menu.AppendSeparator()
             
@@ -1340,23 +1386,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             menu.AppendSeparator()
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
-            
-            if len( tag_services ) + len( file_services ) > 0:
-                
-                menu.AppendSeparator()
-                
-                submenu = wx.Menu()
-                
-                for service in tag_services + file_services:
-                    
-                    name = service.GetName()
-                    service_key = service.GetServiceKey()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Review past news from this service.', self._News, service_key )
-                    
-                
-                ClientGUIMenus.AppendMenu( menu, submenu, 'news' )
-                
             
             return ( menu, p( '&Services' ), True )
             
@@ -1426,6 +1455,125 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg:
             
             dlg.ShowModal()
+            
+        
+    
+    def _ImportUpdateFiles( self ):
+        
+        def do_it( external_update_dir ):
+            
+            num_errors = 0
+            
+            filenames = os.listdir( external_update_dir )
+            
+            update_paths = [ os.path.join( external_update_dir, filename ) for filename in filenames ]
+            
+            update_paths = filter( os.path.isfile, update_paths )
+            
+            num_to_do = len( update_paths )
+            
+            if num_to_do == 0:
+                
+                wx.CallAfter( wx.MessageBox, 'No files in that directory!' )
+                
+                return
+                
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            try:
+                
+                job_key.SetVariable( 'popup_title', 'importing updates' )
+                HydrusGlobals.client_controller.pub( 'message', job_key )
+                
+                for ( i, update_path ) in enumerate( update_paths ):
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        job_key.SetVariable( 'popup_text_1', 'Cancelled!' )
+                        
+                        return
+                        
+                    
+                    try:
+                        
+                        with open( update_path, 'rb' ) as f:
+                            
+                            update_network_string = f.read()
+                            
+                        
+                        update_network_string_hash = hashlib.sha256( update_network_string ).digest()
+                        
+                        try:
+                            
+                            update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
+                            
+                        except:
+                            
+                            num_errors += 1
+                            
+                            HydrusData.Print( update_path + ' did not load correctly!' )
+                            
+                            continue
+                            
+                        
+                        if isinstance( update, HydrusNetwork.DefinitionsUpdate ):
+                            
+                            mime = HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
+                            
+                        elif isinstance( update, HydrusNetwork.ContentUpdate ):
+                            
+                            mime = HC.APPLICATION_HYDRUS_UPDATE_CONTENT
+                            
+                        else:
+                            
+                            num_errors += 1
+                            
+                            HydrusData.Print( update_path + ' was not an update!' )
+                            
+                            continue
+                            
+                        
+                        self._controller.WriteSynchronous( 'import_update', update_network_string, update_network_string_hash, mime )
+                        
+                    finally:
+                        
+                        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                        job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                        
+                    
+                
+                if num_errors == 0:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'Done!' )
+                    
+                else:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'Done with ' + HydrusData.ConvertIntToPrettyString( num_errors ) + ' errors (written to the log).' )
+                    
+                
+            finally:
+                
+                job_key.DeleteVariable( 'popup_gauge_1' )
+                
+                job_key.Finish()
+                
+            
+        
+        message = 'This lets you manually import a directory of update files for your repositories. Any update files that match what your repositories are looking for will be automatically linked so they do not have to be downloaded.'
+        
+        wx.MessageBox( message )
+        
+        with wx.DirDialog( self, 'Select location.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                self._controller.CallToThread( do_it, path )
+                
             
         
     
@@ -1550,7 +1698,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageAccountTypes( self, service_key ):
         
-        with ClientGUIDialogsManage.DialogManageAccountTypes( self, service_key ) as dlg: dlg.ShowModal()
+        title = 'manage account types'
+        frame_key = 'regular_dialog'
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageAccountTypesPanel( dlg, service_key )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManageBoorus( self ):
@@ -1608,7 +1766,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageServer( self, service_key ):
         
-        with ClientGUIDialogsManage.DialogManageServer( self, service_key ) as dlg: dlg.ShowModal()
+        title = 'manage server services'
+        frame_key = 'regular_dialog'
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageServerServicesPanel( dlg, service_key )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ManageServices( self ):
@@ -1619,9 +1787,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         try:
             
-            with ClientGUIDialogsManage.DialogManageServices( self ) as dlg: dlg.ShowModal()
+            title = 'manage services'
+            frame_key = 'regular_dialog'
             
-        finally: HC.options[ 'pause_repo_sync' ] = original_pause_status
+            with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsManagement.ManageClientServicesPanel( dlg )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        finally:
+            
+            HC.options[ 'pause_repo_sync' ] = original_pause_status
+            
         
     
     def _ManageSubscriptions( self ):
@@ -1671,6 +1852,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
     
     def _ModifyAccount( self, service_key ):
+        
+        wx.MessageBox( 'this does not work yet!' )
+        
+        return
         
         service = self._controller.GetServicesManager().GetService( service_key )
         
@@ -1762,20 +1947,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._NewPage( 'url import', management_controller )
         
     
-    def _NewPagePetitions( self, service_key = None ):
+    def _NewPagePetitions( self, service_key ):
         
-        if service_key is None: service_key = ClientGUIDialogs.SelectServiceKey( service_types = HC.REPOSITORIES, permission = HC.RESOLVE_PETITIONS )
+        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
         
-        if service_key is not None:
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
-            
-            service = self._controller.GetServicesManager().GetService( service_key )
-            
-            page_name = service.GetName() + ' petitions'
-            
-            self._NewPage( page_name, management_controller )
-            
+        service = self._controller.GetServicesManager().GetService( service_key )
+        
+        page_name = service.GetName() + ' petitions'
+        
+        self._NewPage( page_name, management_controller )
         
     
     def _NewPageQuery( self, file_service_key, initial_media_results = None, initial_predicates = None ):
@@ -1799,11 +1979,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
         
         self._NewPage( 'files', management_controller, initial_media_results = initial_media_results )
-        
-    
-    def _News( self, service_key ):
-        
-        with ClientGUIDialogs.DialogNews( self, service_key ) as dlg: dlg.ShowModal()
         
     
     def _OpenDBFolder( self ):
@@ -1851,21 +2026,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.Write( 'save_options', HC.options )
-        
-    
-    def _PostNews( self, service_key ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the news you would like to post.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                news = dlg.GetValue()
-                
-                service = self._controller.GetServicesManager().GetService( service_key )
-                
-                with wx.BusyCursor(): service.Request( HC.POST, 'news', { 'news' : news } )
-                
-            
         
     
     def _RebalanceClientFiles( self ):
@@ -2182,15 +2342,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             else:
                 
-                names_to_services = { service.GetName() : service for service in ipfs_services }
+                list_of_tuples = [ ( service.GetName(), service ) for service in ipfs_services ]
                 
-                with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'Select which IPFS Daemon', names_to_services.keys() ) as dlg:
+                with ClientGUIDialogs.DialogSelectFromList( self, 'Select which IPFS Daemon', list_of_tuples ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        name = dlg.GetString()
-                        
-                        service = names_to_services[ name ]
+                        service = dlg.GetChoice()
                         
                     else:
                         
@@ -2228,17 +2386,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 with ClientGUIDialogs.DialogSelectYoutubeURL( self, info ) as select_dlg: select_dlg.ShowModal()
                 
             
-        
-    
-    def _Stats( self, service_key ):
-        
-        service = self._controller.GetServicesManager().GetService( service_key )
-        
-        response = service.Request( HC.GET, 'stats' )
-        
-        stats = response[ 'stats' ]
-        
-        wx.MessageBox( HydrusData.ToUnicode( stats ) )
         
     
     def _SwitchBoolean( self, name ):
@@ -2511,11 +2658,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                         else:
                             
-                            content_update_package = result
+                            client_to_server_update = result
                             
-                            service.Request( HC.POST, 'content_update_package', { 'update' : content_update_package } )
+                            service.Request( HC.POST, 'update', { 'client_to_server_update' : client_to_server_update } )
                             
-                            content_updates = content_update_package.GetContentUpdates( for_client = True )
+                            content_updates = client_to_server_update.GetClientsideContentUpdates()
                             
                         
                         self._controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
@@ -2699,14 +2846,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 self._ChooseNewPage()
                 
             elif command == 'new_page_query': self._NewPageQuery( data )
-            elif command == 'news': self._News( data )
             elif command == 'petitions': self._NewPagePetitions( data )
-            elif command == 'post_news': self._PostNews( data )
             elif command == 'pubsub_profile_mode':
                 
                 HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
                 
-            elif command == 'redo': self._controller.pub( 'redo' )
+            elif command == 'redo':
+                
+                self._controller.pub( 'redo' )
+                
             elif command == 'refresh':
                 
                 self._Refresh()
@@ -2721,7 +2869,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif command == 'start_ipfs_download': self._StartIPFSDownload()
             elif command == 'start_youtube_download': self._StartYoutubeDownload()
-            elif command == 'stats': self._Stats( data )
             elif command == 'synchronised_wait_switch': self._SetSynchronisedWait()
             elif command == 'unclose_page':
                 

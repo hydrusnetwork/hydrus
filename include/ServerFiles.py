@@ -33,46 +33,6 @@ def GetExpectedThumbnailPath( hash ):
     
     return path
     
-def GetExpectedContentUpdatePackagePath( service_key, begin, subindex ):
-    
-    path = os.path.join( GetExpectedUpdateDir( service_key ), str( int( begin ) ) + '_' + str( subindex ) )
-    
-    return path
-    
-def GetExpectedServiceUpdatePackagePath( service_key, begin ):
-    
-    path = os.path.join( GetExpectedUpdateDir( service_key ), str( int( begin ) ) + '_metadata' )
-    
-    return path
-    
-def GetExpectedUpdateDir( service_key ):
-    
-    updates_dir = HydrusGlobals.server_controller.GetUpdatesDir()
-    
-    return os.path.join( updates_dir, service_key.encode( 'hex' ) )
-    
-def GetContentUpdatePackagePath( service_key, begin, subindex ):
-    
-    path = GetExpectedContentUpdatePackagePath( service_key, begin, subindex )
-    
-    if not os.path.exists( path ):
-        
-        raise HydrusExceptions.NotFoundException( 'Update not found!' )
-        
-    
-    return path
-    
-def GetServiceUpdatePackagePath( service_key, begin ):
-    
-    path = GetExpectedServiceUpdatePackagePath( service_key, begin )
-    
-    if not os.path.exists( path ):
-        
-        raise HydrusExceptions.NotFoundException( 'Update not found!' )
-        
-    
-    return path
-    
 def GetFilePath( hash ):
     
     path = GetExpectedFilePath( hash )

@@ -164,41 +164,20 @@ class TestNonDBDialogs( unittest.TestCase ):
     
     def test_select_from_list_of_strings( self ):
         
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
+        list_of_tuples = [ ( 'a', 123 ), ( 'b', 456 ), ( 'c', 789 ) ]
+        
+        with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
             
-            wx.CallLater( 500, dlg._strings.Select, 0 )
-            wx.CallLater( 1000, PressKey, dlg._strings, wx.WXK_SPACE )
+            wx.CallLater( 500, dlg._list.Select, 1 )
+            wx.CallLater( 1000, PressKey, dlg._strings, wx.WXK_RETURN )
             
             result = dlg.ShowModal()
             
             self.assertEqual( result, wx.ID_OK )
             
-            value = dlg.GetString()
+            value = dlg.GetChoice()
             
-            self.assertEqual( value, 'a' )
-            
-        
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
-            
-            HitCancelButton( dlg )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_CANCEL )
-            
-        
-        with ClientGUIDialogs.DialogSelectFromListOfStrings( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
-            
-            wx.CallLater( 500, dlg._strings.Select, 1 )
-            wx.CallLater( 1000, HitButton, dlg._ok )
-            
-            result = dlg.ShowModal()
-            
-            self.assertEqual( result, wx.ID_OK )
-            
-            value = dlg.GetString()
-            
-            self.assertEqual( value, 'b' )
+            self.assertEqual( value, 456 )
             
         
     

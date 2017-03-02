@@ -19,12 +19,14 @@ import ClientImporting
 import ClientMedia
 import ClientRatings
 import ClientSearch
+import ClientServices
 import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
 import HydrusNATPunch
+import HydrusNetwork
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
@@ -175,217 +177,6 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         HydrusGlobals.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
-        
-    
-class DialogManageAccountTypes( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent, service_key ):
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage account types' )
-        
-        self._service_key = service_key
-        
-        self._edit_log = []
-    
-        self._account_types_panel = ClientGUICommon.StaticBox( self, 'account types' )
-        
-        self._ctrl_account_types = ClientGUICommon.SaneListCtrl( self._account_types_panel, 350, [ ( 'title', 120 ), ( 'permissions', -1 ), ( 'max monthly bytes', 120 ), ( 'max monthly requests', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
-        
-        self._add = wx.Button( self._account_types_panel, label = 'add' )
-        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-        
-        self._edit = wx.Button( self._account_types_panel, label = 'edit' )
-        self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-        
-        self._delete = wx.Button( self._account_types_panel, label = 'delete' )
-        self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-        
-        self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._apply.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-        
-        response = service.Request( HC.GET, 'account_types' )
-        
-        account_types = response[ 'account_types' ]
-        
-        self._titles_to_account_types = {}
-        
-        for account_type in account_types:
-            
-            title = account_type.GetTitle()
-            
-            self._titles_to_account_types[ title ] = account_type
-            
-            permissions = account_type.GetPermissions()
-            
-            permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-            
-            max_num_bytes = account_type.GetMaxBytes()
-            max_num_requests = account_type.GetMaxRequests()
-            
-            max_num_bytes_string = account_type.GetMaxBytesString()
-            max_num_requests_string = account_type.GetMaxRequestsString()
-            
-            self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-            
-        
-        h_b_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        h_b_box.AddF( self._add, CC.FLAGS_VCENTER )
-        h_b_box.AddF( self._edit, CC.FLAGS_VCENTER )
-        h_b_box.AddF( self._delete, CC.FLAGS_VCENTER )
-        
-        self._account_types_panel.AddF( self._ctrl_account_types, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._account_types_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._apply, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( 980, y ) )
-        
-        wx.CallAfter( self._apply.SetFocus )
-        
-    
-    def Delete( self ):
-        
-        indices = self._ctrl_account_types.GetAllSelected()
-        
-        titles_about_to_delete = { self._ctrl_account_types.GetClientData( index )[0] for index in indices }
-        
-        all_titles = set( self._titles_to_account_types.keys() )
-        
-        titles_can_move_to = list( all_titles - titles_about_to_delete )
-        
-        if len( titles_can_move_to ) == 0:
-            
-            wx.MessageBox( 'You cannot delete every account type!' )
-            
-            return
-            
-        
-        for title in titles_about_to_delete:
-            
-            with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'what should deleted ' + title + ' accounts become?', titles_can_move_to ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK: title_to_move_to = dlg.GetString()
-                else: return
-                
-            
-            self._edit_log.append( ( HC.DELETE, ( title, title_to_move_to ) ) )
-            
-        
-        self._ctrl_account_types.RemoveAllSelected()
-        
-    
-    def Edit( self ):
-        
-        indices = self._ctrl_account_types.GetAllSelected()
-        
-        for index in indices:
-            
-            title = self._ctrl_account_types.GetClientData( index )[0]
-            
-            account_type = self._titles_to_account_types[ title ]
-            
-            with ClientGUIDialogs.DialogInputNewAccountType( self, account_type ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    old_title = title
-                    
-                    account_type = dlg.GetAccountType()
-                    
-                    title = account_type.GetTitle()
-                    
-                    permissions = account_type.GetPermissions()
-                    
-                    permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                    
-                    max_num_bytes = account_type.GetMaxBytes()
-                    max_num_requests = account_type.GetMaxRequests()
-                    
-                    max_num_bytes_string = account_type.GetMaxBytesString()
-                    max_num_requests_string = account_type.GetMaxRequestsString()
-                    
-                    if old_title != title:
-                        
-                        if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
-                        
-                        del self._titles_to_account_types[ old_title ]
-                        
-                    
-                    self._titles_to_account_types[ title ] = account_type
-                    
-                    self._edit_log.append( ( HC.EDIT, ( old_title, account_type ) ) )
-                    
-                    self._ctrl_account_types.UpdateRow( index, ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-                    
-                
-            
-        
-    
-    def EventAdd( self, event ):
-        
-        with ClientGUIDialogs.DialogInputNewAccountType( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                account_type = dlg.GetAccountType()
-                
-                title = account_type.GetTitle()
-                
-                permissions = account_type.GetPermissions()
-                
-                permissions_string = ', '.join( [ HC.permissions_string_lookup[ permission ] for permission in permissions ] )
-                
-                max_num_bytes = account_type.GetMaxBytes()
-                max_num_requests = account_type.GetMaxRequests()
-                
-                max_num_bytes_string = account_type.GetMaxBytesString()
-                max_num_requests_string = account_type.GetMaxRequestsString()
-                
-                if title in self._titles_to_account_types: raise Exception( 'You already have an account type called ' + title + '; delete or edit that one first' )
-                
-                self._titles_to_account_types[ title ] = account_type
-                
-                self._edit_log.append( ( HC.ADD, account_type ) )
-                
-                self._ctrl_account_types.Append( ( title, permissions_string, max_num_bytes_string, max_num_requests_string ), ( title, len( permissions ), max_num_bytes, max_num_requests ) )
-                
-            
-        
-    
-    def EventDelete( self, event ):
-        
-        self.Delete()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
-        
-    
-    def EventOK( self, event ):
-        
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
-        
-        service.Request( HC.POST, 'account_types', { 'edit_log' : self._edit_log } )
-        
-        self.EndModal( wx.ID_OK )
         
     
 class DialogManageBoorus( ClientGUIDialogs.Dialog ):
@@ -3617,1418 +3408,6 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
             
         
     
-class DialogManageServer( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent, service_key ):
-        
-        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ' + self._service.GetName() + ' services' )
-        
-        self._edit_log = []
-        
-        self._services_listbook = ClientGUICommon.ListBook( self )
-        self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-        self._services_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-        
-        self._service_types = wx.Choice( self )
-        
-        self._add = wx.Button( self, label = 'add' )
-        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-        self._add.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._remove = wx.Button( self, label = 'remove' )
-        self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-        self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        for service_type in [ HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.MESSAGE_DEPOT ]: self._service_types.Append( HC.service_string_lookup[ service_type ], service_type )
-        
-        self._service_types.SetSelection( 0 )
-        
-        response = self._service.Request( HC.GET, 'services_info' )
-        
-        self._services_info = response[ 'services_info' ]
-        
-        for ( service_key, service_type, options ) in self._services_info:
-            
-            name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
-            
-            page = self._Panel( self._services_listbook, service_key, service_type, options )
-            
-            self._services_listbook.AddPage( name, service_key, page )
-            
-        
-        #
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        add_remove_hbox.AddF( self._service_types, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        vbox.AddF( self._services_listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        if y < 400: y = 400 # listbook's setsize ( -1, 400 ) is buggy
-        
-        self.SetInitialSize( ( 680, y ) )
-        
-        self.EventServiceChanged( None )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def _CheckCurrentServiceIsValid( self ):
-        
-        service_panel = self._services_listbook.GetCurrentPage()
-        
-        if service_panel is not None:
-            
-            ( service_key, service_type, options ) = service_panel.GetInfo()
-            
-            for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetActivePages() if page != service_panel ]:
-                
-                if options[ 'port' ] == existing_options[ 'port' ]:
-                    
-                    raise Exception( 'That port is already in use!' )
-                    
-                
-            
-        
-    
-    def EventAdd( self, event ):
-        
-        service_key = HydrusData.GenerateKey()
-        
-        service_type = self._service_types.GetClientData( self._service_types.GetSelection() )
-        
-        port = HC.DEFAULT_SERVICE_PORT
-        
-        existing_ports = set()
-        
-        for ( existing_service_key, existing_service_type, existing_options ) in [ page.GetInfo() for page in self._services_listbook.GetActivePages() ]:
-            
-            existing_ports.add( existing_options[ 'port' ] )
-            
-        
-        while port in existing_ports: port += 1
-        
-        options = dict( HC.DEFAULT_OPTIONS[ service_type ] )
-        
-        options[ 'port' ] = port
-        
-        self._edit_log.append( ( HC.ADD, ( service_key, service_type, options ) ) )
-        
-        page = self._Panel( self._services_listbook, service_key, service_type, options )
-        
-        name = HC.service_string_lookup[ service_type ] + '@' + str( port )
-        
-        self._services_listbook.AddPage( name, service_key, page, select = True )
-        
-    
-    def EventOK( self, event ):
-        
-        try: self._CheckCurrentServiceIsValid()
-        except Exception as e:
-            
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
-            
-            return
-            
-        
-        for page in self._services_listbook.GetActivePages():
-            
-            if page.HasChanges():
-                
-                ( service_key, service_type, options ) = page.GetInfo()
-                
-                self._edit_log.append( ( HC.EDIT, ( service_key, service_type, options ) ) )
-                
-            
-        
-        try:
-            
-            if len( self._edit_log ) > 0:
-                
-                response = self._service.Request( HC.POST, 'services', { 'edit_log' : self._edit_log } )
-                
-                service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
-                
-                admin_service_key = self._service.GetServiceKey()
-                
-                HydrusGlobals.client_controller.Write( 'update_server_services', admin_service_key, self._services_info, self._edit_log, service_keys_to_access_keys )
-                
-            
-        finally: self.EndModal( wx.ID_OK )
-        
-    
-    def EventRemove( self, event ):
-        
-        service_panel = self._services_listbook.GetCurrentPage()
-        
-        if service_panel is not None:
-            
-            ( service_key, service_type, options ) = service_panel.GetInfo()
-            
-            self._edit_log.append( ( HC.DELETE, service_key ) )
-            
-            self._services_listbook.DeleteCurrentPage()
-            
-        
-    
-    def EventServiceChanged( self, event ):
-        
-        page = self._services_listbook.GetCurrentPage()
-        
-        ( service_key, service_type, options ) = page.GetInfo()
-        
-        if service_type == HC.SERVER_ADMIN: self._remove.Disable()
-        else: self._remove.Enable()
-        
-    
-    def EventServiceChanging( self, event ):
-        
-        try:
-            
-            self._CheckCurrentServiceIsValid()
-            
-            service_panel = self._services_listbook.GetCurrentPage()
-            
-            if service_panel is not None:
-                
-                ( service_key, service_type, options ) = service_panel.GetInfo()
-                
-                new_name = HC.service_string_lookup[ service_type ] + '@' + str( options[ 'port' ] )
-                
-                self._services_listbook.RenamePage( service_key, new_name )
-                
-            
-        except Exception as e:
-            
-            wx.MessageBox( HydrusData.ToUnicode( e ) )
-            
-            event.Veto()
-            
-        
-    
-    class _Panel( wx.Panel ):
-        
-        def __init__( self, parent, service_key, service_type, options ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._service_key = service_key
-            self._service_type = service_type
-            self._options = options
-            
-            self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
-            
-            if 'port' in self._options: self._port = wx.SpinCtrl( self._options_panel, min = 1, max = 65535 )
-            if 'max_monthly_data' in self._options: self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max monthly data (MB)', multiplier = 1048576 )
-            if 'max_storage' in self._options: self._max_storage = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'max storage (MB)', multiplier = 1048576 )
-            if 'log_uploader_ips' in self._options: self._log_uploader_ips = wx.CheckBox( self._options_panel )
-            if 'message' in self._options: self._message = wx.TextCtrl( self._options_panel )
-            if 'upnp' in self._options: self._upnp = ClientGUICommon.NoneableSpinCtrl( self._options_panel, 'external port', none_phrase = 'do not forward port', max = 65535 )
-            
-            #
-            
-            if 'port' in self._options: self._port.SetValue( self._options[ 'port' ] )
-            if 'max_monthly_data' in self._options: self._max_monthly_data.SetValue( self._options[ 'max_monthly_data' ] )
-            if 'max_storage' in self._options: self._max_storage.SetValue( self._options[ 'max_storage' ] )
-            if 'log_uploader_ips' in self._options: self._log_uploader_ips.SetValue( self._options[ 'log_uploader_ips' ] )
-            if 'message' in self._options: self._message.SetValue( self._options[ 'message' ] )
-            if 'upnp' in self._options: self._upnp.SetValue( self._options[ 'upnp' ] )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            rows = []
-            
-            if 'port' in self._options:
-                
-                rows.append( ( 'port: ', self._port ) )
-                
-            
-            if 'max_monthly_data' in self._options:
-                
-                rows.append( ( 'max monthly data: ', self._max_monthly_data ) )
-                
-            
-            if 'max_storage' in self._options:
-                
-                rows.append( ( 'max storage: ', self._max_storage ) )
-                
-            
-            if 'log_uploader_ips' in self._options:
-                
-                rows.append( ( 'log uploader IPs: ', self._log_uploader_ips ) )
-                
-            
-            if 'message' in self._options:
-                
-                rows.append( ( 'message: ', self._message ) )
-                
-            
-            if 'upnp' in self._options:
-                
-                rows.append( ( 'UPnP: ', self._upnp ) )
-                
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
-            
-            self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self.SetSizer( vbox )
-            
-        
-        def GetInfo( self ):
-            
-            options = {}
-        
-            if 'port' in self._options: options[ 'port' ] = self._port.GetValue()
-            if 'max_monthly_data' in self._options: options[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
-            if 'max_storage' in self._options: options[ 'max_storage' ] = self._max_storage.GetValue()
-            if 'log_uploader_ips' in self._options: options[ 'log_uploader_ips' ] = self._log_uploader_ips.GetValue()
-            if 'message' in self._options: options[ 'message' ] = self._message.GetValue()
-            if 'upnp' in self._options: options[ 'upnp' ] = self._upnp.GetValue()
-            
-            return ( self._service_key, self._service_type, options )
-            
-        
-        def HasChanges( self ):
-            
-            ( service_key, service_type, options ) = self.GetInfo()
-            
-            if options != self._options: return True
-            
-            return False
-            
-        
-    
-class DialogManageServices( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent ):
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage services' )
-        
-        self._service_types_to_listbooks = {}
-        self._listbooks_to_service_types = {}
-        
-        self._edit_log = []
-        
-        self._notebook = wx.Notebook( self )
-        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
-        self._notebook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._notebook )
-        
-        self._local_listbook = ClientGUICommon.ListBook( self._notebook )
-        self._local_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._local_listbook )
-        
-        self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
-        self._remote_listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventPageChanging, source = self._remote_listbook )
-        
-        self._add = wx.Button( self, label = 'add' )
-        self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-        self._add.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._remove = wx.Button( self, label = 'remove' )
-        self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
-        self._remove.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self._export = wx.Button( self, label = 'export' )
-        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        for service_type in HC.ALL_SERVICES:
-            
-            if service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
-            elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
-            elif service_type == HC.LOCAL_BOORU: name = 'booru'
-            elif service_type == HC.LOCAL_TAG: name = 'local tags'
-            elif service_type == HC.LOCAL_FILE_DOMAIN: name = 'local files'
-            elif service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
-            elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
-            elif service_type == HC.SERVER_ADMIN: name = 'administrative services'
-            elif service_type == HC.IPFS: name = 'ipfs daemons'
-            else: continue
-            
-            if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
-            else: parent_listbook = self._remote_listbook
-            
-            listbook = ClientGUICommon.ListBook( parent_listbook )
-            listbook.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGING, self.EventServiceChanging )
-            
-            self._service_types_to_listbooks[ service_type ] = listbook
-            self._listbooks_to_service_types[ listbook ] = service_type
-            
-            parent_listbook.AddPage( name, name, listbook )
-            
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( service_type, ) )
-            
-            for service in services:
-                
-                service_key = service.GetServiceKey()
-                name = service.GetName()
-                info = service.GetInfo()
-                
-                listbook.AddPageArgs( name, service_key, self._Panel, ( listbook, service_key, service_type, name, info ), {} )
-                
-            
-        
-        wx.CallAfter( self._local_listbook.Layout )
-        wx.CallAfter( self._remote_listbook.Layout )
-        
-        #
-        
-        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
-        
-        ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-        ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        self._notebook.AddPage( self._local_listbook, 'local' )
-        self._notebook.AddPage( self._remote_listbook, 'remote' )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-        vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( 880, y + 220 ) )
-        
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
-        
-        self._EnableDisableButtons()
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def _EnableDisableButtons( self ):
-        
-        local_or_remote_listbook = self._notebook.GetCurrentPage()
-        
-        if local_or_remote_listbook is not None:
-            
-            services_listbook = local_or_remote_listbook.GetCurrentPage()
-            
-            service_type = self._listbooks_to_service_types[ services_listbook ]
-            
-            if service_type in HC.NONADDREMOVEABLE_SERVICES:
-                
-                self._add.Disable()
-                self._remove.Disable()
-                self._export.Disable()
-                
-            else:
-                
-                self._add.Enable()
-                self._remove.Enable()
-                self._export.Enable()
-                
-            
-        
-    
-    def _RenameCurrentServiceIfNeeded( self ):
-        
-        local_or_remote_listbook = self._notebook.GetCurrentPage()
-        
-        if local_or_remote_listbook is not None:
-            
-            services_listbook = local_or_remote_listbook.GetCurrentPage()
-            
-            if services_listbook is not None:
-                
-                service_panel = services_listbook.GetCurrentPage()
-                
-                if service_panel is not None:
-                    
-                    ( service_key, service_type, name, info ) = service_panel.GetInfo()
-                    
-                    services_listbook.RenamePage( service_key, name )
-                    
-                
-            
-        
-    
-    def EventAdd( self, event ):
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter new service\'s name.' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                try:
-                    
-                    name = dlg.GetValue()
-                    
-                    local_or_remote_listbook = self._notebook.GetCurrentPage()
-                    
-                    if local_or_remote_listbook is not None:
-                        
-                        services_listbook = local_or_remote_listbook.GetCurrentPage()
-                        
-                        if name == '':
-                            
-                            raise HydrusExceptions.NameException( 'Please enter a nickname for the service.' )
-                            
-                        
-                        service_key = HydrusData.GenerateKey()
-                        service_type = self._listbooks_to_service_types[ services_listbook ]
-                        
-                        if service_type in HC.NONADDREMOVEABLE_SERVICES:
-                            
-                            wx.MessageBox( 'You cannot add or delete this type of service yet!' )
-                            
-                            return
-                            
-                        
-                        info = {}
-                        
-                        if service_type in HC.REMOTE_SERVICES:
-                            
-                            if service_type == HC.SERVER_ADMIN:
-                                
-                                ( host, port ) = ( 'hostname', 45870 )
-                                
-                            elif service_type in HC.RESTRICTED_SERVICES:
-                                
-                                with ClientGUIDialogs.DialogChooseNewServiceMethod( self ) as dlg:
-                                    
-                                    if dlg.ShowModal() != wx.ID_OK: return
-                                    
-                                    register = dlg.GetRegister()
-                                    
-                                    if register:
-                                        
-                                        with ClientGUIDialogs.DialogRegisterService( self, service_type ) as dlg:
-                                            
-                                            if dlg.ShowModal() != wx.ID_OK: return
-                                            
-                                            credentials = dlg.GetCredentials()
-                                            
-                                            ( host, port ) = credentials.GetAddress()
-                                            
-                                            if credentials.HasAccessKey(): info[ 'access_key' ] = credentials.GetAccessKey()
-                                            
-                                        
-                                    else: ( host, port ) = ( 'hostname', 45871 )
-                                    
-                                
-                            elif service_type == HC.IPFS:
-                                
-                                ( host, port ) = ( '127.0.0.1', 5001 )
-                                
-                            else:
-                                
-                                ( host, port ) = ( 'hostname', 45871 )
-                                
-                            
-                            info[ 'host' ] = host
-                            info[ 'port' ] = port
-                            
-                        
-                        if service_type == HC.IPFS:
-                            
-                            info[ 'multihash_prefix' ] = ''
-                            
-                        
-                        if service_type in HC.REPOSITORIES:
-                            
-                            info[ 'paused' ] = False
-                            
-                        
-                        if service_type == HC.TAG_REPOSITORY:
-                            
-                            info[ 'tag_archive_sync' ] = {}
-                            
-                        
-                        if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                            
-                            if service_type == HC.LOCAL_RATING_NUMERICAL:
-                                
-                                info[ 'num_stars' ] = 5
-                                
-                                info[ 'colours' ] = ClientRatings.default_numerical_colours
-                                
-                                info[ 'allow_zero' ] = True
-                                
-                            else:
-                                
-                                info[ 'colours' ] = ClientRatings.default_like_colours
-                                
-                            
-                            info[ 'shape' ] = ClientRatings.CIRCLE
-                            
-                        
-                        self._edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
-                        
-                        page = self._Panel( services_listbook, service_key, service_type, name, info )
-                        
-                        services_listbook.AddPage( name, service_key, page, select = True )
-                        
-                    
-                except HydrusExceptions.NameException as e:
-                    
-                    wx.MessageBox( str( e ) )
-                    
-                    self.EventAdd( event )
-                    
-                
-            
-        
-    
-    def EventExport( self, event ):
-        
-        local_or_remote_listbook = self._notebook.GetCurrentPage()
-        
-        if local_or_remote_listbook is not None:
-            
-            services_listbook = local_or_remote_listbook.GetCurrentPage()
-            
-            if services_listbook is not None:
-                
-                service_panel = services_listbook.GetCurrentPage()
-                
-                ( service_key, service_type, name, info ) = service_panel.GetInfo()
-                
-                try:
-                    
-                    with wx.FileDialog( self, 'select where to export service', defaultFile = name + '.yaml', style = wx.FD_SAVE ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            path = HydrusData.ToUnicode( dlg.GetPath() )
-                            
-                            with open( path, 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
-                            
-                        
-                    
-                except:
-                    
-                    with wx.FileDialog( self, 'select where to export service', defaultFile = 'service.yaml', style = wx.FD_SAVE ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            path = HydrusData.ToUnicode( dlg.GetPath() )
-                            
-                            with open( path, 'wb' ) as f: f.write( yaml.safe_dump( ( service_key, service_type, name, info ) ) )
-                            
-                        
-                    
-                
-            
-        
-    
-    def EventOK( self, event ):
-        
-        all_listbooks = self._service_types_to_listbooks.values()
-        
-        for listbook in all_listbooks:
-            
-            all_pages = listbook.GetActivePages()
-            
-            for page in all_pages:
-                
-                page.DoOnOKStuff()
-                
-            
-        
-        for listbook in all_listbooks:
-            
-            all_pages = listbook.GetActivePages()
-            
-            for page in all_pages:
-                
-                if page.HasChanges():
-                    
-                    ( service_key, service_type, name, info ) = page.GetInfo()
-                    
-                    self._edit_log.append( HydrusData.EditLogActionEdit( service_key, ( service_key, service_type, name, info ) ) )
-                    
-                
-            
-        
-        try:
-            
-            if len( self._edit_log ) > 0: HydrusGlobals.client_controller.Write( 'update_services', self._edit_log )
-            
-        finally: self.EndModal( wx.ID_OK )
-        
-    
-    def EventPageChanging( self, event ):
-        
-        self._RenameCurrentServiceIfNeeded()
-        
-    
-    def EventRemove( self, event ):
-        
-        local_or_remote_listbook = self._notebook.GetCurrentPage()
-        
-        if local_or_remote_listbook is not None:
-            
-            services_listbook = local_or_remote_listbook.GetCurrentPage()
-            
-            service_panel = services_listbook.GetCurrentPage()
-            
-            if service_panel is not None:
-                
-                ( service_key, service_type, name, info ) = service_panel.GetInfo()
-                
-                self._edit_log.append( HydrusData.EditLogActionDelete( service_key ) )
-                
-                services_listbook.DeleteCurrentPage()
-                
-            
-        
-    
-    def EventServiceChanged( self, event ):
-        
-        self._EnableDisableButtons()
-        
-        event.Skip()
-        
-    
-    def EventServiceChanging( self, event ):
-        
-        self._RenameCurrentServiceIfNeeded()
-        
-    
-    def Import( self, paths ):
-        
-        for path in paths:
-            
-            with open( path, 'rb' ) as f: file = f.read()
-            
-            ( service_key, service_type, name, info ) = yaml.safe_load( file )
-            
-            services_listbook = self._service_types_to_listbooks[ service_type ]
-            
-            if services_listbook.KeyExists( service_key ):
-                
-                message = 'That service seems to already exist. Overwrite it?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        page = services_listbook.GetPage[ service_key ]
-                        
-                        page.Update( service_key, service_type, name, info )
-                        
-                    
-                
-            else:
-                
-                self._edit_log.append( HydrusData.EditLogActionAdd( ( service_key, service_type, name, info ) ) )
-                
-                page = self._Panel( services_listbook, service_key, service_type, name, info )
-                
-                services_listbook.AddPage( name, service_key, page, select = True )
-                
-            
-        
-    
-    class _Panel( wx.Panel ):
-        
-        def __init__( self, parent, service_key, service_type, name, info ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._original_info = ( service_key, service_type, name, info )
-            
-            self._reset_downloading = False
-            self._reset_processing = False
-            
-            #
-            
-            if service_type not in HC.NONRENAMEABLE_SERVICES:
-                
-                if service_type in HC.REMOTE_SERVICES: title = 'name and credentials'
-                else: title = 'name'
-                
-                self._credentials_panel = ClientGUICommon.StaticBox( self, title )
-                
-                self._service_name = wx.TextCtrl( self._credentials_panel )
-                
-                if service_type in HC.REMOTE_SERVICES:
-                    
-                    host = info[ 'host' ]
-                    port = info[ 'port' ]
-                    
-                    if 'access_key' in info: access_key = info[ 'access_key' ]
-                    else: access_key = None
-                    
-                    credentials = ClientData.Credentials( host, port, access_key )
-                    
-                    self._service_credentials = wx.TextCtrl( self._credentials_panel, value = credentials.GetConnectionString() )
-                    
-                    if service_type in HC.RESTRICTED_SERVICES:
-                        
-                        self._check_service = wx.Button( self._credentials_panel, label = 'test credentials' )
-                        self._check_service.Bind( wx.EVT_BUTTON, self.EventCheckService )
-                        
-                    elif service_type == HC.IPFS:
-                        
-                        self._check_ipfs = wx.Button( self._credentials_panel, label = 'test credentials' )
-                        self._check_ipfs.Bind( wx.EVT_BUTTON, self.EventCheckIPFS )
-                        
-                    
-                
-            
-            if service_type == HC.IPFS:
-                
-                self._ipfs_panel = ClientGUICommon.StaticBox( self, 'ipfs settings' )
-                
-                self._multihash_prefix = wx.TextCtrl( self._ipfs_panel, value = info[ 'multihash_prefix' ] )
-                
-                tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
-                tts += os.linesep * 2
-                tts += 'Use this if you would really like to copy a full gateway url with that action. For instance, you could put here:'
-                tts += os.linesep * 2
-                tts += 'http://127.0.0.1:8080/ipfs/'
-                tts += os.linesep
-                tts += 'http://ipfs.io/ipfs/'
-                
-                self._multihash_prefix.SetToolTipString( tts )
-                
-            
-            if service_type in HC.REPOSITORIES:
-                
-                self._repositories_panel = ClientGUICommon.StaticBox( self, 'repository synchronisation' )
-                
-                self._pause_synchronisation = wx.CheckBox( self._repositories_panel, label = 'pause synchronisation' )
-                
-                self._reset_processing_button = wx.Button( self._repositories_panel, label = 'reset processing cache on dialog ok' )
-                self._reset_processing_button.Bind( wx.EVT_BUTTON, self.EventServiceResetProcessing )
-                
-                self._reset_downloading_button = wx.Button( self._repositories_panel, label = 'reset processing and download cache on dialog ok' )
-                self._reset_downloading_button.Bind( wx.EVT_BUTTON, self.EventServiceResetDownload )
-                
-            
-            if service_type in HC.RATINGS_SERVICES:
-                
-                self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    num_stars = info[ 'num_stars' ]
-                    
-                    self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
-                    self._num_stars.SetValue( num_stars )
-                    
-                    allow_zero = info[ 'allow_zero' ]
-                    
-                    self._allow_zero = wx.CheckBox( self._local_rating_panel )
-                    self._allow_zero.SetValue( allow_zero )
-                    
-                
-                self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
-                
-                self._shape.Append( 'circle', ClientRatings.CIRCLE )
-                self._shape.Append( 'square', ClientRatings.SQUARE )
-                self._shape.Append( 'star', ClientRatings.STAR )
-                
-                self._colour_ctrls = {}
-                
-                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
-                    
-                    border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
-                    fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
-                    
-                    border_ctrl.SetMaxSize( ( 20, -1 ) )
-                    fill_ctrl.SetMaxSize( ( 20, -1 ) )
-                    
-                    self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
-                    
-                
-            
-            if service_type in HC.TAG_SERVICES:
-                
-                self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
-                
-                self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
-                
-                self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
-                self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
-                
-                self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
-                self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
-                
-                self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
-                self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
-                
-            
-            if service_type == HC.LOCAL_BOORU:
-                
-                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
-                
-                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'booru local port', none_phrase = 'do not run local booru service', min = 1, max = 65535 )
-                
-                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
-                
-                self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
-                
-            
-            #
-            
-            if service_type not in HC.NONRENAMEABLE_SERVICES:
-                
-                self._service_name.SetValue( name )
-                
-            
-            if service_type in HC.REPOSITORIES:
-                
-                self._pause_synchronisation.SetValue( info[ 'paused' ] )
-                
-            
-            if service_type in HC.TAG_SERVICES:
-                
-                for ( portable_hta_path, namespaces ) in info[ 'tag_archive_sync' ].items():
-                    
-                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-                    
-                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
-                    
-                
-            
-            if service_type in HC.RATINGS_SERVICES:
-                
-                self._shape.SelectClientData( info[ 'shape' ] )
-                
-                colours = info[ 'colours' ]
-                
-                for colour_type in colours:
-                    
-                    ( border_rgb, fill_rgb ) = colours[ colour_type ]
-                    
-                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
-                    
-                    border_ctrl.SetColour( wx.Colour( *border_rgb ) )
-                    fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
-                    
-                
-            
-            if service_type == HC.LOCAL_BOORU:
-                
-                self._port.SetValue( info[ 'port' ] )
-                self._upnp.SetValue( info[ 'upnp' ] )
-                self._max_monthly_data.SetValue( info[ 'max_monthly_data' ] )
-                
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            if service_type not in HC.NONRENAMEABLE_SERVICES:
-                
-                rows = []
-                
-                rows.append( ( 'name: ', self._service_name ) )
-                
-                if service_type in HC.REMOTE_SERVICES:
-                    
-                    rows.append( ( 'credentials: ', self._service_credentials ) )
-                    
-                    if service_type in HC.RESTRICTED_SERVICES:
-                        
-                        rows.append( ( '', self._check_service ) )
-                        
-                    elif service_type == HC.IPFS:
-                        
-                        rows.append( ( '', self._check_ipfs ) )
-                        
-                    
-                
-                gridbox = ClientGUICommon.WrapInGrid( self._credentials_panel, rows )
-                
-                self._credentials_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._credentials_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            if service_type == HC.IPFS:
-                
-                rows = []
-                
-                rows.append( ( 'multihash prefix: ', self._multihash_prefix ) )
-                
-                gridbox = ClientGUICommon.WrapInGrid( self._ipfs_panel, rows )
-                
-                self._ipfs_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._ipfs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            if service_type in HC.REPOSITORIES:
-                
-                self._repositories_panel.AddF( self._pause_synchronisation, CC.FLAGS_VCENTER )
-                self._repositories_panel.AddF( self._reset_processing_button, CC.FLAGS_LONE_BUTTON )
-                self._repositories_panel.AddF( self._reset_downloading_button, CC.FLAGS_LONE_BUTTON )
-                
-                vbox.AddF( self._repositories_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
-                
-                rows = []
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    rows.append( ( 'number of \'stars\': ', self._num_stars ) )
-                    rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
-                    
-                
-                rows.append( ( 'shape: ', self._shape ) )
-                
-                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
-                    
-                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
-                    
-                    hbox = wx.BoxSizer( wx.HORIZONTAL )
-                    
-                    hbox.AddF( border_ctrl, CC.FLAGS_VCENTER )
-                    hbox.AddF( fill_ctrl, CC.FLAGS_VCENTER )
-                    
-                    if colour_type == ClientRatings.LIKE: colour_text = 'liked'
-                    elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
-                    elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
-                    elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
-                    
-                    rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
-                    
-                
-                gridbox = ClientGUICommon.WrapInGrid( self._local_rating_panel, rows )
-                
-                self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._local_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            if service_type in HC.TAG_SERVICES:
-                
-                hbox = wx.BoxSizer( wx.HORIZONTAL )
-                
-                hbox.AddF( self._archive_sync_add, CC.FLAGS_VCENTER )
-                hbox.AddF( self._archive_sync_edit, CC.FLAGS_VCENTER )
-                hbox.AddF( self._archive_sync_remove, CC.FLAGS_VCENTER )
-                
-                self._archive_panel.AddF( self._archive_sync, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._archive_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-                
-                vbox.AddF( self._archive_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            if service_type == HC.LOCAL_BOORU:
-                
-                self._booru_options_panel.AddF( self._port, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._booru_options_panel.AddF( self._max_monthly_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                vbox.AddF( self._booru_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            self.SetSizer( vbox )
-            
-        
-        def _GetArchiveNameToDisplay( self, portable_hta_path, namespaces ):
-            
-            hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-            
-            if len( namespaces ) == 0: name_to_display = hta_path
-            else: name_to_display = hta_path + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
-            
-            return name_to_display
-            
-        
-        def DoOnOKStuff( self ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            if self._reset_downloading:
-                
-                HydrusGlobals.client_controller.Write( 'reset_service', service_key, delete_updates = True )
-                
-            elif self._reset_processing:
-                
-                HydrusGlobals.client_controller.Write( 'reset_service', service_key )
-                
-            
-        
-        def EventArchiveAdd( self, event ):
-            
-            if self._archive_sync.GetCount() == 0:
-                
-                wx.MessageBox( 'Be careful with this tool! Syncing a lot of files to a large archive can take a very long time to initialise.' )
-                
-            
-            text = 'Select the Hydrus Tag Archive\'s location.'
-            
-            with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
-                
-                if dlg_file.ShowModal() == wx.ID_OK:
-                    
-                    hta_path = HydrusData.ToUnicode( dlg_file.GetPath() )
-                    
-                    portable_hta_path = HydrusPaths.ConvertAbsPathToPortablePath( hta_path )
-                    
-                    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-                    
-                    archive_namespaces = hta.GetNamespaces()
-                
-                    with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ) ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
-                            
-                        else:
-                            
-                            return
-                            
-                        
-                    
-                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-                    
-                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
-                    
-                
-            
-        
-        def EventArchiveEdit( self, event ):
-            
-            selection = self._archive_sync.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                ( portable_hta_path, existing_namespaces ) = self._archive_sync.GetClientData( selection )
-                
-                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-                
-                if not os.path.exists( hta_path ):
-                    
-                    wx.MessageBox( 'This archive does not seem to exist any longer!' )
-                    
-                    return
-                    
-                
-                hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-                
-                archive_namespaces = hta.GetNamespaces()
-                
-                with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ), HydrusData.ConvertUglyNamespacesToPrettyStrings( existing_namespaces ) ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-                name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
-                
-                self._archive_sync.SetString( selection, name_to_display )
-                self._archive_sync.SetClientData( selection, ( portable_hta_path, namespaces ) )
-                
-            
-        
-        def EventArchiveRemove( self, event ):
-            
-            selection = self._archive_sync.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                self._archive_sync.Delete( selection )
-                
-            
-        
-        def EventCheckIPFS( self, event ):
-            
-            ( service_key, service_type, name, info ) = self.GetInfo()
-            
-            service = ClientData.GenerateService( service_key, service_type, name, info )
-            
-            try:
-                
-                version = service.GetDaemonVersion()
-                
-                wx.MessageBox( 'Everything looks ok! Connected to IPFS Daemon with version: ' + version )
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                wx.MessageBox( 'Could not connect!' )
-                
-            
-        
-        def EventCheckService( self, event ):
-            
-            ( service_key, service_type, name, info ) = self.GetInfo()
-            
-            service = ClientData.GenerateService( service_key, service_type, name, info )
-            
-            try: root = service.Request( HC.GET, '' )
-            except HydrusExceptions.WrongServiceTypeException:
-                
-                wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ service_type ] + '.' )
-                
-                return
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                wx.MessageBox( 'Could not connect!' )
-                
-                return
-                
-            
-            if service_type in HC.RESTRICTED_SERVICES:
-                
-                if 'access_key' not in info or info[ 'access_key' ] is None:
-                    
-                    wx.MessageBox( 'No access key!' )
-                    
-                    return
-                    
-                
-                response = service.Request( HC.GET, 'access_key_verification' )
-                
-                if not response[ 'verified' ]:
-                    
-                    wx.MessageBox( 'That access key was not recognised!' )
-                    
-                    return
-                    
-                
-            
-            wx.MessageBox( 'Everything looks ok!' )
-            
-        
-        def GetInfo( self ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            info = dict( info )
-            
-            if service_type not in HC.NONRENAMEABLE_SERVICES:
-                
-                name = self._service_name.GetValue()
-                
-                if name == '':
-                    
-                    raise Exception( 'Please enter a name' )
-                    
-                
-            
-            if service_type in HC.REMOTE_SERVICES:
-                
-                connection_string = self._service_credentials.GetValue()
-                
-                if connection_string == '': raise Exception( 'Please enter some credentials' )
-                
-                if '@' in connection_string:
-                    
-                    try: ( access_key, address ) = connection_string.split( '@' )
-                    except: raise Exception( 'Could not parse those credentials - no \'@\' symbol!' )
-                    
-                    try: access_key = access_key.decode( 'hex' )
-                    except: raise Exception( 'Could not parse those credentials - could not understand access key!' )
-                    
-                    if access_key == '': access_key = None
-                    
-                    info[ 'access_key' ] = access_key
-                    
-                    connection_string = address
-                    
-                
-                try: ( host, port ) = connection_string.split( ':' )
-                except: raise Exception( 'Could not parse those credentials - no \':\' symbol!' )
-                
-                try: port = int( port )
-                except: raise Exception( 'Could not parse those credentials - could not understand the port!' )
-                
-                info[ 'host' ] = host
-                info[ 'port' ] = port
-                
-            
-            if service_type == HC.IPFS:
-                
-                info[ 'multihash_prefix' ] = self._multihash_prefix.GetValue()
-                
-            
-            if service_type in HC.REPOSITORIES:
-                
-                info[ 'paused' ] = self._pause_synchronisation.GetValue()
-                
-            
-            if service_type in HC.RATINGS_SERVICES:
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    num_stars = self._num_stars.GetValue()
-                    allow_zero = self._allow_zero.GetValue()
-                    
-                    if num_stars == 1 and not allow_zero:
-                        
-                        allow_zero = True
-                        
-                    
-                    info[ 'num_stars' ] = num_stars
-                    info[ 'allow_zero' ] = allow_zero
-                    
-                
-                info[ 'shape' ] = self._shape.GetChoice()
-                
-                colours = {}
-                
-                for colour_type in self._colour_ctrls:
-                    
-                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
-                    
-                    border_colour = border_ctrl.GetColour()
-                    
-                    border_rgb = ( border_colour.Red(), border_colour.Green(), border_colour.Blue() )
-                    
-                    fill_colour = fill_ctrl.GetColour()
-                    
-                    fill_rgb = ( fill_colour.Red(), fill_colour.Green(), fill_colour.Blue() )
-                    
-                    colours[ colour_type ] = ( border_rgb, fill_rgb )
-                    
-                
-                info[ 'colours' ] = colours
-                
-            
-            if service_type in HC.TAG_SERVICES:
-                
-                tag_archives = {}
-                
-                for i in range( self._archive_sync.GetCount() ):
-                    
-                    ( portable_hta_path, namespaces ) = self._archive_sync.GetClientData( i )
-                    
-                    tag_archives[ portable_hta_path ] = namespaces
-                    
-                
-                info[ 'tag_archive_sync' ] = tag_archives
-                
-            
-            if service_type == HC.LOCAL_BOORU:
-                
-                info[ 'port' ] = self._port.GetValue()
-                info[ 'upnp' ] = self._upnp.GetValue()
-                info[ 'max_monthly_data' ] = self._max_monthly_data.GetValue()
-                
-                # listctrl stuff here
-                
-            
-            return ( service_key, service_type, name, info )
-            
-        
-        def EventServiceResetDownload( self, event ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually redownload and reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._reset_downloading_button.SetLabelText( 'everything will be reset on dialog ok!' )
-                    
-                    self._reset_downloading = True
-                    
-                
-            
-        
-        def EventServiceResetProcessing( self, event ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._reset_processing_button.SetLabelText( 'processing will be reset on dialog ok!' )
-                    
-                    self._reset_processing = True
-                    
-                
-            
-        
-        def HasChanges( self ): return self._original_info != self.GetInfo()
-        
-        def Update( self, service_key, service_type, name, info ):
-            
-            self._service_name.SetValue( name )
-            
-            if service_type in HC.REMOTE_SERVICES:
-                
-                host = info[ 'host' ]
-                port = info[ 'port' ]
-                
-                if service_type in HC.RESTRICTED_SERVICES: access_key = info[ 'access_key' ]
-                else: access_key = None
-                
-                credentials = ClientData.Credentials( host, port, access_key )
-                
-                self._service_credentials.SetValue( credentials.GetConnectionString() )
-                
-            
-            if service_type == HC.LOCAL_RATING_NUMERICAL:
-                
-                num_stars = info[ 'num_stars' ]
-                
-                self._num_stars.SetValue( num_stars )
-                
-            
-        
-    
 class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, initial_value = None ):
@@ -5220,9 +3599,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         for service in services:
             
-            account = service.GetInfo( 'account' )
-            
-            if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
+            if service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
                 
                 name = service.GetName()
                 service_key = service.GetServiceKey()
@@ -5329,9 +3706,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-                
-                self._account = service.GetInfo( 'account' )
+                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
             
             self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_parents', service_key )
@@ -5361,17 +3736,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             #
             
-            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.PETITIONED ] )
+            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
             for ( status, pairs ) in self._original_statuses_to_pairs.items():
                 
-                if status != HC.DELETED:
+                if status != HC.CONTENT_STATUS_DELETED:
                     
                     sign = HydrusData.ConvertStatusToPrefix( status )
                     
                     for ( child, parent ) in pairs:
                         
-                        if status == HC.CURRENT and ( child, parent ) in petitioned_pairs:
+                        if status == HC.CONTENT_STATUS_CURRENT and ( child, parent ) in petitioned_pairs:
                             
                             continue
                             
@@ -5424,15 +3799,15 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 pair = ( child, parent )
                 
-                if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
                     pending_pairs.append( pair )
                     
-                elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
                     petitioned_pairs.append( pair )
                     
-                elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                     
                     current_pairs.append( pair )
                     
@@ -5450,7 +3825,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                     
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                        
+                        reason = 'admin'
+                        
                     else:
                         
                         if len( new_pairs ) > 10:
@@ -5482,7 +3860,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if do_it:
                     
-                    self._current_statuses_to_pairs[ HC.PENDING ].update( new_pairs )
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
                     affected_pairs.extend( new_pairs )
                     
@@ -5512,7 +3890,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                             
                             if dlg.ShowModal() == wx.ID_YES:
                                 
-                                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                                if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_OVERRULE ):
+                                    
+                                    reason = 'admin'
+                                    
                                 else:
                                     
                                     message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
@@ -5542,7 +3923,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                     if do_it:
                         
-                        self._current_statuses_to_pairs[ HC.PETITIONED ].update( current_pairs )
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
                         affected_pairs.extend( current_pairs )
                         
@@ -5566,7 +3947,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            self._current_statuses_to_pairs[ HC.PENDING ].difference_update( pending_pairs )
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                             
                             affected_pairs.extend( pending_pairs )
                             
@@ -5591,7 +3972,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            self._current_statuses_to_pairs[ HC.PETITIONED ].difference_update( petitioned_pairs )
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                             
                             affected_pairs.extend( petitioned_pairs )
                             
@@ -5616,7 +3997,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if potential_child == potential_parent: return False
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
             current_children = { child for ( child, parent ) in current_pairs }
             
@@ -5641,7 +4022,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             ( child, parent ) = pair
             
-            for status in ( HC.CURRENT, HC.DELETED, HC.PENDING, HC.PETITIONED ):
+            for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_DELETED, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
                 
                 if self._tag_parents.HasClientData( ( status, child, parent ) ):
                     
@@ -5655,17 +4036,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             new_status = None
             
-            if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                 
-                new_status = HC.PENDING
+                new_status = HC.CONTENT_STATUS_PENDING
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                 
-                new_status = HC.PETITIONED
+                new_status = HC.CONTENT_STATUS_PETITIONED
                 
-            elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                new_status = HC.CURRENT
+                new_status = HC.CONTENT_STATUS_CURRENT
                 
             
             if new_status is not None:
@@ -5755,16 +4136,16 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
                 
-                for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
-                for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
                 
             else:
                 
-                current_pending = self._current_statuses_to_pairs[ HC.PENDING ]
-                original_pending = self._original_statuses_to_pairs[ HC.PENDING ]
+                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
                 
-                current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
-                original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
+                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
                 
                 new_pends = current_pending.difference( original_pending )
                 rescinded_pends = original_pending.difference( current_pending )
@@ -5816,9 +4197,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         for service in services:
             
-            account = service.GetInfo( 'account' )
-            
-            if account.HasPermission( HC.POST_DATA ) or account.IsUnknownAccount():
+            if service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                 
                 name = service.GetName()
                 service_key = service.GetServiceKey()
@@ -5921,9 +4300,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-                
-                self._account = service.GetInfo( 'account' )
+                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                 
             
             self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_siblings', service_key )
@@ -5957,17 +4334,17 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             #
             
-            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.PETITIONED ] )
+            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
             for ( status, pairs ) in self._original_statuses_to_pairs.items():
                 
-                if status != HC.DELETED:
+                if status != HC.CONTENT_STATUS_DELETED:
                     
                     sign = HydrusData.ConvertStatusToPrefix( status )
                     
                     for ( old, new ) in pairs:
                         
-                        if status == HC.CURRENT and ( old, new ) in petitioned_pairs:
+                        if status == HC.CONTENT_STATUS_CURRENT and ( old, new ) in petitioned_pairs:
                             
                             continue
                             
@@ -6027,15 +4404,15 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 pair = ( old, new )
                 
-                if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
                     pending_pairs.append( pair )
                     
-                elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
                     petitioned_pairs.append( pair )
                     
-                elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                     
                     current_pairs.append( pair )
                     
@@ -6053,7 +4430,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                     
-                    if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                        
+                        reason = 'admin'
+                        
                     else:
                         
                         if len( new_pairs ) > 10:
@@ -6085,7 +4465,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if do_it:
                     
-                    self._current_statuses_to_pairs[ HC.PENDING ].update( new_pairs )
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
                     
                     affected_pairs.extend( new_pairs )
                     
@@ -6114,7 +4494,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                             
                             if dlg.ShowModal() == wx.ID_YES:
                                 
-                                if self._account.HasPermission( HC.RESOLVE_PETITIONS ): reason = 'admin'
+                                if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_OVERRULE ):
+                                    
+                                    reason = 'admin'
+                                    
                                 else:
                                     
                                     message = 'Enter a reason for this pair to be removed. A janitor will review your petition.'
@@ -6140,7 +4523,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                     if do_it:
                         
-                        self._current_statuses_to_pairs[ HC.PETITIONED ].update( current_pairs )
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
                         affected_pairs.extend( current_pairs )
                         
@@ -6165,7 +4548,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            self._current_statuses_to_pairs[ HC.PENDING ].difference_update( pending_pairs )
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                             
                             affected_pairs.extend( pending_pairs )
                             
@@ -6190,7 +4573,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                         
                         if dlg.ShowModal() == wx.ID_YES:
                             
-                            self._current_statuses_to_pairs[ HC.PETITIONED ].difference_update( petitioned_pairs )
+                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                             
                             affected_pairs.extend( petitioned_pairs )
                             
@@ -6213,7 +4596,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             ( potential_old, potential_new ) = potential_pair
             
-            current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
             
             current_olds = { old for ( old, new ) in current_pairs }
             
@@ -6254,7 +4637,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             ( old, new ) = pair
             
-            for status in ( HC.CURRENT, HC.DELETED, HC.PENDING, HC.PETITIONED ):
+            for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_DELETED, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
                 
                 if self._tag_siblings.HasClientData( ( status, old, new ) ):
                     
@@ -6268,17 +4651,17 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             new_status = None
             
-            if pair in self._current_statuses_to_pairs[ HC.PENDING ]:
+            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                 
-                new_status = HC.PENDING
+                new_status = HC.CONTENT_STATUS_PENDING
                 
-            elif pair in self._current_statuses_to_pairs[ HC.PETITIONED ]:
+            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                 
-                new_status = HC.PETITIONED
+                new_status = HC.CONTENT_STATUS_PETITIONED
                 
-            elif pair in self._original_statuses_to_pairs[ HC.CURRENT ]:
+            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                new_status = HC.CURRENT
+                new_status = HC.CONTENT_STATUS_CURRENT
                 
             
             if new_status is not None:
@@ -6305,7 +4688,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 do_it = True
                 
-                current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
+                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
                 
                 current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                 
@@ -6333,7 +4716,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                             
                         
                     
-                    current_pairs = self._current_statuses_to_pairs[ HC.CURRENT ].union( self._current_statuses_to_pairs[ HC.PENDING ] ).difference( self._current_statuses_to_pairs[ HC.PETITIONED ] )
+                    current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
                     
                     current_olds = { current_old for ( current_old, current_new ) in current_pairs }
                     
@@ -6407,16 +4790,16 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
                 
-                for pair in self._current_statuses_to_pairs[ HC.PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
-                for pair in self._current_statuses_to_pairs[ HC.PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]: content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
                 
             else:
                 
-                current_pending = self._current_statuses_to_pairs[ HC.PENDING ]
-                original_pending = self._original_statuses_to_pairs[ HC.PENDING ]
+                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
+                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
                 
-                current_petitioned = self._current_statuses_to_pairs[ HC.PETITIONED ]
-                original_petitioned = self._original_statuses_to_pairs[ HC.PETITIONED ]
+                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
+                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
                 
                 new_pends = current_pending.difference( original_pending )
                 rescinded_pends = original_pending.difference( current_pending )

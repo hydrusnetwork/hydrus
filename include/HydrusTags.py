@@ -150,25 +150,48 @@ def CleanTag( tag ):
     
     try:
         
+        def strip_gumpf_out( t ):
+            
+            t.replace( '\r', '' )
+            t.replace( '\n', '' )
+            
+            t = re.sub( '[\\s]+', ' ', t, flags = re.UNICODE ) # turns multiple spaces into single spaces
+            
+            t = re.sub( '\\s\\Z', '', t, flags = re.UNICODE ) # removes space at the end
+            
+            while re.match( '\\s|-|system:', t, flags = re.UNICODE ) is not None:
+                
+                t = re.sub( '\\A(\\s|-|system:)', '', t, flags = re.UNICODE ) # removes spaces or garbage at the beginning
+                
+            
+            return t
+            
+        
         tag = tag[:1024]
         
         tag = tag.lower()
         
         tag = HydrusData.ToUnicode( tag )
         
-        tag.replace( '\r', '' )
-        tag.replace( '\n', '' )
-        
-        tag = re.sub( '[\\s]+', ' ', tag, flags = re.UNICODE ) # turns multiple spaces into single spaces
-        
-        tag = re.sub( '\\s\\Z', '', tag, flags = re.UNICODE ) # removes space at the end
-        
-        while re.match( '\\s|-|system:', tag, flags = re.UNICODE ) is not None:
+        if tag.startswith( ':' ):
             
-            tag = re.sub( '\\A(\\s|-|system:)', '', tag, flags = re.UNICODE ) # removes spaces or garbage at the beginning
+            tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
             
-        
-        tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+            tag = strip_gumpf_out( tag )
+            
+        elif ':' in tag:
+            
+            ( namespace, subtag ) = SplitTag( tag )
+            
+            namespace = strip_gumpf_out( namespace )
+            subtag = strip_gumpf_out( subtag )
+            
+            tag = CombineTag( namespace, subtag )
+            
+        else:
+            
+            tag = strip_gumpf_out( tag )
+            
         
     except Exception as e:
         

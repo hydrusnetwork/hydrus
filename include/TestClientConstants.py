@@ -3,6 +3,7 @@ import ClientData
 import ClientGUIManagement
 import ClientGUIDialogsManage
 import ClientCaches
+import ClientServices
 import collections
 import HydrusConstants as HC
 import os
@@ -65,13 +66,12 @@ class TestManagers( unittest.TestCase ):
         repo_key = HydrusData.GenerateKey()
         repo_type = HC.TAG_REPOSITORY
         repo_name = 'test tag repo'
-        repo_info = { 'blah' : 5 }
         
-        repo = ClientData.GenerateService( repo_key, repo_type, repo_name, repo_info )
+        repo = ClientServices.GenerateService( repo_key, repo_type, repo_name )
         
         other_key = HydrusData.GenerateKey()
         
-        other = ClientData.GenerateService( other_key, HC.LOCAL_BOORU, 'booru', {} )
+        other = ClientServices.GenerateService( other_key, HC.LOCAL_BOORU, 'booru' )
         
         services = []
         

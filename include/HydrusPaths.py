@@ -392,7 +392,6 @@ def MergeTree( source, dest ):
         
     else:
         
-        
         MakeSureDirectoryExists( dest )
         
         num_errors = 0
@@ -434,7 +433,10 @@ def MergeTree( source, dest ):
                 
             
         
-        DeletePath( source )
+        if num_errors == 0:
+            
+            DeletePath( source )
+            
         
     
 def MirrorFile( source, dest ):

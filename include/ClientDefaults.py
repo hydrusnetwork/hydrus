@@ -181,8 +181,6 @@ def GetClientDefaultOptions():
     
     options[ 'rating_dialog_position' ] = ( False, None )
     
-    options[ 'local_port' ] = None
-    
     return options
     
 def GetDefaultHentaiFoundryInfo():

@@ -190,7 +190,7 @@ def GetNumericalWidth( service_key ):
     
     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
-    num_stars = service.GetInfo( 'num_stars' )
+    num_stars = service.GetNumStars()
     
     return 4 + 12 * num_stars
     
@@ -198,9 +198,9 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
-    colours = service.GetInfo( 'colours' )
+    colour = service.GetColour( rating_state )
     
-    ( pen_rgb, brush_rgb ) = colours[ rating_state ]
+    ( pen_rgb, brush_rgb ) = colour
     
     pen_colour = wx.Colour( *pen_rgb )
     brush_colour = wx.Colour( *brush_rgb )
@@ -211,7 +211,7 @@ def GetShape( service_key ):
     
     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
-    shape = service.GetInfo( 'shape' )
+    shape = service.GetShape()
     
     return shape
     
@@ -219,11 +219,11 @@ def GetStars( service_key, rating_state, rating ):
     
     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
     
-    allow_zero = service.GetInfo( 'allow_zero' )
+    allow_zero = service.AllowZero()
     
-    shape = service.GetInfo( 'shape' )
+    shape = service.GetShape()
     
-    num_stars = service.GetInfo( 'num_stars' )
+    num_stars = service.GetNumStars()
     
     stars = []
     

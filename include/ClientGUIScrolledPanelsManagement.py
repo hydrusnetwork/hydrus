@@ -4,6 +4,7 @@ import ClientData
 import ClientDownloading
 import ClientGUIACDropdown
 import ClientGUICommon
+import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIListBoxes
 import ClientGUIPredicates
@@ -15,10 +16,14 @@ import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
 import ClientSerialisable
+import ClientServices
 import collections
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals
+import HydrusNetwork
+import HydrusNetworking
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -28,6 +33,1313 @@ import random
 import traceback
 import wx
 
+class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, service_key ):
+        
+        self._admin_service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._deletee_account_type_keys_to_new_account_type_keys = {}
+        
+        self._account_types_listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 200, [ ( 'title', -1 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        
+        response = self._admin_service.Request( HC.GET, 'account_types' )
+        
+        account_types = response[ 'account_types' ]
+        
+        for account_type in account_types:
+            
+            ( display_tuple, sort_tuple ) = self._ConvertAccountTypeToTuples( account_type )
+            
+            self._account_types_listctrl.Append( display_tuple, sort_tuple, account_type )
+            
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._account_types_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        title = 'new account type'
+        permissions = {}
+        bandwidth_rules = HydrusNetworking.BandwidthRules()
+        
+        account_type = HydrusNetwork.AccountType.GenerateNewAccountTypeFromParameters( title, permissions, bandwidth_rules )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit account type' ) as dlg_edit:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditAccountTypePanel( dlg_edit, self._admin_service.GetServiceType(), account_type )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_account_type = panel.GetValue()
+                
+                ( display_tuple, sort_tuple ) = self._ConvertAccountTypeToTuples( new_account_type )
+                
+                self._account_types_listctrl.Append( display_tuple, sort_tuple, new_account_type )
+                
+            
+        
+    
+    
+    def _ConvertAccountTypeToTuples( self, account_type ):
+        
+        title = account_type.GetTitle()
+        
+        display_tuple = ( title, )
+        sort_tuple = ( title, )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        indices = self._account_types_listctrl.GetAllSelected()
+        
+        account_types_about_to_delete = { self._account_types_listctrl.GetObject( index ) for index in indices }
+        
+        all_account_types = set( self._account_types_listctrl.GetObjects() )
+        
+        account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
+        
+        if len( account_types_can_move_to ) == 0:
+            
+            wx.MessageBox( 'You cannot delete every account type!' )
+            
+            return
+            
+        
+        for deletee_account_type in account_types_about_to_delete:
+            
+            if len( account_types_can_move_to ) > 1:
+                
+                deletee_title = deletee_account_type.GetTitle()
+                
+                list_of_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
+                
+                with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', list_of_tuples ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        new_account_type = dlg.GetChoice()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            else:
+                
+                ( new_account_type, ) = account_types_can_move_to
+                
+            
+            deletee_account_type_key = deletee_account_type.GetAccountTypeKey()
+            new_account_type_key = new_account_type.GetAccountTypeKey()
+            
+            self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = new_account_type_key
+            
+        
+        self._account_types_listctrl.RemoveAllSelected()
+        
+    
+    def _Edit( self ):
+        
+        indices = self._account_types_listctrl.GetAllSelected()
+        
+        for index in indices:
+            
+            account_type = self._account_types_listctrl.GetObject( index )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit account type' ) as dlg_edit:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditAccountTypePanel( dlg_edit, self._admin_service.GetServiceType(), account_type )
+                
+                dlg_edit.SetPanel( panel )
+                
+                if dlg_edit.ShowModal() == wx.ID_OK:
+                    
+                    edited_account_type = panel.GetValue()
+                    
+                    ( display_tuple, sort_tuple ) = self._ConvertAccountTypeToTuples( edited_account_type )
+                    
+                    self._account_types_listctrl.UpdateRow( index, display_tuple, sort_tuple, edited_account_type )
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+    
+    def CommitChanges( self ):
+        
+        account_types = self._account_types_listctrl.GetObjects()
+        
+        def key_transfer_not_collapsed():
+            
+            keys = set( self._deletee_account_type_keys_to_new_account_type_keys.keys() )
+            values = set( self._deletee_account_type_keys_to_new_account_type_keys.values() )
+            
+            return len( keys.intersection( values ) ) > 0
+            
+        
+        while key_transfer_not_collapsed():
+            
+            # some deletees are going to other deletees, so lets collapse
+            
+            deletee_account_type_keys = set( self._deletee_account_type_keys_to_new_account_type_keys.keys() )
+            
+            account_type_keys_tuples = self._deletee_account_type_keys_to_new_account_type_keys.items()
+            
+            for ( deletee_account_type_key, new_account_type_key ) in account_type_keys_tuples:
+                
+                if new_account_type_key in deletee_account_type_keys:
+                    
+                    better_new_account_type_key = self._deletee_account_type_keys_to_new_account_type_keys[ new_account_type_key ]
+                    
+                    self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = better_new_account_type_key
+                    
+                
+            
+        
+        serialisable_deletee_account_type_keys_to_new_account_type_keys = HydrusSerialisable.SerialisableBytesDictionary( self._deletee_account_type_keys_to_new_account_type_keys )
+        
+        self._admin_service.Request( HC.POST, 'account_types', { 'account_types' : account_types, 'deletee_account_type_keys_to_new_account_type_keys' : serialisable_deletee_account_type_keys_to_new_account_type_keys } )
+        
+    
+class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 400, [ ( 'name', -1 ), ( 'type', 220 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        menu_items = []
+        
+        for service_type in HC.ADDREMOVABLE_SERVICES:
+            
+            service_string = HC.service_string_lookup[ service_type ]
+            
+            menu_items.append( ( 'normal', service_string, 'Add a new ' + service_string + '.', HydrusData.Call( self._Add, service_type ) ) )
+            
+        
+        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items = menu_items )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        
+        #
+        
+        all_services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
+        
+        for service in all_services:
+            
+            ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( service )
+            
+            self._listctrl.Append( display_tuple, sort_tuple, service )
+            
+        
+        self._listctrl.SortListItems( 0 )
+        
+        #
+        
+        add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        add_remove_hbox.AddF( self._add_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.AddF( self._edit_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.AddF( self._delete_button, CC.FLAGS_LONE_BUTTON )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( add_remove_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertServiceToTuples( self, service ):
+        
+        name = service.GetName()
+        service_type = service.GetServiceType()
+        deletable = service_type in HC.ADDREMOVABLE_SERVICES
+        
+        pretty_service_type = HC.service_string_lookup[ service_type ]
+        
+        if deletable:
+            
+            pretty_deletable = 'yes'
+            
+        else:
+            
+            pretty_deletable = ''
+            
+        
+        return ( ( name, pretty_service_type, pretty_deletable ), ( name, pretty_service_type, deletable ) )
+        
+    
+    def _Add( self, service_type ):
+        
+        service_key = HydrusData.GenerateKey()
+        name = 'new service'
+        
+        service = ClientServices.GenerateService( service_key, service_type, name )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
+            
+            panel = self._EditPanel( dlg, service )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_service = panel.GetValue()
+                
+                self._listctrl.SetNonDupeName( new_service )
+                
+                ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( new_service )
+                
+                self._listctrl.Append( display_tuple, sort_tuple, new_service )
+                
+            
+        
+    
+    def _Delete( self ):
+        
+        deletable_indices = []
+        
+        selected = self._listctrl.GetAllSelected()
+        
+        for index in selected:
+            
+            service = self._listctrl.GetObject( index )
+            
+            if service.GetServiceType() in HC.ADDREMOVABLE_SERVICES:
+                
+                deletable_indices.append( index )
+                
+            
+        
+        self._listctrl.RemoveIndices( deletable_indices )
+        
+    
+    def _Edit( self ):
+        
+        indices = self._listctrl.GetAllSelected()
+        
+        for index in indices:
+            
+            service = self._listctrl.GetObject( index )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
+                
+                panel = self._EditPanel( dlg, service )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_service = panel.GetValue()
+                    
+                    ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( edited_service )
+                    
+                    self._listctrl.UpdateRow( index, display_tuple, sort_tuple, edited_service )
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        
+    
+    def CommitChanges( self ):
+        
+        services = self._listctrl.GetObjects()
+        
+        HydrusGlobals.client_controller.SetServices( services )
+        
+    
+    class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
+        
+        def __init__( self, parent, service ):
+            
+            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            
+            duplicate_service = service.Duplicate()
+            
+            ( self._service_key, self._service_type, name, self._dictionary ) = duplicate_service.ToTuple()
+            
+            self._service_panel = self._ServicePanel( self, name )
+            
+            self._panels = []
+            
+            if self._service_type in HC.REMOTE_SERVICES:
+                
+                remote_panel = self._ServiceRemotePanel( self, self._dictionary )
+                
+                self._panels.append( remote_panel )
+                
+            
+            if self._service_type in HC.RESTRICTED_SERVICES:
+                
+                self._panels.append( self._ServiceRestrictedPanel( self, self._service_key, remote_panel, self._service_type, self._dictionary ) )
+                
+            
+            if self._service_type in HC.TAG_SERVICES:
+                
+                self._panels.append( self._ServiceTagPanel( self, self._dictionary ) )
+                
+            
+            if self._service_type == HC.LOCAL_BOORU:
+                
+                self._panels.append( self._ServiceLocalBooruPanel( self, self._dictionary ) )
+                
+            
+            if self._service_type in HC.RATINGS_SERVICES:
+                
+                self._panels.append( self._ServiceRatingsPanel( self, self._dictionary ) )
+                
+                if self._service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    self._panels.append( self._ServiceRatingsNumericalPanel( self, self._dictionary ) )
+                    
+                
+            
+            if self._service_type == HC.IPFS:
+                
+                self._panels.append( self._ServiceIPFSPanel( self, self._dictionary ) )
+                
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            for panel in self._panels:
+                
+                vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            self.SetSizer( vbox )
+            
+        
+        def _GetArchiveNameToDisplay( self, portable_hta_path, namespaces ):
+            
+            hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
+            
+            if len( namespaces ) == 0: name_to_display = hta_path
+            else: name_to_display = hta_path + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
+            
+            return name_to_display
+            
+        
+        def EventArchiveAdd( self, event ):
+            
+            if self._archive_sync.GetCount() == 0:
+                
+                wx.MessageBox( 'Be careful with this tool! Syncing a lot of files to a large archive can take a very long time to initialise.' )
+                
+            
+            text = 'Select the Hydrus Tag Archive\'s location.'
+            
+            with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
+                
+                if dlg_file.ShowModal() == wx.ID_OK:
+                    
+                    hta_path = HydrusData.ToUnicode( dlg_file.GetPath() )
+                    
+                    portable_hta_path = HydrusPaths.ConvertAbsPathToPortablePath( hta_path )
+                    
+                    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
+                    
+                    archive_namespaces = hta.GetNamespaces()
+                
+                    with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ) ) as dlg:
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                            
+                        else:
+                            
+                            return
+                            
+                        
+                    
+                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
+                    
+                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
+                    
+                
+            
+        
+        def EventArchiveEdit( self, event ):
+            
+            selection = self._archive_sync.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                ( portable_hta_path, existing_namespaces ) = self._archive_sync.GetClientData( selection )
+                
+                hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
+                
+                if not os.path.exists( hta_path ):
+                    
+                    wx.MessageBox( 'This archive does not seem to exist any longer!' )
+                    
+                    return
+                    
+                
+                hta = HydrusTagArchive.HydrusTagArchive( hta_path )
+                
+                archive_namespaces = hta.GetNamespaces()
+                
+                with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ), HydrusData.ConvertUglyNamespacesToPrettyStrings( existing_namespaces ) ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+                name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
+                
+                self._archive_sync.SetString( selection, name_to_display )
+                self._archive_sync.SetClientData( selection, ( portable_hta_path, namespaces ) )
+                
+            
+        
+        def EventArchiveRemove( self, event ):
+            
+            selection = self._archive_sync.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                self._archive_sync.Delete( selection )
+                
+            
+        
+        def EventCheckIPFS( self, event ):
+            
+            service = self.GetValue()
+            
+            try:
+                
+                version = service.GetDaemonVersion()
+                
+                wx.MessageBox( 'Everything looks ok! Connected to IPFS Daemon with version: ' + version )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.MessageBox( 'Could not connect!' )
+                
+            
+        
+        def EventCheckService( self, event ):
+            
+            service = self.GetValue()
+            
+            try:
+                
+                root = service.Request( HC.GET, '' )
+                
+            except HydrusExceptions.WrongServiceTypeException:
+                
+                wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
+                
+                return
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.MessageBox( 'Could not connect!' )
+                
+                return
+                
+            
+            if service_type in HC.RESTRICTED_SERVICES:
+                
+                credentials = service.GetCredentials()
+                
+                if not credentials.HasAccessKey():
+                    
+                    wx.MessageBox( 'No access key!' )
+                    
+                    return
+                    
+                
+                response = service.Request( HC.GET, 'access_key_verification' )
+                
+                if not response[ 'verified' ]:
+                    
+                    wx.MessageBox( 'That access key was not recognised!' )
+                    
+                    return
+                    
+                
+            
+            wx.MessageBox( 'Everything looks ok!' )
+            
+        
+        def GetValue( self ):
+            
+            name = self._service_panel.GetValue()
+            
+            dictionary = self._dictionary.Duplicate()
+            
+            for panel in self._panels:
+                
+                dictionary_part = panel.GetValue()
+                
+                dictionary.update( dictionary_part )
+                
+            
+            return ClientServices.GenerateService( self._service_key, self._service_type, name, dictionary )
+            
+        
+        def EventServiceResetDownload( self, event ):
+            
+            ( service_key, service_type, name, info ) = self._original_info
+            
+            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually redownload and reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._reset_downloading_button.SetLabelText( 'everything will be reset on dialog ok!' )
+                    
+                    self._reset_downloading = True
+                    
+                
+            
+        
+        def EventServiceResetProcessing( self, event ):
+            
+            ( service_key, service_type, name, info ) = self._original_info
+            
+            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._reset_processing_button.SetLabelText( 'processing will be reset on dialog ok!' )
+                    
+                    self._reset_processing = True
+                    
+                
+            
+        
+        class _ServicePanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, name ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'name' )
+                
+                self._name = wx.TextCtrl( self )
+                
+                #
+                
+                self._name.SetValue( name )
+                
+                #
+                
+                self.AddF( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                name = self._name.GetValue()
+                
+                if name == '':
+                    
+                    wx.MessageBox( 'Please enter a name!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+                return name
+                
+            
+        
+        class _ServiceRemotePanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'clientside network' )
+                
+                credentials = dictionary[ 'credentials' ]
+                bandwidth_rules = dictionary[ 'bandwidth_rules' ]
+                
+                self._host = wx.TextCtrl( self )
+                self._port = wx.SpinCtrl( self, min = 1, max = 65535, size = ( 80, -1 ) )
+                
+                self._test_address_button = ClientGUICommon.BetterButton( self, 'test address', self._TestAddress )
+                
+                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+                
+                #
+                
+                ( host, port ) = credentials.GetAddress()
+                
+                self._host.SetValue( host )
+                self._port.SetValue( port )
+                
+                #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._host, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_VCENTER )
+                hbox.AddF( self._port, CC.FLAGS_VCENTER )
+                
+                wrapped_hbox = ClientGUICommon.WrapInText( hbox, self, 'address: ' )
+                
+                self.AddF( wrapped_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.AddF( self._test_address_button, CC.FLAGS_LONE_BUTTON )
+                self.AddF( self._bandwidth_rules, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def _TestAddress( self ):
+                
+                try:
+                    
+                    credentials = self.GetCredentials()
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    return
+                    
+                
+                ( host, port ) = credentials.GetAddress()
+                
+                url = 'https://' + host + ':' + str( port ) + '/'
+                
+                try:
+                    
+                    result = HydrusGlobals.client_controller.DoHTTP( HC.GET, url, hydrus_network = True )
+                    
+                    wx.MessageBox( 'Got an ok response!' )
+                    
+                except HydrusExceptions.NetworkException as e:
+                    
+                    wx.MessageBox( 'Problem with that address: ' + str( e ) )
+                    
+                
+            
+            def GetCredentials( self ):
+                
+                host = self._host.GetValue()
+                
+                if host == '':
+                    
+                    wx.MessageBox( 'Please enter a host!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+                port = self._port.GetValue()
+                
+                return HydrusNetwork.Credentials( host, port )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                credentials = self.GetCredentials()
+                
+                dictionary_part[ 'credentials' ] = credentials
+                
+                bandwidth_rules = self._bandwidth_rules.GetValue()
+                
+                dictionary_part[ 'bandwidth_rules' ] = bandwidth_rules
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceRestrictedPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, service_key, remote_panel, service_type, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus network' )
+                
+                self._service_key = service_key
+                self._remote_panel = remote_panel
+                self._service_type = service_type
+                
+                self._original_credentials = dictionary[ 'credentials' ]
+                
+                self._access_key = wx.TextCtrl( self, size = ( 400, -1 ) )
+                
+                self._test_credentials_button = ClientGUICommon.BetterButton( self, 'test access key', self._TestCredentials )
+                self._register = ClientGUICommon.BetterButton( self, 'fetch an access key with a registration key', self._GetAccessKeyFromRegistrationKey )
+                
+                #
+                
+                if self._original_credentials.HasAccessKey():
+                    
+                    self._access_key.SetValue( self._original_credentials.GetAccessKey().encode( 'hex' ) )
+                    
+                
+                #
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._register, CC.FLAGS_LONE_BUTTON )
+                hbox.AddF( self._test_credentials_button, CC.FLAGS_LONE_BUTTON )
+                
+                wrapped_access_key = ClientGUICommon.WrapInText( self._access_key, self, 'access key: ' )
+                
+                self.AddF( wrapped_access_key, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+                
+            
+            def _GetAccessKeyFromRegistrationKey( self ):
+                
+                def do_it( service, registration_key ):
+                    
+                    try:
+                        
+                        response = service.Request( HC.GET, 'access_key', { 'registration_key' : registration_key } )
+                        
+                        access_key_encoded = response[ 'access_key' ].encode( 'hex' )
+                        
+                        wx.CallAfter( self._access_key.SetValue, access_key_encoded )
+                        
+                    finally:
+                        
+                        wx.CallAfter( self._register.Enable )
+                        wx.CallAfter( self._register.SetLabel, 'fetch an access key with a registration key' )
+                        
+                    
+                
+                try:
+                    
+                    credentials = self._remote_panel.GetCredentials()
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    return
+                    
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter the registration key.' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        registration_key_encoded = dlg.GetValue()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+                if registration_key_encoded[0] == 'r':
+                    
+                    registration_key_encoded = registration_key_encoded[1:]
+                    
+                
+                if registration_key_encoded == 'init':
+                    
+                    registration_key = registration_key_encoded
+                    
+                else:
+                    
+                    try:
+                        
+                        registration_key = registration_key_encoded.decode( 'hex' )
+                        
+                    except:
+                        
+                        wx.MessageBox( 'Could not parse that registration key!' )
+                        
+                        return
+                        
+                    
+                
+                service_key = HydrusData.GenerateKey()
+                
+                service = ClientServices.GenerateService( service_key, self._service_type, 'test service' )
+                
+                service.SetCredentials( credentials )
+                
+                self._register.Disable()
+                self._register.SetLabel( 'fetching...' )
+                
+                HydrusGlobals.client_controller.CallToThread( do_it, service, registration_key )
+                
+            
+            def _TestCredentials( self ):
+                
+                try:
+                    
+                    credentials = self.GetCredentials()
+                    
+                except HydrusExceptions.VetoException:
+                    
+                    return
+                    
+                
+                service_key = HydrusData.GenerateKey()
+                
+                service = ClientServices.GenerateService( service_key, self._service_type, 'test service' )
+                
+                service.SetCredentials( credentials )
+                
+                try:
+                    
+                    if self._service_type in HC.RESTRICTED_SERVICES:
+                        
+                        response = service.Request( HC.GET, 'access_key_verification' )
+                        
+                        if not response[ 'verified' ]:
+                            
+                            wx.MessageBox( 'That access key was not recognised!' )
+                            
+                        else:
+                            
+                            wx.MessageBox( 'Everything looks ok!' )
+                            
+                        
+                    
+                except HydrusExceptions.WrongServiceTypeException:
+                    
+                    wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
+                    
+                    return
+                    
+                except HydrusExceptions.NetworkException as e:
+                    
+                    wx.MessageBox( 'Network problem: ' + str( e ) )
+                    
+                    return
+                    
+                
+            
+            def GetCredentials( self ):
+                
+                credentials = self._remote_panel.GetCredentials()
+                
+                try:
+                    
+                    access_key = self._access_key.GetValue().decode( 'hex' )
+                    
+                except:
+                    
+                    wx.MessageBox( 'Could not understand that access key!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+                if access_key != '':
+                    
+                    credentials.SetAccessKey( access_key )
+                    
+                
+                return credentials
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                credentials = self.GetCredentials()
+                
+                if credentials != self._original_credentials:
+                    
+                    account = HydrusNetwork.Account.GenerateUnknownAccount()
+                    
+                    dictionary_part[ 'account' ] = account.ToSerialisableTuple()
+                    
+                    HydrusGlobals.client_controller.pub( 'permissions_are_stale' )
+                    
+                    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
+                    
+                    session_manager.DeleteSessionKey( self._service_key )
+                    
+                
+                dictionary_part[ 'credentials' ] = credentials
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceTagPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'tags' )
+                
+                self._st = wx.StaticText( self )
+                '''
+            if service_type in HC.TAG_SERVICES:
+                
+                self._archive_panel = ClientGUICommon.StaticBox( self, 'archive synchronisation' )
+                
+                self._archive_sync = wx.ListBox( self._archive_panel, size = ( -1, 100 ) )
+                
+                self._archive_sync_add = wx.Button( self._archive_panel, label = 'add' )
+                self._archive_sync_add.Bind( wx.EVT_BUTTON, self.EventArchiveAdd )
+                
+                self._archive_sync_edit = wx.Button( self._archive_panel, label = 'edit' )
+                self._archive_sync_edit.Bind( wx.EVT_BUTTON, self.EventArchiveEdit )
+                
+                self._archive_sync_remove = wx.Button( self._archive_panel, label = 'remove' )
+                self._archive_sync_remove.Bind( wx.EVT_BUTTON, self.EventArchiveRemove )
+                
+                
+            if service_type in HC.TAG_SERVICES:
+                
+                for ( portable_hta_path, namespaces ) in info[ 'tag_archive_sync' ].items():
+                    
+                    name_to_display = self._GetArchiveNameToDisplay( portable_hta_path, namespaces )
+                    
+                    self._archive_sync.Append( name_to_display, ( portable_hta_path, namespaces ) )
+                    
+                
+            
+            
+            
+            if service_type in HC.TAG_SERVICES:
+                
+                tag_archives = {}
+                
+                for i in range( self._archive_sync.GetCount() ):
+                    
+                    ( portable_hta_path, namespaces ) = self._archive_sync.GetClientData( i )
+                    
+                    tag_archives[ portable_hta_path ] = namespaces
+                    
+                
+                info[ 'tag_archive_sync' ] = tag_archives
+                
+            
+                
+            '''
+                #
+                
+                self._st.SetLabelText( 'This is a tag service. This box will get regain tag archive options in a future update.' )
+                
+                #
+                
+                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceLocalBooruPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'local booru' )
+                
+                #dictionary[ 'port' ] = None
+                #dictionary[ 'upnp_port' ] = None
+                #dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
+                
+                self._st = wx.StaticText( self )
+                '''
+            if service_type == HC.LOCAL_BOORU:
+                
+                self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
+                
+                self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'booru local port', none_phrase = 'do not run local booru service', min = 1, max = 65535 )
+                
+                self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
+                
+                self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
+                
+            '''
+                #
+                
+                self._st.SetLabelText( 'This is a Local Booru service. This box will get regain its port options in a future update.' )
+                
+                #
+                
+                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceRatingsPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'ratings' )
+                
+                # shape
+                # colours
+                
+                self._st = wx.StaticText( self )
+                '''
+            if service_type in HC.RATINGS_SERVICES:
+                
+                self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
+                
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    num_stars = info[ 'num_stars' ]
+                    
+                    self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
+                    self._num_stars.SetValue( num_stars )
+                    
+                    allow_zero = info[ 'allow_zero' ]
+                    
+                    self._allow_zero = wx.CheckBox( self._local_rating_panel )
+                    self._allow_zero.SetValue( allow_zero )
+                    
+                
+                self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
+                
+                self._shape.Append( 'circle', ClientRatings.CIRCLE )
+                self._shape.Append( 'square', ClientRatings.SQUARE )
+                self._shape.Append( 'star', ClientRatings.STAR )
+                
+                self._colour_ctrls = {}
+                
+                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
+                    
+                    border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                    fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                    
+                    border_ctrl.SetMaxSize( ( 20, -1 ) )
+                    fill_ctrl.SetMaxSize( ( 20, -1 ) )
+                    
+                    self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
+                    
+                
+                
+                
+            if service_type in HC.RATINGS_SERVICES:
+                
+                self._shape.SelectClientData( info[ 'shape' ] )
+                
+                colours = info[ 'colours' ]
+                
+                for colour_type in colours:
+                    
+                    ( border_rgb, fill_rgb ) = colours[ colour_type ]
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                    
+                    border_ctrl.SetColour( wx.Colour( *border_rgb ) )
+                    fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
+                    
+                
+            
+            
+            
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                
+                rows = []
+                
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    rows.append( ( 'number of \'stars\': ', self._num_stars ) )
+                    rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
+                    
+                
+                rows.append( ( 'shape: ', self._shape ) )
+                
+                for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                    
+                    hbox = wx.BoxSizer( wx.HORIZONTAL )
+                    
+                    hbox.AddF( border_ctrl, CC.FLAGS_VCENTER )
+                    hbox.AddF( fill_ctrl, CC.FLAGS_VCENTER )
+                    
+                    if colour_type == ClientRatings.LIKE: colour_text = 'liked'
+                    elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
+                    elif colour_type == ClientRatings.NULL: colour_text = 'not rated'
+                    elif colour_type == ClientRatings.MIXED: colour_text = 'a mixture of ratings'
+                    
+                    rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
+                    
+                
+                gridbox = ClientGUICommon.WrapInGrid( self._local_rating_panel, rows )
+                
+                self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                vbox.AddF( self._local_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            
+            
+            if service_type in HC.RATINGS_SERVICES:
+                
+                if service_type == HC.LOCAL_RATING_NUMERICAL:
+                    
+                    num_stars = self._num_stars.GetValue()
+                    allow_zero = self._allow_zero.GetValue()
+                    
+                    if num_stars == 1 and not allow_zero:
+                        
+                        allow_zero = True
+                        
+                    
+                    info[ 'num_stars' ] = num_stars
+                    info[ 'allow_zero' ] = allow_zero
+                    
+                
+                info[ 'shape' ] = self._shape.GetChoice()
+                
+                colours = {}
+                
+                for colour_type in self._colour_ctrls:
+                    
+                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                    
+                    border_colour = border_ctrl.GetColour()
+                    
+                    border_rgb = ( border_colour.Red(), border_colour.Green(), border_colour.Blue() )
+                    
+                    fill_colour = fill_ctrl.GetColour()
+                    
+                    fill_rgb = ( fill_colour.Red(), fill_colour.Green(), fill_colour.Blue() )
+                    
+                    colours[ colour_type ] = ( border_rgb, fill_rgb )
+                    
+                
+                info[ 'colours' ] = colours
+                
+            
+            '''
+                #
+                
+                self._st.SetLabelText( 'This is a ratings service. This box will get regain colour and star options in a future update.' )
+                
+                #
+                
+                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceRatingsNumericalPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'numerical ratings' )
+                
+                # num_stars
+                # allow_zero
+                
+                self._st = wx.StaticText( self )
+                
+                #
+                
+                self._st.SetLabelText( 'This is an numerical ratings service. This box will get regain its options in a future update.' )
+                
+                #
+                
+                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                return dictionary_part
+                
+            
+        
+        class _ServiceIPFSPanel( ClientGUICommon.StaticBox ):
+            
+            def __init__( self, parent, dictionary ):
+                
+                ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
+                
+                # test creds
+                # multihash_prefix
+                '''
+            if service_type == HC.IPFS:
+                
+                self._ipfs_panel = ClientGUICommon.StaticBox( self, 'ipfs settings' )
+                
+                self._multihash_prefix = wx.TextCtrl( self._ipfs_panel, value = info[ 'multihash_prefix' ] )
+                
+                tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
+                tts += os.linesep * 2
+                tts += 'Use this if you would really like to copy a full gateway url with that action. For instance, you could put here:'
+                tts += os.linesep * 2
+                tts += 'http://127.0.0.1:8080/ipfs/'
+                tts += os.linesep
+                tts += 'http://ipfs.io/ipfs/'
+                
+                self._multihash_prefix.SetToolTipString( tts )
+                
+            '''
+                self._st = wx.StaticText( self )
+                
+                #
+                
+                self._st.SetLabelText( 'This is an IPFS service. This box will get regain IPFS options in a future update.' )
+                
+                #
+                
+                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            def GetValue( self ):
+                
+                dictionary_part = {}
+                
+                return dictionary_part
+                
+            
+        
+    
 class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
@@ -48,7 +1360,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'default file system predicates', 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
-        self._listbook.AddPage( 'local server', 'local server', self._ServerPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', 'shortcuts', self._ShortcutsPanel( self._listbook ) )
         self._listbook.AddPage( 'file storage locations', 'file storage locations', self._ClientFilesPanel( self._listbook ) )
@@ -919,15 +2230,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name ) )
                 
             
-            ordered_names = [ gallery_identifier.ToString() for gallery_identifier in gallery_identifiers ]
+            list_of_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
             
-            names_to_gallery_identifiers = { gallery_identifier.ToString() : gallery_identifier for gallery_identifier in gallery_identifiers }
-            
-            with ClientGUIDialogs.DialogSelectFromListOfStrings( self, 'select tag domain', ordered_names ) as dlg:
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select tag domain', list_of_tuples ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    name = dlg.GetString()
+                    gallery_identifier = dlg.GetChoice()
+                    
+                    name = gallery_identifier.ToString()
                     
                     for i in range( self._import_tag_options.GetCount() ):
                         
@@ -938,8 +2249,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             return
                             
                         
-                    
-                    gallery_identifier = names_to_gallery_identifiers[ name ]
                     
                     with ClientGUIDialogs.DialogInputImportTagOptions( self, name, gallery_identifier ) as ito_dlg:
                         
@@ -1447,37 +2756,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._new_options.SetMediaViewOptions( mime, value )
                 
-            
-        
-    
-    class _ServerPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._local_port = ClientGUICommon.NoneableSpinCtrl( self, 'local server port', none_phrase = 'do not run local server', min = 1, max = 65535 )
-            
-            #
-            
-            self._local_port.SetValue( HC.options[ 'local_port' ] )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._local_port, CC.FLAGS_VCENTER )
-            
-            self.SetSizer( vbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            new_local_port = self._local_port.GetValue()
-            
-            if new_local_port != HC.options[ 'local_port' ]: HydrusGlobals.client_controller.pub( 'restart_server' )
-            
-            HC.options[ 'local_port' ] = new_local_port
             
         
     
@@ -2355,6 +3633,210 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
 
+class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, service_key ):
+        
+        self._clientside_admin_service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._deletee_service_keys = []
+        
+        columns = [ ( 'port', 80 ), ( 'name', -1 ), ( 'type', 220 ) ]
+        
+        self._services_listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'tag repository', 'Create a new tag repository.', self._AddTagRepository ) )
+        menu_items.append( ( 'normal', 'file repository', 'Create a new file repository.', self._AddFileRepository ) )
+        
+        self._add_button = ClientGUICommon.MenuButton( self, 'add', menu_items )
+        
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        
+        #
+        
+        response = self._clientside_admin_service.Request( HC.GET, 'services' )
+        
+        serverside_services = response[ 'services' ]
+        
+        for serverside_service in serverside_services:
+            
+            ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( serverside_service )
+            
+            self._services_listctrl.Append( display_tuple, sort_tuple, serverside_service )
+            
+        
+        self._services_listctrl.SortListItems( 0 )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._services_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( hbox, CC.FLAGS_SMALL_INDENT )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertServiceToTuples( self, service ):
+        
+        port = service.GetPort()
+        name = service.GetName()
+        service_type = service.GetServiceType()
+        
+        pretty_port = str( port )
+        pretty_name = name
+        pretty_service_type = HC.service_string_lookup[ service_type ]
+        
+        return ( ( pretty_port, pretty_name, pretty_service_type ), ( port, name, service_type ) )
+        
+    
+    def _Add( self, service_type ):
+        
+        service_key = HydrusData.GenerateKey()
+        
+        port = self._GetNextPort()
+        
+        name = 'new service'
+        
+        dictionary = HydrusNetwork.GenerateDefaultServiceDictionary( service_type )
+        
+        service = HydrusNetwork.GenerateService( service_key, service_type, name, port, dictionary )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditServersideService( dlg_edit, service )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_service = panel.GetValue()
+                
+                self._services_listctrl.SetNonDupeName( new_service )
+                
+                self._SetNonDupePort( new_service )
+                
+                ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( new_service )
+                
+                self._services_listctrl.Append( display_tuple, sort_tuple, new_service )
+                
+            
+        
+    
+    def _AddFileRepository( self ):
+        
+        self._Add( HC.FILE_REPOSITORY )
+        
+    
+    def _AddTagRepository( self ):
+        
+        self._Add( HC.TAG_REPOSITORY )
+        
+    
+    def _Delete( self ):
+        
+        for service in self._services_listctrl.GetObjects( only_selected = True ):
+            
+            self._deletee_service_keys.append( service.GetServiceKey() )
+            
+        
+        self._services_listctrl.RemoveAllSelected()
+        
+    
+    def _Edit( self ):
+        
+        for index in self._services_listctrl.GetAllSelected():
+            
+            service = self._services_listctrl.GetObject( index )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditServersideService( dlg_edit, service )
+                
+                dlg_edit.SetPanel( panel )
+                
+                result = dlg_edit.ShowModal()
+                
+                if result == wx.ID_OK:
+                    
+                    edited_service = panel.GetValue()
+                    
+                    self._services_listctrl.SetNonDupeName( edited_service )
+                    
+                    self._SetNonDupePort( edited_service )
+                    
+                    ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( edited_service )
+                    
+                    self._services_listctrl.UpdateRow( index, display_tuple, sort_tuple, edited_service )
+                    
+                elif result == wx.ID_CANCEL:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _GetNextPort( self ):
+        
+        existing_ports = [ service.GetPort() for service in self._services_listctrl.GetObjects() ]
+        
+        largest_port = max( existing_ports )
+        
+        next_port = largest_port
+        
+        while next_port in existing_ports:
+            
+            next_port = max( 1, ( next_port + 1 ) % 65536 )
+            
+        
+        return next_port
+        
+    
+    def _SetNonDupePort( self, new_service ):
+        
+        existing_ports = [ service.GetPort() for service in self._services_listctrl.GetObjects() ]
+        
+        new_port = new_service.GetPort()
+        
+        if new_port in existing_ports:
+            
+            next_port = self._GetNextPort()
+            
+            service.SetPort( next_port )
+            
+        
+    
+    def CommitChanges( self ):
+        
+        services = self._services_listctrl.GetObjects()
+        
+        response = self._clientside_admin_service.Request( HC.POST, 'services', { 'services' : services } )
+        
+        service_keys_to_access_keys = dict( response[ 'service_keys_to_access_keys' ] )
+        
+        admin_service_key = self._clientside_admin_service.GetServiceKey()
+        
+        with HydrusGlobals.dirty_object_lock:
+            
+            HydrusGlobals.client_controller.WriteSynchronous( 'update_server_services', admin_service_key, services, service_keys_to_access_keys, self._deletee_service_keys )
+            
+            HydrusGlobals.client_controller.RefreshServices()
+            
+        
+    
 class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
@@ -2612,9 +4094,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Edit( self ):
         
-        for i in self._subscriptions.GetAllSelected():
+        for index in self._subscriptions.GetAllSelected():
             
-            subscription = self._subscriptions.GetObject( i )
+            subscription = self._subscriptions.GetObject( index )
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
                 
@@ -2624,7 +4106,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 dlg.SetPanel( panel )
                 
-                if dlg.ShowModal() == wx.ID_OK:
+                result = dlg.ShowModal()
+                
+                if result == wx.ID_OK:
                     
                     edited_subscription = panel.GetValue()
                     
@@ -2635,7 +4119,11 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( edited_subscription )
                     
-                    self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, edited_subscription )
+                    self._subscriptions.UpdateRow( index, display_tuple, sort_tuple, edited_subscription )
+                    
+                elif result == wx.ID_CANCEL:
+                    
+                    break
                     
                 
                 
@@ -3005,10 +4493,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if not self._i_am_local_tag_service:
                 
-                service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
-                
-                try: self._account = service.GetInfo( 'account' )
-                except: self._account = HydrusData.GetUnknownAccount()
+                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
                 
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
@@ -3074,7 +4559,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                if not self._account.HasPermission( HC.MANAGE_USERS ):
+                if not self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ):
                     
                     self._modify_mappers.Hide()
                     
@@ -3112,7 +4597,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
-            if not self._i_am_local_tag_service and self._account.HasPermission( HC.RESOLVE_PETITIONS ):
+            if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
                 
                 forced_reason = 'admin'
                 
@@ -3451,6 +4936,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventModify( self, event ):
             
+            wx.MessageBox( 'this does not work yet!' )
+            
+            return
+            
             contents = []
             
             tags = self._tags_box.GetSelectedTags()
@@ -3459,7 +4948,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for tag in tags:
                 
-                contents.extend( [ HydrusData.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes ] )
+                contents.extend( [ HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPING, ( tag, hash ) ) for hash in hashes ] )
                 
             
             if len( contents ) > 0:
