@@ -8,6 +8,55 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 246</h3></li>
+				<ul>
+					<li>fixed a critical bug in serverside content deserialisating that meant servers were not processing most client-submitted data properly</li>
+					<li>fixed a critical bug in 'all known tags' autocomplete regeneration--please run database->regen->a/c cache when it is convenient and let me know if your numbers are still off</li>
+					<li>fixed the pre-v238 update problem for good by abandoning update attempts and advising users to try v238 first</li>
+					<li>clientside invalid tags will now be collapsed like with the server last week. if a tag is invalid (typically something with an extra space, like "series: blah"), the update code will attempt to replace existing mappings with the collapsed valid version. some unusual cases may remain--they will be replaced with 'invalid namespace "series "' and similar. Please remove and replace these when convenient and contact me if there are way too many for you to deal with</li>
+					<li>duplicates pages now have a file domain for the filtering section, and they remember this domain through session loads</li>
+					<li>this file domain is accurate--counting potential duplicates and fetching pairs for 'show some pairs' only from those domains. the issue of remote files appearing should be gone!</li>
+					<li>there is now only one 'idle' entry in the duplicates page cog menu--it combines the three previous into one</li>
+					<li>fixed numerous irregularities across the wildcard code. all search input now has an implicit '*' on the end unless you put a '*' anywhere else, in which case it acts exactly as you enter it, with a non-* beginning matching beginning of string, whitespace, or colon, and non-* end matching end of string or whitespace</li>
+					<li>autocomplete now searches namespace, so entering 'char' will load up all the 'character:' tags along with 'series:di gi charat'. this can lag to hell and back, so it may either need some work or be optional in the future. feedback would be appreciated</li>
+					<li>typing 'namespace:' will include all the series tags below the special optimised 'namespace:*anything*' tag</li>
+					<li>autocomplete searches recognise an explicit '*' no matter where it is in the entry text. typing 'a*' will load up all the a tags and present a 'a*' wildcard option</li>
+					<li>quickly entering a wildcard entry will now submit the correct wildcard predicate ('rather than a literal 'hel*' or whatever tag)</li>
+					<li>review services panel now reports total mappings info on tag services</li>
+					<li>review services panel now reports total files info on file services</li>
+					<li>manage services's listctrl is now type | name | deletable and initially sorts by type. the strings used for hydrus service types are also improved</li>
+					<li>manage serverside services (called by server admins to manage their services) have fixed setnondupe port and name on edit service events</li>
+					<li>new popup messages will now also appear if there were previously no popup messages to display if the current focus is on a child on_top frame, such as review services (you'll now see the processing popup appear when you click 'process now' on review services)</li>
+					<li>the popup message manager now initialises its display window with a single message that is quickly dismissed. this helps set up some variables in a safe environment so they don't have to be generated later when the gui might be minimised or otherwise unusual</li>
+					<li>hid hydrus update files from 'all local files' searches</li>
+					<li>added 'media_view' entries for hydrus update files, just in case they are still visible in some unusual contexts (and they may be again in a future update anyway)</li>
+					<li>fixed 'recent tags' being returned from the database out of order</li>
+					<li>by default, 'recent tags' is now on for new users</li>
+					<li>'get tags even if file already in db' now defaults to False</li>
+					<li>file import status now allows a 'delete' action below the 'skip' action</li>
+					<li>file import status right-click event processing is more sane</li>
+					<li>fixed the new raw width/height sort choices, which were accidentally swapped</li>
+					<li>cleaned the media sort code generally</li>
+					<li>cleared out some redundant rows that are in some users' client_files_locations</li>
+					<li>namespaced predicates are no longer count-merged with their namespaceless versions in 'write' autocomplete dropdowns</li>
+					<li>'unknown' accounts should now properly resync after clientside service change</li>
+					<li>improved how registration keys are checked serverside when fetching access keys</li>
+					<li>fixed a v244 update problem when unexected additional tag parent/sibling petitions rows exist</li>
+					<li>improved my free space test code and applied it to the old v243->v244 free space test (it'll now test free space on your temporary path and report problems appropriately)</li>
+					<li>to improve log privacy and cleanliness, and to make it easier to report profiles, db/pubsub profiles now write to a separate log file named appropriately and labelled with the process's start time</li>
+					<li>profiles are more concise and formatted a little neater</li>
+					<li>across the program, three-period ... ellipses are now replaced with their single character unicode … counterpart (except to the console, where any instance of the unicode ellipsis will now be converted back to ...)</li>
+					<li>cleaned up some log printing code</li>
+					<li>cleaned up some experimental static serialisation code, still thinking if I like it or not</li>
+					<li>started on some proper unit tests for hydrus serialisable objects</li>
+					<li>fixed and otherwise updated a heap of unit test code to account for the v245 changes</li>
+					<li>cleaned up a bunch of old database table join code</li>
+					<li>started some databse-query-tuple-stripping code cleaning</li>
+					<li>deleted more old unused code</li>
+					<li>misc timing improvements</li>
+					<li>misc code cleanup experimentation</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 245</h3></li>
 				<ul>
 					<li>fixed a v244 update problem for clients updating from <v238</li>

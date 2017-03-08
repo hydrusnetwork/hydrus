@@ -168,9 +168,12 @@ def GenerateShapePerceptualHashes( path ):
     dct_88_boolean = dct_88 > median
     
     # convert TTTFTFTF to 11101010 by repeatedly shifting answer and adding 0 or 1
-    # you can even go ( a << 1 ) + b and leave out the initial param on the latel reduce call as bools act like ints for this
+    # you can even go ( a << 1 ) + b and leave out the initial param on the reduce call as bools act like ints for this
     # but let's not go crazy for another two nanoseconds
-    collapse_bools_to_binary_uint = lambda a, b: ( a << 1 ) + int( b )
+    def collapse_bools_to_binary_uint( a, b ):
+        
+        return ( a << 1 ) + int( b )
+        
     
     bytes = []
     

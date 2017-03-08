@@ -65,9 +65,9 @@ def AppendMenuLabel( menu, label, description = None ):
     
 def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
-    l_callable = GetLambdaCallable( callable, *args, **kwargs )
+    event_callable = GetEventCallable( callable, *args, **kwargs )
     
-    event_handler.Bind( wx.EVT_MENU, l_callable, source = menu_item )
+    event_handler.Bind( wx.EVT_MENU, event_callable, source = menu_item )
     
     menus_to_menu_item_data[ menu ].add( ( menu_item, event_handler ) )
     
@@ -101,11 +101,14 @@ def DestroyMenu( menu ):
     
     menu.Destroy()
     
-def GetLambdaCallable( callable, *args, **kwargs ):
+def GetEventCallable( callable, *args, **kwargs ):
     
-    l_callable = lambda event: callable( *args, **kwargs )
+    def event_callable( event ):
+        
+        callable( *args, **kwargs )
+        
     
-    return l_callable
+    return event_callable
     
 def SanitiseLabel( label ):
     

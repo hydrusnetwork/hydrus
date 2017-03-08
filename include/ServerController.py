@@ -112,7 +112,7 @@ def ShutdownSiblingInstance( db_dir ):
             
             port_found = True
             
-            HydrusData.Print( 'Sending shut down instruction...' )
+            HydrusData.Print( u'Sending shut down instruction\u2026' )
             
             connection.request( 'POST', '/shutdown' )
             
@@ -159,6 +159,8 @@ class Controller( HydrusController.HydrusController ):
     def __init__( self, db_dir, no_daemons, no_wal ):
         
         HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
+        
+        self._name = 'server'
         
         HydrusGlobals.server_controller = self
         
@@ -260,11 +262,11 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
-        HydrusData.Print( 'Shutting down daemons and services...' )
+        HydrusData.Print( u'Shutting down daemons and services\u2026' )
         
         self.ShutdownView()
         
-        HydrusData.Print( 'Shutting down db...' )
+        HydrusData.Print( u'Shutting down db\u2026' )
         
         self.ShutdownModel()
         
@@ -360,11 +362,11 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.RecordRunningStart( self._db_dir, 'server' )
         
-        HydrusData.Print( 'Initialising db...' )
+        HydrusData.Print( u'Initialising db\u2026' )
         
         self.InitModel()
         
-        HydrusData.Print( 'Initialising daemons and services...' )
+        HydrusData.Print( u'Initialising daemons and services\u2026' )
         
         self.InitView()
         
@@ -384,7 +386,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     interrupt_received = True
                     
-                    HydrusData.Print( 'Received a keyboard interrupt...' )
+                    HydrusData.Print( u'Received a keyboard interrupt\u2026' )
                     
                     def do_it():
                         
@@ -396,7 +398,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        HydrusData.Print( 'Shutting down controller...' )
+        HydrusData.Print( u'Shutting down controller\u2026' )
         
     
     def SaveDirtyObjects( self ):
@@ -463,7 +465,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownFromServer( self ):
         
-        HydrusData.Print( 'Received a server shut down request...' )
+        HydrusData.Print( u'Received a server shut down request\u2026' )
         
         def do_it():
             

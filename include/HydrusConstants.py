@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 245
+SOFTWARE_VERSION = 246
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -261,9 +261,9 @@ service_string_lookup = {}
 
 service_string_lookup[ TAG_REPOSITORY ] = 'hydrus tag repository'
 service_string_lookup[ FILE_REPOSITORY ] = 'hydrus file repository'
-service_string_lookup[ LOCAL_FILE_DOMAIN ] = 'hydrus local file domain'
-service_string_lookup[ LOCAL_FILE_TRASH_DOMAIN ] = 'hydrus trash domain'
-service_string_lookup[ COMBINED_LOCAL_FILE ] = 'hydrus local file service'
+service_string_lookup[ LOCAL_FILE_DOMAIN ] = 'local file domain'
+service_string_lookup[ LOCAL_FILE_TRASH_DOMAIN ] = 'local trash file domain'
+service_string_lookup[ COMBINED_LOCAL_FILE ] = 'virtual combined local file service'
 service_string_lookup[ MESSAGE_DEPOT ] = 'hydrus message depot'
 service_string_lookup[ LOCAL_TAG ] = 'local tag service'
 service_string_lookup[ LOCAL_RATING_NUMERICAL ] = 'local numerical rating service'
@@ -334,6 +334,7 @@ SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS = 18
 SERVICE_INFO_NUM_PENDING_TAG_PARENTS = 19
 SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS = 20
 SERVICE_INFO_NUM_SHARES = 21
+SERVICE_INFO_NUM_VIEWABLE_FILES = 22
 
 SERVICE_UPDATE_DELETE_PENDING = 0
 SERVICE_UPDATE_RESET = 1

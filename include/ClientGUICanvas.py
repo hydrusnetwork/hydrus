@@ -67,7 +67,7 @@ def CalculateCanvasZooms( canvas, media, show_action ):
         return ( 1.0, 1.0 )
         
     
-    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ):
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
         
         return ( 1.0, 1.0 )
         
@@ -176,7 +176,7 @@ def CalculateCanvasZooms( canvas, media, show_action ):
     
 def CalculateMediaContainerSize( media, zoom, action ):
     
-    if action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+    if action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
         
         raise Exception( 'This media should not be shown in the media viewer!' )
         
@@ -1165,7 +1165,7 @@ class Canvas( wx.Window ):
     
     def _IsZoomable( self ):
         
-        return self._GetShowAction( self._current_display_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
+        return self._GetShowAction( self._current_display_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
     def _ManageRatings( self ):
@@ -1546,7 +1546,7 @@ class Canvas( wx.Window ):
                 
                 media = None
                 
-            elif self._GetShowAction( media.GetDisplayMedia() ) == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+            elif self._GetShowAction( media.GetDisplayMedia() ) in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
                 
                 media = None
                 
@@ -1874,7 +1874,6 @@ class CanvasPanel( Canvas ):
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
-                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
                 elif command == 'inbox': self._Inbox()
@@ -2969,7 +2968,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
-                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
                 elif command == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
@@ -3410,7 +3408,6 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                 elif command == 'copy_bmp': self._CopyBMPToClipboard()
                 elif command == 'copy_files': self._CopyFileToClipboard()
                 elif command == 'copy_hash': self._CopyHashToClipboard( data )
-                elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
                 elif command == 'copy_path': self._CopyPathToClipboard()
                 elif command == 'delete': self._Delete( data )
                 elif command == 'fullscreen_switch': self.GetParent().FullscreenSwitch()
@@ -3673,7 +3670,7 @@ class MediaContainer( wx.Window ):
             self._embed_button.Hide()
             
         
-        if self._show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
             raise Exception( 'This media should not be shown in the media viewer!' )
             

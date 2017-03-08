@@ -137,8 +137,6 @@ def SortNumericTags( tags ):
     
 def CheckTagNotEmpty( tag ):
     
-    empty_tag = False
-    
     ( namespace, subtag ) = SplitTag( tag )
     
     if subtag == '':

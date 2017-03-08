@@ -784,14 +784,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for ( k, v ) in count.items():
             
-            if v > 100: print ( k, v )
+            if v > 100:
+                
+                HydrusData.Print( ( k, v ) )
+                
             
         
         HydrusData.Print( 'gc classes:' )
         
         for ( k, v ) in class_count.items():
             
-            if v > 100: print ( k, v )
+            if v > 100:
+                
+                HydrusData.Print( ( k, v ) )
+                
             
         
         HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
@@ -3281,39 +3287,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
         
     
-    '''
-class FrameComposeMessage( ClientGUITopLevelWindows.Frame ):
-    
-    def __init__( self, empty_draft_message ):
-        
-        ClientGUITopLevelWindows.Frame.__init__( self, None, HC.app.PrepStringForDisplay( 'Compose Message' ) )
-        
-        self.SetInitialSize( ( 920, 600 ) )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        self._draft_panel = ClientGUIMessages.DraftPanel( self, empty_draft_message )
-        
-        vbox.AddF( self._draft_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-        self.Show( True )
-        
-        HC.pubsub.sub( self, 'DeleteConversation', 'delete_conversation_gui' )
-        HC.pubsub.sub( self, 'DeleteDraft', 'delete_draft_gui' )
-        
-    
-    def DeleteConversation( self, conversation_key ):
-        
-        if self._draft_panel.GetConversationKey() == conversation_key: self.Close()
-        
-    
-    def DeleteDraft( self, draft_key ):
-        
-        if draft_key == self._draft_panel.GetDraftKey(): self.Close()
-        
-    '''
 class FrameSplash( wx.Frame ):
     
     WIDTH = 420

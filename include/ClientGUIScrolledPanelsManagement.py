@@ -26,6 +26,7 @@ import HydrusNetwork
 import HydrusNetworking
 import HydrusPaths
 import HydrusSerialisable
+import HydrusTagArchive
 import HydrusTags
 import itertools
 import os
@@ -233,7 +234,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 400, [ ( 'name', -1 ), ( 'type', 220 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 400, [ ( 'type', 220 ), ( 'name', -1 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         menu_items = []
         
@@ -279,8 +280,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _ConvertServiceToTuples( self, service ):
         
-        name = service.GetName()
         service_type = service.GetServiceType()
+        name = service.GetName()
         deletable = service_type in HC.ADDREMOVABLE_SERVICES
         
         pretty_service_type = HC.service_string_lookup[ service_type ]
@@ -294,7 +295,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_deletable = ''
             
         
-        return ( ( name, pretty_service_type, pretty_deletable ), ( name, pretty_service_type, deletable ) )
+        return ( ( pretty_service_type, name, pretty_deletable ), ( pretty_service_type, name, deletable ) )
         
     
     def _Add( self, service_type ):
@@ -560,53 +561,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 wx.MessageBox( 'Could not connect!' )
                 
-            
-        
-        def EventCheckService( self, event ):
-            
-            service = self.GetValue()
-            
-            try:
-                
-                root = service.Request( HC.GET, '' )
-                
-            except HydrusExceptions.WrongServiceTypeException:
-                
-                wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
-                
-                return
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                wx.MessageBox( 'Could not connect!' )
-                
-                return
-                
-            
-            if service_type in HC.RESTRICTED_SERVICES:
-                
-                credentials = service.GetCredentials()
-                
-                if not credentials.HasAccessKey():
-                    
-                    wx.MessageBox( 'No access key!' )
-                    
-                    return
-                    
-                
-                response = service.Request( HC.GET, 'access_key_verification' )
-                
-                if not response[ 'verified' ]:
-                    
-                    wx.MessageBox( 'That access key was not recognised!' )
-                    
-                    return
-                    
-                
-            
-            wx.MessageBox( 'Everything looks ok!' )
             
         
         def GetValue( self ):
@@ -895,7 +849,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 service.SetCredentials( credentials )
                 
                 self._register.Disable()
-                self._register.SetLabel( 'fetching...' )
+                self._register.SetLabel( u'fetching\u2026' )
                 
                 HydrusGlobals.client_controller.CallToThread( do_it, service, registration_key )
                 
@@ -980,9 +934,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     account = HydrusNetwork.Account.GenerateUnknownAccount()
                     
-                    dictionary_part[ 'account' ] = account.ToSerialisableTuple()
-                    
-                    HydrusGlobals.client_controller.pub( 'permissions_are_stale' )
+                    dictionary_part[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( account )
                     
                     session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
                     
@@ -2608,7 +2560,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_zooms.SetValue( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 
@@ -2657,8 +2609,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_mime = HC.mime_string_lookup[ mime ]
             pretty_media_show_action = CC.media_viewer_action_string_lookup[ media_show_action ]
             pretty_preview_show_action = CC.media_viewer_action_string_lookup[ preview_show_action ]
-            
-            no_show_actions = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON )
             
             no_show = media_show_action in CC.no_support and preview_show_action in CC.no_support
             
@@ -3761,6 +3711,8 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             service = self._services_listctrl.GetObject( index )
             
+            original_name = service.GetName()
+            
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
                 
                 panel = ClientGUIScrolledPanelsEdit.EditServersideService( dlg_edit, service )
@@ -3773,7 +3725,10 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     edited_service = panel.GetValue()
                     
-                    self._services_listctrl.SetNonDupeName( edited_service )
+                    if edited_service.GetName() != original_name:
+                        
+                        self._services_listctrl.SetNonDupeName( edited_service )
+                        
                     
                     self._SetNonDupePort( edited_service )
                     
@@ -3807,7 +3762,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetNonDupePort( self, new_service ):
         
-        existing_ports = [ service.GetPort() for service in self._services_listctrl.GetObjects() ]
+        existing_ports = [ service.GetPort() for service in self._services_listctrl.GetObjects() if service.GetServiceKey() != new_service.GetServiceKey() ]
         
         new_port = new_service.GetPort()
         

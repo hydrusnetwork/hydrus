@@ -1987,7 +1987,10 @@ class ServicesManager( object ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
-        compare_function = lambda a, b: cmp( a.GetName(), b.GetName() )
+        def compare_function( a, b ):
+            
+            return cmp( a.GetName(), b.GetName() )
+            
         
         self._services_sorted = list( services )
         self._services_sorted.sort( cmp = compare_function )
@@ -1997,7 +2000,12 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            filtered_service_keys = [ service_key for service_key in service_keys if self._keys_to_services[ service_key ].GetServiceType() in desired_types ]
+            def func( service_key ):
+                
+                return self._keys_to_services[ service_key ].GetServiceType() in desired_types
+                
+            
+            filtered_service_keys = filter( func, service_keys )
             
             return filtered_service_keys
             
@@ -2007,7 +2015,12 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            filtered_service_keys = [ service_key for service_key in service_keys if service_key in self._keys_to_services ]
+            def func( service_key ):
+                
+                return service_key in self._keys_to_services
+                
+            
+            filtered_service_keys = filter( func, service_keys )
             
             return filtered_service_keys
             
@@ -2045,7 +2058,12 @@ class ServicesManager( object ):
         
         with self._lock:
             
-            services = [ service for service in self._services_sorted if service.GetServiceType() in desired_types ]
+            def func( service ):
+                
+                return service.GetServiceType() in desired_types
+                
+            
+            services = filter( func, self._services_sorted )
             
             if randomised:
                 
@@ -2448,11 +2466,11 @@ class TagSiblingsManager( object ):
                 
             else:
                 
-                matching_keys = ClientSearch.FilterTagsBySearchEntry( service_key, search_text, siblings.keys(), search_siblings = False )
+                matching_keys = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.keys(), search_siblings = False )
                 
                 key_based_matching_values = { siblings[ key ] for key in matching_keys }
                 
-                value_based_matching_values = ClientSearch.FilterTagsBySearchEntry( service_key, search_text, siblings.values(), search_siblings = False )
+                value_based_matching_values = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.values(), search_siblings = False )
                 
             
             matching_values = key_based_matching_values.union( value_based_matching_values )

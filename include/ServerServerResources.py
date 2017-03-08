@@ -33,7 +33,7 @@ class HydrusResourceAccessKey( HydrusServerResources.HydrusResource ):
         
         registration_key = request.hydrus_args[ 'registration_key' ]
         
-        access_key = HydrusGlobals.server_controller.Read( 'access_key', registration_key )
+        access_key = HydrusGlobals.server_controller.Read( 'access_key', self._service_key, registration_key )
         
         body = HydrusNetwork.DumpToBodyString( { 'access_key' : access_key } )
         

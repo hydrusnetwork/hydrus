@@ -489,7 +489,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
             
-            if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+            if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()
@@ -499,6 +499,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 path = client_files_manager.GetFilePath( hash, mime )
                 
                 HydrusPaths.LaunchFile( path )
+                
+                return
+                
+            elif media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
                 
                 return
                 
@@ -2129,7 +2133,6 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_known_urls': self._CopyKnownURLsToClipboard()
-            elif command == 'copy_local_url': self._CopyLocalUrlToClipboard()
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_service_filename': self._CopyServiceFilenameToClipboard( data )
             elif command == 'copy_service_filenames': self._CopyServiceFilenamesToClipboard( data )

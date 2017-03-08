@@ -24,6 +24,7 @@ from include import TestDB
 from include import TestFunctions
 from include import TestClientImageHandling
 from include import TestHydrusNATPunch
+from include import TestHydrusSerialisable
 from include import TestHydrusServer
 from include import TestHydrusSessions
 from include import TestHydrusTags
@@ -248,7 +249,15 @@ class Controller( object ):
         return HydrusGlobals.model_shutdown
         
     
-    def Read( self, name, *args, **kwargs ): return self._reads[ name ]
+    def Read( self, name, *args, **kwargs ):
+        
+        return self._reads[ name ]
+        
+    
+    def RequestMade( self, num_bytes ):
+        
+        pass
+        
     
     def ResetIdleTimer( self ): pass
     
@@ -269,6 +278,7 @@ class Controller( object ):
         if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
         if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
         if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
+        if run_all or only_run == 'serialisable': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
         if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
         if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
         if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )

@@ -3,6 +3,7 @@ import ClientData
 import ClientFiles
 import ClientLocalServer
 import ClientMedia
+import ClientServices
 import hashlib
 import httplib
 import HydrusConstants as HC
@@ -45,9 +46,11 @@ class TestServer( unittest.TestCase ):
         
         services = []
         
-        self._file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo' )
-        self._tag_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo' )
-        self._admin_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin' )
+        self._file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', HC.DEFAULT_SERVICE_PORT + 1 )
+        self._tag_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', HC.DEFAULT_SERVICE_PORT )
+        self._admin_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', HC.DEFAULT_SERVER_ADMIN_PORT )
+        
+        self._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
         
         services_manager = HydrusGlobals.test_controller.GetServicesManager()
         
@@ -82,12 +85,11 @@ class TestServer( unittest.TestCase ):
             
             context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( self._ssl_key_path, self._ssl_cert_path )
             
-            reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._admin_service.GetServiceKey(), HC.SERVER_ADMIN, 'hello' ), context_factory )
-            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._file_service.GetServiceKey(), HC.FILE_REPOSITORY, 'hello' ), context_factory )
-            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._tag_service.GetServiceKey(), HC.TAG_REPOSITORY, 'hello' ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._admin_service ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._file_service ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._tag_service ), context_factory )
             
-            reactor.listenTCP( HC.DEFAULT_LOCAL_FILE_PORT, ClientLocalServer.HydrusServiceLocal( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'hello' ) )
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'hello' ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( self._local_booru ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -134,51 +136,6 @@ class TestServer( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( data, favicon )
-        
-    
-    def _test_local_file( self, host, port ):
-        
-        connection = httplib.HTTPConnection( host, port, timeout = 10 )
-        
-        #
-        
-        client_files_default = os.path.join( TestConstants.DB_DIR, 'client_files' )
-
-        hash_encoded = self._file_hash.encode( 'hex' )
-        
-        prefix = hash_encoded[:2]
-        
-        path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
-        
-        with open( path, 'wb' ) as f: f.write( EXAMPLE_FILE )
-        
-        connection.request( 'GET', '/file?hash=' + self._file_hash.encode( 'hex' ) )
-        
-        response = connection.getresponse()
-        
-        data = response.read()
-        
-        self.assertEqual( data, EXAMPLE_FILE )
-        
-        try: os.remove( path )
-        except: pass
-        
-        #
-        
-        path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
-        
-        with open( path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
-        
-        connection.request( 'GET', '/thumbnail?hash=' + self._file_hash.encode( 'hex' ) )
-        
-        response = connection.getresponse()
-        
-        data = response.read()
-        
-        self.assertEqual( data, EXAMPLE_THUMBNAIL )
-        
-        try: os.remove( path )
-        except: pass
         
     
     def _test_file_repo( self, service, host, port ):
@@ -575,15 +532,6 @@ class TestServer( unittest.TestCase ):
     def _test_tag_repo( self, service, host, port ):
         
         pass
-        
-    
-    def test_local_service( self ):
-        
-        host = '127.0.0.1'
-        port = HC.DEFAULT_LOCAL_FILE_PORT
-        
-        self._test_basics( host, port, https = False )
-        self._test_local_file( host, port )
         
     
     def test_repository_file( self ):

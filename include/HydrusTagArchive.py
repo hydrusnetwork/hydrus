@@ -231,7 +231,7 @@ class HydrusTagArchive( object ):
         try: hash_id = self._GetHashId( hash, read_only = True )
         except: return []
         
-        result = { tag for ( tag, ) in self._c.execute( 'SELECT tag FROM mappings, tags USING ( tag_id ) WHERE hash_id = ?;', ( hash_id, ) ) }
+        result = { tag for ( tag, ) in self._c.execute( 'SELECT tag FROM mappings NATURAL JOIN tags WHERE hash_id = ?;', ( hash_id, ) ) }
         
         return result
         

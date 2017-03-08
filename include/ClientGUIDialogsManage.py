@@ -4318,8 +4318,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
-            removed_callable = lambda tags: 1
-            
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = wx.StaticText( self )
             

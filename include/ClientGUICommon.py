@@ -5,6 +5,7 @@ import ClientData
 import ClientConstants as CC
 import ClientGUIMenus
 import ClientRatings
+import ClientThreading
 import itertools
 import os
 import random
@@ -641,8 +642,8 @@ class ExportPatternButton( wx.Button ):
         if id == self.ID_HASH: phrase = '{hash}'
         if id == self.ID_TAGS: phrase = '{tags}'
         if id == self.ID_NN_TAGS: phrase = '{nn tags}'
-        if id == self.ID_NAMESPACE: phrase = '[...]'
-        if id == self.ID_TAG: phrase = '(...)'
+        if id == self.ID_NAMESPACE: phrase = u'[\u2026]'
+        if id == self.ID_TAG: phrase = u'(\u2026)'
         else: event.Skip()
         
         if phrase is not None: HydrusGlobals.client_controller.pub( 'clipboard', 'text', phrase )
@@ -662,11 +663,11 @@ class ExportPatternButton( wx.Button ):
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_NAMESPACE, 'all instances of a particular namespace - [...]' )
+        menu.Append( self.ID_NAMESPACE, u'all instances of a particular namespace - [\u2026]' )
         
         menu.AppendSeparator()
         
-        menu.Append( self.ID_TAG, 'a particular tag, if the file has it - (...)' )
+        menu.Append( self.ID_TAG, u'a particular tag, if the file has it - (\u2026)' )
         
         HydrusGlobals.client_controller.PopupMenu( self, menu )
         
@@ -1976,6 +1977,18 @@ class PopupMessageManager( wx.Frame ):
         
         self._timer.Start( 500, wx.TIMER_CONTINUOUS )
         
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_text_1', u'initialising popup message manager\u2026' )
+        
+        wx.CallAfter( self.AddMessage, job_key )
+        
+        wx.CallAfter( self._Update )
+        
+        wx.CallAfter( job_key.Delete )
+        
+        wx.CallAfter( self._Update )
+        
     
     def _CheckPending( self ):
         
@@ -2066,11 +2079,23 @@ class PopupMessageManager( wx.Frame ):
             
             current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
             
-            gui_is_active = current_focus_tlp in ( self, parent )
+            main_gui_is_active = current_focus_tlp in ( self, parent )
+            
+            on_top_frame_is_active = False
+            
+            if not main_gui_is_active:
+                
+                c_f_tlp_is_child_frame_of_main_gui = isinstance( current_focus_tlp, wx.Frame ) and current_focus_tlp.GetParent() == parent
+                
+                if c_f_tlp_is_child_frame_of_main_gui and current_focus_tlp.GetWindowStyle() & wx.FRAME_FLOAT_ON_PARENT == wx.FRAME_FLOAT_ON_PARENT:
+                    
+                    on_top_frame_is_active = True
+                    
+                
             
             if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
                 
-                if gui_is_active:
+                if main_gui_is_active:
                     
                     # gui can have focus even while minimised to the taskbar--let's not show in this case
                     if not self.IsShown() and parent.IsIconized():
@@ -2118,7 +2143,7 @@ class PopupMessageManager( wx.Frame ):
                     
                 
                 # Unhiding tends to raise the main gui tlp, which is annoying if a media viewer window has focus
-                show_is_not_annoying = gui_is_active or self._DisplayingError()
+                show_is_not_annoying = main_gui_is_active or on_top_frame_is_active or self._DisplayingError()
                 
                 ok_to_show = show_is_not_annoying and not going_to_bug_out_at_hide_or_show
                 
@@ -2158,6 +2183,38 @@ class PopupMessageManager( wx.Frame ):
             
             self.Destroy()
             
+        
+    
+    def _Update( self ):
+        
+        if HydrusGlobals.view_shutdown:
+            
+            self._timer.Stop()
+            
+            self.Destroy()
+            
+            return
+            
+        
+        sizer_items = self._message_vbox.GetChildren()
+        
+        for sizer_item in sizer_items:
+            
+            message_window = sizer_item.GetWindow()
+            
+            if message_window.IsDeleted():
+                
+                message_window.TryToDismiss()
+                
+                break
+                
+            else:
+                
+                message_window.Update()
+                
+            
+        
+        self._SizeAndPositionAndShow()
         
     
     def AddMessage( self, job_key ):
@@ -2247,34 +2304,7 @@ class PopupMessageManager( wx.Frame ):
         
         try:
             
-            if HydrusGlobals.view_shutdown:
-                
-                self._timer.Stop()
-                
-                self.Destroy()
-                
-                return
-                
-            
-            sizer_items = self._message_vbox.GetChildren()
-            
-            for sizer_item in sizer_items:
-                
-                message_window = sizer_item.GetWindow()
-                
-                if message_window.IsDeleted():
-                    
-                    message_window.TryToDismiss()
-                    
-                    break
-                    
-                else:
-                    
-                    message_window.Update()
-                    
-                
-            
-            self._SizeAndPositionAndShow()
+            self._Update()
             
         except wx.PyDeadObjectError:
             
@@ -2850,8 +2880,8 @@ class RegexButton( wx.Button ):
         submenu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
         submenu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
         submenu.Append( self.ID_REGEX_END, r'end of line - $' )
-        submenu.Append( self.ID_REGEX_SET, r'any of these - [...]' )
-        submenu.Append( self.ID_REGEX_NOT_SET, r'anything other than these - [^...]' )
+        submenu.Append( self.ID_REGEX_SET, u'any of these - [\u2026]' )
+        submenu.Append( self.ID_REGEX_NOT_SET, u'anything other than these - [^\u2026]' )
         
         submenu.AppendSeparator()
         
@@ -2867,10 +2897,10 @@ class RegexButton( wx.Button ):
         
         submenu.AppendSeparator()
         
-        submenu.Append( self.ID_REGEX_LOOKAHEAD, r'the next characters are: (non-consuming) - (?=...)' )
-        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, r'the next characters are not: (non-consuming) - (?!...)' )
-        submenu.Append( self.ID_REGEX_LOOKBEHIND, r'the previous characters are: (non-consuming) - (?<=...)' )
-        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, r'the previous characters are not: (non-consuming) - (?<!...)' )
+        submenu.Append( self.ID_REGEX_LOOKAHEAD, u'the next characters are: (non-consuming) - (?=\u2026)' )
+        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, u'the next characters are not: (non-consuming) - (?!\u2026)' )
+        submenu.Append( self.ID_REGEX_LOOKBEHIND, u'the previous characters are: (non-consuming) - (?<=\u2026)' )
+        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, u'the previous characters are not: (non-consuming) - (?<!\u2026)' )
         
         submenu.AppendSeparator()
         
@@ -2910,8 +2940,8 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
         elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
         elif id == self.ID_REGEX_END: phrase = r'$'
-        elif id == self.ID_REGEX_SET: phrase = r'[...]'
-        elif id == self.ID_REGEX_NOT_SET: phrase = r'[^...]'
+        elif id == self.ID_REGEX_SET: phrase = u'[\u2026]'
+        elif id == self.ID_REGEX_NOT_SET: phrase = u'[^\u2026]'
         elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
         elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
         elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
@@ -2921,10 +2951,10 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
         elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
         elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
-        elif id == self.ID_REGEX_LOOKAHEAD: phrase = r'(?=...)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = r'(?!...)'
-        elif id == self.ID_REGEX_LOOKBEHIND: phrase = r'(?<=...)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = r'(?<!...)'
+        elif id == self.ID_REGEX_LOOKAHEAD: phrase = u'(?=\u2026)'
+        elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = u'(?!\u2026)'
+        elif id == self.ID_REGEX_LOOKBEHIND: phrase = u'(?<=\u2026)'
+        elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = u'(?<!\u2026)'
         elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
         elif id == self.ID_REGEX_FILENAME: phrase = '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + ']*?(?=\..*$)'
         elif id == self.ID_REGEX_MANAGE_FAVOURITES:
@@ -3376,161 +3406,6 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         
         self._data_indices_to_objects[ data_index ] = obj
         self._objects_to_data_indices[ obj ] = data_index
-        
-    
-class SeedCacheControl( SaneListCtrlForSingleObject ):
-    
-    def __init__( self, parent, seed_cache ):
-        
-        height = 300
-        columns = [ ( 'source', -1 ), ( 'status', 90 ), ( 'added', 150 ), ( 'last modified', 150 ), ( 'note', 200 ) ]
-        
-        SaneListCtrlForSingleObject.__init__( self, parent, height, columns )
-        
-        self._seed_cache = seed_cache
-        
-        for seed in self._seed_cache.GetSeeds():
-            
-            self._AddSeed( seed )
-            
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
-        
-        HydrusGlobals.client_controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
-        
-    
-    def _AddSeed( self, seed ):
-        
-        sort_tuple = self._seed_cache.GetSeedInfo( seed )
-        
-        ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
-        
-        self.Append( display_tuple, sort_tuple, seed )
-        
-    
-    def _GetListCtrlTuples( self, seed ):
-        
-        sort_tuple = self._seed_cache.GetSeedInfo( seed )
-        
-        ( seed, status, added_timestamp, last_modified_timestamp, note ) = sort_tuple
-        
-        pretty_seed = HydrusData.ToUnicode( seed )
-        pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
-        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
-        pretty_note = note.split( os.linesep )[0]
-        
-        display_tuple = ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
-        
-        return ( display_tuple, sort_tuple )
-        
-    
-    def _CopySelectedNotes( self ):
-        
-        notes = []
-        
-        for seed in self.GetObjects( only_selected = True ):
-            
-            ( seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
-            
-            if note != '':
-                
-                notes.append( note )
-                
-            
-        
-        if len( notes ) > 0:
-            
-            separator = os.linesep * 2
-            
-            text = separator.join( notes )
-            
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
-            
-        
-    
-    def _CopySelectedSeeds( self ):
-        
-        seeds = self.GetObjects( only_selected = True )
-        
-        if len( seeds ) > 0:
-            
-            separator = os.linesep * 2
-            
-            text = separator.join( seeds )
-            
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
-            
-        
-    
-    def _SetSelected( self, status_to_set ):
-        
-        seeds_to_reset = self.GetObjects( only_selected = True )
-        
-        for seed in seeds_to_reset:
-            
-            self._seed_cache.UpdateSeedStatus( seed, status_to_set )
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'copy_seed_notes': self._CopySelectedNotes()
-            elif command == 'copy_seeds': self._CopySelectedSeeds()
-            elif command == 'set_seed_unknown': self._SetSelected( CC.STATUS_UNKNOWN )
-            elif command == 'set_seed_skipped': self._SetSelected( CC.STATUS_SKIPPED )
-            else: event.Skip()
-            
-        
-    
-    def EventShowMenu( self, event ):
-        
-        menu = wx.Menu()
-        
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seeds' ), 'copy sources' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seed_notes' ), 'copy notes' )
-        
-        menu.AppendSeparator()
-        
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_skipped' ), 'skip' )
-        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_unknown' ), 'try again' )
-        
-        HydrusGlobals.client_controller.PopupMenu( self, menu )
-        
-    
-    def NotifySeedUpdated( self, seed ):
-        
-        if self._seed_cache.HasSeed( seed ):
-            
-            if self.HasObject( seed ):
-                
-                index = self.GetIndexFromObject( seed )
-                
-                ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
-                
-                self.UpdateRow( index, display_tuple, sort_tuple, seed )
-                
-            else:
-                
-                self._AddSeed( seed )
-                
-            
-        else:
-            
-            if self.HasObject( seed ):
-                
-                index = self.GetIndexFromObject( seed )
-                
-                self.DeleteItem( index )
-                
-            
         
     
 class Shortcut( wx.TextCtrl ):

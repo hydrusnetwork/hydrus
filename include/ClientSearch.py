@@ -13,9 +13,9 @@ IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : None for char 
 
 def ConvertTagToSearchable( tag ):
     
-    while tag.endswith( '*' ):
+    if tag == '':
         
-        tag = tag[:-1]
+        return ''
         
     
     if not isinstance( tag, unicode ):
@@ -23,9 +23,29 @@ def ConvertTagToSearchable( tag ):
         tag = HydrusData.ToUnicode( tag )
         
     
-    return tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
+    tag = tag.translate( IGNORED_TAG_SEARCH_CHARACTERS_UNICODE_TRANSLATE )
     
-def FilterPredicatesBySearchEntry( service_key, search_entry, predicates ):
+    while '**' in tag:
+        
+        tag = tag.replace( '**', '*' )
+        
+    
+    return tag
+
+def ConvertEntryTextToSearchText( entry_text ):
+    
+    entry_text = HydrusTags.CleanTag( entry_text )
+    
+    entry_text = ConvertTagToSearchable( entry_text )
+    
+    if not IsComplexWildcard( entry_text ) and not entry_text.endswith( '*' ):
+        
+        entry_text = entry_text + u'*'
+        
+    
+    return entry_text
+    
+def FilterPredicatesBySearchText( service_key, search_text, predicates ):
     
     tags_to_predicates = {}
     
@@ -39,59 +59,48 @@ def FilterPredicatesBySearchEntry( service_key, search_entry, predicates ):
             
         
     
-    matching_tags = FilterTagsBySearchEntry( service_key, search_entry, tags_to_predicates.keys() )
+    matching_tags = FilterTagsBySearchText( service_key, search_text, tags_to_predicates.keys() )
     
     matches = [ tags_to_predicates[ tag ] for tag in matching_tags ]
     
     return matches
     
-def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = True ):
+def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = True ):
     
     def compile_re( s ):
         
-        num_stars = s.count( '*' )
-        
-        is_wildcard_search = ( num_stars == 1 and not s.endswith( '*' ) ) or num_stars > 1
-        
         regular_parts_of_s = s.split( '*' )
         
-        escaped_parts_of_s = [ re.escape( part ) for part in regular_parts_of_s ]
+        escaped_parts_of_s = map( re.escape, regular_parts_of_s )
         
         s = '.*'.join( escaped_parts_of_s )
         
-        if is_wildcard_search:
+        # \A is start of string
+        # \Z is end of string
+        # \s is whitespace
+        
+        if s.startswith( '.*' ):
             
-            return re.compile( s, flags = re.UNICODE )
+            beginning = '(\\A|:)'
             
         else:
             
-            return re.compile( '(\\A|\\s)' + s + '(\\s|\\Z)', flags = re.UNICODE )
+            beginning = '(\\A|:|\\s)'
             
         
-    
-    search_entry = ConvertTagToSearchable( search_entry )
-    
-    ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_entry )
-    
-    if namespace != '':
+        if s.endswith( '.*' ):
+            
+            end = '\\Z' # end of string
+            
+        else:
+            
+            end = '(\\s|\\Z)' # whitespace or end of string
+            
         
-        search_namespace = True
-        
-        namespace_re_predicate = compile_re( ConvertTagToSearchable( namespace ) )
-        
-    else:
-        
-        search_namespace = False
-        
-        namespace_re_predicate = None
+        return re.compile( beginning + s + end, flags = re.UNICODE )
         
     
-    if '*' not in half_complete_subtag:
-        
-        half_complete_subtag += '*'
-        
-    
-    half_complete_subtag_re_predicate = compile_re( half_complete_subtag )
+    re_predicate = compile_re( search_text )
     
     sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
     
@@ -108,30 +117,11 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
             possible_tags = [ tag ]
             
         
+        possible_tags = map( ConvertTagToSearchable, possible_tags )
+        
         for possible_tag in possible_tags:
             
-            ( possible_namespace, possible_subtag ) = HydrusTags.SplitTag( possible_tag )
-            
-            if possible_namespace != '':
-                
-                possible_namespace = ConvertTagToSearchable( possible_namespace )
-                
-                if search_namespace and re.search( namespace_re_predicate, possible_namespace ) is None:
-                    
-                    continue
-                    
-                
-            else:
-                
-                if search_namespace:
-                    
-                    continue
-                    
-                
-            
-            possible_subtag = ConvertTagToSearchable( possible_subtag )
-            
-            if re.search( half_complete_subtag_re_predicate, possible_subtag ) is not None:
+            if re.search( re_predicate, possible_tag ) is not None:
                 
                 result.append( tag )
                 
@@ -141,6 +131,22 @@ def FilterTagsBySearchEntry( service_key, search_entry, tags, search_siblings = 
         
     
     return result
+    
+def IsComplexWildcard( search_text ):
+    
+    num_stars = search_text.count( '*' )
+    
+    if num_stars > 1:
+        
+        return True
+        
+    
+    if num_stars == 1 and not search_text.endswith( '*' ):
+        
+        return True
+        
+    
+    return False
     
 def SortPredicates( predicates ):
     

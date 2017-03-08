@@ -194,7 +194,10 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        hex_filter = lambda c: c in string.hexdigits
+        def hex_filter( c ):
+            
+            return c in string.hexdigits
+            
         
         hash = filter( hex_filter, self._hash.GetValue().lower() )
         
@@ -685,7 +688,10 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        hex_filter = lambda c: c in string.hexdigits
+        def hex_filter( c ):
+            
+            return c in string.hexdigits
+            
         
         hash = filter( hex_filter, self._hash.GetValue().lower() )
         

@@ -246,7 +246,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._media_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
             
-            if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+            if action != CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
                 self._preview_show_action.Append( CC.media_viewer_action_string_lookup[ action ], action )
                 
@@ -420,7 +420,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._seed_cache = seed_cache
         
         self._text = wx.StaticText( self, label = 'initialising' )
-        self._seed_cache_control = ClientGUICommon.SeedCacheControl( self, self._seed_cache )
+        self._seed_cache_control = ClientGUIControls.SeedCacheControl( self, self._seed_cache )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

@@ -709,7 +709,12 @@ def IntelligentMassIntersect( sets_to_reduce ):
     
     sets_to_reduce = list( sets_to_reduce )
     
-    sets_to_reduce.sort( cmp = lambda x, y: cmp( len( x ), len( y ) ) )
+    def get_len( item ):
+        
+        return len( item )
+        
+    
+    sets_to_reduce.sort( key = get_len )
     
     for set_to_reduce in sets_to_reduce:
         
@@ -831,7 +836,7 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
 def Print( text ):
     
-    print( ToByteString( text ) )
+    print( ToUnicode( text ) )
     
 ShowText = Print
 
@@ -864,7 +869,7 @@ def PrintException( e, do_wait = True ):
     
 ShowException = PrintException
 
-def Profile( code, g, l ):
+def Profile( summary, code, g, l ):
     
     profile = cProfile.Profile()
     
@@ -878,38 +883,19 @@ def Profile( code, g, l ):
     
     stats.sort_stats( 'tottime' )
     
-    output.seek( 0 )
-    
     output.write( 'Stats' )
-    output.write( os.linesep )
+    output.write( os.linesep * 2 )
     
     stats.print_stats()
     
-    output.seek( 0 )
-    
-    DebugPrint( output.read() )
-    
-    output.seek( 0 )
-    
     output.write( 'Callers' )
-    output.write( os.linesep )
+    output.write( os.linesep * 2 )
     
     stats.print_callers()
     
     output.seek( 0 )
     
-    DebugPrint( output.read() )
-    
-    output.seek( 0 )
-    
-    output.write( 'Callees' )
-    output.write( os.linesep )
-    
-    stats.print_callees()
-    
-    output.seek( 0 )
-    
-    DebugPrint( output.read() )
+    HydrusGlobals.controller.PrintProfile( summary, output.read() )
     
 def RandomPop( population ):
     

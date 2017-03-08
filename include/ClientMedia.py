@@ -438,11 +438,17 @@ class MediaList( object ):
             
             if sort_by_data == CC.SORT_BY_RANDOM:
                 
-                sort_function = lambda x: random.random()
+                def sort_key( x ):
+                    
+                    return random.random()
+                    
                 
             elif sort_by_data in ( CC.SORT_BY_SMALLEST, CC.SORT_BY_LARGEST ):
                 
-                sort_function = lambda x: deal_with_none( x.GetSize() )
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetSize() )
+                    
                 
                 if sort_by_data == CC.SORT_BY_LARGEST:
                     
@@ -451,7 +457,10 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_SHORTEST, CC.SORT_BY_LONGEST ):
                 
-                sort_function = lambda x: deal_with_none( x.GetDuration() )
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetDuration() )
+                    
                 
                 if sort_by_data == CC.SORT_BY_LONGEST:
                     
@@ -473,7 +482,10 @@ class MediaList( object ):
                     file_service_key = self._file_service_key
                     
                 
-                sort_function = lambda x: deal_with_none( x.GetTimestamp( file_service_key ) )
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetTimestamp( file_service_key ) )
+                    
                 
                 if sort_by_data == CC.SORT_BY_NEWEST:
                     
@@ -482,7 +494,10 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_HEIGHT_ASC, CC.SORT_BY_HEIGHT_DESC ):
                 
-                sort_function = lambda x: deal_with_none( x.GetResolution()[0] )
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetResolution()[1] )
+                    
                 
                 if sort_by_data == CC.SORT_BY_HEIGHT_DESC:
                     
@@ -491,7 +506,10 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_WIDTH_ASC, CC.SORT_BY_WIDTH_DESC ):
                 
-                sort_function = lambda x: deal_with_none( x.GetResolution()[1] )
+                def sort_key( x ):
+                    
+                    return deal_with_none( x.GetResolution()[0] )
+                    
                 
                 if sort_by_data == CC.SORT_BY_WIDTH_DESC:
                     
@@ -500,7 +518,7 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_RATIO_ASC, CC.SORT_BY_RATIO_DESC ):
                 
-                def sort_function( x ):
+                def sort_key( x ):
                     
                     ( width, height ) = x.GetResolution()
                     
@@ -521,7 +539,7 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_NUM_PIXELS_ASC, CC.SORT_BY_NUM_PIXELS_DESC ):
                 
-                def sort_function( x ):
+                def sort_key( x ):
                     
                     ( width, height ) = x.GetResolution()
                     
@@ -542,25 +560,28 @@ class MediaList( object ):
                 
             elif sort_by_data == CC.SORT_BY_MIME:
                 
-                sort_function = lambda x: x.GetMime()
+                def sort_key( x ):
+                    
+                    return x.GetMime()
+                    
                 
             
         elif sort_by_type == 'namespaces':
             
-            def namespace_sort_function( namespaces, x ):
+            namespaces = sort_by_data
+            
+            def sort_key( x ):
                 
                 x_tags_manager = x.GetTagsManager()
                 
                 return [ x_tags_manager.GetComparableNamespaceSlice( ( namespace, ) ) for namespace in namespaces ]
                 
             
-            sort_function = lambda x: namespace_sort_function( sort_by_data, x )
-            
         elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
             
             service_key = sort_by_data
             
-            def ratings_sort_function( service_key, x ):
+            def sort_key( x ):
                 
                 x_ratings_manager = x.GetRatingsManager()
                 
@@ -569,15 +590,13 @@ class MediaList( object ):
                 return rating
                 
             
-            sort_function = lambda x: ratings_sort_function( service_key, x )
-            
             if sort_by_type == 'rating_descend':
                 
                 reverse = True
                 
             
         
-        return ( sort_function, reverse )
+        return ( sort_key, reverse )
         
     
     def _RecalcHashes( self ):
@@ -824,7 +843,7 @@ class MediaList( object ):
                     
                     media_show_action = new_options.GetMediaShowAction( media.GetMime() )
                     
-                    if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW:
+                    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
                         
                         continue
                         
@@ -979,15 +998,15 @@ class MediaList( object ):
             sort_by_fallback = sort_choices[ 0 ]
             
         
-        ( sort_function, reverse ) = self._GetSortFunction( sort_by_fallback )
+        ( sort_key, reverse ) = self._GetSortFunction( sort_by_fallback )
         
-        self._sorted_media.sort( sort_function, reverse = reverse )
+        self._sorted_media.sort( sort_key, reverse = reverse )
         
         # this is a stable sort, so the fallback order above will remain for equal items
         
-        ( sort_function, reverse ) = self._GetSortFunction( self._sort_by )
+        ( sort_key, reverse ) = self._GetSortFunction( self._sort_by )
         
-        self._sorted_media.sort( sort_function = sort_function, reverse = reverse )
+        self._sorted_media.sort( sort_key = sort_key, reverse = reverse )
         
     
 class ListeningMediaList( MediaList ):
@@ -1682,9 +1701,12 @@ class SortedList( object ):
     
     def __init__( self, initial_items = None ):
         
-        if initial_items is None: initial_items = []
+        if initial_items is None:
+            
+            initial_items = []
+            
         
-        self._sort_function = lambda x: x
+        self._sort_key = None
         self._sort_reverse = False
         
         self._sorted_list = list( initial_items )
@@ -1779,20 +1801,20 @@ class SortedList( object ):
         self._DirtyIndices()
         
     
-    def sort( self, sort_function = None, reverse = False ):
+    def sort( self, sort_key = None, reverse = False ):
         
-        if sort_function is None:
+        if sort_key is None:
             
-            sort_function = self._sort_function
+            sort_key = self._sort_key
             reverse = self._sort_reverse
             
         else:
             
-            self._sort_function = sort_function
+            self._sort_key = sort_key
             self._sort_reverse = reverse
             
         
-        self._sorted_list.sort( key = sort_function, reverse = reverse )
+        self._sorted_list.sort( key = sort_key, reverse = reverse )
         
         self._DirtyIndices()
         

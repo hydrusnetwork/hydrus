@@ -353,7 +353,6 @@ def MergePredicates( predicates, add_namespaceless = False ):
             
         
     
-    
     return master_predicate_dict.values()
     
 def ShowExceptionClient( e ):
@@ -567,8 +566,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
         
-        self._dictionary[ 'booleans' ][ 'maintain_similar_files_phashes_during_idle' ] = False
-        self._dictionary[ 'booleans' ][ 'maintain_similar_files_tree_during_idle' ] = False
         self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
         
         #
@@ -600,7 +597,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
         self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
         
-        self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = None
+        self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         
         self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
         
@@ -668,6 +665,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
+        
         self._dictionary[ 'media_view' ][ HC.VIDEO_AVI ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
         self._dictionary[ 'media_view' ][ HC.VIDEO_MOV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )

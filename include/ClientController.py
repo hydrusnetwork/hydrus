@@ -45,6 +45,8 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
         
+        self._name = 'client'
+        
         HydrusGlobals.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
@@ -518,7 +520,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.pub( 'splash_set_title_text', 'booting db...' )
+        self.pub( 'splash_set_title_text', u'booting db\u2026' )
         
         self._http = ClientNetworking.HTTPConnectionManager()
         
@@ -601,7 +603,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToWx( wx_code_password )
             
         
-        self.pub( 'splash_set_title_text', 'booting gui...' )
+        self.pub( 'splash_set_title_text', u'booting gui\u2026' )
         
         def wx_code_gui():
             
@@ -627,7 +629,7 @@ class Controller( HydrusController.HydrusController ):
         if not self._no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'permissions_are_stale', ) ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'notify_unknown_accounts', ) ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SaveDirtyObjects', ClientDaemons.DAEMONSaveDirtyObjects, ( 'important_dirt_to_clean', ), period = 30 ) )
             
             self._daemons.append( HydrusThreading.DAEMONForegroundWorker( self, 'DownloadFiles', ClientDaemons.DAEMONDownloadFiles, ( 'notify_new_downloads', 'notify_new_permissions' ) ) )
@@ -688,7 +690,7 @@ class Controller( HydrusController.HydrusController ):
             loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
-        if self._new_options.GetBoolean( 'maintain_similar_files_phashes_during_idle' ):
+        if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
             phashes_stop_time = stop_time
             
@@ -699,9 +701,6 @@ class Controller( HydrusController.HydrusController ):
             
             self.WriteInterruptable( 'maintain_similar_files_phashes', stop_time = phashes_stop_time )
             
-        
-        if self._new_options.GetBoolean( 'maintain_similar_files_tree_during_idle' ):
-            
             tree_stop_time = stop_time
             
             if tree_stop_time is None:
@@ -710,9 +709,6 @@ class Controller( HydrusController.HydrusController ):
                 
             
             self.WriteInterruptable( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
-            
-        
-        if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
             search_distance = self._new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
@@ -956,7 +952,7 @@ class Controller( HydrusController.HydrusController ):
         # I have had this as 'suppress' before
         self._app.SetAssertMode( wx.PYAPP_ASSERT_EXCEPTION )
         
-        HydrusData.Print( 'booting controller...' )
+        HydrusData.Print( u'booting controller\u2026' )
         
         self.CreateSplash()
         
@@ -966,7 +962,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.MainLoop()
         
-        HydrusData.Print( 'shutting down controller...' )
+        HydrusData.Print( u'shutting down controller\u2026' )
         
     
     def SaveDirtyObjects( self ):
@@ -1144,11 +1140,11 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            self.pub( 'splash_set_title_text', 'shutting down gui...' )
+            self.pub( 'splash_set_title_text', u'shutting down gui\u2026' )
             
             self.ShutdownView()
             
-            self.pub( 'splash_set_title_text', 'shutting down db...' )
+            self.pub( 'splash_set_title_text', u'shutting down db\u2026' )
             
             self.ShutdownModel()
             

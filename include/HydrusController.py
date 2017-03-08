@@ -23,6 +23,8 @@ class HydrusController( object ):
         
         HydrusGlobals.controller = self
         
+        self._name = 'hydrus'
+        
         self._db_dir = db_dir
         self._no_daemons = no_daemons
         self._no_wal = no_wal
@@ -247,6 +249,24 @@ class HydrusController( object ):
     def NotifyPubSubs( self ):
         
         raise NotImplementedError()
+        
+    
+    def PrintProfile( self, summary, profile_text ):
+        
+        boot_pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._timestamps[ 'boot' ] ) )
+        
+        profile_log_filename = self._name + ' profile - ' + boot_pretty_timestamp + '.log'
+        
+        profile_log_path = os.path.join( self._db_dir, profile_log_filename )
+        
+        with open( profile_log_path, 'a' ) as f:
+            
+            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
+            
+            f.write( prefix + summary )
+            f.write( os.linesep * 2 )
+            f.write( profile_text )
+            
         
     
     def ProcessPubSub( self ):

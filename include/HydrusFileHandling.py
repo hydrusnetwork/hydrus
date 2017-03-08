@@ -163,7 +163,10 @@ def GetFileInfo( path ):
     
     mime = GetMime( path )
     
-    if mime not in HC.ALLOWED_MIMES: raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
+    if mime not in HC.ALLOWED_MIMES:
+        
+        raise HydrusExceptions.MimeException( 'Filetype is not permitted!' )
+        
     
     width = None
     height = None

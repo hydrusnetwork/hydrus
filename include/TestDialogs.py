@@ -166,10 +166,10 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         list_of_tuples = [ ( 'a', 123 ), ( 'b', 456 ), ( 'c', 789 ) ]
         
-        with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', [ 'a', 'b', 'c' ] ) as dlg:
+        with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', list_of_tuples ) as dlg:
             
             wx.CallLater( 500, dlg._list.Select, 1 )
-            wx.CallLater( 1000, PressKey, dlg._strings, wx.WXK_RETURN )
+            wx.CallLater( 1000, PressKey, dlg._list, wx.WXK_RETURN )
             
             result = dlg.ShowModal()
             

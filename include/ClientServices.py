@@ -33,7 +33,7 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         if service_type in HC.RESTRICTED_SERVICES:
             
-            dictionary[ 'account' ] = HydrusNetwork.Account.GenerateUnknownAccount().ToSerialisableTuple()
+            dictionary[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( HydrusNetwork.Account.GenerateUnknownAccount() )
             dictionary[ 'next_account_sync' ] = 0
             
             if service_type in HC.REPOSITORIES:
@@ -596,7 +596,7 @@ class ServiceRestricted( ServiceRemote ):
         
         dictionary = ServiceRemote._GetSerialisableDictionary( self )
         
-        dictionary[ 'account' ] = self._account.ToSerialisableTuple()
+        dictionary[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( self._account )
         dictionary[ 'next_account_sync' ] = self._next_account_sync
         
         return dictionary
@@ -938,6 +938,14 @@ class ServiceRepository( ServiceRestricted ):
         ( download_value, processing_value, range ) = HydrusGlobals.client_controller.Read( 'repository_progress', service_key )
         
         return processing_value < range
+        
+    
+    def GetNextUpdateDueString( self ):
+        
+        with self._lock:
+            
+            return self._metadata.GetNextUpdateDueString( from_client = True )
+            
         
     
     def GetTagArchiveSync( self ):

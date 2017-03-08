@@ -113,13 +113,15 @@ class HydrusLogger( object ):
                 prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
                 
             
-            message = HydrusData.ToByteString( prefix + value )
+            message = prefix + value
             
             if not self._problem_with_previous_stdout:
                 
+                stdout_message = HydrusData.ToByteString( message.replace( u'\u2026', '...' ) )
+                
                 try:
                     
-                    self._previous_sys_stdout.write( message )
+                    self._previous_sys_stdout.write( stdout_message )
                     
                 except IOError:
                     
@@ -127,7 +129,9 @@ class HydrusLogger( object ):
                     
                 
             
-            self._log_file.write( message )
+            log_message = HydrusData.ToByteString( message )
+            
+            self._log_file.write( log_message )
             
         
     

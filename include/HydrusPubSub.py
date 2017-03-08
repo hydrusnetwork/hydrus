@@ -107,18 +107,18 @@ class HydrusPubSub( object ):
             
             if HydrusGlobals.pubsub_profile_mode:
                 
-                text = 'Profiling ' + topic + ': ' + repr( callable )
+                summary = 'Profiling ' + topic + ': ' + repr( callable )
                 
                 if topic == 'message':
                     
-                    HydrusData.Print( text )
+                    HydrusData.Print( summary )
                     
                 else:
                     
-                    HydrusData.ShowText( text )
+                    HydrusData.ShowText( summary )
                     
                 
-                HydrusData.Profile( 'callable( *args, **kwargs )', globals(), locals() )
+                HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals() )
                 
             else:
                 

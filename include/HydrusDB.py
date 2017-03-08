@@ -47,37 +47,11 @@ def CanVacuum( db_path, stop_time = None ):
                 
             
         
-        temp_dir = tempfile.gettempdir()
         ( db_dir, db_filename ) = os.path.split( db_path )
         
-        temp_disk_free_space = HydrusPaths.GetFreeSpace( temp_dir )
+        ( has_space, reason ) = HydrusPaths.HasSpaceForDBTransaction( db_dir, db_size )
         
-        a = HydrusPaths.GetDevice( temp_dir )
-        b = HydrusPaths.GetDevice( db_dir )
-        
-        if HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir ):
-            
-            if temp_disk_free_space < db_size * 2.2:
-                
-                return False
-                
-            
-        else:
-            
-            if temp_disk_free_space < db_size * 1.1:
-                
-                return False
-                
-            
-            db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
-            
-            if db_disk_free_space < db_size * 1.1:
-                
-                return False
-                
-            
-        
-        return True
+        return has_space
         
     except Exception as e:
         
@@ -206,7 +180,15 @@ class HydrusDB( object ):
         
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
-        if version < HC.SOFTWARE_VERSION - 50: raise Exception( 'Your current version of hydrus ' + str( version ) + ' is too old for this version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
+        if version < HC.SOFTWARE_VERSION - 50:
+            
+            raise Exception( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
+            
+        
+        if version < 238:
+            
+            raise Exception( 'Unfortunately, this software cannot update your database. Please try installing version 238 first.' )
+            
         
         while version < HC.SOFTWARE_VERSION:
             
@@ -585,6 +567,20 @@ class HydrusDB( object ):
         return [ row for row in self._SelectFromList( select_statement, xs ) ]
         
     
+    def _STL( self, iterable_cursor ):
+        
+        # strip singleton tuples to a list
+        
+        return [ item for ( item, ) in iterable_cursor ]
+        
+    
+    def _STS( self, iterable_cursor ):
+        
+        # strip singleton tuples to a set
+        
+        return { item for ( item, ) in iterable_cursor }
+        
+    
     def _UpdateDB( self, version ):
         
         raise NotImplementedError()
@@ -662,9 +658,11 @@ class HydrusDB( object ):
                     
                     if HydrusGlobals.db_profile_mode:
                         
-                        HydrusData.ShowText( 'Profiling ' + job.ToString() )
+                        summary = 'Profiling ' + job.ToString()
                         
-                        HydrusData.Profile( 'self._ProcessJob( job )', globals(), locals() )
+                        HydrusData.ShowText( summary )
+                        
+                        HydrusData.Profile( summary, 'self._ProcessJob( job )', globals(), locals() )
                         
                     else:
                         

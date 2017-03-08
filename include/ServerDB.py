@@ -195,7 +195,7 @@ class DB( HydrusDB.HydrusDB ):
         
         [ registration_key ] = self._GenerateRegistrationKeys( service_id, 1, service_admin_account_type_id, None, force_registration_key )
         
-        access_key = self._GetAccessKey( registration_key )
+        access_key = self._GetAccessKey( service_key, registration_key )
         
         if service_type in HC.REPOSITORIES:
             
@@ -471,14 +471,16 @@ class DB( HydrusDB.HydrusDB ):
         return [ registration_key for ( registration_key, account_key, access_key ) in keys ]
         
     
-    def _GetAccessKey( self, registration_key ):
+    def _GetAccessKey( self, service_key, registration_key ):
+        
+        service_id = self._GetServiceId( service_key )
         
         # we generate a new access_key every time this is requested so that no one with access to the registration key can peek at the access_key before the legit user fetches it for real
         # the reg_key is deleted when the last-requested access_key is used to create a session, which calls getaccountkeyfromaccesskey
         
         registration_key_sha256 = hashlib.sha256( registration_key ).digest()
         
-        result = self._c.execute( 'SELECT 1 FROM registration_keys WHERE registration_key = ?;', ( sqlite3.Binary( registration_key_sha256 ), ) ).fetchone()
+        result = self._c.execute( 'SELECT 1 FROM registration_keys WHERE service_id = ? AND registration_key = ?;', ( service_id, sqlite3.Binary( registration_key_sha256 ) ) ).fetchone()
         
         if result is None:
             
@@ -487,7 +489,7 @@ class DB( HydrusDB.HydrusDB ):
         
         new_access_key = os.urandom( HC.HYDRUS_KEY_LENGTH )
         
-        self._c.execute( 'UPDATE registration_keys SET access_key = ? WHERE registration_key = ?;', ( sqlite3.Binary( new_access_key ), sqlite3.Binary( registration_key_sha256 ) ) )
+        self._c.execute( 'UPDATE registration_keys SET access_key = ? WHERE service_id = ? AND registration_key = ?;', ( sqlite3.Binary( new_access_key ), service_id, sqlite3.Binary( registration_key_sha256 ) ) )
         
         return new_access_key
         
@@ -500,7 +502,7 @@ class DB( HydrusDB.HydrusDB ):
         
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
         
-        return HydrusNetwork.Account( account_key, account_type, created, expires, dictionary )
+        return HydrusNetwork.Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         
     
     def _GetAccountFromAccountKey( self, service_key, account_key ):
@@ -543,9 +545,9 @@ class DB( HydrusDB.HydrusDB ):
             
             created = HydrusData.GetNow()
             
-            account = HydrusNetwork.Account.GenerateNewAccount( account_key, account_type, created, expires )
+            account = HydrusNetwork.Account( account_key, account_type, created, expires )
             
-            ( account_key, account_type, created, expires, dictionary ) = account.ToTuple()
+            ( account_key, account_type, created, expires, dictionary ) = HydrusNetwork.Account.GenerateTupleFromAccount( account )
             
             dictionary_string = dictionary.DumpToString()
             
@@ -628,7 +630,7 @@ class DB( HydrusDB.HydrusDB ):
             account_info = {}
             
         
-        account_info[ 'account' ] = subject_account.ToSerialisableTuple()
+        account_info[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( subject_account )
         
         return account_info
         
@@ -1283,7 +1285,9 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            deleted_service_hash_ids = ( service_hash_id for ( service_hash_id, ) in self._c.execute( 'SELECT service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( ( service_tag_id, service_hash_id ) for service_hash_id in service_hash_ids ) ) )
+            select_statement = 'SELECT service_hash_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ' + str( service_tag_id ) + ' AND service_hash_id IN %s;'
+            
+            deleted_service_hash_ids = ( service_hash_id for ( service_hash_id, ) in self._SelectFromList( select_statement, service_hash_ids ) )
             
             service_hash_ids = set( service_hash_ids ).difference( deleted_service_hash_ids )
             
@@ -1588,7 +1592,7 @@ class DB( HydrusDB.HydrusDB ):
         
         now = HydrusData.GetNow()
         
-        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_siblings_table_name + ' ( bad_tag_id, good_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, now ) )
+        self._c.execute( 'INSERT OR IGNORE INTO ' + deleted_tag_siblings_table_name + ' ( bad_service_tag_id, good_service_tag_id, account_id, sibling_timestamp ) VALUES ( ?, ?, ?, ? );', ( bad_service_tag_id, good_service_tag_id, account_id, now ) )
         
     
     def _RepositoryDenyFilePetition( self, service_id, service_hash_ids ):
@@ -1962,7 +1966,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
-        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._c.execute( 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' NATURAL JOIN ' + current_mappings_table_name + ' WHERE service_tag_id = ?;', ( service_id, service_tag_id ) ) ]
+        master_hash_ids = [ master_hash_id for ( master_hash_id, ) in self._c.execute( 'SELECT master_hash_id FROM ' + hash_id_map_table_name + ' NATURAL JOIN ' + current_mappings_table_name + ' WHERE service_tag_id = ?;', ( service_tag_id, ) ) ]
         
         return master_hash_ids
         
@@ -3068,7 +3072,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for account in accounts:
             
-            ( account_key, account_type, created, expires, dictionary ) = account.ToTuple()
+            ( account_key, account_type, created, expires, dictionary ) = HydrusNetwork.Account.GenerateTupleFromAccount( account )
             
             account_type_key = account_type.GetAccountTypeKey()
             

@@ -1,10 +1,12 @@
 import ClientConstants as CC
 import ClientGUICommon
+import ClientGUIDialogs
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals
+import HydrusNATPunch
 import HydrusNetwork
 import HydrusPaths
 import os
@@ -87,36 +89,7 @@ class ReviewServicePanel( wx.Panel ):
             
             service_info = self._controller.Read( 'service_info', self._service_key )
             
-            if service_type in HC.FILE_SERVICES:
-                
-                num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-                
-                self._files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size ) )
-                
-                if service_type in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
-                    
-                    num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
-                    
-                    self._deleted_files_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files' )
-                    
-                
-            elif service_type in HC.TAG_SERVICES:
-                
-                num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
-                num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
-                num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
-                
-                self._tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_files ) + ' hashes, ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' tags, totalling ' + HydrusData.ConvertIntToPrettyString( num_mappings ) + ' mappings' )
-                
-                if service_type == HC.TAG_REPOSITORY:
-                    
-                    num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
-                    
-                    self._deleted_tags_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings' )
-                    
-                
-            elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
                 
                 num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                 
@@ -510,7 +483,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._file_info_st = wx.StaticText( self )
             
             #
             
@@ -518,16 +491,14 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( self._file_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
             
         
         def _Refresh( self ):
             
-            # put this fetch on a thread, since it'll have to go to the db
-            
-            self._name_and_type.SetLabelText( 'This service has files. This box will regain its old information in a later version.' )
+            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
             
         
         def Update( self, service ):
@@ -538,6 +509,25 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._my_updater.Update()
                 
+            
+        
+        def THREADUpdateTagInfo( self ):
+            
+            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            
+            num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+            total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+            
+            text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size )
+            
+            if self._service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+                
+                num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
+                
+                text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files'
+                
+            
+            wx.CallAfter( self._file_info_st.SetLabelText, text )
             
         
     
@@ -777,7 +767,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
             self._refresh_account_button.Disable()
-            self._refresh_account_button.SetLabelText( 'fetching...' )
+            self._refresh_account_button.SetLabelText( u'fetching\u2026' )
             
             HydrusGlobals.client_controller.CallToThread( do_it )
             
@@ -805,10 +795,12 @@ class ReviewServicePanel( wx.Panel ):
             
             self._content_panel = wx.Panel( self )
             
+            self._metadata_st = wx.StaticText( self )
+            
             self._download_progress = ClientGUICommon.TextAndGauge( self )
             self._processing_progress = ClientGUICommon.TextAndGauge( self )
             
-            self._sync_now_button = ClientGUICommon.BetterButton( self, 'sync now', self._SyncNow )
+            self._sync_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncNow )
             self._pause_play_button = ClientGUICommon.BetterButton( self, 'pause', self._PausePlay )
             self._export_updates_button = ClientGUICommon.BetterButton( self, 'export updates', self._ExportUpdates )
             
@@ -824,6 +816,7 @@ class ReviewServicePanel( wx.Panel ):
             hbox.AddF( self._pause_play_button, CC.FLAGS_LONE_BUTTON )
             hbox.AddF( self._export_updates_button, CC.FLAGS_LONE_BUTTON )
             
+            self.AddF( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
@@ -909,7 +902,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     path = HydrusData.ToUnicode( dlg.GetPath() )
                     
-                    self._export_updates_button.SetLabelText( 'exporting...' )
+                    self._export_updates_button.SetLabelText( u'exporting\u2026' )
                     self._export_updates_button.Disable()
                     
                     HydrusGlobals.client_controller.CallToThread( do_it, path )
@@ -947,6 +940,8 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._pause_play_button.SetLabelText( 'pause' )
                 
+            
+            self._metadata_st.SetLabelText( self._service.GetNextUpdateDueString() )
             
             HydrusGlobals.client_controller.CallToThread( self.THREADFetchUpdateProgress )
             
@@ -1118,7 +1113,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._tag_info_st = wx.StaticText( self )
             
             #
             
@@ -1126,16 +1121,14 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
             
         
         def _Refresh( self ):
             
-            # put this fetch on a thread, since it'll have to go to the db
-            
-            self._name_and_type.SetLabelText( 'This service has tags. This box will regain its old information in a later version.' )
+            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
             
         
         def Update( self, service ):
@@ -1146,6 +1139,26 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._my_updater.Update()
                 
+            
+        
+        def THREADUpdateTagInfo( self ):
+            
+            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            
+            num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+            num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
+            num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
+            
+            text = HydrusData.ConvertIntToPrettyString( num_mappings ) + ' total mappings involving ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' different tags on ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' different files'
+            
+            if self._service.GetServiceType() == HC.TAG_REPOSITORY:
+                
+                num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
+                
+                text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings'
+                
+            
+            wx.CallAfter( self._tag_info_st.SetLabelText, text )
             
         
     

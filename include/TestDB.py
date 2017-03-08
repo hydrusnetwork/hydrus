@@ -86,11 +86,11 @@ class TestClientDB( unittest.TestCase ):
         
         self._clear_db()
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*' )
         
         self.assertEqual( result, [] )
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:*' )
         
         self.assertEqual( result, [] )
         
@@ -118,7 +118,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', add_namespaceless = True )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = True )
         
         preds = set()
         
@@ -131,7 +131,7 @@ class TestClientDB( unittest.TestCase ):
         
         # cars
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c', add_namespaceless = False )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*', add_namespaceless = False )
         
         preds = set()
         
@@ -144,13 +144,17 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'ser' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'ser*' )
         
-        self.assertEqual( result, [] )
+        preds = set()
+        
+        preds.add( ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 ) )
+        
+        self.assertEqual( set( result ), preds )
         
         #
         
-        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:c' )
+        result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'series:c*' )
         
         pred = ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'series:cars', min_current_count = 1 )
         
@@ -895,7 +899,11 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'pending', service_key )
         
-        self.assertIsInstance( result, HydrusNetwork.ClientToServerContentUpdatePackage )
+        self.assertIsInstance( result, HydrusNetwork.ClientToServerUpdate )
+        
+        self.assertTrue( result.HasContent() )
+        
+        self.assertEqual( set( result.GetHashes() ), set( hashes ) )
         
         #
         
@@ -965,7 +973,7 @@ class TestClientDB( unittest.TestCase ):
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
+        self.assertItemsEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY }, result_service_keys )
         
         #
         
@@ -1234,8 +1242,8 @@ class TestServerDB( unittest.TestCase ):
         
         r_key = r_keys[0]
         
-        access_key = self._read( 'access_key', r_key )
-        access_key_2 = self._read( 'access_key', r_key )
+        access_key = self._read( 'access_key', self._tag_service_key, r_key )
+        access_key_2 = self._read( 'access_key', self._tag_service_key, r_key )
         
         self.assertNotEqual( access_key, access_key_2 )
         
@@ -1257,7 +1265,7 @@ class TestServerDB( unittest.TestCase ):
     
     def _test_init_server_admin( self ):
         
-        result = self._read( 'init' ) # an access key
+        result = self._read( 'access_key', HC.SERVER_ADMIN_KEY, 'init' )
         
         self.assertEqual( type( result ), str )
         self.assertEqual( len( result ), 32 )

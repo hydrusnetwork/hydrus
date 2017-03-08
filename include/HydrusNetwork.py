@@ -16,7 +16,7 @@ def ConvertContentsToClientToServerContentUpdatePackage( action, contents, reaso
     hash_ids_to_hashes = {}
     hash_i = 0
     
-    content_data_dict = GetEmptyDataDict()
+    content_data_dict = HydrusData.GetEmptyDataDict()
     
     for content in contents:
         
@@ -211,12 +211,12 @@ def DumpToBodyString( args ):
     
     if 'account' in args:
         
-        args[ 'account' ] = args[ 'account' ].ToSerialisableTuple()
+        args[ 'account' ] = Account.GenerateSerialisableTupleFromAccount( args[ 'account' ] )
         
     
     if 'accounts' in args:
         
-        args[ 'accounts' ] = [ account.ToSerialisableTuple() for account in args[ 'accounts' ] ]
+        args[ 'accounts' ] = map( Account.GenerateSerialisableTupleFromAccount, args[ 'accounts' ] )
         
     
     if 'account_types' in args:
@@ -399,7 +399,17 @@ def ParseGETArgs( requests_args ):
     
 class Account( object ):
     
-    def __init__( self, account_key, account_type, created, expires, dictionary ):
+    def __init__( self, account_key, account_type, created, expires, banned_info = None, bandwidth_tracker = None ):
+        
+        if banned_info is None:
+            
+            banned_info = None # stupid, but keep it in case we change this
+            
+        
+        if bandwidth_tracker is None:
+            
+            bandwidth_tracker = HydrusNetworking.BandwidthTracker()
+            
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -409,8 +419,8 @@ class Account( object ):
         self._account_type = account_type
         self._created = created
         self._expires = expires
-        
-        self._LoadFromDictionary( dictionary )
+        self._banned_info = banned_info
+        self._bandwidth_tracker = bandwidth_tracker
         
         self._dirty = False
         
@@ -423,24 +433,6 @@ class Account( object ):
     def __str__( self ):
         
         return self.__repr__()
-        
-    
-    def _GetSerialisableDictionary( self ):
-        
-        dictionary = HydrusSerialisable.SerialisableDictionary()
-        
-        dictionary[ 'banned_info' ] = self._banned_info
-        
-        dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
-        
-        return dictionary
-        
-    
-    def _LoadFromDictionary( self, dictionary ):
-        
-        self._banned_info = dictionary[ 'banned_info' ]
-        
-        self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         
     
     def _GetBannedString( self ):
@@ -706,25 +698,11 @@ class Account( object ):
             
         
     
-    def ToSerialisableTuple( self ):
-        
-        with self._lock:
-            
-            dictionary = self._GetSerialisableDictionary()
-            
-            dictionary_string = dictionary.DumpToString()
-            
-            return ( self._account_key.encode( 'hex' ), self._account_type.ToSerialisableTuple(), self._created, self._expires, dictionary_string )
-            
-        
-    
     def ToTuple( self ):
         
         with self._lock:
             
-            dictionary = self._GetSerialisableDictionary()
-            
-            return ( self._account_key, self._account_type, self._created, self._expires, dictionary )
+            return ( self._account_key, self._account_type, self._created, self._expires, self._banned_info, self._bandwidth_tracker )
             
         
     
@@ -745,18 +723,44 @@ class Account( object ):
         account_type = AccountType.GenerateAccountTypeFromSerialisableTuple( account_type_serialisable_tuple )
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
         
-        return Account( account_key, account_type, created, expires, dictionary )
+        return Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         
     
     @staticmethod
-    def GenerateNewAccount( account_key, account_type, created, expires ):
+    def GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) ):
+        
+        banned_info = dictionary[ 'banned_info' ]
+        bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
+        
+        return Account( account_key, account_type, created, expires, banned_info, bandwidth_tracker )
+        
+    
+    @staticmethod
+    def GenerateSerialisableTupleFromAccount( account ):
+        
+        ( account_key, account_type, created, expires, dictionary ) = Account.GenerateTupleFromAccount( account )
+        
+        account_key_encoded = account_key.encode( 'hex' )
+        
+        serialisable_account_type = account_type.ToSerialisableTuple()
+        
+        dictionary_string = dictionary.DumpToString()
+        
+        return ( account_key_encoded, serialisable_account_type, created, expires, dictionary_string )
+        
+    
+    @staticmethod
+    def GenerateTupleFromAccount( account ):
+        
+        ( account_key, account_type, created, expires, banned_info, bandwidth_tracker ) = account.ToTuple()
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        dictionary[ 'banned_info' ] = None
-        dictionary[ 'bandwidth_tracker' ] = HydrusNetworking.BandwidthTracker()
+        dictionary[ 'banned_info' ] = banned_info
         
-        return Account( account_key, account_type, created, expires, dictionary )
+        dictionary[ 'bandwidth_tracker' ] = bandwidth_tracker
+        
+        return ( account_key, account_type, created, expires, dictionary )
         
     
     @staticmethod
@@ -766,7 +770,7 @@ class Account( object ):
         created = 0
         expires = None
         
-        unknown_account = Account.GenerateNewAccount( account_key, account_type, created, expires )
+        unknown_account = Account( account_key, account_type, created, expires )
         
         return unknown_account
         
@@ -998,7 +1002,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        for ( action, serialisable_contents_and_reasons ) in self._actions_to_contents_and_reasons.items():
+        for ( action, serialisable_contents_and_reasons ) in serialisable_info:
             
             contents_and_reasons = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ), reason ) for ( serialisable_content, reason ) in serialisable_contents_and_reasons ]
             
@@ -1655,6 +1659,18 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         self._update_hashes = set()
         
     
+    def _GetNextUpdateDueTime( self, from_client = False ):
+        
+        delay = 0
+        
+        if from_client:
+            
+            delay = self.CLIENT_DELAY
+            
+        
+        return self._next_update_due + delay
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_metadata = [ ( update_index, [ update_hash.encode( 'hex' ) for update_hash in update_hashes ], begin, end ) for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items() ]
@@ -1729,18 +1745,20 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNextUpdateDueTime( self, from_client = False ):
+    def GetNextUpdateDueString( self, from_client = False ):
         
         with self._lock:
             
-            delay = 0
-            
-            if from_client:
+            if self._next_update_due == 0:
                 
-                delay = self.CLIENT_DELAY
+                return 'have not yet synced metadata'
                 
-            
-            return self._next_update_due + delay
+            else:
+                
+                update_due = self._GetNextUpdateDueTime( from_client )
+                
+                return 'next update due ' + HydrusData.ConvertTimestampToPrettyPending( update_due )
+                
             
         
     
@@ -1851,14 +1869,9 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            delay = 0
+            next_update_due_time = self._GetNextUpdateDueTime( from_client )
             
-            if from_client:
-                
-                delay = self.CLIENT_DELAY
-                
-            
-            return HydrusData.TimeHasPassed( self._next_update_due + delay )
+            return HydrusData.TimeHasPassed( next_update_due_time )
             
         
     

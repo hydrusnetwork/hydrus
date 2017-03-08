@@ -54,7 +54,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._pending_queries = []
         
-        self._get_tags_if_redundant = True
+        self._get_tags_if_redundant = False
         self._file_limit = HC.options[ 'gallery_file_limit' ]
         self._gallery_paused = False
         self._files_paused = False

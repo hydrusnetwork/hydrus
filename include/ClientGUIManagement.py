@@ -16,6 +16,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIListBoxes
 import ClientGUIMedia
+import ClientGUIMenus
 import ClientGUIScrolledPanelsEdit
 import ClientGUITopLevelWindows
 import ClientImporting
@@ -76,6 +77,8 @@ def CreateManagementController( management_type, file_service_key = None ):
 def CreateManagementControllerDuplicateFilter():
     
     management_controller = CreateManagementController( MANAGEMENT_TYPE_DUPLICATE_FILTER )
+    
+    management_controller.SetKey( 'duplicate_filter_file_domain', CC.LOCAL_FILE_SERVICE_KEY )
     
     return management_controller
     
@@ -537,11 +540,21 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return ( self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
         
     
+    def _InitialiseDefaults( self ):
+        
+        if self._management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
+            
+            self._keys[ 'duplicate_filter_file_domain' ] = CC.LOCAL_FILE_SERVICE_KEY
+            
+        
+    
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( self._management_type, serialisable_keys, serialisable_simples, serialisables ) = serialisable_info
         
-        self._keys = { name : key.decode( 'hex' ) for ( name, key ) in serialisable_keys.items() }
+        self._InitialiseDefaults()
+        
+        self._keys.update( { name : key.decode( 'hex' ) for ( name, key ) in serialisable_keys.items() } )
         
         if 'file_service' in self._keys:
             
@@ -551,9 +564,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        self._simples = dict( serialisable_simples )
+        self._simples.update( dict( serialisable_simples ) )
         
-        self._serialisables = { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisables.items() }
+        self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisables.items() } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -626,6 +639,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     def SetType( self, management_type ):
         
         self._management_type = management_type
+        
+        self._InitialiseDefaults()
         
     
     def SetVariable( self, name, value ):
@@ -715,9 +730,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         menu_items.append( ( 'normal', 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
         menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
         menu_items.append( ( 'separator', 0, 0, 0 ) )
-        menu_items.append( ( 'check', 'regenerate file information in normal db maintenance', 'Tell the client to include file phash regeneration in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', 'maintain_similar_files_phashes_during_idle' ) )
-        menu_items.append( ( 'check', 'rebalance tree in normal db maintenance', 'Tell the client to balance the tree in its normal db maintenance cycles, whether you have that set to idle or shutdown time. It will not occur whille there are phashes still to regenerate.', 'maintain_similar_files_tree_during_idle' ) )
-        menu_items.append( ( 'check', 'find duplicate pairs at the current distance in normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time. It will not occur whille there are phashes still to regenerate or if the tree still needs rebalancing.', 'maintain_similar_files_duplicate_pairs_during_idle' ) )
+        menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', 'maintain_similar_files_duplicate_pairs_during_idle' ) )
         
         self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
@@ -755,6 +768,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._filtering_panel = ClientGUICommon.StaticBox( self, 'filtering' )
         
+        self._file_domain_button = ClientGUICommon.BetterButton( self._filtering_panel, 'file domain', self._FileDomainButtonHit )
         self._num_unknown_duplicates = wx.StaticText( self._filtering_panel )
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
@@ -765,6 +779,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         new_options = self._controller.GetNewOptions()
         
         self._search_distance_spinctrl.SetValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
+        
+        duplicate_filter_file_domain = management_controller.GetKey( 'duplicate_filter_file_domain' )
+        
+        self._SetFileDomain( duplicate_filter_file_domain ) # this spawns a refreshandupdatestatus
         
         #
         
@@ -801,6 +819,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
+        self._filtering_panel.AddF( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_same_file_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -820,9 +839,27 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdateDBJob, id = ID_TIMER_UPDATE )
         self._update_db_job_timer = wx.Timer( self, id = ID_TIMER_UPDATE )
         
-        #
+    
+    def _FileDomainButtonHit( self ):
         
-        self._RefreshAndUpdateStatus()
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        services = []
+        
+        services.append( services_manager.GetService( CC.LOCAL_FILE_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
+        services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        
+        menu = wx.Menu()
+        
+        for service in services:
+            
+            call = HydrusData.Call( self._SetFileDomain, service.GetServiceKey() )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Set the filtering file domain.', call )
+            
+        
+        HydrusGlobals.client_controller.PopupMenu( self._file_domain_button, menu )
         
     
     def _RebalanceTree( self ):
@@ -862,6 +899,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._StartStopDBJob()
         
     
+    def _SetFileDomain( self, service_key ):
+        
+        self._management_controller.SetKey( 'duplicate_filter_file_domain', service_key )
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        service = services_manager.GetService( service_key )
+        
+        self._file_domain_button.SetLabelText( service.GetName() )
+        
+        self._RefreshAndUpdateStatus()
+        
+    
     def _SetSearchDistance( self, value ):
         
         self._search_distance_spinctrl.SetValue( value )
@@ -871,7 +921,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _ShowSomeDupes( self ):
         
-        hashes = self._controller.Read( 'some_dupes' )
+        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        
+        hashes = self._controller.Read( 'some_dupes', duplicate_filter_file_domain )
         
         media_results = self._controller.Read( 'media_results', hashes )
         
@@ -924,6 +976,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._job_key.Cancel()
             
+        
+    
+    def _RefreshAndUpdateStatus( self ):
+        
+        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        
+        self._similar_files_maintenance_status = self._controller.Read( 'similar_files_maintenance_status', duplicate_filter_file_domain )
+        
+        self._UpdateStatus()
         
     
     def _UpdateJob( self ):
@@ -982,16 +1043,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
-    def _RefreshAndUpdateStatus( self ):
-        
-        self._similar_files_maintenance_status = self._controller.Read( 'similar_files_maintenance_status' )
-        
-        self._UpdateStatus()
-        
-    
     def _UpdateStatus( self ):
         
-        ( searched_distances_to_count, duplicate_types_to_count, num_phashes_to_regen, num_branches_to_regen ) = self._similar_files_maintenance_status
+        ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count ) = self._similar_files_maintenance_status
         
         self._cog_button.Enable()
         
