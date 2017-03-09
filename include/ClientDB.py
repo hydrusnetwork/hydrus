@@ -8221,19 +8221,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for repo_tag_service_id in repo_tag_service_ids:
                     
-                    current_mappings_table_name = 'external_mappings.current_mappings_' + str( local_tag_service_id )
+                    current_mappings_table_name = 'external_mappings.current_mappings_' + str( repo_tag_service_id )
                     
                     dirty_local_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( dirty_tag_id, ) ) ]
                     
                     deleted_mappings_ids = [ ( dirty_tag_id, dirty_local_hash_ids ) ]
                     
-                    pending_mappings_table_name = 'external_mappings.pending_mappings_' + str( local_tag_service_id )
+                    pending_mappings_table_name = 'external_mappings.pending_mappings_' + str( repo_tag_service_id )
                     
                     dirty_pending_local_hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' WHERE tag_id = ?;', ( dirty_tag_id, ) ) ]
                     
                     pending_rescinded_mappings_ids = [ ( dirty_tag_id, dirty_pending_local_hash_ids ) ]
                     
-                    self._UpdateMappings( local_tag_service_id, deleted_mappings_ids = deleted_mappings_ids, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids )
+                    self._UpdateMappings( repo_tag_service_id, deleted_mappings_ids = deleted_mappings_ids, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids )
                     
                 
             
