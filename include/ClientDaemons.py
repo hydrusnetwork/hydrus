@@ -1,33 +1,15 @@
-import ClientDownloading
-import ClientFiles
 import ClientThreading
-import collections
-import hashlib
-import httplib
-import itertools
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusImageHandling
 import HydrusNATPunch
 import HydrusPaths
 import HydrusSerialisable
-import HydrusTagArchive
-import HydrusTags
 import HydrusThreading
 import ClientConstants as CC
-import os
-import Queue
 import random
-import shutil
-import sqlite3
-import stat
-import sys
-import threading
 import time
-import traceback
 import wx
-import yaml
 
 def DAEMONCheckExportFolders( controller ):
     

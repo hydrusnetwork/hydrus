@@ -1,20 +1,5 @@
-import ClientConstants as CC
-import ClientData
 import gc
-import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
-import HydrusFileHandling
-import HydrusGlobals
-import HydrusPaths
-import HydrusSerialisable
-import itertools
 import os
-import random
-import re
-import shutil
-import stat
-import wx
 
 def GetAllPaths( raw_paths ):
     

@@ -1,6 +1,5 @@
 import ClientConstants as CC
 import ClientData
-import ClientFiles
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData

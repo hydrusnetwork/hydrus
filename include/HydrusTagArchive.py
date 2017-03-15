@@ -189,28 +189,31 @@ class HydrusTagArchive( object ):
     
     def GetHashType( self ):
         
-        try: ( hash_type, ) = self._c.execute( 'SELECT hash_type FROM hash_type;' ).fetchone()
-        except:
+        result = self._c.execute( 'SELECT hash_type FROM hash_type;' ).fetchone()
+        
+        if result is None:
             
-            try:
-                
-                ( hash, ) = self._c.execute( 'SELECT hash FROM hashes;' ).fetchone()
-                
-                if len( hash ) == 16: self.SetHashType( HASH_TYPE_MD5 )
-                elif len( hash ) == 20: self.SetHashType( HASH_TYPE_SHA1 )
-                elif len( hash ) == 32: self.SetHashType( HASH_TYPE_SHA256 )
-                elif len( hash ) == 64: self.SetHashType( HASH_TYPE_SHA512 )
-                else: raise Exception()
-                
-                return self.GetHashType()
-                
-            except TypeError:
+            result = self._c.execute( 'SELECT hash FROM hashes;' ).fetchone()
+            
+            if result is None:
                 
                 raise Exception( 'This archive has no hash type set, and as it has no files, no hash type guess can be made.' )
                 
             
-        
-        return hash_type
+            if len( hash ) == 16: self.SetHashType( HASH_TYPE_MD5 )
+            elif len( hash ) == 20: self.SetHashType( HASH_TYPE_SHA1 )
+            elif len( hash ) == 32: self.SetHashType( HASH_TYPE_SHA256 )
+            elif len( hash ) == 64: self.SetHashType( HASH_TYPE_SHA512 )
+            else: raise Exception()
+            
+            return self.GetHashType()
+            
+        else:
+            
+            ( hash_type, ) = result
+            
+            return hash_type
+            
         
     
     def GetMappings( self, hash ): return self.GetTags( hash )
@@ -244,7 +247,17 @@ class HydrusTagArchive( object ):
             
             return True
             
-        except: return False
+        except:
+            
+            return False
+            
+        
+    
+    def HasHashTypeSet( self ):
+        
+        result = self._c.execute( 'SELECT hash_type FROM hash_type;' ).fetchone()
+        
+        return result is not None
         
     
     def IterateHashes( self ):

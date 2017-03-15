@@ -306,8 +306,8 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
     
     def _threadDoGETJob( self, request ):
         
-        content_type = request.request_args[ 'content_type' ]
-        status = request.request_args[ 'status' ]
+        content_type = request.hydrus_args[ 'content_type' ]
+        status = request.hydrus_args[ 'status' ]
         
         petition = HydrusGlobals.server_controller.Read( 'petition', self._service_key, request.hydrus_account, content_type, status )
         
@@ -324,7 +324,15 @@ class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
         
         num = request.hydrus_args[ 'num' ]
         account_type_key = request.hydrus_args[ 'account_type_key' ]
-        expires = request.hydrus_args[ 'expires' ]
+        
+        if 'expires' in request.hydrus_args:
+            
+            expires = request.hydrus_args[ 'expires' ]
+            
+        else:
+            
+            expires = None
+            
         
         registration_keys = HydrusGlobals.server_controller.Read( 'registration_keys', self._service_key, request.hydrus_account, num, account_type_key, expires )
         

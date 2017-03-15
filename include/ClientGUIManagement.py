@@ -730,7 +730,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         menu_items.append( ( 'normal', 'refresh', 'This panel does not update itself when files are added or deleted elsewhere in the client. Hitting this will refresh the numbers from the database.', self._RefreshAndUpdateStatus ) )
         menu_items.append( ( 'normal', 'reset potential duplicates', 'This will delete all the potential duplicate pairs found so far and reset their files\' search status.', self._ResetUnknown ) )
         menu_items.append( ( 'separator', 0, 0, 0 ) )
-        menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', 'maintain_similar_files_duplicate_pairs_during_idle' ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
+        
+        menu_items.append( ( 'check', 'search for duplicate pairs at the current distance during normal db maintenance', 'Tell the client to find duplicate pairs in its normal db maintenance cycles, whether you have that set to idle or shutdown time.', check_manager ) )
         
         self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
@@ -1159,6 +1162,8 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
+        self._gallery_import = self._management_controller.GetVariable( 'gallery_import' )
+        
         self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'imports' )
@@ -1206,9 +1211,22 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._query_paste = wx.Button( self._pending_queries_panel, label = 'paste queries' )
         self._query_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
         
-        self._get_tags_if_redundant = wx.CheckBox( self._gallery_downloader_panel, label = 'get tags even if file is already in db' )
-        self._get_tags_if_redundant.Bind( wx.EVT_CHECKBOX, self.EventGetTagsIfRedundant )
-        self._get_tags_if_redundant.SetToolTipString( 'if off, the downloader will only fetch tags from the gallery if the file is new' )
+        menu_items = []
+        
+        invert_call = self._gallery_import.InvertGetTagsIfURLKnownAndFileRedundant
+        value_call = self._gallery_import.GetTagsIfURLKnownAndFileRedundant
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
+        
+        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (this downloader)', 'If this is selected, the client will fetch the tags from a file\'s page even if it has the file and already previously downloaded it from that location.', check_manager ) )
+        
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'get_tags_if_url_known_and_file_redundant' )
+        
+        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (default)', 'Set the default for this value.', check_manager ) )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self._gallery_downloader_panel, CC.GlobalBMPs.cog, menu_items )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
@@ -1265,7 +1283,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._gallery_downloader_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._get_tags_if_redundant, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._cog_button, CC.FLAGS_LONE_BUTTON )
         self._gallery_downloader_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1288,8 +1306,6 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._controller.sub( self, 'UpdateStatus', 'update_status' )
         
-        self._gallery_import = self._management_controller.GetVariable( 'gallery_import' )
-        
         gallery_identifier = self._gallery_import.GetGalleryIdentifier()
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
@@ -1305,12 +1321,11 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._gallery_import.SetDownloadHook( file_download_hook )
         
-        ( import_file_options, import_tag_options, get_tags_if_redundant, file_limit ) = self._gallery_import.GetOptions()
+        ( import_file_options, import_tag_options, file_limit ) = self._gallery_import.GetOptions()
         
         self._import_file_options.SetOptions( import_file_options )
         self._import_tag_options.SetOptions( import_tag_options )
         
-        self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
         self._file_limit.SetValue( file_limit )
         
         self._Update()
@@ -1478,11 +1493,6 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._gallery_import.PausePlayGallery()
         
         self._Update()
-        
-    
-    def EventGetTagsIfRedundant( self, event ):
-        
-        self._gallery_import.SetGetTagsIfRedundant( self._get_tags_if_redundant.GetValue() )
         
     
     def EventKeyDown( self, event ):
@@ -2130,21 +2140,54 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._service = self._controller.GetServicesManager().GetService( self._petition_service_key )
         self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
         
-        self._num_petitions = None
+        service_type = self._service.GetServiceType()
+        
+        self._num_petition_info = None
         self._current_petition = None
         
         #
         
         self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
         
-        self._num_petitions_text = wx.StaticText( self._petitions_info_panel )
+        self._refresh_num_petitions_button = ClientGUICommon.BetterButton( self._petitions_info_panel, 'refresh counts', self._FetchNumPetitions )
         
-        refresh_num_petitions = wx.Button( self._petitions_info_panel, label = 'refresh' )
-        refresh_num_petitions.Bind( wx.EVT_BUTTON, self.EventRefreshNumPetitions )
+        self._petition_types_to_controls = {}
         
-        self._get_petition = wx.Button( self._petitions_info_panel, label = 'get petition' )
-        self._get_petition.Bind( wx.EVT_BUTTON, self.EventGetPetition )
-        self._get_petition.Disable()
+        content_type_hboxes = []
+        
+        petition_types = []
+        
+        if service_type == HC.FILE_REPOSITORY:
+            
+            petition_types.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED ) )
+            
+        elif service_type == HC.TAG_REPOSITORY:
+            
+            petition_types.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED ) )
+            petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING ) )
+            petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED ) )
+            petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING ) )
+            petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED ) )
+            
+        
+        for ( content_type, status ) in petition_types:
+            
+            func = HydrusData.Call( self._FetchPetition, content_type, status )
+            
+            st = wx.StaticText( self._petitions_info_panel )
+            button = ClientGUICommon.BetterButton( self._petitions_info_panel, 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition', func )
+            
+            button.Disable()
+            
+            self._petition_types_to_controls[ ( content_type, status ) ] = ( st, button )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.AddF( st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+            hbox.AddF( button, CC.FLAGS_VCENTER )
+            
+            content_type_hboxes.append( hbox )
+            
         
         #
         
@@ -2154,6 +2197,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._reason_text = ClientGUICommon.SaneMultilineTextCtrl( self._petition_panel, style = wx.TE_READONLY )
         self._reason_text.SetMinSize( ( -1, 80 ) )
+        
+        check_all = ClientGUICommon.BetterButton( self._petition_panel, 'check all', self._CheckAll )
+        check_none = ClientGUICommon.BetterButton( self._petition_panel, 'check none', self._CheckNone )
         
         self._contents = wx.CheckListBox( self._petition_panel, size = ( -1, 300 ) )
         self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )
@@ -2170,17 +2216,22 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         #
         
-        num_petitions_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._petitions_info_panel.AddF( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        num_petitions_hbox.AddF( self._num_petitions_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        num_petitions_hbox.AddF( refresh_num_petitions, CC.FLAGS_VCENTER )
+        for hbox in content_type_hboxes:
+            
+            self._petitions_info_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
         
-        self._petitions_info_panel.AddF( num_petitions_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._petitions_info_panel.AddF( self._get_petition, CC.FLAGS_EXPAND_PERPENDICULAR )
+        check_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._petition_panel.AddF( wx.StaticText( self._petition_panel, label = 'Double click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        check_hbox.AddF( check_all, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        check_hbox.AddF( check_none, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        
+        self._petition_panel.AddF( wx.StaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.AddF( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.AddF( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.AddF( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.AddF( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._petition_panel.AddF( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.AddF( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2197,9 +2248,25 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        wx.CallAfter( self.EventRefreshNumPetitions, None )
+        wx.CallAfter( self._FetchNumPetitions )
         
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
+        
+    
+    def _CheckAll( self ):
+        
+        for i in range( self._contents.GetCount() ):
+            
+            self._contents.Check( i )
+            
+        
+    
+    def _CheckNone( self ):
+        
+        for i in range( self._contents.GetCount() ):
+            
+            self._contents.Check( i, False )
+            
         
     
     def _DrawCurrentPetition( self ):
@@ -2210,6 +2277,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._action_text.SetLabelText( '' )
             self._reason_text.SetValue( '' )
+            self._reason_text.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) )
             self._contents.Clear()
             self._process.Disable()
             
@@ -2228,6 +2296,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             reason = self._current_petition.GetReason()
             
             self._reason_text.SetValue( reason )
+            
+            self._reason_text.SetBackgroundColour( action_colour )
             
             contents = self._current_petition.GetContents()
             
@@ -2251,6 +2321,96 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._ShowHashes( [] )
         
     
+    def _DrawNumPetitions( self ):
+        
+        new_petition_fetched = False
+        
+        for ( content_type, status, count ) in self._num_petition_info:
+            
+            petition_type = ( content_type, status )
+            
+            if petition_type in self._petition_types_to_controls:
+                
+                ( st, button ) = self._petition_types_to_controls[ petition_type ]
+                
+                st.SetLabelText( HydrusData.ConvertIntToPrettyString( count ) + ' petitions' )
+                
+                if count > 0:
+                    
+                    button.Enable()
+                    
+                    if self._current_petition is None and not new_petition_fetched:
+                        
+                        self._FetchPetition( content_type, status )
+                        
+                        new_petition_fetched = True
+                        
+                    
+                else:
+                    
+                    button.Disable()
+                    
+                
+            
+        
+    
+    def _FetchNumPetitions( self ):
+        
+        def do_it():
+            
+            try:
+                
+                response = self._service.Request( HC.GET, 'num_petitions' )
+                
+                self._num_petition_info = response[ 'num_petitions' ]
+                
+                wx.CallAfter( self._DrawNumPetitions )
+                
+            finally:
+                
+                self._refresh_num_petitions_button.SetLabelText( 'refresh counts' )
+                
+            
+        
+        self._refresh_num_petitions_button.SetLabelText( u'Fetching\u2026' )
+        
+        self._controller.CallToThread( do_it )
+        
+    
+    def _FetchPetition( self, content_type, status ):
+        
+        ( st, button ) = self._petition_types_to_controls[ ( content_type, status ) ]
+        
+        def do_it():
+            
+            try:
+                
+                response = self._service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
+                
+                self._current_petition = response[ 'petition' ]
+                
+                wx.CallAfter( self._DrawCurrentPetition )
+                
+            finally:
+                
+                wx.CallAfter( button.Enable )
+                wx.CallAfter( button.SetLabelText, 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition' )
+                
+            
+        
+        if self._current_petition is not None:
+            
+            self._current_petition = None
+            
+            self._DrawCurrentPetition()
+            
+        
+        button.Disable()
+        button.SetLabelText( u'Fetching\u2026' )
+        
+        self._controller.CallToThread( do_it )
+        
+    
     def _ShowHashes( self, hashes ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
@@ -2264,14 +2424,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         panel.Sort( self._page_key, self._sort_by.GetChoice() )
         
         self._controller.pub( 'swap_media_panel', self._page_key, panel )
-        
-    
-    def _DrawNumPetitions( self ):
-        
-        self._num_petitions_text.SetLabelText( HydrusData.ConvertIntToPrettyString( self._num_petitions ) + ' petitions' )
-        
-        if self._num_petitions > 0: self._get_petition.Enable()
-        else: self._get_petition.Disable()
         
     
     def EventContentDoubleClick( self, event ):
@@ -2291,6 +2443,81 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventProcess( self, event ):
         
+        def do_it( approved_contents, denied_contents, petition ):
+            
+            try:
+                
+                num_done = 0
+                num_to_do = len( approved_contents ) + len( denied_contents )
+                
+                if num_to_do > 1:
+                    
+                    job_key = ClientThreading.JobKey( cancellable = True )
+                    
+                    job_key.SetVariable( 'popup_title', 'comitting petitions' )
+                    
+                    HydrusGlobals.client_controller.pub( 'message', job_key )
+                    
+                else:
+                    
+                    job_key = None
+                    
+                
+                for content in approved_contents:
+                    
+                    if job_key is not None:
+                        
+                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                        
+                        if should_quit:
+                            
+                            return
+                            
+                        
+                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                        
+                    
+                    ( update, content_update ) = petition.GetApproval( content )
+                    
+                    self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                    
+                    self._controller.Write( 'content_updates', { self._petition_service_key : [ content_update ] } )
+                    
+                    num_done += 1
+                    
+                
+                for content in denied_contents:
+                    
+                    if job_key is not None:
+                        
+                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                        
+                        if should_quit:
+                            
+                            return
+                            
+                        
+                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                        
+                    
+                    update = petition.GetDenial( content )
+                    
+                    self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                    
+                    num_done += 1
+                    
+                
+            finally:
+                
+                if job_key is not None:
+                    
+                    job_key.Delete()
+                    
+                
+                wx.CallAfter( self._FetchNumPetitions )
+                
+            
+        
         approved_contents = []
         denied_contents = []
         
@@ -2308,93 +2535,21 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        if len( approved_contents ) > 0:
-            
-            for chunk_of_approved_contents in HydrusData.SplitListIntoChunks( approved_contents, 10 ):
-                
-                update = self._current_petition.GetApproval( chunk_of_approved_contents )
-                
-                self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-                
-                self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
-                
-            
-        
-        if len( denied_contents ) > 0:
-            
-            for chunk_of_denied_contents in HydrusData.SplitListIntoChunks( denied_contents, 10 ):
-                
-                update = self._current_petition.GetDenial( chunk_of_denied_contents )
-                
-                self._service.Request( HC.POST, 'content_update_package', { 'update' : update } )
-                
-                self._controller.Write( 'content_updates', { self._petition_service_key : update.GetContentUpdates( for_client = True ) } )
-                
-            
+        HydrusGlobals.client_controller.CallToThread( do_it, approved_contents, denied_contents, self._current_petition )
         
         self._current_petition = None
         
         self._DrawCurrentPetition()
-        
-        self.EventRefreshNumPetitions( event )
-        
-    
-    def EventGetPetition( self, event ):
-        
-        return
-        
-        def do_it():
-            
-            self._current_petition = self._service.Request( HC.GET, 'petition' )
-            
-            wx.CallAfter( self._DrawCurrentPetition )
-            
-        
-        self._current_petition = None
-        
-        self._DrawCurrentPetition()
-        
-        self._controller.CallToThread( do_it )
         
     
     def EventModifyPetitioner( self, event ):
         
-        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerIdentifier(), ) ) as dlg:
+        wx.MessageBox( 'modify users does not work yet!' )
+        
+        with ClientGUIDialogs.DialogModifyAccounts( self, self._petition_service_key, ( self._current_petition.GetPetitionerAccount(), ) ) as dlg:
             
             dlg.ShowModal()
             
-        
-    
-    def EventRefreshNumPetitions( self, event ):
-        
-        return
-        
-        def do_it():
-            
-            try:
-                
-                response = self._service.Request( HC.GET, 'num_petitions' )
-                
-                self._num_petitions = response[ 'num_petitions' ]
-                
-                wx.CallAfter( self._DrawNumPetitions )
-                
-                if self._num_petitions > 0 and self._current_petition is None:
-                    
-                    wx.CallAfter( self.EventGetPetition, None )
-                    
-                
-            except Exception as e:
-                
-                wx.CallAfter( self._num_petitions_text.SetLabel, 'Error' )
-                
-                raise
-                
-            
-        
-        self._num_petitions_text.SetLabelText( u'Fetching\u2026' )
-        
-        self._controller.CallToThread( do_it )
         
     
     def RefreshQuery( self, page_key ):

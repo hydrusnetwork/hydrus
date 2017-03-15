@@ -1,26 +1,17 @@
 import bs4
 import ClientNetworking
-import collections
-import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusPaths
 import HydrusSerialisable
-import HydrusThreading
 import json
 import lxml # to force import for later bs4 stuff
 import os
 import pafy
 import re
-import requests
-import sys
 import threading
-import time
-import traceback
 import urllib
 import urlparse
-import wx
-import HydrusTags
 import HydrusData
 import ClientConstants as CC
 import HydrusGlobals

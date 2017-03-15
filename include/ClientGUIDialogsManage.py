@@ -3449,7 +3449,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and '' for all unnamespaced tags. You may have to refresh your current queries to see any changes."
+        intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and the empty string (just hit enter with no text added) for all unnamespaced tags. You will have to refresh your current queries to see any changes."
         
         st = wx.StaticText( self, label = intro )
         

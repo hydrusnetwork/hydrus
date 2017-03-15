@@ -63,6 +63,20 @@ def AppendMenuLabel( menu, label, description = None ):
     
     return menu_item
     
+def AppendSeparator( menu ):
+    
+    num_items = menu.GetMenuItemCount()
+    
+    if num_items > 0:
+        
+        last_item = menu.FindItemByPosition( num_items - 1 )
+        
+        if not last_item.IsSeparator():
+            
+            menu.AppendSeparator()
+            
+        
+    
 def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
     event_callable = GetEventCallable( callable, *args, **kwargs )

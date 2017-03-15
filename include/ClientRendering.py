@@ -9,6 +9,7 @@ import HydrusGlobals
 import HydrusThreading
 import HydrusVideoHandling
 import lz4
+import os
 import threading
 import time
 import wx
@@ -195,6 +196,17 @@ class RasterContainerVideo( RasterContainer ):
         
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
+        
+        if num_frames is None or num_frames == 0:
+            
+            message = 'The file with hash ' + media.GetHash().encode( 'hex' ) + ', had an invalid number of frames.'
+            message += os.linesep * 2
+            message += 'You may wish to try exporting, deleting, and the reimporting it.'
+            
+            HydrusData.ShowText( message )
+            
+            num_frames = 1
+            
         
         self._average_frame_duration = float( duration ) / num_frames
         

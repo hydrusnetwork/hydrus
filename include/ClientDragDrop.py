@@ -1,5 +1,3 @@
-import ClientFiles
-import json
 import wx
 
 class FileDropTarget( wx.PyDropTarget ):

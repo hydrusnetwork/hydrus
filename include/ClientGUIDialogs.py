@@ -806,9 +806,9 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._account_types.Select( 0 )
         
-        for ( str, value ) in HC.lifetimes:
+        for ( s, value ) in HC.lifetimes:
             
-            self._lifetime.Append( str, value )
+            self._lifetime.Append( s, value )
             
         
         self._lifetime.SetSelection( 3 ) # one year
@@ -864,7 +864,12 @@ class DialogGenerateNewAccounts( Dialog ):
         
         try:
             
-            request_args = { 'num' : num, 'account_type_key' : account_type_key, 'expires' : expires }
+            request_args = { 'num' : num, 'account_type_key' : account_type_key }
+            
+            if expires is not None:
+                
+                request_args[ 'expires' ] = expires
+                
             
             response = service.Request( HC.GET, 'registration_keys', request_args )
             
@@ -1999,7 +2004,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        intro = 'Put the namespace (e.g. page) on the left.' + os.linesep + 'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + 'All files will be tagged with "namespace:regex".'
+        intro = r'Put the namespace (e.g. page) on the left.' + os.linesep + r'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + r'All files will be tagged with "namespace:regex".'
         
         vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2991,6 +2996,12 @@ class DialogPathsToTags( Dialog ):
             tags.extend( self._advanced_panel.GetTags( index, path ) )
             
             tags = HydrusTags.CleanTags( tags )
+            
+            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+            
+            tags = siblings_manager.CollapseTags( self._service_key, tags )
+            tags = parents_manager.ExpandTags( self._service_key, tags )
             
             tags = list( tags )
             

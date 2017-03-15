@@ -2,6 +2,7 @@ import ClientCaches
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
@@ -367,7 +368,7 @@ class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seeds' ), 'copy sources' )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_seed_notes' ), 'copy notes' )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_unknown' ), 'try again' )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_skipped' ), 'skip' )

@@ -1,32 +1,23 @@
 import ClientConstants as CC
 import ClientDefaults
 import ClientDownloading
-import ClientFiles
-import ClientNetworking
 import ClientThreading
 import collections
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
-import HydrusFileHandling
+import HydrusGlobals
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
 import threading
 import traceback
 import os
-import random
-import requests
-import shutil
 import sqlite3
-import stat
 import sys
 import time
-import urllib
 import wx
 import yaml
-import HydrusData
-import HydrusGlobals
-import HydrusThreading
 
 def AddPaddingToDimensions( dimensions, padding ):
     
@@ -556,6 +547,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'get_tags_if_url_known_and_file_redundant' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
@@ -1464,11 +1457,11 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         return service_keys_to_content_updates
         
     
-    def ShouldFetchTags( self ):
+    def InterestedInTags( self ):
         
-        i_am_interested_in_namespaces = len( self._service_keys_to_namespaces ) > 0
+        i_am_interested = len( self._service_keys_to_namespaces ) > 0
         
-        return i_am_interested_in_namespaces
+        return i_am_interested
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions

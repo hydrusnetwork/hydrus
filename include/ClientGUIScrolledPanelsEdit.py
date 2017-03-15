@@ -737,7 +737,22 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
         
-        self._get_tags_if_redundant = wx.CheckBox( self._options_panel )
+        menu_items = []
+        
+        invert_call = self._InvertGetTagsIfURLKnownAndFileRedundant
+        value_call = self._GetTagsIfURLKnownAndFileRedundant
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
+        
+        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (this downloader)', 'If this is selected, the client will fetch the tags from a file\'s page even if it has the file and already previously downloaded it from that location.', check_manager ) )
+        
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'get_tags_if_url_known_and_file_redundant' )
+        
+        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (default)', 'Set the default for this value.', check_manager ) )
+        
+        cog_button = ClientGUICommon.MenuBitmapButton( self._options_panel, CC.GlobalBMPs.cog, menu_items )
         
         self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
         self._initial_file_limit.SetToolTipString( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
@@ -769,7 +784,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
         
         self._name.SetValue( name )
         
@@ -797,7 +812,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._period.SetValue( period )
         
-        self._get_tags_if_redundant.SetValue( get_tags_if_redundant )
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
@@ -844,12 +858,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'get tags even if new file is already in db: ', self._get_tags_if_redundant ) )
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
+        self._options_panel.AddF( cog_button, CC.FLAGS_LONE_BUTTON )
         self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -919,6 +933,16 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return gallery_identifier
+        
+    
+    def _GetTagsIfURLKnownAndFileRedundant( self ):
+        
+        return self._get_tags_if_url_known_and_file_redundant
+        
+    
+    def _InvertGetTagsIfURLKnownAndFileRedundant( self ):
+        
+        self._get_tags_if_url_known_and_file_redundant = not self._get_tags_if_url_known_and_file_redundant
         
     
     def _UpdateCommandButtons( self ):
@@ -1090,7 +1114,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         period = self._period.GetValue()
         
-        get_tags_if_redundant = self._get_tags_if_redundant.GetValue()
         initial_file_limit = self._initial_file_limit.GetValue()
         periodic_file_limit = self._periodic_file_limit.GetValue()
         
@@ -1100,7 +1123,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_tag_options = self._import_tag_options.GetOptions()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
         return subscription
         

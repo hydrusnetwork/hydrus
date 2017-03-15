@@ -1,6 +1,5 @@
 import ClientDefaults
 import ClientDownloading
-import ClientFiles
 import ClientNetworking
 import ClientRendering
 import ClientSearch
@@ -8,16 +7,13 @@ import ClientThreading
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
-import HydrusImageHandling
 import HydrusPaths
 import HydrusSessions
 import itertools
 import json
 import os
 import random
-import Queue
 import requests
-import shutil
 import threading
 import time
 import urllib

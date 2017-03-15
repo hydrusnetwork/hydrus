@@ -6,7 +6,6 @@ import ClientGUIMenus
 import ClientNetworking
 import ClientThreading
 import hashlib
-import httplib
 import HydrusConstants as HC
 import HydrusController
 import HydrusData
@@ -14,8 +13,6 @@ import HydrusExceptions
 import HydrusGlobals
 import HydrusNetworking
 import HydrusSerialisable
-import HydrusSessions
-import HydrusTags
 import HydrusThreading
 import HydrusVideoHandling
 import ClientConstants as CC
@@ -24,10 +21,6 @@ import ClientGUI
 import ClientGUIDialogs
 import os
 import psutil
-import random
-import sqlite3
-import subprocess
-import sys
 import threading
 import time
 import traceback
@@ -687,7 +680,7 @@ class Controller( HydrusController.HydrusController ):
                 disk_cache_stop_time = HydrusData.GetNow() + 6
                 
             
-            loaded_into_disk_cache = HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+            HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
         if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):

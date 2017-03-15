@@ -269,7 +269,14 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
         
         for ( key, value ) in self.items():
             
-            encoded_key = key.encode( 'hex' )
+            if isinstance( key, int ):
+                
+                encoded_key = key
+                
+            else:
+                
+                encoded_key = key.encode( 'hex' )
+                
             
             if isinstance( value, ( list, tuple, set ) ):
                 
@@ -290,7 +297,14 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
         
         for ( encoded_key, encoded_value ) in serialisable_info:
             
-            key = encoded_key.decode( 'hex' )
+            if isinstance( encoded_key, int ):
+                
+                key = encoded_key
+                
+            else:
+                
+                key = encoded_key.decode( 'hex' )
+                
             
             if isinstance( encoded_value, ( list, tuple, set ) ):
                 

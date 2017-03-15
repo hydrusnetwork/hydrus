@@ -311,11 +311,11 @@ class HydrusDB( object ):
         
         if unique:
             
-            create_phrase = 'CREATE UNIQUE INDEX '
+            create_phrase = 'CREATE UNIQUE INDEX IF NOT EXISTS '
             
         else:
             
-            create_phrase = 'CREATE INDEX '
+            create_phrase = 'CREATE INDEX IF NOT EXISTS '
             
         
         on_phrase = ' ON ' + table_name_simple + ' (' + ', '.join( columns ) + ');'
@@ -565,6 +565,13 @@ class HydrusDB( object ):
     def _SelectFromListFetchAll( self, select_statement, xs ):
         
         return [ row for row in self._SelectFromList( select_statement, xs ) ]
+        
+    
+    def _STI( self, iterable_cursor ):
+        
+        # strip singleton tuples to an iterator
+        
+        return ( item for ( item, ) in iterable_cursor )
         
     
     def _STL( self, iterable_cursor ):

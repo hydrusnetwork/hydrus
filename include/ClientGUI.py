@@ -1,9 +1,6 @@
-import httplib
 import HydrusConstants as HC
 import ClientConstants as CC
 import ClientCaches
-import ClientFiles
-import ClientData
 import ClientDragDrop
 import ClientExporting
 import ClientGUICommon
@@ -28,21 +25,15 @@ import gc
 import hashlib
 import HydrusData
 import HydrusExceptions
-import HydrusFileHandling
 import HydrusPaths
 import HydrusGlobals
-import HydrusImageHandling
-import HydrusNATPunch
 import HydrusNetwork
 import HydrusNetworking
 import HydrusSerialisable
 import HydrusTagArchive
-import HydrusThreading
 import HydrusVideoHandling
-import itertools
 import os
 import PIL
-import random
 import sqlite3
 import ssl
 import subprocess
@@ -53,7 +44,6 @@ import traceback
 import types
 import webbrowser
 import wx
-import yaml
 
 # Sizer Flags
 
@@ -116,7 +106,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NewPageImportURLs', 'new_page_import_urls' )
         self._controller.sub( self, 'NewPagePetitions', 'new_page_petitions' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
-        self._controller.sub( self, 'NewPageThreadDumper', 'new_thread_dumper' )
         self._controller.sub( self, 'NewSimilarTo', 'new_similar_to' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
@@ -897,11 +886,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         def file():
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'import files', 'Add new files to the database.', self._ImportFiles )
-            menu.AppendSeparator()
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             open = wx.Menu()
             
@@ -911,11 +902,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, open, 'open' )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'options', 'Change how the client operates.', self._ManageOptions )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             we_borked_linux_pyinstaller = HC.PLATFORM_LINUX and not HC.RUNNING_FROM_SOURCE
             
@@ -946,28 +937,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 show = True
                 
-                did_undo_stuff = False
-                
                 if undo_string is not None:
-                    
-                    did_undo_stuff = True
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, undo_string, 'Undo last operation.', self._controller.pub, 'undo' )
                     
                 
                 if redo_string is not None:
                     
-                    did_undo_stuff = True
-                    
                     ClientGUIMenus.AppendMenuItem( self, menu, redo_string, 'Redo last operation.', self._controller.pub, 'redo' )
                     
                 
                 if have_closed_pages:
                     
-                    if did_undo_stuff:
-                        
-                        menu.AppendSeparator()
-                        
+                    ClientGUIMenus.AppendSeparator( menu )
                     
                     undo_pages = wx.Menu()
                     
@@ -1008,7 +990,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
             ClientGUIMenus.AppendMenuItem( self, menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self._ShowHideSplitters )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             gui_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
@@ -1045,7 +1027,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, sessions, 'sessions' )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self._ChooseNewPage )
             
@@ -1071,7 +1053,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._NewPageQuery, service.GetServiceKey() )
                 
             
-            search_menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( search_menu )
             
             ClientGUIMenus.AppendMenuItem( self, search_menu, 'duplicates (under construction!)', 'Open a new tab to discover and filter duplicate files.', self._NewPageDuplicateFilter )
             
@@ -1152,12 +1134,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'create a database backup', 'Back the database up to an external location.', self._controller.BackupDatabase )
             ClientGUIMenus.AppendMenuItem( self, menu, 'restore a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             submenu = wx.Menu()
             
@@ -1272,7 +1254,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
@@ -1317,7 +1299,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if can_overrule_account_types:
                         
-                        submenu.AppendSeparator()
+                        ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
                         
@@ -1348,7 +1330,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if can_overrule_account_types:
                         
-                        submenu.AppendSeparator()
+                        ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( self, submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._ManageAccountTypes, service_key )
                         
@@ -1357,7 +1339,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if can_overrule_services:
                         
-                        submenu.AppendSeparator()
+                        ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( self, submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
                         ClientGUIMenus.AppendMenuItem( self, submenu, 'make a backup', 'Command the server to temporarily pause and back up its database.', self._BackupService, service_key )
@@ -1369,27 +1351,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
                 
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag censorship', 'Set which tags you want to see from which services.', self._ManageTagCensorship )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
             
-            menu.AppendSeparator()
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
             
@@ -3117,19 +3099,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._NewPageQuery( service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
         
     
-    def NewPageThreadDumper( self, hashes ):
-        
-        with ClientGUIDialogs.DialogSelectImageboard( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                imageboard = dlg.GetImageboard()
-                
-                pass
-                
-            
-        
-    
     def NewSimilarTo( self, file_service_key, hash, hamming_distance ):
         
         initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
@@ -3326,8 +3295,7 @@ class FrameSplash( wx.Frame ):
         self.Show( True )
         
         self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
-        self._controller.sub( self, 'SetStatusText', 'splash_set_status_text' )
-        self._controller.sub( self, 'SetStatusTextNoLog', 'splash_set_status_text_no_log' )
+        self._controller.sub( self, 'SetText', 'splash_set_status_text' )
         self._controller.sub( self, 'Destroy', 'splash_destroy' )
         
         self.Raise()
@@ -3415,7 +3383,7 @@ class FrameSplash( wx.Frame ):
             
         
     
-    def SetStatusText( self, text, print_to_log = True ):
+    def SetText( self, text, print_to_log = True ):
         
         if print_to_log:
             

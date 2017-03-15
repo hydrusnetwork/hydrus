@@ -54,14 +54,15 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._pending_queries = []
         
-        self._get_tags_if_redundant = False
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        self._get_tags_if_url_known_and_file_redundant = new_options.GetBoolean( 'get_tags_if_url_known_and_file_redundant' )
+        
         self._file_limit = HC.options[ 'gallery_file_limit' ]
         self._gallery_paused = False
         self._files_paused = False
         
         self._import_file_options = ClientDefaults.GetDefaultImportFileOptions()
-        
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
         
         self._import_tag_options = new_options.GetDefaultImportTagOptions( self._gallery_identifier )
         
@@ -100,12 +101,12 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_current_query_stuff = ( self._current_query, self._current_query_num_urls, serialisable_current_gallery_stream_identifier, self._current_gallery_stream_identifier_page_index, serialisable_current_gallery_stream_identifier_found_urls, serialisable_pending_gallery_stream_identifiers )
         
-        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._get_tags_if_redundant, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_seed_cache )
+        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._get_tags_if_url_known_and_file_redundant, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_seed_cache )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._get_tags_if_redundant, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_seed_cache ) = serialisable_info
+        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._get_tags_if_url_known_and_file_redundant, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_seed_cache ) = serialisable_info
         
         ( self._current_query, self._current_query_num_urls, serialisable_current_gallery_stream_identifier, self._current_gallery_stream_identifier_page_index, serialisable_current_gallery_stream_identifier_found_urls, serialisable_pending_gallery_stream_identifier ) = serialisable_current_query_stuff
         
@@ -182,13 +183,13 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            tags = []
+            downloaded_tags = []
             
             if status == CC.STATUS_REDUNDANT:
                 
-                if self._get_tags_if_redundant and self._import_tag_options.ShouldFetchTags():
+                if self._get_tags_if_url_known_and_file_redundant and self._import_tag_options.InterestedInTags():
                     
-                    tags = gallery.GetTags( url, report_hooks = [ self._file_download_hook ] )
+                    downloaded_tags = gallery.GetTags( url, report_hooks = [ self._file_download_hook ] )
                     
                 else:
                     
@@ -203,9 +204,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                     # status: x_out_of_y + 'downloading file'
                     
-                    if self._import_tag_options.ShouldFetchTags():
+                    if self._import_tag_options.InterestedInTags():
                         
-                        tags = gallery.GetFileAndTags( temp_path, url, report_hooks = [ self._file_download_hook ] )
+                        downloaded_tags = gallery.GetFileAndTags( temp_path, url, report_hooks = [ self._file_download_hook ] )
                         
                     else:
                         
@@ -230,7 +231,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
-                service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, tags )
+                service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, downloaded_tags )
                 
                 if len( service_keys_to_content_updates ) > 0:
                     
@@ -503,7 +504,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._import_file_options, self._import_tag_options, self._get_tags_if_redundant, self._file_limit )
+            return ( self._import_file_options, self._import_tag_options, self._file_limit )
             
         
     
@@ -519,6 +520,22 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             cancellable = self._current_query is not None
             
             return ( list( self._pending_queries ), self._gallery_status, self._seed_cache_status, self._files_paused, self._gallery_paused, cancellable )
+            
+        
+    
+    def GetTagsIfURLKnownAndFileRedundant( self ):
+        
+        with self._lock:
+            
+            return self._get_tags_if_url_known_and_file_redundant
+            
+        
+    
+    def InvertGetTagsIfURLKnownAndFileRedundant( self ):
+        
+        with self._lock:
+            
+            self._get_tags_if_url_known_and_file_redundant = not self._get_tags_if_url_known_and_file_redundant
             
         
     
@@ -562,14 +579,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._file_limit = file_limit
-            
-        
-    
-    def SetGetTagsIfRedundant( self, get_tags_if_redundant ):
-        
-        with self._lock:
-            
-            self._get_tags_if_redundant = get_tags_if_redundant
             
         
     
@@ -1126,7 +1135,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                                 
-                                service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, set() )
+                                downloaded_tags = []
+                                
+                                service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, downloaded_tags ) # explicit tags
                                 
                                 if len( service_keys_to_content_updates ) > 0:
                                     
@@ -2056,9 +2067,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( self._gallery_identifier )
         
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
         self._query = search_value
         self._period = 86400 * 7
-        self._get_tags_if_redundant = False
+        self._get_tags_if_url_known_and_file_redundant = new_options.GetBoolean( 'get_tags_if_url_known_and_file_redundant' )
         
         if HC.options[ 'gallery_file_limit' ] is None:
             
@@ -2102,12 +2115,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
-        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache )
+        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_url_known_and_file_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache ) = serialisable_info
+        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, self._query, self._period, self._get_tags_if_url_known_and_file_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._last_checked, self._check_now, self._last_error, serialisable_seed_cache ) = serialisable_info
         
         self._gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
         self._gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_stream_identifier ) for serialisable_gallery_stream_identifier in serialisable_gallery_stream_identifiers ]
@@ -2125,11 +2138,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if version == 1:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, last_error, serialisable_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, last_error, serialisable_seed_cache ) = old_serialisable_info
             
             check_now = False
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, serialisable_seed_cache )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, serialisable_seed_cache )
             
             return ( 2, new_serialisable_info )
             
@@ -2190,15 +2203,15 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                tags = []
+                downloaded_tags = []
                 
                 if status == CC.STATUS_REDUNDANT:
                     
-                    if self._get_tags_if_redundant and self._import_tag_options.ShouldFetchTags():
+                    if self._get_tags_if_url_known_and_file_redundant and self._import_tag_options.InterestedInTags():
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'found file in db, fetching tags' )
                         
-                        tags = gallery.GetTags( url, report_hooks = [ hook ] )
+                        downloaded_tags = gallery.GetTags( url, report_hooks = [ hook ] )
                         
                     else:
                         
@@ -2213,9 +2226,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'downloading file' )
                         
-                        if self._import_tag_options.ShouldFetchTags():
+                        if self._import_tag_options.InterestedInTags():
                             
-                            tags = gallery.GetFileAndTags( temp_path, url, report_hooks = [ hook ] )
+                            downloaded_tags = gallery.GetFileAndTags( temp_path, url, report_hooks = [ hook ] )
                             
                         else:
                             
@@ -2257,7 +2270,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if hash is not None:
                     
-                    service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, tags )
+                    service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, downloaded_tags )
                     
                     if len( service_keys_to_content_updates ) > 0:
                         
@@ -2494,13 +2507,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._seed_cache = SeedCache()
         
     
-    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ):
+    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ):
         
         self._gallery_identifier = gallery_identifier
         self._gallery_stream_identifiers = gallery_stream_identifiers
         self._query = query
         self._period = period
-        self._get_tags_if_redundant = get_tags_if_redundant
+        self._get_tags_if_url_known_and_file_redundant = get_tags_if_url_known_and_file_redundant
         self._initial_file_limit = initial_file_limit
         self._periodic_file_limit = periodic_file_limit
         self._paused = paused
@@ -2575,7 +2588,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._import_file_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        return ( self._name, self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_url_known_and_file_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._import_file_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
@@ -2671,7 +2684,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             file_original_filename = self._urls_to_filenames[ file_url ]
             
-            tags = [ 'filename:' + file_original_filename ]
+            downloaded_tags = [ 'filename:' + file_original_filename ]
             
             # we now do both url and md5 tests here because cloudflare was sometimes giving optimised versions of images, meaning the api's md5 was unreliable
             # if someone set up a thread watcher of a thread they had previously watched, any optimised images would be redownloaded
@@ -2736,7 +2749,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
-                    service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, tags )
+                    service_keys_to_content_updates = self._import_tag_options.GetServiceKeysToContentUpdates( hash, downloaded_tags )
                     
                 
                 if len( service_keys_to_content_updates ) > 0:

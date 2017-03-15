@@ -1,14 +1,14 @@
-import collections
-import HydrusConstants as HC
 import ClientCaches
 import ClientData
 import ClientConstants as CC
 import ClientGUIMenus
 import ClientRatings
 import ClientThreading
-import itertools
+import HydrusConstants as HC
+import HydrusData
+import HydrusExceptions
+import HydrusGlobals
 import os
-import random
 import sys
 import threading
 import time
@@ -19,10 +19,6 @@ import wx.richtext
 import wx.lib.newevent
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
-import HydrusTags
-import HydrusData
-import HydrusExceptions
-import HydrusGlobals
 
 TEXT_CUTOFF = 1024
 
@@ -655,17 +651,17 @@ class ExportPatternButton( wx.Button ):
         
         menu.Append( -1, 'click on a phrase to copy to clipboard' )
         
-        menu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( menu )
         
         menu.Append( self.ID_HASH, 'the file\'s hash - {hash}' )
         menu.Append( self.ID_TAGS, 'all the file\'s tags - {tags}' )
         menu.Append( self.ID_NN_TAGS, 'all the file\'s non-namespaced tags - {nn tags}' )
         
-        menu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( menu )
         
         menu.Append( self.ID_NAMESPACE, u'all instances of a particular namespace - [\u2026]' )
         
-        menu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( menu )
         
         menu.Append( self.ID_TAG, u'a particular tag, if the file has it - (\u2026)' )
         
@@ -1207,6 +1203,61 @@ class ListCtrlAutoWidth( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         for index in indices: self.DeleteItem( index )
         
     
+class CheckboxManager( object ):
+    
+    def GetCurrentValue( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def Invert( self ):
+        
+        raise NotImplementedError()
+        
+    
+class CheckboxManagerCalls( CheckboxManager ):
+    
+    def __init__( self, invert_call, value_call ):
+        
+        CheckboxManager.__init__( self )
+        
+        self._invert_call = invert_call
+        self._value_call = value_call
+        
+    
+    def GetCurrentValue( self ):
+        
+        return self._value_call()
+        
+    
+    def Invert( self ):
+        
+        self._invert_call()
+        
+    
+class CheckboxManagerOptions( CheckboxManager ):
+    
+    def __init__( self, boolean_name ):
+        
+        CheckboxManager.__init__( self )
+        
+        self._boolean_name = boolean_name
+        
+    
+    def GetCurrentValue( self ):
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        return new_options.GetBoolean( self._boolean_name )
+        
+    
+    def Invert( self ):
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        new_options.InvertBoolean( self._boolean_name )
+        
+    
 class MenuBitmapButton( BetterBitmapButton ):
     
     def __init__( self, parent, bitmap, menu_items ):
@@ -1214,13 +1265,6 @@ class MenuBitmapButton( BetterBitmapButton ):
         BetterBitmapButton.__init__( self, parent, bitmap, self.DoMenu )
         
         self._menu_items = menu_items
-        
-    
-    def _DoBooloanCheck( self, boolean_name ):
-        
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
-        
-        new_options.InvertBoolean( boolean_name )
         
     
     def DoMenu( self ):
@@ -1231,23 +1275,22 @@ class MenuBitmapButton( BetterBitmapButton ):
             
             if item_type == 'normal':
                 
-                callable = data
+                func = data
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, title, description, callable )
+                ClientGUIMenus.AppendMenuItem( self, menu, title, description, func )
                 
             elif item_type == 'check':
                 
-                new_options = HydrusGlobals.client_controller.GetNewOptions()
+                check_manager = data
                 
-                boolean_name = data
+                current_value = check_manager.GetCurrentValue()
+                func = check_manager.Invert
                 
-                initial_value = new_options.GetBoolean( boolean_name )
-                
-                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, initial_value, self._DoBooloanCheck, boolean_name )
+                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
                 
             elif item_type == 'separator':
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
             
         
@@ -1263,13 +1306,6 @@ class MenuButton( BetterButton ):
         self._menu_items = menu_items
         
     
-    def _DoBooloanCheck( self, boolean_name ):
-        
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
-        
-        new_options.InvertBoolean( boolean_name )
-        
-    
     def DoMenu( self ):
         
         menu = wx.Menu()
@@ -1284,17 +1320,15 @@ class MenuButton( BetterButton ):
                 
             elif item_type == 'check':
                 
-                new_options = HydrusGlobals.client_controller.GetNewOptions()
+                check_manager = data
                 
-                boolean_name = data
+                initial_value = check_manager.GetInitialValue()
                 
-                initial_value = new_options.GetBoolean( boolean_name )
-                
-                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, initial_value, self._DoBooloanCheck, boolean_name )
+                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, initial_value, check_manager.Invert )
                 
             elif item_type == 'separator':
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
             elif item_type == 'label':
                 
@@ -1534,6 +1568,8 @@ class PopupDismissAll( PopupWindow ):
     
 class PopupMessage( PopupWindow ):
     
+    WRAP_WIDTH = 400
+    
     def __init__( self, parent, job_key ):
         
         PopupWindow.__init__( self, parent )
@@ -1547,20 +1583,20 @@ class PopupMessage( PopupWindow ):
         self._title.Hide()
         
         self._text_1 = FitResistantStaticText( self )
-        self._text_1.Wrap( 380 )
+        self._text_1.Wrap( self.WRAP_WIDTH )
         self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_1.Hide()
         
-        self._gauge_1 = Gauge( self, size = ( 380, -1 ) )
+        self._gauge_1 = Gauge( self, size = ( self.WRAP_WIDTH, -1 ) )
         self._gauge_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_1.Hide()
         
         self._text_2 = FitResistantStaticText( self )
-        self._text_2.Wrap( 380 )
+        self._text_2.Wrap( self.WRAP_WIDTH )
         self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_2.Hide()
         
-        self._gauge_2 = Gauge( self, size = ( 380, -1 ) )
+        self._gauge_2 = Gauge( self, size = ( self.WRAP_WIDTH, -1 ) )
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
@@ -1581,7 +1617,7 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.Hide()
         
         self._tb_text = FitResistantStaticText( self )
-        self._tb_text.Wrap( 380 )
+        self._tb_text.Wrap( self.WRAP_WIDTH )
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()
         
@@ -2869,7 +2905,7 @@ class RegexButton( wx.Button ):
         
         menu.Append( -1, 'click on a phrase to copy to clipboard' )
         
-        menu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( menu )
         
         submenu = wx.Menu()
         
@@ -2883,7 +2919,7 @@ class RegexButton( wx.Button ):
         submenu.Append( self.ID_REGEX_SET, u'any of these - [\u2026]' )
         submenu.Append( self.ID_REGEX_NOT_SET, u'anything other than these - [^\u2026]' )
         
-        submenu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( submenu )
         
         submenu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
         submenu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
@@ -2895,17 +2931,17 @@ class RegexButton( wx.Button ):
         submenu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
         submenu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
         
-        submenu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( submenu )
         
         submenu.Append( self.ID_REGEX_LOOKAHEAD, u'the next characters are: (non-consuming) - (?=\u2026)' )
         submenu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, u'the next characters are not: (non-consuming) - (?!\u2026)' )
         submenu.Append( self.ID_REGEX_LOOKBEHIND, u'the previous characters are: (non-consuming) - (?<=\u2026)' )
         submenu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, u'the previous characters are not: (non-consuming) - (?<!\u2026)' )
         
-        submenu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( submenu )
         
         submenu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + ']*?(?=\..*$)' )
+        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)' )
         
         menu.AppendMenu( -1, 'regex components', submenu )
         
@@ -2913,7 +2949,7 @@ class RegexButton( wx.Button ):
         
         submenu.Append( self.ID_REGEX_MANAGE_FAVOURITES, 'manage favourites' )
         
-        submenu.AppendSeparator()
+        ClientGUIMenus.AppendSeparator( submenu )
         
         for ( index, ( regex_phrase, description ) ) in enumerate( HC.options[ 'regex_favourites' ] ):
             
@@ -2956,7 +2992,7 @@ class RegexButton( wx.Button ):
         elif id == self.ID_REGEX_LOOKBEHIND: phrase = u'(?<=\u2026)'
         elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = u'(?<!\u2026)'
         elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-        elif id == self.ID_REGEX_FILENAME: phrase = '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + ']*?(?=\..*$)'
+        elif id == self.ID_REGEX_FILENAME: phrase = '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)'
         elif id == self.ID_REGEX_MANAGE_FAVOURITES:
             
             import ClientGUIDialogsManage

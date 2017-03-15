@@ -419,27 +419,37 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if do_it:
                 
+                def process_in_thread( service_key, content_updates ):
+                    
+                    for content_update in content_updates:
+                        
+                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
+                        
+                    
+                
                 local_file_services = ( CC.LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY )
                 
                 if file_service_key in local_file_services:
+                    
+                    # we want currently animating files (i.e. currently open files) to be unloaded before the delete call goes through
                     
                     if file_service_key == CC.TRASH_SERVICE_KEY:
                         
                         self._SetFocussedMedia( None )
                         
                     
-                    # we want currently animating files (i.e. currently open files) to be unloaded before the delete call goes through
+                    # split them into bits so we don't hang the gui with a huge delete transaction
                     
-                    wx.CallAfter( HydrusGlobals.client_controller.Write, 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                    chunks_of_hashes = HydrusData.SplitListIntoChunks( hashes, 64 )
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                     
                 else:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) )
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) ) ]
                     
-                    service_keys_to_content_updates = { file_service_key : ( content_update, ) }
-                    
-                    HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                    
+                
+                HydrusGlobals.client_controller.CallToThread( process_in_thread, file_service_key, content_updates )
                 
             
         
@@ -889,17 +899,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             self.SetFocus()
             
-        
-    
-    def _NewThreadDumper( self ):
-        
-        # can't do normal _getselectedhashes because we want to keep order!
-        
-        args = [ media.GetHashes( CC.DISCRIMINANT_LOCAL ) for media in self._selected_media ]
-        
-        hashes = [ h for h in itertools.chain( *args ) ]
-        
-        if len( hashes ) > 0: HydrusGlobals.client_controller.pub( 'new_thread_dumper', hashes )
         
     
     def _OpenExternally( self ):
@@ -2165,7 +2164,6 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'manage_ratings': self._ManageRatings()
             elif command == 'manage_tags': self._ManageTags()
             elif command == 'modify_account': self._ModifyUploaders( data )
-            elif command == 'new_thread_dumper': self._NewThreadDumper()
             elif command == 'open_externally': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
             elif command == 'remove': self._Remove()
@@ -2342,7 +2340,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._sorted_media ) > 0:
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 select_menu = wx.Menu()
                 
@@ -2678,7 +2676,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     AddServiceKeyLabelsToMenu( menu, common_petitioned_ipfs_service_keys, unpin_phrase )
                     
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 #
                 
@@ -2817,7 +2815,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         ClientGUIMenus.AppendMenuItem( self, custom_shortcuts_menu, 'manage', 'Manage your different custom filters and their shortcuts.', self._CustomFilter )
                         
-                        custom_shortcuts_menu.AppendSeparator()
+                        ClientGUIMenus.AppendSeparator( custom_shortcuts_menu )
                         
                         for shortcut_name in shortcut_names:
                             
@@ -2834,7 +2832,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenu( menu, filter_menu, 'filter' )
                     
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 if selection_has_inbox:
                     
@@ -2861,7 +2859,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 # share
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 if selection_has_local:
                     
@@ -2967,13 +2965,13 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
                 
+                ClientGUIMenus.AppendSeparator( menu )
+                
                 if len( self._sorted_media ) > 0:
-                    
-                    menu.AppendSeparator()
                     
                     select_menu = wx.Menu()
                     
@@ -3017,13 +3015,13 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
                     
                 
-                menu.AppendSeparator()
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewQueryPage )
                 
                 if self._focussed_media.HasImages():
                     
-                    menu.AppendSeparator()
+                    ClientGUIMenus.AppendSeparator( menu )
                     
                     similar_menu = wx.Menu()
                     

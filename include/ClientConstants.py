@@ -1,10 +1,5 @@
-import collections
 import HydrusConstants as HC
-import HydrusExceptions
 import os
-import sys
-import threading
-import traceback
 import wx
 import wx.lib.newevent
 

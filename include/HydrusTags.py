@@ -38,7 +38,7 @@ def CensorshipMatch( tag, censorships ):
                 
                 ( namespace, subtag ) = SplitTag( tag )
                 
-                if namespace == censorship:
+                if namespace == censorship[:-1]:
                     
                     return True
                     
@@ -238,13 +238,17 @@ def CombineTag( namespace, subtag ):
     
 def RenderTag( tag ):
     
-    if tag.startswith( '::' ):
+    ( namespace, subtag ) = SplitTag( tag )
+    
+    if namespace == '':
         
-        return tag[1:]
+        return subtag
         
     else:
         
-        return tag
+        connector = ':'
+        
+        return namespace + connector + subtag
         
     
 def SplitTag( tag ):

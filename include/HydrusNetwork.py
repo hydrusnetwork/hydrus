@@ -7,93 +7,9 @@ import HydrusNetworking
 import HydrusSerialisable
 import threading
 
-INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action' }
+INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
 BYTE_PARAMS = { 'access_key', 'account_type_key', 'subject_account_key', 'hash', 'registration_key', 'subject_hash', 'subject_tag', 'share_key', 'update_hash' }
 
-def ConvertContentsToClientToServerContentUpdatePackage( action, contents, reason = None ):
-    
-    hashes_to_hash_ids = {}
-    hash_ids_to_hashes = {}
-    hash_i = 0
-    
-    content_data_dict = HydrusData.GetEmptyDataDict()
-    
-    for content in contents:
-        
-        content_type = content.GetContentType()
-        content_data = content.GetContentData()
-        
-        if content_type == HC.CONTENT_TYPE_FILES:
-            
-            hashes = content_data
-            
-        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-            
-            ( tag, hashes ) = content_data
-            
-        elif content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
-            
-            ( old_tag, new_tag ) = content_data
-            
-            hashes = set()
-            
-        
-        hash_ids = []
-        
-        for hash in hashes:
-            
-            if hash not in hashes_to_hash_ids:
-                
-                hashes_to_hash_ids[ hash ] = hash_i
-                hash_ids_to_hashes[ hash_i ] = hash
-                
-                hash_i += 1
-                
-            
-            hash_ids.append( hashes_to_hash_ids[ hash ] )
-            
-        
-        if action in ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_PETITION ):
-            
-            if reason is None:
-                
-                reason = 'admin'
-                
-            
-            if content_type == HC.CONTENT_TYPE_FILES:
-                
-                row = ( hash_ids, reason )
-                
-            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                row = ( tag, hash_ids, reason )
-                
-            else:
-                
-                row = ( ( old_tag, new_tag ), reason )
-                
-            
-        elif action in ( HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_DENY_PETITION ):
-            
-            if content_type == HC.CONTENT_TYPE_FILES:
-                
-                row = hash_ids
-                
-            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                row = ( tag, hash_ids )
-                
-            elif content_type in ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_TYPE_TAG_SIBLINGS ):
-                
-                row = ( old_tag, new_tag )
-                
-            
-        
-        content_data_dict[ content_type ][ action ].append( row )
-        
-    
-    return ClientToServerContentUpdatePackage( content_data_dict, hash_ids_to_hashes )
-    
 def GenerateDefaultServiceDictionary( service_type ):
     
     dictionary = HydrusSerialisable.SerialisableDictionary()
@@ -1892,29 +1808,29 @@ class Petition( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PETITION
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, action = None, petitioner_account_identifier = None, reason = None, contents = None ):
+    def __init__( self, action = None, petitioner_account = None, reason = None, contents = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._action = action
-        self._petitioner_account_identifier = petitioner_account_identifier
+        self._petitioner_account = petitioner_account
         self._reason = reason
         self._contents = contents
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_petitioner_account_identifier = self._petitioner_account_identifier.GetSerialisableTuple()
+        serialisable_petitioner_account = Account.GenerateSerialisableTupleFromAccount( self._petitioner_account )
         serialisable_contents = [ content.GetSerialisableTuple() for content in self._contents ]
         
-        return ( self._action, serialisable_petitioner_account_identifier, self._reason, serialisable_contents )
+        return ( self._action, serialisable_petitioner_account, self._reason, serialisable_contents )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._action, serialisable_petitioner_account_identifier, self._reason, serialisable_contents ) = serialisable_info
+        ( self._action, serialisable_petitioner_account, self._reason, serialisable_contents ) = serialisable_info
         
-        self._petitioner_account_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_petitioner_account_identifier )
+        self._petitioner_account = Account.GenerateAccountFromSerialisableTuple( serialisable_petitioner_account )
         self._contents = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content ) for serialisable_content in serialisable_contents ]
         
     
@@ -1925,20 +1841,39 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         if self._action == HC.CONTENT_UPDATE_PEND:
             
             action_text += 'ADD'
-            action_colour = ( 0, 128, 0 )
+            action_colour = ( 127, 255, 127 )
             
         elif self._action == HC.CONTENT_UPDATE_PETITION:
             
             action_text += 'DELETE'
-            action_colour = ( 128, 0, 0 )
+            action_colour = ( 255, 127, 127 )
             
         
         return ( action_text, action_colour )
         
     
-    def GetApproval( self, filtered_contents ):
+    def GetApproval( self, content ):
         
-        return ConvertContentsToClientToServerContentUpdatePackage( self._action, filtered_contents, reason = self._reason )
+        if self._action == HC.CONTENT_UPDATE_PEND:
+            
+            content_update_action = HC.CONTENT_UPDATE_ADD
+            
+        elif self._action == HC.CONTENT_UPDATE_PETITION:
+            
+            content_update_action = HC.CONTENT_UPDATE_DELETE
+            
+        
+        update = ClientToServerUpdate()
+        
+        update.AddContent( self._action, content, self._reason )
+        
+        content_type = content.GetContentType()
+        
+        row = content.GetContentData()
+        
+        content_update = HydrusData.ContentUpdate( content_type, content_update_action, row )
+        
+        return ( update, content_update )
         
     
     def GetContents( self ):
@@ -1946,7 +1881,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         return self._contents
         
     
-    def GetDenial( self, filtered_contents ):
+    def GetDenial( self, content ):
         
         if self._action == HC.CONTENT_UPDATE_PEND:
             
@@ -1957,12 +1892,16 @@ class Petition( HydrusSerialisable.SerialisableBase ):
             denial_action = HC.CONTENT_UPDATE_DENY_PETITION
             
         
-        return ConvertContentsToClientToServerContentUpdatePackage( denial_action, filtered_contents )
+        update = ClientToServerUpdate()
+        
+        update.AddContent( denial_action, content, self._reason )
+        
+        return update
         
     
-    def GetPetitionerIdentifier( self ):
+    def GetPetitionerAccount( self ):
         
-        return self._petitioner_account_identifier
+        return self._petitioner_account
         
     
     def GetReason( self ):

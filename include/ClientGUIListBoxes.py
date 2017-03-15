@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
 import ClientData
+import ClientGUIMenus
 import ClientSearch
 import collections
 import HydrusConstants as HC
@@ -741,21 +742,15 @@ class ListBoxTags( ListBox ):
                             
                         
                     
-                    if menu.GetMenuItemCount() > 0:
-                        
-                        menu.AppendSeparator()
-                        
-                    
+                
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 if self.can_spawn_new_windows:
                     
                     menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + selection_string )
                     
                 
-                if menu.GetMenuItemCount() > 0:
-                    
-                    menu.AppendSeparator()
-                    
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy ' + selection_string )
                 
@@ -776,12 +771,9 @@ class ListBoxTags( ListBox ):
                     
                 
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
             if len( self._ordered_strings ) > len( self._selected_terms ):
-                
-                if menu.GetMenuItemCount() > 0:
-                    
-                    menu.AppendSeparator()
-                    
                 
                 menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags' ), 'copy all tags' )
                 if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
@@ -793,10 +785,7 @@ class ListBoxTags( ListBox ):
                 
                 if str in term_types or unicode in term_types:
                     
-                    if menu.GetMenuItemCount() > 0:
-                        
-                        menu.AppendSeparator()
-                        
+                    ClientGUIMenus.AppendSeparator( menu )
                     
                     if len( self._selected_terms ) == 1:
                         
