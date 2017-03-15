@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 247</h3></li>
+				<ul>
+					<li>fixed a problem with deleting more than 256 files at once</li>
+					<li>furthermore, deleting from thumbnail view or after a filter will split delete jobs into chunks of 64 files at a time to reduce gui hang from deleting many tag-heavy files</li>
+					<li>rewrote canvas media container code to recycle containers, embed windows, animation bars, static image windows, and animation windows. scrolling through all kinds of media is less flickery (less 'grey box' window initialise flicker) and scrolling through static images should be completely flickerless! William Gibson slideshow speed works again!</li>
+					<li>this flickerless static image transition will be particularly useful in the forthcoming duplicate image filter!</li>
+					<li>got adminside petition processing working again</li>
+					<li>petition counts and fetching is now split by content_type and status</li>
+					<li>the approve/deny colour hint is more obvious on the petition panel</li>
+					<li>petitions now process off the main gui thread and throw up a popup message</li>
+					<li>added 'check all' and 'check none' buttons to petition panel</li>
+					<li>several serverside petition processing fixes</li>
+					<li>generalised and improved dynamic menu check item initialisation and inversion support</li>
+					<li>moved the 'get tags even if file already in db' option into a cog button on regular downloader pages</li>
+					<li>added a default menu option for 'get tags even if file already in db' to the same cog button</li>
+					<li>added this cog button to the edit subscription panel as well</li>
+					<li>fixed exporting tags to Hydrus Tag Archives</li>
+					<li>fixed exporting 'all known tags' to HTAs</li>
+					<li>cleaned some HTA and related code</li>
+					<li>fixed namespace based tag censorship</li>
+					<li>fixed autocomplete not filtering out current/pending counts if they are set to 'excluded'</li>
+					<li>fixed generation of non-expiring new accounts</li>
+					<li>fixed some v245->v246 tag improvement code that was replacing invalid tags with the incorrect namespace</li>
+					<li>patched a problem with '-:' dirty tag in the v245->v246 update code--I'm not sure what it was doing, but it catches the unusual problem and puts it in the 'invalid tags' category, so let me know if you get trouble with this in future</li>
+					<li>wrote unit tests for bytesdictionary and shortcuts serialisable objects</li>
+					<li>harmonised and improved how separators are appended to menus</li>
+					<li>cleaned up some client db index creation</li>
+					<li>cleaned up some client tuple stripping</li>
+					<li>misc pylint warnings cleanup</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 246</h3></li>
 				<ul>
 					<li>fixed a critical bug in serverside content deserialisating that meant servers were not processing most client-submitted data properly</li>
