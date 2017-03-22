@@ -775,7 +775,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitDropDownList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsAutocompleteDropdownRead( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_window, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
         
     
     def _ParseSearchText( self ):
@@ -1226,7 +1226,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitDropDownList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsAutocompleteDropdownWrite( self._dropdown_window, self._tag_service_key, self.BroadcastChoices, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_window, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):

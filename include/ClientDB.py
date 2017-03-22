@@ -940,6 +940,26 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
         
     
+    def _CacheSimilarFilesGetDuplicatePair( self, service_key, duplicate_type ):
+        
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( service_key )
+        
+        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 1;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
+        
+        if result is None:
+            
+            return None
+            
+        else:
+            
+            ( smaller_hash_id, larger_hash_id ) = result
+            
+            media_results = self._GetMediaResults( ( smaller_hash_id, larger_hash_id ) )
+            
+            return media_results
+            
+        
+    
     def _CacheSimilarFilesGetDuplicatePairsTableJoinInfo( self, file_service_key ):
         
         service_id = self._GetServiceId( file_service_key )
@@ -7000,6 +7020,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
+        elif action == 'duplicate_pair': result = self._CacheSimilarFilesGetDuplicatePair( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
@@ -7105,7 +7126,7 @@ class DB( HydrusDB.HydrusDB ):
         job_key.SetVariable( 'popup_text_1', 'done!' )
         
     
-    def _ResetService( self, service_key ):
+    def _ResetRepository( self, service ):
         
         self._c.execute( 'COMMIT;' )
         
@@ -7118,11 +7139,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'BEGIN IMMEDIATE;' )
         
-        service_id = self._GetServiceId( service_key )
-        
-        service = self._GetService( service_id )
-        
         ( service_key, service_type, name, dictionary ) = service.ToTuple()
+        
+        service_id = self._GetServiceId( service_key )
         
         prefix = 'resetting ' + name
         
@@ -7134,17 +7153,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._DeleteService( service_id )
         
-        if service_type in HC.REPOSITORIES:
-            
-            job_key.SetVariable( 'popup_text_1', prefix + ': deleting downloaded updates' )
-            
-            self.pub_after_commit( 'notify_restart_repo_sync_daemon' )
-            
-        
         job_key.SetVariable( 'popup_text_1', prefix + ': recreating service' )
         
         self._AddService( service_key, service_type, name, dictionary )
         
+        self.pub_after_commit( 'notify_unknown_accounts' )
         self.pub_after_commit( 'notify_new_pending' )
         self.pub_after_commit( 'notify_new_services_data' )
         self.pub_after_commit( 'notify_new_services_gui' )
@@ -7314,6 +7327,8 @@ class DB( HydrusDB.HydrusDB ):
         for ( service_key, blacklist, tags ) in info:
             
             service_id = self._GetServiceId( service_key )
+            
+            tags = list( tags )
             
             self._c.execute( 'INSERT OR IGNORE INTO tag_censorship ( service_id, blacklist, tags ) VALUES ( ?, ?, ? );', ( service_id, blacklist, tags ) )
             
@@ -7967,7 +7982,105 @@ class DB( HydrusDB.HydrusDB ):
             HydrusPaths.DeletePath( updates_dir )
             
         
+        # cleantag definition has changed, so let's collapse all 'series: blah' stuff to 'series:blah'
+        # server did it last week, so we can nuke non-local tags as they'll be replaced in the normal resync that's going on atm
+        # this is for v245->v246, v247->v248 updates both
+        
+        def current_clean_tag( tag ):
+            
+            try:
+                
+                def strip_gumpf_out( t ):
+                    
+                    t.replace( '\r', '' )
+                    t.replace( '\n', '' )
+                    
+                    t = re.sub( '[\\s]+', ' ', t, flags = re.UNICODE ) # turns multiple spaces into single spaces
+                    
+                    t = re.sub( '\\s\\Z', '', t, flags = re.UNICODE ) # removes space at the end
+                    
+                    while re.match( '\\s|-|system:', t, flags = re.UNICODE ) is not None:
+                        
+                        t = re.sub( '\\A(\\s|-|system:)', '', t, flags = re.UNICODE ) # removes spaces or garbage at the beginning
+                        
+                    
+                    return t
+                    
+                
+                tag = tag[:1024]
+                
+                tag = tag.lower()
+                
+                tag = HydrusData.ToUnicode( tag )
+                
+                if tag.startswith( ':' ):
+                    
+                    tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+                    
+                    tag = strip_gumpf_out( tag )
+                    
+                elif ':' in tag:
+                    
+                    ( namespace, subtag ) = current_split_tag( tag )
+                    
+                    namespace = strip_gumpf_out( namespace )
+                    subtag = strip_gumpf_out( subtag )
+                    
+                    tag = current_combine_tag( namespace, subtag )
+                    
+                else:
+                    
+                    tag = strip_gumpf_out( tag )
+                    
+                
+            except Exception as e:
+                
+                text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
+                text += os.linesep * 2
+                text += str( e )
+                
+                raise Exception( text )
+                
+            
+            return tag
+            
+        
+        def current_combine_tag( namespace, subtag ):
+            
+            if namespace == '':
+                
+                if subtag.startswith( ':' ):
+                    
+                    return ':' + subtag
+                    
+                else:
+                    
+                    return subtag
+                    
+                
+            else:
+                
+                return namespace + ':' + subtag
+                
+            
+        
+        def current_split_tag( tag ):
+            
+            if ':' in tag:
+                
+                return tag.split( ':', 1 )
+                
+            else:
+                
+                return ( '', tag )
+                
+            
+        
         if version == 245:
+            
+            self._InitCaches()
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
             
             # due to a previous update, some clients have two entries per prefix with ..\db\client_files vs client_files type superfluous stuff.
             # let's clean it up nicely, catching any other weirdness along the way
@@ -8012,99 +8125,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             #
-            
-            # cleantag definition has changed, so let's collapse all 'series: blah' stuff to 'series:blah'
-            # server did it last week, so we can nuke non-local tags as they'll be replaced in the normal resync that's going on atm
-            
-            def current_clean_tag( tag ):
-                
-                try:
-                    
-                    def strip_gumpf_out( t ):
-                        
-                        t.replace( '\r', '' )
-                        t.replace( '\n', '' )
-                        
-                        t = re.sub( '[\\s]+', ' ', t, flags = re.UNICODE ) # turns multiple spaces into single spaces
-                        
-                        t = re.sub( '\\s\\Z', '', t, flags = re.UNICODE ) # removes space at the end
-                        
-                        while re.match( '\\s|-|system:', t, flags = re.UNICODE ) is not None:
-                            
-                            t = re.sub( '\\A(\\s|-|system:)', '', t, flags = re.UNICODE ) # removes spaces or garbage at the beginning
-                            
-                        
-                        return t
-                        
-                    
-                    tag = tag[:1024]
-                    
-                    tag = tag.lower()
-                    
-                    tag = HydrusData.ToUnicode( tag )
-                    
-                    if tag.startswith( ':' ):
-                        
-                        tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
-                        
-                        tag = strip_gumpf_out( tag )
-                        
-                    elif ':' in tag:
-                        
-                        ( namespace, subtag ) = current_split_tag( tag )
-                        
-                        namespace = strip_gumpf_out( namespace )
-                        subtag = strip_gumpf_out( subtag )
-                        
-                        tag = current_combine_tag( namespace, subtag )
-                        
-                    else:
-                        
-                        tag = strip_gumpf_out( tag )
-                        
-                    
-                except Exception as e:
-                    
-                    text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
-                    text += os.linesep * 2
-                    text += str( e )
-                    
-                    raise Exception( text )
-                    
-                
-                return tag
-                
-            
-            def current_combine_tag( namespace, subtag ):
-                
-                if namespace == '':
-                    
-                    if subtag.startswith( ':' ):
-                        
-                        return ':' + subtag
-                        
-                    else:
-                        
-                        return subtag
-                        
-                    
-                else:
-                    
-                    return namespace + ':' + subtag
-                    
-                
-            
-            def current_split_tag( tag ):
-                
-                if ':' in tag:
-                    
-                    return tag.split( ':', 1 )
-                    
-                else:
-                    
-                    return ( '', tag )
-                    
-                
             
             self._controller.pub( 'splash_set_status_text', 'cleaning tags' )
             
@@ -8205,9 +8225,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            ( local_tag_service_id, ) = self._c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( CC.LOCAL_TAG_SERVICE_KEY ), ) ).fetchone()
+            
+            repo_tag_service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type = ?;', ( HC.TAG_REPOSITORY, ) ) ]
+            
             for ( dirty_tag_id, clean_tag_id ) in dirty_and_clean_tag_ids:
-                
-                ( local_tag_service_id, ) = self._c.execute( 'SELECT service_id FROM services WHERE service_key = ?;', ( sqlite3.Binary( CC.LOCAL_TAG_SERVICE_KEY ), ) ).fetchone()
                 
                 current_mappings_table_name = 'external_mappings.current_mappings_' + str( local_tag_service_id )
                 
@@ -8217,8 +8239,6 @@ class DB( HydrusDB.HydrusDB ):
                 deleted_mappings_ids = [ ( dirty_tag_id, dirty_local_hash_ids ) ]
                 
                 self._UpdateMappings( local_tag_service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
-                
-                repo_tag_service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type = ?;', ( HC.TAG_REPOSITORY, ) ) ]
                 
                 for repo_tag_service_id in repo_tag_service_ids:
                     
@@ -8244,6 +8264,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 clean_subtag = 'invalid empty subtag ' + str( i )
                 
+                while self._SubtagExists( clean_subtag ): # there actually was a collision here for one user!
+                    
+                    i += 1
+                    
+                    clean_subtag = 'invalid empty subtag ' + str( i )
+                    
+                
                 self._c.execute( 'UPDATE subtags SET subtag = ? WHERE subtag_id = ?;', ( clean_subtag, invalid_subtag_id ) )
                 
             
@@ -8252,6 +8279,107 @@ class DB( HydrusDB.HydrusDB ):
             message = 'I have fixed a bug in the \'all known files\' autocomplete cache. Please go database->regenerate->autocomplete cache when it is convenient.'
             
             self.pub_initial_message( message )
+            
+        
+        if version == 247:
+            
+            self._InitCaches()
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
+            
+            self._controller.pub( 'splash_set_status_text', 'cleaning tags again' )
+            
+            tag_service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type IN ( ?, ? );', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) ) ]
+            
+            # I've messed this up with several lots of bad logic, so let's give it another go
+            
+            ugly_namespace_info = self._c.execute( 'SELECT namespace_id, namespace FROM namespaces WHERE namespace LIKE "invalid namespace%";' ).fetchall()
+            
+            for ( ugly_namespace_id, ugly_namespace ) in ugly_namespace_info:
+                
+                if len( ugly_namespace ) > 21 and ugly_namespace.startswith( 'invalid namespace "' ) and ugly_namespace.endswith( '"' ):
+                    
+                    # 'invalid namespace "blah"'
+                    
+                    invalid_namespace = ugly_namespace[19:-1]
+                    
+                    example_tag = current_combine_tag( invalid_namespace, 'test' )
+                    
+                    clean_example_tag = current_clean_tag( example_tag )
+                    
+                    ( pretty_namespace, gumpf ) = current_split_tag( clean_example_tag )
+                    
+                    if len( pretty_namespace ) > 0:
+                        
+                        for ( ugly_tag_id, subtag ) in self._c.execute( 'SELECT tag_id, subtag FROM tags NATURAL JOIN subtags WHERE namespace_id = ?;', ( ugly_namespace_id, ) ).fetchall():
+                            
+                            pretty_tag = current_combine_tag( pretty_namespace, subtag )
+                            
+                            pretty_tag_id = self._GetTagId( pretty_tag )
+                            
+                            for tag_service_id in tag_service_ids:
+                                
+                                current_mappings_table_name = 'external_mappings.current_mappings_' + str( tag_service_id )
+                                
+                                ugly_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( ugly_tag_id, ) ) )
+                                
+                                if len( ugly_hash_ids ) > 0:
+                                    
+                                    mappings_ids = [ ( pretty_tag_id, ugly_hash_ids ) ]
+                                    deleted_mappings_ids = [ ( ugly_tag_id, ugly_hash_ids ) ]
+                                    
+                                    self._UpdateMappings( tag_service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
+                                    
+                                
+                            
+                        
+                    
+                
+            
+            #
+            
+            ugly_subtag_info = self._c.execute( 'SELECT subtag_id, subtag FROM subtags WHERE subtag LIKE "invalid subtag%";' ).fetchall()
+            
+            for ( ugly_subtag_id, ugly_subtag ) in ugly_subtag_info:
+                
+                if len( ugly_subtag ) > 18 and ugly_subtag.startswith( 'invalid subtag "' ) and ugly_subtag.endswith( '"' ):
+                    
+                    # 'invalid subtag "blah"'
+                    
+                    invalid_subtag = ugly_subtag[16:-1]
+                    
+                    example_tag = current_combine_tag( 'series', invalid_subtag )
+                    
+                    clean_example_tag = current_clean_tag( example_tag )
+                    
+                    ( gumpf, pretty_subtag ) = current_split_tag( clean_example_tag )
+                    
+                    if len( pretty_subtag ) > 0:
+                        
+                        for ( ugly_tag_id, namespace ) in self._c.execute( 'SELECT tag_id, namespace FROM tags NATURAL JOIN namespaces WHERE subtag_id = ?;', ( ugly_subtag_id, ) ).fetchall():
+                            
+                            pretty_tag = current_combine_tag( namespace, pretty_subtag )
+                            
+                            pretty_tag_id = self._GetTagId( pretty_tag )
+                            
+                            for tag_service_id in tag_service_ids:
+                                
+                                current_mappings_table_name = 'external_mappings.current_mappings_' + str( tag_service_id )
+                                
+                                ugly_hash_ids = self._STL( self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( ugly_tag_id, ) ) )
+                                
+                                if len( ugly_hash_ids ) > 0:
+                                    
+                                    mappings_ids = [ ( pretty_tag_id, ugly_hash_ids ) ]
+                                    deleted_mappings_ids = [ ( ugly_tag_id, ugly_hash_ids ) ]
+                                    
+                                    self._UpdateMappings( tag_service_id, mappings_ids = mappings_ids, deleted_mappings_ids = deleted_mappings_ids )
+                                    
+                                
+                            
+                        
+                    
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
@@ -8861,7 +8989,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
-        elif action == 'reset_service': result = self._ResetService( *args, **kwargs )
+        elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': result = self._SetJSONDump( *args, **kwargs )

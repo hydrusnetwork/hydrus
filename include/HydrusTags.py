@@ -236,21 +236,6 @@ def CombineTag( namespace, subtag ):
         return namespace + ':' + subtag
         
     
-def RenderTag( tag ):
-    
-    ( namespace, subtag ) = SplitTag( tag )
-    
-    if namespace == '':
-        
-        return subtag
-        
-    else:
-        
-        connector = ':'
-        
-        return namespace + connector + subtag
-        
-    
 def SplitTag( tag ):
     
     if ':' in tag:

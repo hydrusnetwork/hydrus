@@ -988,28 +988,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
-    def _RatingsFilter( self, service_key ):
-        
-        if service_key is None:
-            
-            service_key = ClientGUIDialogs.SelectServiceKey( service_types = ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-            
-            if service_key is None: return
-            
-        
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ), unrated = service_key )
-        
-        if len( media_results ) > 0:
-            
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-            
-            if service.GetServiceType() == HC.LOCAL_RATING_LIKE:
-                
-                ClientGUICanvas.RatingsFilterFrameLike( self.GetTopLevelParent(), self._page_key, service_key, media_results )
-                
-            
-        
-    
     def _RecalculateVirtualSize( self ): pass
     
     def _RedrawMedia( self, media ): pass

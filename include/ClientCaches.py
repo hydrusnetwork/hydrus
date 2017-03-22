@@ -634,10 +634,6 @@ class ClientFilesManager( object ):
     
     def ClearOrphans( self, move_location = None ):
         
-        HydrusData.ShowText( 'sorry, clear orphans does not work right now!' )
-        
-        return
-        
         with self._lock:
             
             job_key = ClientThreading.JobKey( cancellable = True )

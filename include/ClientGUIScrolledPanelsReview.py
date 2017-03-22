@@ -26,10 +26,10 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._local_listbook = ClientGUICommon.ListBook( self._notebook )
         self._remote_listbook = ClientGUICommon.ListBook( self._notebook )
         
-        self._InitialiseServices()
-        
         self._notebook.AddPage( self._local_listbook, 'local' )
         self._notebook.AddPage( self._remote_listbook, 'remote' )
+        
+        self._InitialiseServices()
         
         self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventPageChanged )
         
@@ -44,12 +44,30 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _InitialiseServices( self ):
         
+        lb = self._notebook.GetCurrentPage()
+        
+        if lb.GetPageCount() == 0:
+            
+            previous_service_key = CC.LOCAL_FILE_SERVICE_KEY
+            
+        else:
+            
+            page = lb.GetCurrentPage().GetCurrentPage()
+            
+            previous_service_key = page.GetServiceKey()
+            
+        
         self._local_listbook.DeleteAllPages()
         self._remote_listbook.DeleteAllPages()
         
         listbook_dict = {}
         
         services = self._controller.GetServicesManager().GetServices( randomised = False )
+        
+        lb_to_select = None
+        service_type_name_to_select = None
+        service_type_lb = None
+        service_name_to_select = None
         
         for service in services:
             
@@ -58,34 +76,63 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if service_type in HC.LOCAL_SERVICES: parent_listbook = self._local_listbook
             else: parent_listbook = self._remote_listbook
             
-            if service_type == HC.TAG_REPOSITORY: name = 'tag repositories'
-            elif service_type == HC.FILE_REPOSITORY: name = 'file repositories'
-            elif service_type == HC.MESSAGE_DEPOT: name = 'message depots'
-            elif service_type == HC.SERVER_ADMIN: name = 'administrative servers'
-            elif service_type in HC.LOCAL_FILE_SERVICES: name = 'files'
-            elif service_type == HC.LOCAL_TAG: name = 'tags'
-            elif service_type == HC.LOCAL_RATING_LIKE: name = 'like/dislike ratings'
-            elif service_type == HC.LOCAL_RATING_NUMERICAL: name = 'numerical ratings'
-            elif service_type == HC.LOCAL_BOORU: name = 'booru'
-            elif service_type == HC.IPFS: name = 'ipfs'
+            if service_type == HC.TAG_REPOSITORY: service_type_name = 'tag repositories'
+            elif service_type == HC.FILE_REPOSITORY: service_type_name = 'file repositories'
+            elif service_type == HC.MESSAGE_DEPOT: service_type_name = 'message depots'
+            elif service_type == HC.SERVER_ADMIN: service_type_name = 'administrative servers'
+            elif service_type in HC.LOCAL_FILE_SERVICES: service_type_name = 'files'
+            elif service_type == HC.LOCAL_TAG: service_type_name = 'tags'
+            elif service_type == HC.LOCAL_RATING_LIKE: service_type_name = 'like/dislike ratings'
+            elif service_type == HC.LOCAL_RATING_NUMERICAL: service_type_name = 'numerical ratings'
+            elif service_type == HC.LOCAL_BOORU: service_type_name = 'booru'
+            elif service_type == HC.IPFS: service_type_name = 'ipfs'
             else: continue
             
-            if name not in listbook_dict:
+            if service_type_name not in listbook_dict:
                 
                 listbook = ClientGUICommon.ListBook( parent_listbook )
                 
-                listbook_dict[ name ] = listbook
+                listbook_dict[ service_type_name ] = listbook
                 
-                parent_listbook.AddPage( name, name, listbook )
+                parent_listbook.AddPage( service_type_name, service_type_name, listbook )
                 
             
-            listbook = listbook_dict[ name ]
+            listbook = listbook_dict[ service_type_name ]
             
             name = service.GetName()
             
             panel_class = ClientGUIPanels.ReviewServicePanel
             
             listbook.AddPageArgs( name, name, panel_class, ( listbook, service ), {} )
+            
+            if service.GetServiceKey() == previous_service_key:
+                
+                lb_to_select = parent_listbook
+                service_type_name_to_select = service_name_to_select
+                service_type_lb = listbook
+                name_to_select = name
+                
+            
+        
+        if lb_to_select is not None:
+            
+            if self._notebook.GetCurrentPage() != lb_to_select:
+                
+                selection = self._notebook.GetSelection()
+                
+                if selection == 0:
+                    
+                    self._notebook.SetSelection( 1 )
+                    
+                else:
+                    
+                    self._notebook.SetSelection( 0 )
+                    
+                
+            
+            lb_to_select.Select( service_name_to_select )
+            
+            service_type_lb.Select( name_to_select )
             
         
     

@@ -11,6 +11,7 @@ import ClientDefaults
 import ClientCaches
 import ClientFiles
 import ClientGUIACDropdown
+import ClientGUICanvas
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIDialogs
@@ -776,6 +777,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
         self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some pairs (prototype!)', self._ShowSomeDupes )
+        self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch filter (prototype!)', self._LaunchFilter )
         
         #
         
@@ -827,6 +829,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._filtering_panel.AddF( self._num_same_file_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.AddF( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -863,6 +866,17 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
         HydrusGlobals.client_controller.PopupMenu( self._file_domain_button, menu )
+        
+    
+    def _LaunchFilter( self ):
+        
+        duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
+        
+        canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
+        
+        canvas_window = ClientGUICanvas.CanvasFilterDuplicates( canvas_frame, duplicate_filter_file_domain )
+        
+        canvas_frame.SetCanvas( canvas_window )
         
     
     def _RebalanceTree( self ):
@@ -2253,6 +2267,34 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
     
+    def _BreakApprovedContentsIntoChunks( self, approved_contents ):
+        
+        chunks_of_approved_contents = []
+        chunk_of_approved_contents = []
+        weight = 0
+        
+        for content in approved_contents:
+            
+            chunk_of_approved_contents.append( content )
+            
+            weight += content.GetVirtualWeight()
+            
+            if weight > 200:
+                
+                chunks_of_approved_contents.append( chunk_of_approved_contents )
+                
+                weight = 0
+                
+            
+        
+        if len( chunk_of_approved_contents ) > 0:
+            
+            chunks_of_approved_contents.append( chunk_of_approved_contents )
+            
+        
+        return chunks_of_approved_contents
+        
+
     def _CheckAll( self ):
         
         for i in range( self._contents.GetCount() ):
@@ -2270,8 +2312,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         
     
     def _DrawCurrentPetition( self ):
-        
-        hashes = []
         
         if self._current_petition is None:
             
@@ -2448,7 +2488,12 @@ class ManagementPanelPetitions( ManagementPanel ):
             try:
                 
                 num_done = 0
-                num_to_do = len( approved_contents ) + len( denied_contents )
+                num_to_do = len( approved_contents )
+                
+                if len( denied_contents ) > 0:
+                    
+                    num_to_do += 1
+                    
                 
                 if num_to_do > 1:
                     
@@ -2463,7 +2508,9 @@ class ManagementPanelPetitions( ManagementPanel ):
                     job_key = None
                     
                 
-                for content in approved_contents:
+                chunks_of_approved_contents = self._BreakApprovedContentsIntoChunks( approved_contents )
+                
+                for chunk_of_approved_contents in chunks_of_approved_contents:
                     
                     if job_key is not None:
                         
@@ -2477,16 +2524,16 @@ class ManagementPanelPetitions( ManagementPanel ):
                         job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                         
                     
-                    ( update, content_update ) = petition.GetApproval( content )
+                    ( update, content_updates ) = petition.GetApproval( chunk_of_approved_contents )
                     
                     self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
                     
-                    self._controller.Write( 'content_updates', { self._petition_service_key : [ content_update ] } )
+                    self._controller.Write( 'content_updates', { self._petition_service_key : content_updates } )
                     
-                    num_done += 1
+                    num_done += len( chunk_of_approved_contents )
                     
                 
-                for content in denied_contents:
+                if len( denied_contents ) > 0:
                     
                     if job_key is not None:
                         
@@ -2497,14 +2544,10 @@ class ManagementPanelPetitions( ManagementPanel ):
                             return
                             
                         
-                        job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
-                        
                     
-                    update = petition.GetDenial( content )
+                    update = petition.GetDenial( denied_contents )
                     
                     self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
-                    
-                    num_done += 1
                     
                 
             finally:
@@ -2577,7 +2620,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
             
-            self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsPredicates( self._search_panel, self._page_key, initial_predicates )
+            self._current_predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._search_panel, self._page_key, initial_predicates )
             
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
@@ -2772,7 +2815,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
         
-        self._thread_times_to_check = wx.SpinCtrl( self._options_panel, size = ( 60, -1 ), min = 0, max = 100 )
+        self._thread_times_to_check = wx.SpinCtrl( self._options_panel, size = ( 80, -1 ), min = 0, max = 65536 )
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
         

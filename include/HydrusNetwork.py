@@ -1116,6 +1116,26 @@ class Content( HydrusSerialisable.SerialisableBase ):
         return hashes
         
     
+    def GetVirtualWeight( self ):
+        
+        if self._content_type in ( HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS ):
+            
+            return len( self.GetHashes() )
+            
+        elif self._content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            return 5000
+            
+        elif self._content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            return 5
+            
+        elif self._content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            return 1
+            
+        
+    
     def HasHashes( self ):
         
         return self._content_type in ( HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPING, HC.CONTENT_TYPE_MAPPINGS )
@@ -1852,7 +1872,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         return ( action_text, action_colour )
         
     
-    def GetApproval( self, content ):
+    def GetApproval( self, contents ):
         
         if self._action == HC.CONTENT_UPDATE_PEND:
             
@@ -1864,16 +1884,22 @@ class Petition( HydrusSerialisable.SerialisableBase ):
             
         
         update = ClientToServerUpdate()
+        content_updates = []
         
-        update.AddContent( self._action, content, self._reason )
+        for content in contents:
+            
+            update.AddContent( self._action, content, self._reason )
+            
+            content_type = content.GetContentType()
+            
+            row = content.GetContentData()
+            
+            content_update = HydrusData.ContentUpdate( content_type, content_update_action, row )
+            
+            content_updates.append( content_update )
+            
         
-        content_type = content.GetContentType()
-        
-        row = content.GetContentData()
-        
-        content_update = HydrusData.ContentUpdate( content_type, content_update_action, row )
-        
-        return ( update, content_update )
+        return ( update, content_updates )
         
     
     def GetContents( self ):
@@ -1881,7 +1907,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         return self._contents
         
     
-    def GetDenial( self, content ):
+    def GetDenial( self, contents ):
         
         if self._action == HC.CONTENT_UPDATE_PEND:
             
@@ -1894,7 +1920,10 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         
         update = ClientToServerUpdate()
         
-        update.AddContent( denial_action, content, self._reason )
+        for content in contents:
+            
+            update.AddContent( denial_action, content, self._reason )
+            
         
         return update
         
@@ -2140,28 +2169,44 @@ class ServerServiceRepository( ServerServiceRestricted ):
         
         with self._lock:
             
-            if self._metadata.UpdateDue():
+            update_due = self._metadata.UpdateDue()
+            
+        
+        if update_due:
+            
+            HydrusGlobals.server_busy = True
+            
+            while update_due:
                 
-                HydrusGlobals.server_busy = True
-                
-                while self._metadata.UpdateDue():
+                with self._lock:
+                    
+                    service_key = self._service_key
                     
                     begin = self._metadata.GetNextUpdateBegin()
                     
-                    end = begin + HC.UPDATE_DURATION
-                    
-                    update_hashes = HydrusGlobals.server_controller.WriteSynchronous( 'create_update', self._service_key, begin, end )
-                    
-                    next_update_due = end + HC.UPDATE_DURATION + 1
+                
+                end = begin + HC.UPDATE_DURATION
+                
+                update_hashes = HydrusGlobals.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
+                
+                next_update_due = end + HC.UPDATE_DURATION + 1
+                
+                with self._lock:
                     
                     self._metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
                     
+                    update_due = self._metadata.UpdateDue()
+                    
                 
-                HydrusGlobals.server_busy = False
+            
+            HydrusGlobals.server_busy = False
+            
+            with self._lock:
                 
                 self._SetDirty()
                 
             
+        
         
     
 class ServerServiceRepositoryTag( ServerServiceRepository ):

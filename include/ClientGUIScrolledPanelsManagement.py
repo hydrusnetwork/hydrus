@@ -113,53 +113,59 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
-        indices = self._account_types_listctrl.GetAllSelected()
-        
-        account_types_about_to_delete = { self._account_types_listctrl.GetObject( index ) for index in indices }
-        
-        all_account_types = set( self._account_types_listctrl.GetObjects() )
-        
-        account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
-        
-        if len( account_types_can_move_to ) == 0:
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
-            wx.MessageBox( 'You cannot delete every account type!' )
-            
-            return
-            
-        
-        for deletee_account_type in account_types_about_to_delete:
-            
-            if len( account_types_can_move_to ) > 1:
+            if dlg.ShowModal() == wx.ID_YES:
                 
-                deletee_title = deletee_account_type.GetTitle()
+                indices = self._account_types_listctrl.GetAllSelected()
                 
-                list_of_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
+                account_types_about_to_delete = { self._account_types_listctrl.GetObject( index ) for index in indices }
                 
-                with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', list_of_tuples ) as dlg:
+                all_account_types = set( self._account_types_listctrl.GetObjects() )
+                
+                account_types_can_move_to = list( all_account_types - account_types_about_to_delete )
+                
+                if len( account_types_can_move_to ) == 0:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    wx.MessageBox( 'You cannot delete every account type!' )
+                    
+                    return
+                    
+                
+                for deletee_account_type in account_types_about_to_delete:
+                    
+                    if len( account_types_can_move_to ) > 1:
                         
-                        new_account_type = dlg.GetChoice()
+                        deletee_title = deletee_account_type.GetTitle()
+                        
+                        list_of_tuples = [ ( account_type.GetTitle(), account_type ) for account_type in account_types_can_move_to ]
+                        
+                        with ClientGUIDialogs.DialogSelectFromList( self, 'what should deleted ' + deletee_title + ' accounts become?', list_of_tuples ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                new_account_type = dlg.GetChoice()
+                                
+                            else:
+                                
+                                return
+                                
+                            
                         
                     else:
                         
-                        return
+                        ( new_account_type, ) = account_types_can_move_to
                         
                     
+                    deletee_account_type_key = deletee_account_type.GetAccountTypeKey()
+                    new_account_type_key = new_account_type.GetAccountTypeKey()
+                    
+                    self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = new_account_type_key
+                    
                 
-            else:
-                
-                ( new_account_type, ) = account_types_can_move_to
+                self._account_types_listctrl.RemoveAllSelected()
                 
             
-            deletee_account_type_key = deletee_account_type.GetAccountTypeKey()
-            new_account_type_key = new_account_type.GetAccountTypeKey()
-            
-            self._deletee_account_type_keys_to_new_account_type_keys[ deletee_account_type_key ] = new_account_type_key
-            
-        
-        self._account_types_listctrl.RemoveAllSelected()
         
     
     def _Edit( self ):
@@ -577,40 +583,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             return ClientServices.GenerateService( self._service_key, self._service_type, name, dictionary )
-            
-        
-        def EventServiceResetDownload( self, event ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            message = 'This will completely reset ' + name + ', deleting all downloaded and processed information from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually redownload and reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you definitely want to click no!'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._reset_downloading_button.SetLabelText( 'everything will be reset on dialog ok!' )
-                    
-                    self._reset_downloading = True
-                    
-                
-            
-        
-        def EventServiceResetProcessing( self, event ):
-            
-            ( service_key, service_type, name, info ) = self._original_info
-            
-            message = 'This will remove all the processed information for ' + name + ' from the database. It may take several minutes to finish the operation, during which time the gui will likely freeze.' + os.linesep * 2 + 'Once the service is reset, the client will eventually reprocess everything all over again.' + os.linesep * 2 + 'If you do not understand what this button does, you probably want to click no!'
-            
-            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._reset_processing_button.SetLabelText( 'processing will be reset on dialog ok!' )
-                    
-                    self._reset_processing = True
-                    
-                
             
         
         class _ServicePanel( ClientGUICommon.StaticBox ):
@@ -1426,7 +1398,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
                 
-                self._client_files.RemoveAllSelected()
+                with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        self._client_files.RemoveAllSelected()
+                        
+                    
                 
             
         
@@ -1593,7 +1571,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             results = self._namespace_colours.GetSelectedNamespaceColours()
             
-            for ( namespace, colour ) in results:
+            for ( namespace, colour ) in results.items():
                 
                 colour_data = wx.ColourData()
                 
@@ -1792,7 +1770,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
             
-            self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 100 )
+            self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 65536 )
             self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
             
             self._thread_check_period = ClientGUICommon.TimeDeltaButton( thread_checker, min = 30, hours = True, minutes = True, seconds = True )
@@ -2764,7 +2742,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def DeleteShortcuts( self ):
             
-            self._shortcuts.RemoveAllSelected()
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._shortcuts.RemoveAllSelected()
+                    
+                
             
         
         def EditShortcuts( self ):
@@ -3284,6 +3268,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            render_panel = ClientGUICommon.StaticBox( self, 'tag rendering' )
+            
+            render_st = wx.StaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
+            render_st.Wrap( 400 )
+            
+            self._show_namespaces = wx.CheckBox( render_panel )
+            self._namespace_connector = wx.TextCtrl( render_panel )
+            
+            #
+            
             suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
             self._suggested_tags_width = wx.SpinCtrl( suggested_tags_panel, min = 20, max = 65535 )
@@ -3385,6 +3379,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
             
+            #
+            
+            self._show_namespaces.SetValue( new_options.GetBoolean( 'show_namespaces' ) )
+            self._namespace_connector.SetValue( new_options.GetString( 'namespace_connector' ) )
+            
+            #
+            
             self._suggested_tags_width.SetValue( self._new_options.GetInteger( 'suggested_tags_width' ) )
             
             self._suggested_tags_layout.SelectClientData( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
@@ -3420,6 +3421,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             general_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             vbox.AddF( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
+            rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
+            
+            render_panel.AddF( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.AddF( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3543,6 +3558,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetChoice() )
             
             self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
+            
+            self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
+            self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
             
             self._SaveCurrentSuggestedFavourites()
             
@@ -3697,12 +3715,18 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Delete( self ):
         
-        for service in self._services_listctrl.GetObjects( only_selected = True ):
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
-            self._deletee_service_keys.append( service.GetServiceKey() )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for service in self._services_listctrl.GetObjects( only_selected = True ):
+                    
+                    self._deletee_service_keys.append( service.GetServiceKey() )
+                    
+                
+                self._services_listctrl.RemoveAllSelected()
+                
             
-        
-        self._services_listctrl.RemoveAllSelected()
         
     
     def _Edit( self ):
@@ -4023,7 +4047,13 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Delete( self ):
         
-        self._subscriptions.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._subscriptions.RemoveAllSelected()
+                
+            
         
     
     def Duplicate( self ):

@@ -561,6 +561,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
         
+        self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
+        
         #
         
         self._dictionary[ 'integers' ] = {}
@@ -604,6 +606,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ] = {}
         
         self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
+        self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         
         #
         

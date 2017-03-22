@@ -135,12 +135,18 @@ class ReviewServicePanel( wx.Panel ):
     
     def DeleteBoorus( self ):
         
-        for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
-            self._controller.Write( 'delete_local_booru_share', share_key )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
+                    
+                    self._controller.Write( 'delete_local_booru_share', share_key )
+                    
+                
+                self._booru_shares.RemoveAllSelected()
+                
             
-        
-        self._booru_shares.RemoveAllSelected()
         
     
     def EditBoorus( self ):
@@ -414,6 +420,11 @@ class ReviewServicePanel( wx.Panel ):
             
         
     
+    def GetServiceKey( self ):
+        
+        return self._service.GetServiceKey()
+        
+    
     def RefreshLocalBooruShares( self ):
         
         self._DisplayService()
@@ -421,12 +432,18 @@ class ReviewServicePanel( wx.Panel ):
     
     def UnpinIPFSDirectories( self ):
         
-        for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
-            self._service.UnpinDirectory( multihash )
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                    
+                    self._service.UnpinDirectory( multihash )
+                    
+                
+                self._ipfs_shares.RemoveAllSelected()
+                
             
-        
-        self._ipfs_shares.RemoveAllSelected()
         
     
     class _ServicePanel( ClientGUICommon.StaticBox ):
@@ -501,6 +518,18 @@ class ReviewServicePanel( wx.Panel ):
             HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
             
         
+        def _UpdateFromThread( self, text ):
+            
+            try:
+                
+                self._file_info_st.SetLabelText( text )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
+            
+        
         def Update( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -527,7 +556,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files'
                 
             
-            wx.CallAfter( self._file_info_st.SetLabelText, text )
+            wx.CallAfter( self._UpdateFromThread, text )
             
         
     
@@ -803,6 +832,7 @@ class ReviewServicePanel( wx.Panel ):
             self._sync_now_button = ClientGUICommon.BetterButton( self, 'process now', self._SyncNow )
             self._pause_play_button = ClientGUICommon.BetterButton( self, 'pause', self._PausePlay )
             self._export_updates_button = ClientGUICommon.BetterButton( self, 'export updates', self._ExportUpdates )
+            self._reset_button = ClientGUICommon.BetterButton( self, 'reset processing cache', self._Reset )
             
             #
             
@@ -815,6 +845,7 @@ class ReviewServicePanel( wx.Panel ):
             hbox.AddF( self._sync_now_button, CC.FLAGS_LONE_BUTTON )
             hbox.AddF( self._pause_play_button, CC.FLAGS_LONE_BUTTON )
             hbox.AddF( self._export_updates_button, CC.FLAGS_LONE_BUTTON )
+            hbox.AddF( self._reset_button, CC.FLAGS_LONE_BUTTON )
             
             self.AddF( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -946,6 +977,29 @@ class ReviewServicePanel( wx.Panel ):
             HydrusGlobals.client_controller.CallToThread( self.THREADFetchUpdateProgress )
             
         
+        def _Reset( self ):
+            
+            name = self._service.GetName()
+            
+            message = 'This will remove all the processed information for ' + name + ' from the database, setting the \'processed\' gauge back to 0.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything that has been downloaded over again. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'If you do not understand what this does, click no!'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    message = 'Seriously, are you absolutely sure?'
+                    
+                    with ClientGUIDialogs.DialogYesNo( self, message ) as dlg2:
+                        
+                        if dlg2.ShowModal() == wx.ID_YES:
+                            
+                            self._service.Reset()
+                            
+                        
+                    
+                
+            
+        
         def _SyncNow( self ):
             
             def do_it():
@@ -958,6 +1012,19 @@ class ReviewServicePanel( wx.Panel ):
             self._sync_now_button.Disable()
             
             HydrusGlobals.client_controller.CallToThread( do_it )
+            
+        
+        def _UpdateFromThread( self, download_text, download_value, processing_text, processing_value, range ):
+            
+            try:
+                
+                self._download_progress.SetValue( download_text, download_value, range )
+                self._processing_progress.SetValue( processing_text, processing_value, range )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         def Update( self, service ):
@@ -974,13 +1041,11 @@ class ReviewServicePanel( wx.Panel ):
             
             ( download_value, processing_value, range ) = HydrusGlobals.client_controller.Read( 'repository_progress', self._service.GetServiceKey() )
             
-            text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
+            download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
             
-            wx.CallAfter( self._download_progress.SetValue, text, download_value, range )
+            processing_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
             
-            text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
-            
-            wx.CallAfter( self._processing_progress.SetValue, text, processing_value, range )
+            wx.CallAfter( self._UpdateFromThread, download_text, download_value, processing_text, processing_value, range )
             
         
     
@@ -1131,6 +1196,18 @@ class ReviewServicePanel( wx.Panel ):
             HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
             
         
+        def _UpdateFromThread( self, text ):
+            
+            try:
+                
+                self._tag_info_st.SetLabelText( text )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
+            
+        
         def Update( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -1158,7 +1235,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings'
                 
             
-            wx.CallAfter( self._tag_info_st.SetLabelText, text )
+            wx.CallAfter( self._UpdateFromThread, text )
             
         
     

@@ -73,7 +73,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
         
     '''
-class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTags ):
+class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, activate_callable ):
         
@@ -98,18 +98,14 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTags ):
     
     def SetPredicates( self, predicates ):
         
-        self._ordered_strings = []
-        self._strings_to_terms = {}
+        self._Clear()
         
         for predicate in predicates:
             
-            tag_string = predicate.GetValue()
-            
-            self._ordered_strings.append( tag_string )
-            self._strings_to_terms[ tag_string ] = predicate
+            self._AppendTerm( predicate )
             
         
-        self._TextsHaveChanged()
+        self._DataHasChanged()
         
     
 class RecentTagsPanel( wx.Panel ):

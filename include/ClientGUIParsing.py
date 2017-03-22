@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
+import ClientGUIControls
 import ClientGUIScrolledPanels
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
@@ -31,7 +32,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = wx.TextCtrl( self )
         
-        self._attrs = ClientGUICommon.EditStringToStringDict( self, attrs )
+        self._attrs = ClientGUIControls.EditStringToStringDictControl( self, attrs )
         
         message = 'index to fetch'
         
@@ -563,7 +564,13 @@ class EditNodes( wx.Panel ):
     
     def Delete( self ):
         
-        self._nodes.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._nodes.RemoveAllSelected()
+                
+            
         
     
     def Duplicate( self ):
@@ -1279,7 +1286,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         static_args_panel = ClientGUICommon.StaticBox( query_panel, 'static arguments' )
         
-        self._static_args = ClientGUICommon.EditStringToStringDict( static_args_panel, static_args )
+        self._static_args = ClientGUIControls.EditStringToStringDictControl( static_args_panel, static_args )
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
@@ -1726,7 +1733,13 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Delete( self ):
         
-        self._scripts.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._scripts.RemoveAllSelected()
+                
+            
         
     
     def Duplicate( self ):

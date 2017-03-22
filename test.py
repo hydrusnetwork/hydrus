@@ -18,6 +18,7 @@ from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientDownloading
+from include import TestClientListBoxes
 from include import TestConstants
 from include import TestDialogs
 from include import TestDB
@@ -270,18 +271,21 @@ class Controller( object ):
         if only_run is None: run_all = True
         else: run_all = False
         
-        if run_all or only_run == 'cc': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
         if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
-        if run_all or only_run == 'dialogs': suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
+        if run_all or only_run == 'data':
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
         if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
-        if run_all or only_run == 'functions': suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
+        if run_all or only_run == 'gui':
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
         if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
         if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
-        if run_all or only_run == 'serialisable': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
         if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
-        if run_all or only_run == 'sessions': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
-        if run_all or only_run == 'tags': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         
         suite = unittest.TestSuite( suites )
         
@@ -350,11 +354,14 @@ if __name__ == '__main__':
             
             win = wx.Frame( None )
             
-            wx.CallAfter( controller.Run )
-            #threading.Thread( target = controller.Run ).start()
+            def do_it():
+                
+                controller.Run()
+                
+                win.Destroy()
+                
             
-            wx.CallAfter( win.Destroy )
-            
+            wx.CallAfter( do_it )
             app.MainLoop()
             
         except:

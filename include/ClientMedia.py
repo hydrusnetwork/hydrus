@@ -350,6 +350,11 @@ class MediaList( object ):
         self._RecalcHashes()
         
     
+    def __len__( self ):
+        
+        return len( self._singleton_media ) + sum( map( len, self._collected_media ) )
+        
+    
     def _CalculateCollectionKeysToMedias( self, collect_by, medias ):
     
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
@@ -856,6 +861,11 @@ class MediaList( object ):
         return media_results
         
     
+    def GetFirst( self ):
+        
+        return self._GetFirst()
+        
+    
     def GetFlatMedia( self ):
         
         flat_media = []
@@ -869,7 +879,22 @@ class MediaList( object ):
         return flat_media
         
     
+    def GetLast( self ):
+        
+        return self._GetLast()
+        
+    
     def GetMediaIndex( self, media ): return self._sorted_media.index( media )
+    
+    def GetNext( self, media ):
+        
+        return self._GetNext( media )
+        
+    
+    def GetPrevious( self, media ):
+        
+        return self._GetPrevious( media )
+        
     
     def GetSortedMedia( self ): return self._sorted_media
     

@@ -1,4 +1,5 @@
 import collections
+import ClientConstants as CC
 import HydrusConstants as HC
 import HydrusTags
 import os
@@ -6,6 +7,7 @@ import random
 import threading
 import weakref
 import HydrusData
+import wx
 
 DB_DIR = None
 
@@ -53,4 +55,24 @@ class FakeHTTPConnectionManager():
 class FakeWebSessionManager():
     
     def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
+    
+class TestFrame( wx.Frame ):
+    
+    def __init__( self ):
+        
+        wx.Frame.__init__( self, None )
+        
+    
+    def SetPanel( self, panel ):
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self.Fit()
+        
+        self.Show()
+        
     

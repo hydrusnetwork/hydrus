@@ -1298,7 +1298,13 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def Delete( self ):
         
-        self._export_folders.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._export_folders.RemoveAllSelected()
+                
+            
         
     
     def Edit( self ):
@@ -1404,7 +1410,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         predicates = file_search_context.GetPredicates()
         
-        self._predicates_box = ClientGUIListBoxes.ListBoxTagsPredicates( self._query_box, self._page_key, predicates )
+        self._predicates_box = ClientGUIListBoxes.ListBoxTagsActiveSearchPredicates( self._query_box, self._page_key, predicates )
         
         self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._query_box, self._page_key, file_search_context )
         
@@ -2375,7 +2381,13 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def Delete( self ):
         
-        self._import_folders.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._import_folders.RemoveAllSelected()
+                
+            
         
     
     def Edit( self ):
@@ -3332,7 +3344,13 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
     
     def Delete( self ):
         
-        self._regexes.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._regexes.RemoveAllSelected()
+                
+            
         
     
     def Edit( self ):
@@ -3579,7 +3597,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
     
 class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, tag = None ):
+    def __init__( self, parent, tags = None ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag parents' )
         
@@ -3604,11 +3622,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 name = service.GetName()
                 service_key = service.GetServiceKey()
                 
-                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
+                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tags ), {} )
                 
             
         
-        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tag )
+        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tags )
         
         name = CC.LOCAL_TAG_SERVICE_KEY
         
@@ -4069,7 +4087,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 self._parents.RemoveTags( tags )
                 
-                self._children.AddTags( tags )
+                self._children.EnterTags( tags )
                 
                 self._SetButtonStatus()
                 
@@ -4081,7 +4099,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 self._children.RemoveTags( tags )
                 
-                self._parents.AddTags( tags )
+                self._parents.EnterTags( tags )
                 
                 self._SetButtonStatus()
                 
@@ -4171,7 +4189,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
 class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
-    def __init__( self, parent, tag = None ):
+    def __init__( self, parent, tags = None ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'tag siblings' )
         
@@ -4187,7 +4205,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         #
         
-        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tag )
+        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, tags )
         
         name = CC.LOCAL_TAG_SERVICE_KEY
         
@@ -4202,7 +4220,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 name = service.GetName()
                 service_key = service.GetServiceKey()
                 
-                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tag ), {} )
+                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, tags ), {} )
                 
             
         
@@ -4828,7 +4846,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._old_siblings.RemoveTags( { new } )
                 
-                self._new_sibling.SetLabelText( HydrusTags.RenderTag( new ) )
+                self._new_sibling.SetLabelText( new )
                 
                 self._current_new = new
                 

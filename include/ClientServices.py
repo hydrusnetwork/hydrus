@@ -997,6 +997,26 @@ class ServiceRepository( ServiceRestricted ):
             
         
     
+    def Reset( self ):
+        
+        with self._lock:
+            
+            self._no_requests_reason = ''
+            no_requests_until = 0
+            
+            self._account = HydrusNetwork.Account.GenerateUnknownAccount()
+            self._next_account_sync = 0
+            
+            self._metadata = HydrusNetwork.Metadata()
+            
+            self._SetDirty()
+            
+            HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+            
+            HydrusGlobals.client_controller.Write( 'reset_repository', self )
+            
+        
+    
     def Sync( self, only_process_when_idle = False, stop_time = None ):
         
         try:

@@ -94,7 +94,13 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
     def _Delete( self ):
         
-        self._listctrl.RemoveAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._listctrl.RemoveAllSelected()
+                
+            
         
     
     def _Edit( self ):
@@ -223,6 +229,120 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             return ( bandwidth_type, time_delta, max_allowed )
             
+        
+    
+class EditStringToStringDictControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_dict ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._listctrl = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
+        self._edit = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
+        self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
+        
+        #
+        
+        for display_tuple in initial_dict.items():
+            
+            self._listctrl.Append( display_tuple, display_tuple )
+            
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._add, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._edit, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def Add( self ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'enter the key', allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key = dlg.GetValue()
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'enter the value', allow_blank = True ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        value = dlg.GetValue()
+                        
+                        display_tuple = ( key, value )
+                        
+                        self._listctrl.Append( display_tuple, display_tuple )
+                        
+                    
+                
+            
+        
+    
+    def Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._listctrl.RemoveAllSelected()
+                
+            
+        
+    
+    def Edit( self ):
+        
+        for i in self._listctrl.GetAllSelected():
+            
+            ( key, value ) = self._listctrl.GetClientData( i )
+            
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = key, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    key = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the value', default = value, allow_blank = True ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    value = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            display_tuple = ( key, value )
+            
+            self._listctrl.UpdateRow( i, display_tuple, display_tuple )
+            
+        
+    
+    def GetValue( self ):
+        
+        value_dict = { key : value for ( key, value ) in self._listctrl.GetClientData() }
+        
+        return value_dict
         
     
 class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):

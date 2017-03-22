@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 248</h3></li>
+				<ul>
+					<li>fixed two more issues with recent update code!</li>
+					<li>re-applied a more rigorously tested 'invalid subtag' replacement for any user that has experienced incomplete update code in the past few weeks</li>
+					<li>added some tag rendering options to options->tags that affect most user-facing, non-editing windows:</li>
+					<li>added custom namespace-subtag connector (i.e. instead of ':')</li>
+					<li>added 'show namespaces' checkbox (i.e. to keep the colour but lose the namespace, like how most boorus display tags)</li>
+					<li>created a basic framework for the duplicate filter--it doesn't do anything yet, but you can launch it from the duplicates page to check it out</li>
+					<li>updated 'reset processing cache' action and added it to review services repository pages</li>
+					<li>review services now always starts on 'my files'</li>
+					<li>review services will try to stay looking at the currently selected service through a refresh_services event</li>
+					<li>fixed some thread-gui refresh interaction in review services</li>
+					<li>all listctrl-attached delete/remove buttons will now ask if you are sure before they go</li>
+					<li>reenabled db->maintenance->clear orphans, which it turns out I had already fixed by accident</li>
+					<li>serverside services will lock themselves more efficiently while generating updates, ensuring 'server busy' responses can always return promptly</li>
+					<li>fixed tag manage parents a/c entry to remove tags when they already exist in the box (previously, the a/c would only ever add, so a double-click was required to remove)</li>
+					<li>tuned adminside petition processing so it approves/denies in reasonable-sized chunks</li>
+					<li>refactored all the taglist gui code to focus on the underlying tag rather than the string representation</li>
+					<li>plenty of misc taglist cleanup besides</li>
+					<li>started a unit test suite for listboxes and wrote a thorough test for namespace colour listbox</li>
+					<li>misc canvas refactoring</li>
+				</ul>
 				<li><h3>version 247</h3></li>
 				<ul>
 					<li>fixed a problem with deleting more than 256 files at once</li>

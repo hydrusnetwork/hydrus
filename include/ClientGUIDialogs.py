@@ -1828,10 +1828,16 @@ class DialogInputLocalFiles( Dialog ):
     
     def RemovePaths( self ):
         
-        self._paths_list.RemoveAllSelected()
-        
-        self._current_paths = [ row[0] for row in self._paths_list.GetClientData() ]
-        self._current_paths_set = set( self._current_paths )
+        with DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._paths_list.RemoveAllSelected()
+                
+                self._current_paths = [ row[0] for row in self._paths_list.GetClientData() ]
+                self._current_paths_set = set( self._current_paths )
+                
+            
         
     
     def StopProgress( self ):
@@ -3158,9 +3164,15 @@ class DialogPathsToTags( Dialog ):
             
             def DeleteQuickNamespaces( self ):
                 
-                self._quick_namespaces_list.RemoveAllSelected()
-                
-                self._refresh_callable()
+                with DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        self._quick_namespaces_list.RemoveAllSelected()
+                        
+                        self._refresh_callable()
+                        
+                    
                 
             
             def EditQuickNamespaces( self ):
@@ -4223,9 +4235,15 @@ class DialogSetupExport( Dialog ):
     
     def DeletePaths( self ):
         
-        self._paths.RemoveAllSelected()
-        
-        self._RecalcPaths()
+        with DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._paths.RemoveAllSelected()
+                
+                self._RecalcPaths()
+                
+            
         
     
     def EventExport( self, event ):
@@ -4729,7 +4747,13 @@ class DialogShortcuts( Dialog ):
         
         def RemoveShortcuts( self ):
             
-            self._shortcuts.RemoveAllSelected()
+            with DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._shortcuts.RemoveAllSelected()
+                    
+                
             
         
     
