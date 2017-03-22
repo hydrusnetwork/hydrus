@@ -19,7 +19,7 @@
 			<p>Searching for tags via the autocomplete dropdown and searching for files in general can sometimes take a very long time. It depends on many things. In general, the more predicates (tags and system:something) you have active for a search, the faster it will be. And the more specific the search domain (e.g. "local files" instead of "all known files" and "my tag repo" instead of "all known tags"), the faster it will be.</p>
 			<p>You can also look at <i>file->options->speed and memory</i>, again especially if you have a slow computer. Increasing the autocomplete thresholds is very often helpful. You can even force autocompletes to only fetch results when you manually ask for them.</p>
 			<p>Having lots of thumbnails open can slow many things down. If you get lag with 10,000 files open in your searches, try cutting it down to only 1,000 or so. Split your downloading binges and subscriptions into smaller, rarer chunks, and don't try to watch 1080p webms while five other things are going on.</p>
-			<h3>finally - profiles</h3>
+			<h3 id="profiles">finally - profiles</h3>
 			<p>Lots of my code remains unoptimised for certain situations. My development environment is obviously specific to me and has only a few thousand images and a few million tags. As I write code, I am usually more concerned with getting it to work at all rather than getting it to work fast for every possible scenario. So, if something is running particularly slow for you, but your computer is otherwise working fine, let me know and I can almost always speed it up.</p>
 			<p>Let me know:</p>
 			<ul>
@@ -30,8 +30,8 @@
 				<li>Any <i>profiles</i> you have collected.</li>
 			</ul>
 			<p>A <i>profile</i> is a large block of debug text that lets me know which parts of my code are running slow for you. Currently, hydrus profiles have three sections. A complete one looks like <a href="profile_example.txt">this</a>.</p>
-			<p>It is very helpful to me to have a profile. You can generate one by going <i>help->debug->db profile mode</i>, which tells the client to generate profile information for every subsequent database request. This will spam your logfile, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).</p>
-			<p>Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then shut the client down and go to your logfile, which should be at install_dir/db/client.log. At the bottom of that file will be several sets of tables with timing information for one (or likely more) code calls. Find the ones labelled for your problem request (e.g. "import_file") and copy and paste that to me.</p>
+			<p>It is very helpful to me to have a profile. You can generate some by going <i>help->debug->db profile mode</i>, which tells the client to generate profile information for every subsequent database request. This will spam your logfile, so don't leave it on for a very long time (you can turn it off by hitting the help menu entry again).</p>
+			<p>Turn on profile mode, do the thing that runs slow for you (importing a file, fetching some tags, whatever), and then shut the client down and go to the newly created profile logfile, which should be at <i>install_dir/db/client profile - TIMESTAMP.log</i>. This file will be filled with several sets of tables with timing information for one (or likely more) code calls. You can either copy and paste the data labelled for your problem request (e.g. "import_file") or just send me the whole logfile.</p>
 			<p><i>pubsub profile mode</i> is experimental and very log heavy. Feel free to play with it, but it is really for my own purposes. Almost everything that is slow in the program is due to my inefficient database queries.</p>
 			<p>There are several ways to <a href="contact.html">contact me</a>.</p>
 		</div>

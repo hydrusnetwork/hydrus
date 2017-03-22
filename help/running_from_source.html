@@ -7,13 +7,13 @@
 	<body>
 		<div class="content">
 			<h3>running from source</h3>
-			<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. I don't recommended this for someone who just wants to get the program working, but rather for those who have a general interest or wish to modify the program.</p>
+			<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is not simple to get hydrus running this way, but if none of the built packages work for you (for instance you use a non-Ubuntu-compatible flavour of Linux), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this stuff.</p>
 			<h3>what you will need</h3>
-			<p>You will need to install python 2.7 and a number of python modules. Most of it you can get through pip. I think this will do for most systems:</p>
+			<p>You will need basic python experience, python 2.7 and a number of python modules. Most of it you can get through pip. I think this will do for most systems:</p>
 			<ul>
 				<li>pip install beautifulsoup4 hsaudiotag lxml lz4 nose numpy pafy Pillow psutil pycrypto PyOpenSSL PyPDF2 PySocks python-potr PyYAML requests Send2Trash service_identity twisted</li>
 			</ul>
-			<p>Although you may want to do them one at a time, or in a different order. Your specific system may also need some of them from different sources and will need some complicated things installed separately. The best way to figure it out is just to keep running client.pyw and see what it complains about missing.</p>
+			<p>Although you may want to do all that in smaller batches. Ultimately, the best way to figure out if you have enough is to just keep running client.pyw and see what it complains about missing.</p>
 			<p>I use Ubuntu 16.10, which also requires something like:</p>
 			<p><ul>
 				<li>sudo apt-get install python-opencv</li>
@@ -28,12 +28,11 @@
 			</ul></p>
 			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. wxPython is easy--just download from <a href="http://wxpython.org/download.php">here</a>. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python27\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>A user has also created <a href="https://github.com/eider-i128/hydrus-win">an environment</a> to help Windows users run from source and build a distribution.</p>
-			<p>Some people have encountered problems with wxPython 3.0, so you might want to try 2.9.x. Again, YMMV.</p>
 			<p>If you don't have ffmpeg in your path and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. You can either copy the exe from one of those releases, or download the latest build right from the FFMPEG site. I don't include these exes in the source release just because they are so big.</a>
 			<p>Once you have everything set up, client.pyw and server.pyw should look for and run off client.db and server.db just like the executables.</p>
-			<p>I develop hydrus on 64-bit Win 7, so the program is much more stable and reasonable on Windows. I do not have as much experience with Linux or OS X, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
+			<p>I develop hydrus on and am most experienced with Windows, so the program is much more stable and reasonable on that. I do not have as much experience with Linux or OS X, so I would particularly appreciate your Linux/OS X bug reports and any informed suggestions.</p>
 			<h3>my code</h3>
-			<p>My nerdism is INFJ, not INTP/J. My coding style is unusual, and everything is pretty much hacked together, but please do look through the source if you are interested in how things work and ask me if you don't understand something.</p>
+			<p>My nerdism is INFJ, not INTP/J. My coding style is unusual, and everything is pretty much hacked together, but please do look through the source if you are interested in how things work and ask me if you don't understand something. I'm constantly throwing new code together and then cleaning and overhauling it down the line.</p>
 			<p>I prefer to work alone, so while I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests. Everything is <a href="http://sam.zoy.org/wtfpl/COPYING">WTFPL</a>, though, so feel free to fork and play around with things on your end as much as you like.</p>
 		</div>
 	</body>
