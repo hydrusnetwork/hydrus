@@ -1410,6 +1410,8 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         for ( namespace, colour ) in initial_namespace_colours.items():
             
+            colour = tuple( colour ) # tuple to convert from list, for oooold users who have list colours
+            
             self._AppendTerm( ( namespace, colour ) )
             
         
@@ -1466,6 +1468,8 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
     
     def SetNamespaceColour( self, namespace, colour ):
+        
+        colour = tuple( colour )
         
         for ( existing_namespace, existing_colour ) in self._terms:
             
