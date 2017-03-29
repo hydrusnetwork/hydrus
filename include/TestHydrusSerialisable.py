@@ -1,5 +1,7 @@
 import ClientConstants as CC
 import ClientData
+import ClientDownloading
+import ClientImporting
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData
@@ -9,7 +11,7 @@ import os
 import unittest
 import wx
 
-class TestServer( unittest.TestCase ):
+class TestSerialisables( unittest.TestCase ):
     
     def _dump_and_load_and_test( self, obj, test_func ):
         
@@ -163,3 +165,68 @@ class TestServer( unittest.TestCase ):
             self.assertEqual( shortcuts.GetMouseAction( modifier, mouse_button ), action )
             
         
+    
+    def test_SERIALISABLE_TYPE_SUBSCRIPTION( self ):
+        
+        def test( obj, dupe_obj ):
+            
+            self.assertEqual( obj.GetName(), dupe_obj.GetName() )
+            
+            self.assertEqual( obj._gallery_identifier, dupe_obj._gallery_identifier )
+            self.assertEqual( obj._gallery_stream_identifiers, dupe_obj._gallery_stream_identifiers )
+            self.assertEqual( obj._query, dupe_obj._query )
+            self.assertEqual( obj._period, dupe_obj._period )
+            self.assertEqual( obj._get_tags_if_url_known_and_file_redundant, dupe_obj._get_tags_if_url_known_and_file_redundant )
+            self.assertEqual( obj._initial_file_limit, dupe_obj._initial_file_limit )
+            self.assertEqual( obj._periodic_file_limit, dupe_obj._periodic_file_limit )
+            self.assertEqual( obj._paused, dupe_obj._paused )
+            
+            self.assertEqual( obj._import_file_options.GetSerialisableTuple(), dupe_obj._import_file_options.GetSerialisableTuple() )
+            self.assertEqual( obj._import_tag_options.GetSerialisableTuple(), dupe_obj._import_tag_options.GetSerialisableTuple() )
+            
+            self.assertEqual( obj._last_checked, dupe_obj._last_checked )
+            self.assertEqual( obj._last_error, dupe_obj._last_error )
+            self.assertEqual( obj._check_now, dupe_obj._check_now )
+            
+            self.assertEqual( obj._seed_cache.GetSerialisableTuple(), dupe_obj._seed_cache.GetSerialisableTuple() )
+            
+        
+        sub = ClientImporting.Subscription( 'test sub' )
+        
+        self._dump_and_load_and_test( sub, test )
+        
+        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, 'gelbooru' )
+        gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
+        query = 'test query'
+        period = 86400 * 7
+        get_tags_if_url_known_and_file_redundant = True
+        initial_file_limit = 100
+        periodic_file_limit = 50
+        paused = False
+        
+        import_file_options = ClientData.ImportFileOptions( automatic_archive = False, exclude_deleted = True, min_size = 8 * 1024, min_resolution = [ 25, 25 ] )
+        import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = { HydrusData.GenerateKey() : { 'series', '' } }, service_keys_to_explicit_tags = { HydrusData.GenerateKey() : { 'test explicit tag', 'and another' } } )
+        
+        last_checked = HydrusData.GetNow() - 3600
+        last_error = HydrusData.GetNow() - 86400 * 20
+        check_now = False
+        seed_cache = ClientImporting.SeedCache()
+        
+        seed_cache.AddSeed( 'http://exampleurl.com/image/123456' )
+        
+        sub.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache )
+        
+        self.assertEqual( sub.GetGalleryIdentifier(), gallery_identifier )
+        self.assertEqual( sub.GetImportTagOptions(), import_tag_options )
+        self.assertEqual( sub.GetQuery(), query )
+        self.assertEqual( sub.GetSeedCache(), seed_cache )
+        
+        self.assertEqual( sub._paused, False )
+        sub.PauseResume()
+        self.assertEqual( sub._paused, True )
+        sub.PauseResume()
+        self.assertEqual( sub._paused, False )
+        
+        self._dump_and_load_and_test( sub, test )
+        
+    

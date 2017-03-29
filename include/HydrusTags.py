@@ -195,7 +195,7 @@ def CleanTag( tag ):
         
         text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
         text += os.linesep * 2
-        text += str( e )
+        text += HydrusData.ToUnicode( e )
         
         raise Exception( text )
         

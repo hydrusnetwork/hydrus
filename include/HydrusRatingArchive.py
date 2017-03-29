@@ -72,7 +72,10 @@ class HydrusRatingArchive( object ):
         self._c = self._db.cursor()
         
     
-    def BeginBigJob( self ): self._c.execute( 'BEGIN IMMEDIATE;' )
+    def BeginBigJob( self ):
+        
+        self._c.execute( 'BEGIN IMMEDIATE;' )
+        
     
     def CommitBigJob( self ):
         
@@ -123,7 +126,10 @@ class HydrusRatingArchive( object ):
         
         filename = os.path.basename( self._path )
         
-        if '.' in filename: filename = filename.split( '.', 1 )[0]
+        if '.' in filename:
+            
+            filename = filename.split( '.', 1 )[0]
+            
         
         return filename
         

@@ -1088,7 +1088,14 @@ class ClientFilesManager( object ):
                     
                     ( base, filename ) = os.path.split( path )
                     
-                    ( hash_encoded, ext ) = filename.split( '.', 1 )
+                    if '.' in filename:
+                        
+                        ( hash_encoded, ext ) = filename.split( '.', 1 )
+                        
+                    else:
+                        
+                        continue # it is an update file, so let's save us some ffmpeg lag and logspam
+                        
                     
                     hash = hash_encoded.decode( 'hex' )
                     

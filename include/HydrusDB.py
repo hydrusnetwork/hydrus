@@ -129,6 +129,8 @@ class HydrusDB( object ):
         self._db_name = db_name
         self._no_wal = no_wal
         
+        self._in_transaction = False
+        
         self._connection_timestamp = 0
         
         main_db_filename = db_name
@@ -194,7 +196,10 @@ class HydrusDB( object ):
             
             time.sleep( self.UPDATE_WAIT )
             
-            try: self._c.execute( 'BEGIN IMMEDIATE;' )
+            try:
+                
+                self._BeginImmediate()
+                
             except Exception as e:
                 
                 raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
@@ -204,7 +209,7 @@ class HydrusDB( object ):
                 
                 self._UpdateDB( version )
                 
-                self._c.execute( 'COMMIT;' )
+                self._Commit()
                 
                 self._is_db_updated = True
                 
@@ -214,7 +219,7 @@ class HydrusDB( object ):
                 
                 try:
                     
-                    self._c.execute( 'ROLLBACK;' )
+                    self._Rollback()
                     
                 except Exception as rollback_e:
                     
@@ -271,6 +276,20 @@ class HydrusDB( object ):
             
         
     
+    def _BeginImmediate( self ):
+        
+        if self._in_transaction:
+            
+            HydrusData.Print( 'Received a call to begin, but was already in a transaction!' )
+            
+        else:
+            
+            self._c.execute( 'BEGIN IMMEDIATE;' )
+            
+            self._in_transaction = True
+            
+        
+    
     def _CleanUpCaches( self ):
         
         pass
@@ -280,6 +299,11 @@ class HydrusDB( object ):
         
         if self._db is not None:
             
+            if self._in_transaction:
+                
+                self._Commit()
+                
+            
             self._c.close()
             self._db.close()
             
@@ -288,6 +312,20 @@ class HydrusDB( object ):
             
             self._db = None
             self._c = None
+            
+        
+    
+    def _Commit( self ):
+        
+        if self._in_transaction:
+            
+            self._c.execute( 'COMMIT;' )
+            
+            self._in_transaction = False
+            
+        else:
+            
+            HydrusData.Print( 'Received a call to commit, but was not in a transaction!' )
             
         
     
@@ -447,6 +485,11 @@ class HydrusDB( object ):
             
         
     
+    def _InitDiskCache( self ):
+        
+        pass
+        
+    
     def _InitExternalDatabases( self ):
         
         pass
@@ -463,25 +506,19 @@ class HydrusDB( object ):
         
         ( action, args, kwargs ) = job.GetCallableTuple()
         
-        in_transaction = False
-        
         try:
             
             if job_type in ( 'read_write', 'write' ):
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
-                
-                in_transaction = True
+                self._BeginImmediate()
                 
             
             if job_type in ( 'read', 'read_write' ): result = self._Read( action, *args, **kwargs )
             elif job_type in ( 'write' ): result = self._Write( action, *args, **kwargs )
             
-            if in_transaction:
+            if self._in_transaction:
                 
-                self._c.execute( 'COMMIT;' )
-                
-                in_transaction = False
+                self._Commit()
                 
             
             for ( topic, args, kwargs ) in self._pubsubs:
@@ -496,11 +533,11 @@ class HydrusDB( object ):
             
         except Exception as e:
             
-            if in_transaction:
+            if self._in_transaction:
                 
                 try:
                     
-                    self._c.execute( 'ROLLBACK;' )
+                    self._Rollback()
                     
                 except Exception as rollback_e:
                     
@@ -522,6 +559,20 @@ class HydrusDB( object ):
     def _ReportStatus( self, text ):
         
         HydrusData.Print( text )
+        
+    
+    def _Rollback( self ):
+        
+        if self._in_transaction:
+            
+            self._c.execute( 'ROLLBACK;' )
+            
+            self._in_transaction = False
+            
+        else:
+            
+            HydrusData.Print( 'Received a call to rollback, but was not in a transaction!' )
+            
         
     
     def _SelectFromList( self, select_statement, xs ):
@@ -633,6 +684,8 @@ class HydrusDB( object ):
         try:
             
             self._InitDBCursor() # have to reinitialise because the thread id has changed
+            
+            self._InitDiskCache()
             
             self._InitCaches()
             

@@ -194,13 +194,20 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = None, period = 3600, phrase = '{hash}' ):
+    def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = None, period = 3600, phrase = None ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
         if file_search_context is None:
             
             file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
+            
+        
+        if phrase is None:
+            
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            phrase = new_options.GetString( 'export_phrase' )
             
         
         self._path = path

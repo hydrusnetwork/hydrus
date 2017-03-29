@@ -270,7 +270,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self ):
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         self._CloseDBCursor()
         
@@ -325,7 +325,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBCursor()
             
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            self._BeginImmediate()
             
         
         HydrusData.Print( 'backing up: done!' )
@@ -344,7 +344,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
         
-        self._c.execute( 'BEGIN IMMEDIATE' )
+        self._BeginImmediate()
         
         self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, port INTEGER, dictionary_string TEXT );' )
         
@@ -393,7 +393,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._AddService( admin_service ) # this sets up the admin account and a registration key by itself
         
-        self._c.execute( 'COMMIT' )
+        self._Commit()
         
     
     def _DeleteOrphans( self ):
@@ -510,6 +510,17 @@ class DB( HydrusDB.HydrusDB ):
         return self._GetAccount( service_id, account_id )
         
     
+    def _GetAccountFromAccountKeyAdmin( self, admin_account, service_key, account_key ):
+        
+        # check admin account
+        
+        service_id = self._GetServiceId( service_key )
+        
+        account_id = self._GetAccountId( account_key )
+        
+        return self._GetAccount( service_id, account_id )
+        
+    
     def _GetAccountKeyFromAccessKey( self, service_key, access_key ):
         
         service_id = self._GetServiceId( service_key )
@@ -565,31 +576,103 @@ class DB( HydrusDB.HydrusDB ):
         return account_key
         
     
-    def _GetAccountKeyFromIdentifier( self, service_id, account_identifier ):
+    def _GetAccountFromContent( self, admin_account, service_key, content ):
         
-        if account_identifier.HasAccountKey():
+        # check admin account
+        
+        service_id = self._GetServiceId( service_key )
+        
+        content_type = content.GetContentType()
+        content_data = content.GetContentData()
+        
+        if content_type == HC.CONTENT_TYPE_FILES:
             
-            account_key = account_identifier.GetData()
+            hash = content_data[0]
             
-            result = self._c.execute( 'SELECT 1 FROM accounts WHERE service_id = ? AND account_key = ?;', ( service_id, sqlite3.Binary( account_key ) ) ).fetchone()
-            
-            if result is None: raise HydrusExceptions.ForbiddenException( 'The service could not find that hash in its database.')
-            
-        elif account_identifier.HasContent():
-            
-            account_id = self._RepositoryGetAccountIdFromAccountIdentifierContent( service_id, account_identifier )
-            
-            try:
+            if not self._MasterHashExists( hash ):
                 
-                ( account_key, ) = self._c.execute( 'SELECT account_key FROM accounts WHERE account_id = ?;', ( account_id, ) ).fetchone()
+                raise HydrusExceptions.NotFoundException( 'The service could not find that hash in its database.' )
                 
-            except:
+            
+            master_hash_id = self._GetMasterHashId( hash )
+            
+            if not self._RepositoryServiceHashIdExists( service_id, master_hash_id ):
                 
-                raise HydrusExceptions.NotFoundException( 'The service could not find that account in its database.' )
+                raise HydrusExceptions.NotFoundException( 'The service could not find that service hash in its database.' )
                 
+            
+            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
+            
+            ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+            
+            result = self._c.execute( 'SELECT account_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
+            
+            if result is None:
+                
+                result = self._c.execute( 'SELECT account_id FROM ' + deleted_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
+                
+            
+            if result is None:
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that hash in its database.' )
+                
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPING:
+            
+            ( tag, hash ) = content_data
+            
+            if not self._MasterHashExists( hash ):
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that hash in its database.' )
+                
+            
+            master_hash_id = self._GetMasterHashId( hash )
+            
+            if not self._RepositoryServiceHashIdExists( service_id, master_hash_id ):
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that service hash in its database.' )
+                
+            
+            service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
+            
+            if not self._MasterTagExists( tag ):
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that tag in its database.' )
+                
+            
+            master_tag_id = self._GetMasterTagId( tag )
+            
+            if not self._RepositoryServiceTagIdExists( service_id, master_tag_id ):
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that service tag in its database.' )
+                
+            
+            service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
+            
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+            
+            result = self._c.execute( 'SELECT account_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
+            
+            if result is None:
+                
+                result = self._c.execute( 'SELECT account_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
+                
+            
+            if result is None:
+                
+                raise HydrusExceptions.NotFoundException( 'The service could not find that mapping in its database.' )
+                
+            
+        else:
+            
+            raise HydrusExceptions.NotFoundException( 'The service could not understand the submitted content.' )
             
         
-        return account_key
+        ( account_id, ) = result
+        
+        account = self._GetAccount( service_id, account_id )
+        
+        return account
         
     
     def _GetAccountId( self, account_key ):
@@ -603,17 +686,15 @@ class DB( HydrusDB.HydrusDB ):
         return account_id
         
     
-    def _GetAccountInfo( self, service_key, account, subject_account_identifier ):
+    def _GetAccountInfo( self, service_key, account, subject_account ):
         
         account.CheckPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
         
         service_id = self._GetServiceId( service_key )
         
-        subject_account_key = self._GetAccountKeyFromIdentifier( service_id, subject_account_identifier )
+        subject_account_key = subject_account.GetAccountKey()
         
         subject_account_id = self._GetAccountId( subject_account_key )
-        
-        subject_account = self._GetAccount( service_id, subject_account_id )
         
         service_type = self._GetServiceType( service_id )
         
@@ -625,8 +706,6 @@ class DB( HydrusDB.HydrusDB ):
             
             account_info = {}
             
-        
-        account_info[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( subject_account )
         
         return account_info
         
@@ -1123,7 +1202,7 @@ class DB( HydrusDB.HydrusDB ):
         
         account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         if not self._fast_big_transaction_wal:
             
@@ -1132,7 +1211,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
         current_service_keys = { service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services;' ) }
         
@@ -1170,11 +1249,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         self._InitDBCursor()
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
         return service_keys_to_access_keys
         
@@ -1803,107 +1882,6 @@ class DB( HydrusDB.HydrusDB ):
         updates.extend( content_update_builder.GetUpdates() )
         
         return updates
-        
-    
-    def _RepositoryGetAccountIdFromAccountIdentifierContent( self, service_id, account_identifier ):
-        
-        content = account_identifier.GetData()
-        
-        content_type = content.GetContentType()
-        content_data = content.GetContentData()
-        
-        if content_type == HC.CONTENT_TYPE_FILES:
-            
-            try:
-                
-                hash = content_data[0]
-                
-                if not self._MasterHashExists( hash ):
-                    
-                    raise Exception()
-                    
-                
-                master_hash_id = self._GetMasterHashId( hash )
-                
-                if not self._RepositoryServiceHashIdExists( service_id, master_hash_id ):
-                    
-                    raise Exception()
-                    
-                
-                service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
-                
-                ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-                
-                result = self._c.execute( 'SELECT account_id FROM ' + current_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
-                
-                if result is None:
-                    
-                    result = self._c.execute( 'SELECT account_id FROM ' + deleted_files_table_name + ' WHERE service_hash_id = ?;', ( service_hash_id, ) ).fetchone()
-                    
-                
-                ( account_id, ) = result
-                
-                return account_id
-                
-            except:
-                
-                raise HydrusExceptions.NotFoundException( 'The service could not find that hash in its database.' )
-                
-            
-        elif content_type == HC.CONTENT_TYPE_MAPPING:
-            
-            try:
-                
-                ( tag, hash ) = content_data
-                
-                if not self._MasterHashExists( hash ):
-                    
-                    raise Exception()
-                    
-                
-                master_hash_id = self._GetMasterHashId( hash )
-                
-                if not self._RepositoryServiceHashIdExists( service_id, master_hash_id ):
-                    
-                    raise Exception()
-                    
-                
-                service_hash_id = self._RepositoryGetServiceHashId( service_id, master_hash_id )
-                
-                if not self._MasterTagExists( tag ):
-                    
-                    raise Exception()
-                    
-                
-                master_tag_id = self._GetMasterTagId( tag )
-                
-                if not self._RepositoryServiceTagIdExists( service_id, master_tag_id ):
-                    
-                    raise Exception()
-                    
-                
-                service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id )
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-                
-                result = self._c.execute( 'SELECT account_id FROM ' + current_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
-                
-                if result is None:
-                    
-                    result = self._c.execute( 'SELECT account_id FROM ' + deleted_mappings_table_name + ' WHERE service_tag_id = ? AND service_hash_id = ?;', ( service_tag_id, service_hash_id ) ).fetchone()
-                    
-                
-                ( account_id, ) = result
-                
-                return account_id
-                
-            except:
-                
-                raise HydrusExceptions.NotFoundException( 'The service could not find that mapping in its database.' )
-                
-            
-        
-        raise HydrusExceptions.NotFoundException( 'The service could not understand that account identifier.' )
         
     
     def _RepositoryGetAccountInfo( self, service_id, account_id ):
@@ -3199,7 +3177,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             self._CloseDBCursor()
             
@@ -3221,7 +3199,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._InitDBCursor()
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
             
         
@@ -3357,11 +3335,11 @@ class DB( HydrusDB.HydrusDB ):
             
             if foreign_keys_on:
                 
-                self._c.execute( 'COMMIT;' )
+                self._Commit()
                 
                 self._c.execute( 'PRAGMA foreign_keys = ?;', ( False, ) )
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
             
             HydrusData.Print( 'updating services' )
@@ -3924,7 +3902,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'committing to disk' )
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             self._CloseDBCursor()
             
@@ -3954,7 +3932,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._InitDBCursor()
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
             
             

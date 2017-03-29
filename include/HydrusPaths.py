@@ -199,7 +199,7 @@ def DeletePath( path ):
             
         except Exception as e:
             
-            if 'Error 32' in str( e ):
+            if 'Error 32' in HydrusData.ToUnicode( e ):
                 
                 # file in use by another process
                 

@@ -135,7 +135,10 @@ def GenerateFilteredRandomBytes( byte_to_exclude, num_bytes ):
         
         new_byte = os.urandom( 1 )
         
-        if new_byte != byte_to_exclude: bytes.append( new_byte )
+        if new_byte != byte_to_exclude:
+            
+            bytes.append( new_byte )
+            
         
     
     return ''.join( bytes )
@@ -149,7 +152,9 @@ def GenerateOpenSSLCertAndKeyFile( cert_path, key_path ):
     # create a self-signed cert
     cert = OpenSSL.crypto.X509()
     
-    cert.get_subject().C = 'US'
+    cert.get_subject().countryName = 'HN'
+    cert.get_subject().organizationName = 'hydrus network'
+    cert.get_subject().organizationalUnitName = os.urandom( 32 ).encode( 'hex' )
     cert.set_serial_number( 1 )
     cert.gmtime_adj_notBefore( 0 )
     cert.gmtime_adj_notAfter( 10*365*24*60*60 )

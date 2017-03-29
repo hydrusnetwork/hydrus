@@ -893,9 +893,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             contents = [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ hash ] ) for hash in hashes ]
             
-            subject_identifiers = [ HydrusData.AccountIdentifier( content = content ) for content in contents ]
+            subject_accounts = 'blah' # fetch subjects from server with the contents
             
-            with ClientGUIDialogs.DialogModifyAccounts( self, file_service_key, subject_identifiers ) as dlg: dlg.ShowModal()
+            with ClientGUIDialogs.DialogModifyAccounts( self, file_service_key, subject_accounts ) as dlg: dlg.ShowModal()
             
             self.SetFocus()
             

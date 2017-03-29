@@ -840,7 +840,9 @@ class HTTPConnection( object ):
         if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
         elif self._scheme == 'https':
             
-            if self._hydrus_network:
+            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            
+            if self._hydrus_network or not new_options.GetBoolean( 'verify_regular_https' ):
                 
                 # this negotiates decent encryption but won't check hostname or the certificate
                 

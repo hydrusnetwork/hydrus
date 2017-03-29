@@ -1528,7 +1528,7 @@ class DialogInputLocalBooruShare( Dialog ):
             external_port = self._service.GetPort()
             
         
-        url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
+        url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', url )
         
@@ -4144,7 +4144,11 @@ class DialogSetupExport( Dialog ):
         
         self._directory_picker.SetPath( export_path )
         
-        self._pattern.SetValue( '{hash}' )
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        phrase = new_options.GetString( 'export_phrase' )
+        
+        self._pattern.SetValue( phrase )
         
         #
         
@@ -4258,6 +4262,10 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        new_options.SetString( 'export_phrase', pattern )
+        
         terms = ClientExporting.ParseExportPhrase( pattern )
         
         client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
@@ -4370,10 +4378,23 @@ class DialogSetupExport( Dialog ):
                 
                 HydrusPaths.LaunchDirectory( directory )
                 
-            except: wx.MessageBox( 'Could not open that location!' )
+            except:
+                
+                wx.MessageBox( 'Could not open that location!' )
+                
+            
         
     
-    def EventRecalcPaths( self, event ): self._RecalcPaths()
+    def EventRecalcPaths( self, event ):
+        
+        pattern = self._pattern.GetValue()
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        new_options.SetString( 'export_phrase', pattern )
+        
+        self._RecalcPaths()
+        
     
     def EventSelectPath( self, event ):
         

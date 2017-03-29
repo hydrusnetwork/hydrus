@@ -488,7 +488,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', 'closing db' )
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         self._CloseDBCursor()
         
@@ -517,7 +517,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBCursor()
             
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            self._BeginImmediate()
             
         
         job_key.SetVariable( 'popup_text_1', 'done!' )
@@ -1059,56 +1059,65 @@ class DB( HydrusDB.HydrusDB ):
             pub_job_key = True
             
         
-        ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-        
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) ]
-        
-        pairs_found = 0
-        
-        total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-        
-        for ( i, hash_id ) in enumerate( hash_ids ):
+        try:
             
-            job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
+            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
             
-            if pub_job_key and not job_key_pubbed:
+            hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ) ]
+            
+            pairs_found = 0
+            
+            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
+            
+            for ( i, hash_id ) in enumerate( hash_ids ):
                 
-                self._controller.pub( 'message', job_key )
+                job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
                 
-                job_key_pubbed = True
+                if pub_job_key and not job_key_pubbed:
+                    
+                    self._controller.pub( 'message', job_key )
+                    
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( pairs_found ) + ' potential duplicate pairs'
+                
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
+                
+                if i % 100 == 0:
+                    
+                    HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
+                    
+                
+                duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+                
+                # double-check the files exist in shape_search_cache, as I think stale branches are producing deleted file pairs here
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
+                
+                pairs_found += self._GetRowCount()
+                
+                self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
                 
             
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+        finally:
             
-            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
             
-            if should_quit or should_stop:
-                
-                return
-                
+            job_key.Finish()
+            job_key.Delete( 30 )
             
-            text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( pairs_found ) + ' potential duplicate pairs'
-            
-            HydrusGlobals.client_controller.pub( 'splash_set_status_text', text )
-            job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-            
-            duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
-            
-            # double-check the files exist in shape_search_cache, as I think stale branches are producing deleted file pairs here
-            
-            self._c.executemany( 'INSERT OR IGNORE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( ( min( hash_id, duplicate_hash_id ), max( hash_id, duplicate_hash_id ), HC.DUPLICATE_UNKNOWN ) for duplicate_hash_id in duplicate_hash_ids ) )
-            
-            pairs_found += self._GetRowCount()
-            
-            self._c.execute( 'UPDATE shape_search_cache SET searched_distance = ? WHERE hash_id = ?;', ( search_distance, hash_id ) )
-            
-        
-        job_key.SetVariable( 'popup_text_1', 'done!' )
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        
-        job_key.Finish()
-        job_key.Delete( 30 )
         
     
     def _CacheSimilarFilesMaintainFiles( self, job_key = None, stop_time = None ):
@@ -2078,7 +2087,10 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
         
-        try: self._c.execute( 'BEGIN IMMEDIATE;' )
+        try:
+            
+            self._BeginImmediate()
+            
         except Exception as e:
             
             raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
@@ -2246,7 +2258,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT INTO json_dumps_named VALUES ( ?, ?, ?, ? );', ClientDefaults.GetDefaultScriptRows() )
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
     
     def _DeleteFiles( self, service_id, hash_ids ):
@@ -3536,8 +3548,24 @@ class DB( HydrusDB.HydrusDB ):
             elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
             else:
                 
-                if operator == u'\u2248': predicate = str( value * 0.95 ) + ' < rating AND rating < ' + str( value * 1.05 )
-                else: predicate = 'rating ' + operator + ' ' + str( value )
+                # floats are a pain!
+                
+                if operator == u'\u2248':
+                    
+                    predicate = str( value * 0.8 ) + ' < rating AND rating < ' + str( value * 1.2 )
+                    
+                elif operator == '<':
+                    
+                    predicate = 'rating < ' + str( value * 0.995 )
+                    
+                elif operator == '>':
+                    
+                    predicate = 'rating > ' + str( value * 1.005 )
+                    
+                elif operator == '=':
+                    
+                    predicate = str( value * 0.995 ) + ' < rating AND rating < ' + str( value * 1.005 )
+                    
                 
                 query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
                 
@@ -5581,19 +5609,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _InitCaches( self ):
         
-        new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-        
-        disk_cache_init_period = new_options.GetNoneableInteger( 'disk_cache_init_period' )
-        
-        if disk_cache_init_period is not None:
-            
-            HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
-            
-            stop_time = HydrusData.GetNow() + disk_cache_init_period
-            
-            self._LoadIntoDiskCache( stop_time = stop_time )
-            
-        
         HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing db caches' )
         
         self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
@@ -5610,6 +5625,22 @@ class DB( HydrusDB.HydrusDB ):
         ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
         
         self._inbox_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox;' ) }
+        
+    
+    def _InitDiskCache( self ):
+        
+        new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+        
+        disk_cache_init_period = new_options.GetNoneableInteger( 'disk_cache_init_period' )
+        
+        if disk_cache_init_period is not None:
+            
+            HydrusGlobals.client_controller.pub( 'splash_set_status_text', 'preparing disk cache' )
+            
+            stop_time = HydrusData.GetNow() + disk_cache_init_period
+            
+            self._LoadIntoDiskCache( stop_time = stop_time )
+            
         
     
     def _InitExternalDatabases( self ):
@@ -6089,11 +6120,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
             
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            self._BeginImmediate()
             
         
         c_u_p_num_rows = content_update_package.GetNumRows()
@@ -6137,11 +6168,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
                     
-                    self._c.execute( 'COMMIT;' )
+                    self._Commit()
                     
                     self._c.execute( 'PRAGMA journal_mode = WAL;' )
                     
-                    self._c.execute( 'BEGIN IMMEDIATE;' )
+                    self._BeginImmediate()
                     
                 
                 return ( False, c_u_p_total_weight_processed )
@@ -6182,11 +6213,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             self._c.execute( 'PRAGMA journal_mode = WAL;' )
             
-            self._c.execute( 'BEGIN IMMEDIATE;' )
+            self._BeginImmediate()
             
         
         return ( True, c_u_p_total_weight_processed )
@@ -6856,11 +6887,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 stop_time = HydrusData.GetNow() + min( 5 + num_updates_to_do, 30 )
                 
-                self._c.execute( 'COMMIT;' )
+                self._Commit()
                 
                 self._LoadIntoDiskCache( stop_time = stop_time )
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
                 num_updates_done = 0
                 
@@ -7128,7 +7159,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ResetRepository( self, service ):
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         if not self._fast_big_transaction_wal:
             
@@ -7137,7 +7168,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
         ( service_key, service_type, name, dictionary ) = service.ToTuple()
         
@@ -7164,11 +7195,11 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_1', prefix + ': done!' )
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         self._InitDBCursor()
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
         job_key.Finish()
         
@@ -7800,7 +7831,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'splash_set_status_text', 'committing to disk' )
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             self._CloseDBCursor()
             
@@ -7830,7 +7861,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._InitDBCursor()
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
             
             for schema in [ 'main', 'external_caches', 'external_master', 'external_mappings' ]:
@@ -7854,11 +7885,11 @@ class DB( HydrusDB.HydrusDB ):
             
             if foreign_keys_on:
                 
-                self._c.execute( 'COMMIT;' )
+                self._Commit()
                 
                 self._c.execute( 'PRAGMA foreign_keys = ?;', ( False, ) )
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
             
             self._controller.pub( 'splash_set_status_text', 'updating services' )
@@ -8037,7 +8068,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 text = 'Was unable to parse the tag: ' + HydrusData.ToUnicode( tag )
                 text += os.linesep * 2
-                text += str( e )
+                text += HydrusData.ToUnicode( e )
                 
                 raise Exception( text )
                 
@@ -8079,8 +8110,6 @@ class DB( HydrusDB.HydrusDB ):
         if version == 245:
             
             self._InitCaches()
-            
-            self._c.execute( 'BEGIN IMMEDIATE;' )
             
             # due to a previous update, some clients have two entries per prefix with ..\db\client_files vs client_files type superfluous stuff.
             # let's clean it up nicely, catching any other weirdness along the way
@@ -8284,8 +8313,6 @@ class DB( HydrusDB.HydrusDB ):
         if version == 247:
             
             self._InitCaches()
-            
-            self._c.execute( 'BEGIN IMMEDIATE;' )
             
             self._controller.pub( 'splash_set_status_text', 'cleaning tags again' )
             
@@ -8785,7 +8812,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateServices( self, services ):
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         if not self._fast_big_transaction_wal:
             
@@ -8794,7 +8821,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
         current_service_keys = { service_key for ( service_key, ) in self._c.execute( 'SELECT service_key FROM services;' ) }
         
@@ -8831,11 +8858,11 @@ class DB( HydrusDB.HydrusDB ):
         self.pub_after_commit( 'notify_new_services_gui' )
         self.pub_after_commit( 'notify_new_pending' )
         
-        self._c.execute( 'COMMIT;' )
+        self._Commit()
         
         self._InitDBCursor()
         
-        self._c.execute( 'BEGIN IMMEDIATE;' )
+        self._BeginImmediate()
         
     
     def _Vacuum( self, stop_time = None, force_vacuum = False ):
@@ -8866,7 +8893,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( due_names ) > 0:
             
-            self._c.execute( 'COMMIT;' )
+            self._Commit()
             
             job_key_pubbed = False
             
@@ -8927,7 +8954,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self._InitDBCursor()
                         
-                        self._c.execute( 'BEGIN IMMEDIATE;' )
+                        self._BeginImmediate()
                         
                         new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', None )
                         
@@ -8943,7 +8970,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._InitDBCursor()
                 
-                self._c.execute( 'BEGIN IMMEDIATE;' )
+                self._BeginImmediate()
                 
                 self._c.executemany( 'DELETE FROM vacuum_timestamps WHERE name = ?;', ( ( name, ) for name in names_done ) )
                 

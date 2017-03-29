@@ -257,7 +257,7 @@ class ReviewServicePanel( wx.Panel ):
             
             if external_port is None: external_port = info[ 'port' ]
             
-            url = 'http://' + external_ip + ':' + str( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+            url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
             
             self._controller.pub( 'clipboard', 'text', url )
             
@@ -789,7 +789,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     HydrusData.ShowException( e )
                     
-                    wx.CallAfter( wx.MessageBox, str( e ) )
+                    wx.CallAfter( wx.MessageBox, HydrusData.ToUnicode( e ) )
                     
                 
                 wx.CallAfter( self._Refresh )

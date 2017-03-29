@@ -1869,7 +1869,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( str( e ) )
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
                     
                     return
                     

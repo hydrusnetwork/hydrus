@@ -271,7 +271,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                 except HydrusExceptions.NameException as e:
                     
-                    wx.MessageBox( str( e ) )
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
                     
                     self.EventAdd( event )
                     
@@ -1246,12 +1246,15 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def _AddFolder( self ):
         
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        phrase = new_options.GetString( 'export_phrase' )
+        
         name = 'export folder'
         path = ''
         export_type = HC.EXPORT_FOLDER_TYPE_REGULAR
         file_search_context = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY )
         period = 15 * 60
-        phrase = '{hash}'
         
         export_folder = ClientExporting.ExportFolder( name, path, export_type = export_type, file_search_context = file_search_context, period = period, phrase = phrase )
         
@@ -1653,7 +1656,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                 except HydrusExceptions.NameException as e:
                     
-                    wx.MessageBox( str( e ) )
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
                     
                     self.EventAdd( event )
                     

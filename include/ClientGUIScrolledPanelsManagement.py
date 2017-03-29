@@ -15,6 +15,7 @@ import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
+import ClientRatings
 import ClientSerialisable
 import ClientServices
 import collections
@@ -678,7 +679,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.NetworkException as e:
                     
-                    wx.MessageBox( 'Problem with that address: ' + str( e ) )
+                    wx.MessageBox( 'Problem with that address: ' + HydrusData.ToUnicode( e ) )
                     
                 
             
@@ -867,7 +868,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.NetworkException as e:
                     
-                    wx.MessageBox( 'Network problem: ' + str( e ) )
+                    wx.MessageBox( 'Network problem: ' + HydrusData.ToUnicode( e ) )
                     
                     return
                     
@@ -1034,29 +1035,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'ratings' )
                 
-                # shape
-                # colours
-                
-                self._st = wx.StaticText( self )
-                '''
-            if service_type in HC.RATINGS_SERVICES:
-                
-                self._local_rating_panel = ClientGUICommon.StaticBox( self, 'local rating configuration' )
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    num_stars = info[ 'num_stars' ]
-                    
-                    self._num_stars = wx.SpinCtrl( self._local_rating_panel, min = 1, max = 20 )
-                    self._num_stars.SetValue( num_stars )
-                    
-                    allow_zero = info[ 'allow_zero' ]
-                    
-                    self._allow_zero = wx.CheckBox( self._local_rating_panel )
-                    self._allow_zero.SetValue( allow_zero )
-                    
-                
-                self._shape = ClientGUICommon.BetterChoice( self._local_rating_panel )
+                self._shape = ClientGUICommon.BetterChoice( self )
                 
                 self._shape.Append( 'circle', ClientRatings.CIRCLE )
                 self._shape.Append( 'square', ClientRatings.SQUARE )
@@ -1066,8 +1045,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for colour_type in [ ClientRatings.LIKE, ClientRatings.DISLIKE, ClientRatings.NULL, ClientRatings.MIXED ]:
                     
-                    border_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
-                    fill_ctrl = wx.ColourPickerCtrl( self._local_rating_panel )
+                    border_ctrl = wx.ColourPickerCtrl( self )
+                    fill_ctrl = wx.ColourPickerCtrl( self )
                     
                     border_ctrl.SetMaxSize( ( 20, -1 ) )
                     fill_ctrl.SetMaxSize( ( 20, -1 ) )
@@ -1075,17 +1054,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     self._colour_ctrls[ colour_type ] = ( border_ctrl, fill_ctrl )
                     
                 
+                #
                 
+                self._shape.SelectClientData( dictionary[ 'shape' ] )
                 
-            if service_type in HC.RATINGS_SERVICES:
-                
-                self._shape.SelectClientData( info[ 'shape' ] )
-                
-                colours = info[ 'colours' ]
-                
-                for colour_type in colours:
-                    
-                    ( border_rgb, fill_rgb ) = colours[ colour_type ]
+                for ( colour_type, ( border_rgb, fill_rgb ) ) in dictionary[ 'colours' ]:
                     
                     ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
                     
@@ -1093,18 +1066,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     fill_ctrl.SetColour( wx.Colour( *fill_rgb ) )
                     
                 
-            
-            
-            
-            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                #
                 
                 rows = []
-                
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    rows.append( ( 'number of \'stars\': ', self._num_stars ) )
-                    rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
-                    
                 
                 rows.append( ( 'shape: ', self._shape ) )
                 
@@ -1125,38 +1089,20 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     rows.append( ( 'border/fill for ' + colour_text + ': ', hbox ) )
                     
                 
-                gridbox = ClientGUICommon.WrapInGrid( self._local_rating_panel, rows )
+                gridbox = ClientGUICommon.WrapInGrid( self, rows )
                 
-                self._local_rating_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                
-                vbox.AddF( self._local_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            
-            
-            if service_type in HC.RATINGS_SERVICES:
+            def GetValue( self ):
                 
-                if service_type == HC.LOCAL_RATING_NUMERICAL:
-                    
-                    num_stars = self._num_stars.GetValue()
-                    allow_zero = self._allow_zero.GetValue()
-                    
-                    if num_stars == 1 and not allow_zero:
-                        
-                        allow_zero = True
-                        
-                    
-                    info[ 'num_stars' ] = num_stars
-                    info[ 'allow_zero' ] = allow_zero
-                    
+                dictionary_part = {}
                 
-                info[ 'shape' ] = self._shape.GetChoice()
+                dictionary_part[ 'shape' ] = self._shape.GetChoice()
                 
-                colours = {}
+                dictionary_part[ 'colours' ] = {}
                 
-                for colour_type in self._colour_ctrls:
-                    
-                    ( border_ctrl, fill_ctrl ) = self._colour_ctrls[ colour_type ]
+                for ( colour_type, ( border_ctrl, fill_ctrl ) ) in self._colour_ctrls.items():
                     
                     border_colour = border_ctrl.GetColour()
                     
@@ -1166,25 +1112,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     fill_rgb = ( fill_colour.Red(), fill_colour.Green(), fill_colour.Blue() )
                     
-                    colours[ colour_type ] = ( border_rgb, fill_rgb )
+                    dictionary_part[ 'colours' ][ colour_type ] = ( border_rgb, fill_rgb )
                     
-                
-                info[ 'colours' ] = colours
-                
-            
-            '''
-                #
-                
-                self._st.SetLabelText( 'This is a ratings service. This box will get regain colour and star options in a future update.' )
-                
-                #
-                
-                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-            
-            def GetValue( self ):
-                
-                dictionary_part = {}
                 
                 return dictionary_part
                 
@@ -1196,23 +1125,40 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'numerical ratings' )
                 
-                # num_stars
-                # allow_zero
-                
-                self._st = wx.StaticText( self )
+                self._num_stars = wx.SpinCtrl( self, min = 1, max = 20 )
+                self._allow_zero = wx.CheckBox( self )
                 
                 #
                 
-                self._st.SetLabelText( 'This is an numerical ratings service. This box will get regain its options in a future update.' )
+                self._num_stars.SetValue( dictionary[ 'num_stars' ] )
+                self._allow_zero.SetValue( dictionary[ 'allow_zero' ] )
                 
                 #
                 
-                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                rows = []
+                
+                rows.append( ( 'number of \'stars\': ', self._num_stars ) )
+                rows.append( ( 'allow a zero rating: ', self._allow_zero ) )
+                
+                gridbox = ClientGUICommon.WrapInGrid( self, rows )
+                
+                self.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
                 
                 dictionary_part = {}
+                
+                num_stars = self._num_stars.GetValue()
+                allow_zero = self._allow_zero.GetValue()
+                
+                if num_stars == 1 and not allow_zero:
+                    
+                    allow_zero = True
+                    
+                
+                dictionary_part[ 'num_stars' ] = num_stars
+                dictionary_part[ 'allow_zero' ] = allow_zero
                 
                 return dictionary_part
                 
@@ -1224,7 +1170,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
                 
-                # test creds
+                # test creds and fetch version
                 # multihash_prefix
                 '''
             if service_type == HC.IPFS:
@@ -1235,7 +1181,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
                 tts += os.linesep * 2
-                tts += 'Use this if you would really like to copy a full gateway url with that action. For instance, you could put here:'
+                tts += 'Use this if you would rather copy a full gateway url with that action. For instance, you could put here:'
                 tts += os.linesep * 2
                 tts += 'http://127.0.0.1:8080/ipfs/'
                 tts += os.linesep
@@ -1760,6 +1706,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._waiting_politely_text = wx.CheckBox( general )
             
+            self._verify_regular_https = wx.CheckBox( general )
+            
             #
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
@@ -1781,6 +1729,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._website_download_polite_wait.SetValue( HC.options[ 'website_download_polite_wait' ] )
             self._waiting_politely_text.SetValue( self._new_options.GetBoolean( 'waiting_politely_text' ) )
             
+            self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
+            
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
             ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
@@ -1795,6 +1745,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'seconds to politely wait between gallery/thread url requests: ', self._website_download_polite_wait ) )
             rows.append( ( 'instead of the traffic light waiting politely indicator, use text: ', self._waiting_politely_text ) )
+            rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
             
@@ -1830,6 +1781,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'website_download_polite_wait' ] = self._website_download_polite_wait.GetValue()
             self._new_options.SetBoolean( 'waiting_politely_text', self._waiting_politely_text.GetValue() )
+            self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
             
@@ -4187,7 +4139,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( str( e ) )
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
                     
                     return
                     
@@ -4483,7 +4435,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
             
-            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsSelectionTagsDialog( self._tags_box_sorter, self.AddTags, self.RemoveTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -4938,9 +4890,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( contents ) > 0:
                 
-                subject_identifiers = [ HydrusData.AccountIdentifier( content = content ) for content in contents ]
+                subject_accounts = 'blah' # fetch subjects from the server using the contents
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_identifiers ) as dlg: dlg.ShowModal()
+                with ClientGUIDialogs.DialogModifyAccounts( self, self._tag_service_key, subject_accounts ) as dlg: dlg.ShowModal()
                 
             
         
@@ -4999,6 +4951,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def Ok( self ):
             
             wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+            
+        
+        def RemoveTags( self, tags ):
+            
+            if len( tags ) > 0:
+                
+                self._AddTags( tags, only_remove = True )
+                
             
         
         def SetMedia( self, media ):

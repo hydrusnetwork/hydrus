@@ -53,7 +53,7 @@ class HydrusPubSub( object ):
                                 
                             except TypeError as e:
                                 
-                                if '_wxPyDeadObject' not in str( e ): raise
+                                if '_wxPyDeadObject' not in HydrusData.ToUnicode( e ): raise
                                 
                             except Exception as e:
                                 

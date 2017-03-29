@@ -786,7 +786,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                 else:
                     
-                    self._DelayFutureRequests( str( e ) )
+                    self._DelayFutureRequests( HydrusData.ToUnicode( e ) )
                     
                 
                 
@@ -1747,7 +1747,7 @@ class ServiceIPFS( ServiceRemote ):
             
         except HydrusExceptions.NetworkException as e:
             
-            if 'not pinned' not in str( e ):
+            if 'not pinned' not in HydrusData.ToUnicode( e ):
                 
                 raise
                 

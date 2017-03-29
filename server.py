@@ -94,7 +94,7 @@ try:
             
         except HydrusExceptions.PermissionException as e:
             
-            error = str( e )
+            error = HydrusData.ToUnicode( e )
             
             HydrusData.Print( error )
             

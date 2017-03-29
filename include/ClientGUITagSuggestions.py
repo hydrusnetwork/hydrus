@@ -96,6 +96,13 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
         
     
+    def _GetTextFromTerm( self, term ):
+        
+        predicate = term
+        
+        return predicate.GetUnicode( with_count = False )
+        
+    
     def SetPredicates( self, predicates ):
         
         self._Clear()

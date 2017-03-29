@@ -16,7 +16,6 @@ import wx
 class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3
-    delete_key_activates = False
     
     def __init__( self, parent, min_height = 250 ):
         
@@ -66,10 +65,17 @@ class ListBox( wx.ScrolledWindow ):
     
     def _Activate( self ):
         
-        raise NotImplementedError()
+        pass
+        
+    
+    def _DeleteActivate( self ):
+        
+        pass
         
     
     def _AppendTerm( self, term ):
+        
+        was_selected_before = term in self._selected_terms
         
         if term in self._terms:
             
@@ -80,6 +86,11 @@ class ListBox( wx.ScrolledWindow ):
         self._ordered_terms.append( term )
         
         self._terms_to_texts[ term ] = self._GetTextFromTerm( term )
+        
+        if was_selected_before:
+            
+            self._selected_terms.add( term )
+            
         
     
     def _Clear( self ):
@@ -475,7 +486,11 @@ class ListBox( wx.ScrolledWindow ):
         
         key_code = event.GetKeyCode()
         
-        if key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) or ( self.delete_key_activates and key_code in CC.DELETE_KEYS ):
+        if key_code in CC.DELETE_KEYS:
+            
+            self._DeleteActivate()
+            
+        elif key_code in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             self._Activate()
             
@@ -621,7 +636,11 @@ class ListBoxTags( ListBox ):
     
     def _GetAllTagsForClipboard( self, with_counts = False ):
         
-        raise NotImplementedError()
+        texts = list( self._terms_to_texts.values() )
+        
+        texts.sort()
+        
+        return texts
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -1088,7 +1107,6 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
 class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
     
-    delete_key_activates = True
     has_counts = False
     
     def __init__( self, parent, page_key, initial_predicates = None ):
@@ -1122,6 +1140,11 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
             
             self._EnterPredicates( set( self._selected_terms ) )
             
+        
+    
+    def _DeleteActivate( self ):
+        
+        self._Activate()
         
     
     def _EnterPredicates( self, predicates, permit_add = True, permit_remove = True ):
@@ -1400,13 +1423,12 @@ class ListBoxTagsCensorship( ListBoxTags ):
     
 class ListBoxTagsColourOptions( ListBoxTags ):
     
+    PROTECTED_TERMS = ( None, '' )
     can_spawn_new_windows = False
     
     def __init__( self, parent, initial_namespace_colours ):
         
         ListBoxTags.__init__( self, parent )
-        
-        self._namespace_colours = dict( initial_namespace_colours )
         
         for ( namespace, colour ) in initial_namespace_colours.items():
             
@@ -1415,12 +1437,21 @@ class ListBoxTagsColourOptions( ListBoxTags ):
             self._AppendTerm( ( namespace, colour ) )
             
         
+        self._SortByText()
+        
         self._DataHasChanged()
         
     
     def _Activate( self ):
         
-        self._RemoveSelectedTerms()
+        namespaces = [ namespace for ( namespace, colour ) in self._selected_terms ]
+        
+        self._RemoveNamespaces( namespaces )
+        
+    
+    def _DeleteActivate( self ):
+        
+        self._Activate()
         
     
     def _GetTextFromTerm( self, term ):
@@ -1445,7 +1476,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def _GetNamespaceColours( self ):
         
-        return self._namespace_colours
+        return dict( self._terms )
         
     
     def _GetNamespaceFromTerm( self, term ):
@@ -1456,6 +1487,8 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
     
     def _RemoveNamespaces( self, namespaces ):
+        
+        namespaces = [ namespace for namespace in namespaces if namespace not in self.PROTECTED_TERMS ]
         
         removees = [ ( existing_namespace, existing_colour ) for ( existing_namespace, existing_colour ) in self._terms if existing_namespace in namespaces ]
         
@@ -1483,14 +1516,14 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         self._AppendTerm( ( namespace, colour ) )
         
+        self._SortByText()
+        
         self._DataHasChanged()
         
     
     def GetNamespaceColours( self ):
         
-        namespace_colours = dict( self._terms )
-        
-        return namespace_colours
+        return self._GetNamespaceColours()
         
     
     def GetSelectedNamespaceColours( self ):
@@ -2073,11 +2106,6 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
     def _Activate( self ):
         
-        # if the hover window has focus when the manage tags spawns, then when it disappears, the main gui gets put as the next heir
-        # so when manage tags closes, main gui pops to the front!
-        
-        #self.GetParent().GiveParentFocus()
-        
         HydrusGlobals.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         
     
@@ -2154,20 +2182,27 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
 class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
     
     render_for_user = False
-    delete_key_activates = True
     
-    def __init__( self, parent, callable ):
+    def __init__( self, parent, add_func, delete_func ):
         
         ListBoxTagsSelection.__init__( self, parent, include_counts = True, collapse_siblings = False )
         
-        self._callable = callable
+        self._add_func = add_func
+        self._delete_func = delete_func
         
     
     def _Activate( self ):
         
         if len( self._selected_terms ) > 0:
             
-            self._callable( self._selected_terms )
+            self._add_func( self._selected_terms )
             
         
     
+    def _DeleteActivate( self ):
+        
+        if len( self._selected_terms ) > 0:
+            
+            self._delete_func( self._selected_terms )
+            
+        

@@ -165,7 +165,7 @@ class BetterButton( wx.Button ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
         
-        wx.Button.__init__( self, parent, label = label )
+        wx.Button.__init__( self, parent, label = label, style = wx.BU_EXACTFIT )
         
         self._func = func
         self._args = args

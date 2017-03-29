@@ -715,9 +715,15 @@ class Controller( HydrusController.HydrusController ):
             self.WriteInterruptable( 'maintain_similar_files_duplicate_pairs', search_distance, stop_time = search_stop_time, abandon_if_other_work_to_do = True )
             
         
-        self.WriteInterruptable( 'vacuum', stop_time = stop_time )
+        if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
+            
+            self.WriteInterruptable( 'vacuum', stop_time = stop_time )
+            
         
-        self.WriteInterruptable( 'analyze', stop_time = stop_time )
+        if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
+            
+            self.WriteInterruptable( 'analyze', stop_time = stop_time )
+            
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
@@ -991,7 +997,14 @@ class Controller( HydrusController.HydrusController ):
             
             if HydrusGlobals.do_idle_shutdown_work:
                 
-                self.DoIdleShutdownWork()
+                try:
+                    
+                    self.DoIdleShutdownWork()
+                    
+                except:
+                    
+                    ClientData.ReportShutdownException()
+                    
                 
             
         
@@ -1147,14 +1160,7 @@ class Controller( HydrusController.HydrusController ):
         except HydrusExceptions.ShutdownException: pass
         except:
             
-            text = 'A serious error occured while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
-            
-            HydrusData.DebugPrint( text )
-            
-            HydrusData.DebugPrint( traceback.format_exc() )
-            
-            wx.CallAfter( wx.MessageBox, traceback.format_exc() )
-            wx.CallAfter( wx.MessageBox, text )
+            ClientData.ReportShutdownException()
             
         finally:
             

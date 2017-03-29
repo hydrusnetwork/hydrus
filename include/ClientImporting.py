@@ -693,11 +693,21 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            if not os.path.exists( path ):
+                
+                raise Exception( 'Source file does not exist!' )
+                
+            
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
             try:
                 
-                HydrusPaths.MirrorFile( path, temp_path )
+                copied = HydrusPaths.MirrorFile( path, temp_path )
+                
+                if not copied:
+                    
+                    raise Exception( 'File failed to copy--see log for error.' )
+                    
                 
                 client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
                 
@@ -1120,7 +1130,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             try:
                                 
-                                HydrusPaths.MirrorFile( path, temp_path )
+                                copied = HydrusPaths.MirrorFile( path, temp_path )
+                                
+                                if not copied:
+                                    
+                                    raise Exception( 'File failed to copy--see log for error.' )
+                                    
                                 
                                 client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
                                 

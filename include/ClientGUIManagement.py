@@ -1189,8 +1189,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._import_queue_panel, self._page_key )
         
-        self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
@@ -1329,8 +1328,15 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         
         def file_download_hook( gauge_range, gauge_value ):
             
-            self._file_gauge.SetRange( gauge_range )
-            self._file_gauge.SetValue( gauge_value )
+            try:
+                
+                self._file_gauge.SetRange( gauge_range )
+                self._file_gauge.SetValue( gauge_value )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         self._gallery_import.SetDownloadHook( file_download_hook )
@@ -1345,6 +1351,20 @@ class ManagementPanelGalleryImport( ManagementPanel ):
         self._Update()
         
         self._gallery_import.Start( self._page_key )
+        
+    
+    def _SeedCache( self ):
+        
+        seed_cache = self._gallery_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def _Update( self ):
@@ -1589,20 +1609,6 @@ class ManagementPanelGalleryImport( ManagementPanel ):
             
         
     
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._gallery_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
-        
-    
     def SetSearchFocus( self, page_key ):
         
         if page_key == self._page_key: self._query_input.SetFocus()
@@ -1630,8 +1636,7 @@ class ManagementPanelHDDImport( ManagementPanel ):
         self._current_action = wx.StaticText( self._import_queue_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
-        self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
@@ -1668,6 +1673,20 @@ class ManagementPanelHDDImport( ManagementPanel ):
         self._Update()
         
         self._hdd_import.Start( self._page_key )
+        
+    
+    def _SeedCache( self ):
+        
+        seed_cache = self._hdd_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def _Update( self ):
@@ -1737,20 +1756,6 @@ class ManagementPanelHDDImport( ManagementPanel ):
         self._Update()
         
     
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._hdd_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
-        
-    
     def TestAbleToClose( self ):
         
         ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._hdd_import.GetStatus()
@@ -1798,8 +1803,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._import_queue_panel, self._page_key )
         
-        self._seed_cache_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
@@ -1895,8 +1899,15 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         
         def file_download_hook( gauge_range, gauge_value ):
             
-            self._file_gauge.SetRange( gauge_range )
-            self._file_gauge.SetValue( gauge_value )
+            try:
+                
+                self._file_gauge.SetRange( gauge_range )
+                self._file_gauge.SetValue( gauge_value )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         self._page_of_images_import.SetDownloadHook( file_download_hook )
@@ -1911,6 +1922,20 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._Update()
         
         self._page_of_images_import.Start( self._page_key )
+        
+    
+    def _SeedCache( self ):
+        
+        seed_cache = self._page_of_images_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def _Update( self ):
@@ -2112,20 +2137,6 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
         self._page_of_images_import.PausePlay()
         
         self._Update()
-        
-    
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._page_of_images_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def SetSearchFocus( self, page_key ):
@@ -2828,8 +2839,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._options_panel, self._page_key )
         
-        self._seed_cache_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         self._pause_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.pause )
@@ -2899,8 +2909,15 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         
         def file_download_hook( gauge_range, gauge_value ):
             
-            self._file_gauge.SetRange( gauge_range )
-            self._file_gauge.SetValue( gauge_value )
+            try:
+                
+                self._file_gauge.SetRange( gauge_range )
+                self._file_gauge.SetValue( gauge_value )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         self._thread_watcher_import.SetDownloadHook( file_download_hook )
@@ -2922,6 +2939,20 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
             
         
         self._Update()
+        
+    
+    def _SeedCache( self ):
+        
+        seed_cache = self._thread_watcher_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def _Update( self ):
@@ -3062,7 +3093,10 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
             
             self._thread_watcher_import.Start( self._page_key )
             
-        else: event.Skip()
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):
@@ -3094,20 +3128,6 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
         self._thread_watcher_import.PausePlay()
         
         self._Update()
-        
-    
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._thread_watcher_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def EventTimesToCheck( self, event ):
@@ -3172,8 +3192,7 @@ class ManagementPanelURLsImport( ManagementPanel ):
         
         self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._url_panel, self._page_key )
         
-        self._seed_cache_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
         self._url_input = wx.TextCtrl( self._url_panel, style = wx.TE_PROCESS_ENTER )
@@ -3227,8 +3246,15 @@ class ManagementPanelURLsImport( ManagementPanel ):
         
         def file_download_hook( gauge_range, gauge_value ):
             
-            self._file_gauge.SetRange( gauge_range )
-            self._file_gauge.SetValue( gauge_value )
+            try:
+                
+                self._file_gauge.SetRange( gauge_range )
+                self._file_gauge.SetValue( gauge_value )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         self._urls_import.SetDownloadHook( file_download_hook )
@@ -3240,6 +3266,20 @@ class ManagementPanelURLsImport( ManagementPanel ):
         self._Update()
         
         self._urls_import.Start( self._page_key )
+        
+    
+    def _SeedCache( self ):
+        
+        seed_cache = self._urls_import.GetSeedCache()
+        
+        title = 'file import status'
+        frame_key = 'file_import_status'
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+        
+        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
+        
+        frame.SetPanel( panel )
         
     
     def _Update( self ):
@@ -3372,20 +3412,6 @@ class ManagementPanelURLsImport( ManagementPanel ):
         self._urls_import.PausePlay()
         
         self._Update()
-        
-    
-    def EventSeedCache( self, event ):
-        
-        seed_cache = self._urls_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def SetSearchFocus( self, page_key ):

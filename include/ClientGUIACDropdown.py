@@ -3,6 +3,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientGUIListBoxes
+import ClientGUIMenus
 import ClientSearch
 import collections
 import HydrusConstants as HC
@@ -536,8 +537,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._tag_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, tag_service.GetName(), self.TagButtonHit )
         self._tag_repo_button.SetMinSize( ( 20, -1 ) )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
     
     def _ChangeFileService( self, file_service_key ):
         
@@ -599,31 +598,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'change_file_service':
-                
-                self._ChangeFileService( data )
-                
-            elif command == 'change_tag_service':
-                
-                self._ChangeTagService( data )
-                
-            else:
-                
-                event.Skip()
-                
-                return # this is about select_up and select_down
-                
-            
-        
-    
     def FileButtonHit( self ):
         
         services_manager = HydrusGlobals.client_controller.GetServicesManager()
@@ -640,7 +614,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services:
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_file_service', service.GetServiceKey() ), service.GetName() )
+            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Change the current file domain to ' + service.GetName() + '.', self._ChangeFileService, service.GetServiceKey() )
             
         
         HydrusGlobals.client_controller.PopupMenu( self._file_repo_button, menu )
@@ -670,7 +644,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         for service in services:
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'change_tag_service', service.GetServiceKey() ), service.GetName() )
+            ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Change the current tag domain to ' + service.GetName() + '.', self._ChangeTagService, service.GetServiceKey() )
             
         
         HydrusGlobals.client_controller.PopupMenu( self._tag_repo_button, menu )

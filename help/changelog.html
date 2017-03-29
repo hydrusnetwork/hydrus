@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 249</h3></li>
+				<ul>
+					<li>reintroduced shape and colour options to edit ratings service panels</li>
+					<li>reintroduced num_stars and allow_zero options to edit numerical ratings service panels</li>
+					<li>the export phrase--defaulting to '{hash}'--will now persist through export dialogs. it is saved whenever you click update or export</li>
+					<li>removed the unintended 'counts' that were appearing after related tags</li>
+					<li>fixed 'remove' action in custom filters</li>
+					<li>hitting the delete key on manage tags taglist now will always remove</li>
+					<li>added a BUGFIX option to not verify regular https traffic on the old networking engine for those non-Windows users who are getting SSL verify errors</li>
+					<li>refactored the top hover frame more, making it more flexible</li>
+					<li>created a new top hover frame for the duplicates filter</li>
+					<li>duplicates filter now also supports tag and ratings hover frames</li>
+					<li>duplicates filter now reports A or B as file index</li>
+					<li>added some placeholder buttons to the duplicates filter for actions and 'cog' customisation</li>
+					<li>reduced duplicate search shutdown logspam</li>
+					<li>improved duplicate search job cleanup</li>
+					<li>improved mime detection of thumbnail regeneration</li>
+					<li>improved some shutdown error handling</li>
+					<li>improved numerical rating search accuracy</li>
+					<li>improved some hdd import error handling</li>
+					<li>improved some unicode error handling</li>
+					<li>improved reliability of some database transaction processing</li>
+					<li>fixed animationbar having problems with single-frame videos</li>
+					<li>fixed namespace colour taglist not updating colour correctly</li>
+					<li>stopped the namespace colour taglist from deleting default namespace colours</li>
+					<li>made the new class of button more compact--not sure if I like it</li>
+					<li>refactored some db initialisation to avoid future transaction problems during special updates</li>
+					<li>tidied up some last incomplete taglist code from last week</li>
+					<li>did a little prep for some future shortucts overhaul</li>
+					<li>did some more menu code updating</li>
+					<li>added a simple subscription save/load unit test</li>
+					<li>moved outdated server unit tests forward</li>
+					<li>fleshed out some server certificate generation</li>
+					<li>some other misc v245 catchup work</li>
+					<li>cleaned up some pydeadobjecterrors caused by downloaders reporting progress to destroyed windows</li>
+				</ul>
 				<li><h3>version 248</h3></li>
 				<ul>
 					<li>fixed two more issues with recent update code!</li>

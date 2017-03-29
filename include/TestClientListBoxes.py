@@ -144,6 +144,11 @@ class TestListBoxes( unittest.TestCase ):
             
             random_index = random.choice( all_clickable_indices.keys() )
             
+            while ordered_terms[ random_index ][0] in panel.PROTECTED_TERMS:
+                
+                random_index = random.choice( all_clickable_indices.keys() )
+                
+            
             del new_namespace_colours[ ordered_terms[ random_index ][0] ]
             
             # select nothing

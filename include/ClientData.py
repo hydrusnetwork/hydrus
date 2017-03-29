@@ -346,6 +346,17 @@ def MergePredicates( predicates, add_namespaceless = False ):
     
     return master_predicate_dict.values()
     
+def ReportShutdownException():
+    
+    text = 'A serious error occured while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
+    
+    HydrusData.DebugPrint( text )
+    
+    HydrusData.DebugPrint( traceback.format_exc() )
+    
+    wx.CallAfter( wx.MessageBox, traceback.format_exc() )
+    wx.CallAfter( wx.MessageBox, text )
+    
 def ShowExceptionClient( e ):
     
     ( etype, value, tb ) = sys.exc_info()
@@ -563,6 +574,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
         
+        self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
+        
         #
         
         self._dictionary[ 'integers' ] = {}
@@ -607,6 +620,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
+        self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         
         #
         
@@ -1480,6 +1494,8 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._mouse_actions = {}
         self._keyboard_actions = {}
+        
+        # update this to have actions as a separate serialisable class
         
     
     def _ConvertActionToSerialisableAction( self, action ):

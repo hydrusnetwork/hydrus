@@ -1851,7 +1851,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                try: account_key = dlg.GetValue().decode( 'hex' )
+                try:
+                    
+                    account_key = dlg.GetValue().decode( 'hex' )
+                    
                 except:
                     
                     wx.MessageBox( 'Could not parse that account key' )
@@ -1859,9 +1862,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     return
                     
                 
-                subject_identifiers = ( HydrusData.AccountIdentifier( account_key = account_key ), )
+                subject_account = 'blah' # fetch account from service
                 
-                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, subject_identifiers ) as dlg2: dlg2.ShowModal()
+                with ClientGUIDialogs.DialogModifyAccounts( self, service_key, [ subject_account ] ) as dlg2: dlg2.ShowModal()
                 
             
         

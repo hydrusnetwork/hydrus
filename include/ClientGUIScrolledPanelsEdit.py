@@ -766,8 +766,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused = wx.CheckBox( self._control_panel )
         
-        self._seed_cache_button = wx.BitmapButton( self._control_panel, bitmap = CC.GlobalBMPs.seed_cache )
-        self._seed_cache_button.Bind( wx.EVT_BUTTON, self.EventSeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
         
         self._retry_failed = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailed )
@@ -1055,25 +1054,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         wx.CallAfter( self.ProcessEvent, event )
         
     
-    def CheckNow( self ):
-        
-        self._check_now = True
-        
-        self._UpdateCommandButtons()
-        self._UpdateLastNextCheck()
-        
-    
-    def EventBooruSelected( self, event ):
-        
-        self._ConfigureImportTagOptions()
-        
-    
-    def EventPeriodChanged( self, event ):
-        
-        self._UpdateLastNextCheck()
-        
-    
-    def EventSeedCache( self, event ):
+    def _SeedCache( self ):
         
         dupe_seed_cache = self._seed_cache.Duplicate()
         
@@ -1092,6 +1073,23 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+    
+    def CheckNow( self ):
+        
+        self._check_now = True
+        
+        self._UpdateCommandButtons()
+        self._UpdateLastNextCheck()
+        
+    
+    def EventBooruSelected( self, event ):
+        
+        self._ConfigureImportTagOptions()
+        
+    
+    def EventPeriodChanged( self, event ):
+        
+        self._UpdateLastNextCheck()
         
     
     def EventSiteChanged( self, event ):

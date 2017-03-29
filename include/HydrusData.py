@@ -1080,7 +1080,14 @@ def ToUnicode( text_producing_object ):
             
         except:
             
-            text = repr( text_producing_object )
+            try:
+                
+                text = unicode( text_producing_object )
+                
+            except:
+                
+                text = repr( text_producing_object )
+                
             
         
     
