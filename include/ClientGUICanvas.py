@@ -1246,9 +1246,7 @@ class Canvas( wx.Window ):
             return True
             
         
-        if HydrusGlobals.do_not_catch_char_hook:
-            
-            HydrusGlobals.do_not_catch_char_hook = False
+        if not ( ClientGUICommon.WindowHasFocus( self ) or ClientGUICommon.ChildHasFocus( self ) ):
             
             return True
             
@@ -1648,13 +1646,15 @@ class Canvas( wx.Window ):
         
         if media is not None:
             
+            media = media.GetDisplayMedia()
+            
             locations_manager = media.GetLocationsManager()
             
             if not locations_manager.IsLocal():
                 
                 media = None
                 
-            elif self._GetShowAction( media.GetDisplayMedia() ) in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            elif self._GetShowAction( media ) in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
                 
                 media = None
                 
@@ -1736,7 +1736,7 @@ class CanvasPanel( Canvas ):
         
         self._page_key = page_key
         
-        HydrusGlobals.client_controller.sub( self, 'FocusChanged', 'focus_changed' )
+        HydrusGlobals.client_controller.sub( self, 'PreviewChanged', 'preview_changed' )
         HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
@@ -1867,7 +1867,7 @@ class CanvasPanel( Canvas ):
             
         
     
-    def FocusChanged( self, page_key, media ):
+    def PreviewChanged( self, page_key, media ):
         
         if HC.options[ 'hide_preview' ]:
             
@@ -1919,7 +1919,7 @@ class CanvasWithDetails( Canvas ):
             
             dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
             
-            tags_manager = self._current_media.GetDisplayMedia().GetTagsManager()
+            tags_manager = self._current_media.GetTagsManager()
             
             current = tags_manager.GetCurrent()
             pending = tags_manager.GetPending()

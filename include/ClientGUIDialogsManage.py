@@ -3568,7 +3568,9 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def EventKeyDownTag( self, event ):
             
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
                 tag = self._tag_input.GetValue()
                 
@@ -3595,7 +3597,10 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             return len( tags ) > 0
             
         
-        def SetTagBoxFocus( self ): self._tag_input.SetFocus()
+        def SetTagBoxFocus( self ):
+            
+            self._tag_input.SetFocus()
+            
         
     
 class DialogManageTagParents( ClientGUIDialogs.Dialog ):

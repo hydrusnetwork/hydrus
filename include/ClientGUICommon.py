@@ -29,6 +29,88 @@ ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
 ID_TIMER_POPUP = wx.NewId()
 
+def ChildHasFocus( window ):
+    
+    focus = wx.Window.FindFocus()
+    
+    if focus is None:
+        
+        return False
+        
+    
+    while not isinstance( focus, wx.TopLevelWindow ):
+        
+        focus = focus.GetParent()
+        
+        if focus is None:
+            
+            return False
+            
+        
+        if focus == window:
+            
+            return True
+            
+        
+    
+    return False
+    
+def TLPHasFocus( window ):
+    
+    focus = wx.Window.FindFocus()
+    
+    if focus is None:
+        
+        return False
+        
+    
+    if isinstance( focus, wx.TopLevelWindow ):
+        
+        focus_tlp = focus
+        
+    else:
+        
+        focus_tlp = wx.GetTopLevelParent( focus )
+        
+    
+    if isinstance( window, wx.TopLevelWindow ):
+        
+        window_tlp = window
+        
+    else:
+        
+        window_tlp = wx.GetTopLevelParent( window )
+        
+    
+    return window_tlp == focus_tlp
+    
+def WindowHasFocus( window ):
+    
+    focus = wx.Window.FindFocus()
+    
+    if focus is None:
+        
+        return False
+        
+    
+    return window == focus
+    
+def IsWXAncestor( child, ancestor ):
+    
+    parent = child
+    
+    while not isinstance( parent, wx.TopLevelWindow ):
+        
+        if parent == ancestor:
+            
+            return True
+            
+        
+        parent = parent.GetParent()
+        
+    
+    return False
+    
 def WrapInGrid( parent, rows, expand_text = False ):
     
     gridbox = wx.FlexGridSizer( 0, 2 )
@@ -75,22 +157,6 @@ def WrapInText( control, parent, text ):
     hbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
-    
-def IsWXAncestor( child, ancestor ):
-    
-    parent = child
-    
-    while not isinstance( parent, wx.TopLevelWindow ):
-        
-        if parent == ancestor:
-            
-            return True
-            
-        
-        parent = parent.GetParent()
-        
-    
-    return False
     
 class AnimatedStaticTextTimestamp( wx.StaticText ):
     
@@ -3061,14 +3127,16 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in CC.DELETE_KEYS:
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in CC.DELETE_KEYS:
             
             if self._delete_key_callback is not None:
                 
                 self._delete_key_callback()
                 
             
-        elif event.KeyCode in ( ord( 'A' ), ord( 'a' ) ) and event.CmdDown():
+        elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
             
             self.SelectAll()
             
@@ -3370,15 +3438,11 @@ class Shortcut( wx.TextCtrl ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in range( 65, 91 ) or event.KeyCode in CC.wxk_code_string_lookup.keys():
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in range( 65, 91 ) or key in CC.wxk_code_string_lookup.keys():
             
-            modifier = wx.ACCEL_NORMAL
-            
-            if event.AltDown(): modifier = wx.ACCEL_ALT
-            elif event.CmdDown(): modifier = wx.ACCEL_CTRL
-            elif event.ShiftDown(): modifier = wx.ACCEL_SHIFT
-            
-            ( self._modifier, self._key ) = ClientData.GetShortcutFromEvent( event )
+            ( self._modifier, self._key ) = ( modifier, key )
             
             self._SetShortcutString()
         

@@ -128,18 +128,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 
                 mouse_is_over_something_important = mouse_is_over_interactable_media or mouse_is_near_animation_bar
                 
-                current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
-                
-                canvas_parent_tlp = wx.GetTopLevelParent( self.GetParent() )
-                
-                if current_focus_tlp in ( self, canvas_parent_tlp ):
-                    
-                    focus_is_good = True
-                    
-                else:
-                    
-                    focus_is_good = False
-                    
+                focus_is_good = ClientGUICommon.TLPHasFocus( self ) or ClientGUICommon.TLPHasFocus( self.GetParent() )
                 
                 ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
                 ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )

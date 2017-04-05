@@ -77,48 +77,48 @@ class TestMergeTagsManagers( unittest.TestCase ):
 class TestTagsManager( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self._first_key = HydrusData.GenerateKey()
-        self._second_key = HydrusData.GenerateKey()
-        self._third_key = HydrusData.GenerateKey()
+        cls._first_key = HydrusData.GenerateKey()
+        cls._second_key = HydrusData.GenerateKey()
+        cls._third_key = HydrusData.GenerateKey()
         
         service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
-        service_keys_to_statuses_to_tags[ self._first_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
-        service_keys_to_statuses_to_tags[ self._first_key ][ HC.CONTENT_STATUS_DELETED ] = { 'deleted' }
+        service_keys_to_statuses_to_tags[ cls._first_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'current', u'\u2835', 'creator:tsutomu nihei', 'series:blame!', 'title:test title', 'volume:3', 'chapter:2', 'page:1' }
+        service_keys_to_statuses_to_tags[ cls._first_key ][ HC.CONTENT_STATUS_DELETED ] = { 'deleted' }
         
-        service_keys_to_statuses_to_tags[ self._second_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'deleted', u'\u2835' }
-        service_keys_to_statuses_to_tags[ self._second_key ][ HC.CONTENT_STATUS_DELETED ] = { 'current' }
-        service_keys_to_statuses_to_tags[ self._second_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
-        service_keys_to_statuses_to_tags[ self._second_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'petitioned' }
+        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'deleted', u'\u2835' }
+        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_DELETED ] = { 'current' }
+        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
+        service_keys_to_statuses_to_tags[ cls._second_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'petitioned' }
         
-        service_keys_to_statuses_to_tags[ self._third_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'petitioned' }
-        service_keys_to_statuses_to_tags[ self._third_key ][ HC.CONTENT_STATUS_DELETED ] = { 'pending' }
+        service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'petitioned' }
+        service_keys_to_statuses_to_tags[ cls._third_key ][ HC.CONTENT_STATUS_DELETED ] = { 'pending' }
         
-        self._tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
+        cls._tags_manager = ClientMedia.TagsManager( service_keys_to_statuses_to_tags )
         
-        self._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
+        cls._service_keys_to_statuses_to_tags = service_keys_to_statuses_to_tags
         
         #
         
-        self._pending_service_key = HydrusData.GenerateKey()
-        self._content_update_service_key = HydrusData.GenerateKey()
-        self._reset_service_key = HydrusData.GenerateKey()
+        cls._pending_service_key = HydrusData.GenerateKey()
+        cls._content_update_service_key = HydrusData.GenerateKey()
+        cls._reset_service_key = HydrusData.GenerateKey()
         
         other_service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
         
-        other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
-        other_service_keys_to_statuses_to_tags[ self._pending_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'petitioned' }
+        other_service_keys_to_statuses_to_tags[ cls._pending_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'pending' }
+        other_service_keys_to_statuses_to_tags[ cls._pending_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'petitioned' }
         
-        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'reset_current' }
-        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.CONTENT_STATUS_DELETED ] = { 'reset_deleted' }
-        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'reset_pending' }
-        other_service_keys_to_statuses_to_tags[ self._reset_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'reset_petitioned' }
+        other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_CURRENT ] = { 'reset_current' }
+        other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_DELETED ] = { 'reset_deleted' }
+        other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PENDING ] = { 'reset_pending' }
+        other_service_keys_to_statuses_to_tags[ cls._reset_service_key ][ HC.CONTENT_STATUS_PETITIONED ] = { 'reset_petitioned' }
         
-        self._other_tags_manager = ClientMedia.TagsManager( other_service_keys_to_statuses_to_tags )
+        cls._other_tags_manager = ClientMedia.TagsManager( other_service_keys_to_statuses_to_tags )
         
-        self._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
+        cls._other_service_keys_to_statuses_to_tags = other_service_keys_to_statuses_to_tags
         
     
     def test_get_cstvcp( self ):
@@ -536,11 +536,11 @@ class TestTagObjects( unittest.TestCase ):
 class TestTagParents( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self._first_key = HydrusData.GenerateKey()
-        self._second_key = HydrusData.GenerateKey()
-        self._third_key = HydrusData.GenerateKey()
+        cls._first_key = HydrusData.GenerateKey()
+        cls._second_key = HydrusData.GenerateKey()
+        cls._third_key = HydrusData.GenerateKey()
         
         first_dict = HydrusData.default_dict_set()
         
@@ -561,13 +561,13 @@ class TestTagParents( unittest.TestCase ):
         
         tag_parents = collections.defaultdict( HydrusData.default_dict_set )
         
-        tag_parents[ self._first_key ] = first_dict
-        tag_parents[ self._second_key ] = second_dict
-        tag_parents[ self._third_key ] = third_dict
+        tag_parents[ cls._first_key ] = first_dict
+        tag_parents[ cls._second_key ] = second_dict
+        tag_parents[ cls._third_key ] = third_dict
         
         HydrusGlobals.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        self._tag_parents_manager = ClientCaches.TagParentsManager( HydrusGlobals.client_controller )
+        cls._tag_parents_manager = ClientCaches.TagParentsManager( HydrusGlobals.client_controller )
         
     
     def test_expand_predicates( self ):
@@ -681,10 +681,10 @@ class TestTagParents( unittest.TestCase ):
 class TestTagSiblings( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self._first_key = HydrusData.GenerateKey()
-        self._second_key = HydrusData.GenerateKey()
+        cls._first_key = HydrusData.GenerateKey()
+        cls._second_key = HydrusData.GenerateKey()
         
         tag_siblings = collections.defaultdict( HydrusData.default_dict_set )
         
@@ -700,12 +700,12 @@ class TestTagSiblings( unittest.TestCase ):
         second_dict[ HC.CONTENT_STATUS_PENDING ] = { ( 'pending_a', 'pending_b' ) }
         second_dict[ HC.CONTENT_STATUS_PETITIONED ] = { ( 'petitioned_a', 'petitioned_b' ) }
         
-        tag_siblings[ self._first_key ] = first_dict
-        tag_siblings[ self._second_key ] = second_dict
+        tag_siblings[ cls._first_key ] = first_dict
+        tag_siblings[ cls._second_key ] = second_dict
         
         HydrusGlobals.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
-        self._tag_siblings_manager = ClientCaches.TagSiblingsManager( HydrusGlobals.client_controller )
+        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HydrusGlobals.client_controller )
         
     
     def test_autocomplete( self ):

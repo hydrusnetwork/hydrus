@@ -1,6 +1,8 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIScrolledPanelsReview
+import ClientGUITopLevelWindows
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
@@ -414,7 +416,11 @@ class ReviewServicePanel( wx.Panel ):
     
     def EventServiceWideUpdate( self, event ):
         
-        with ClientGUIDialogs.DialogAdvancedContentUpdate( self, self._service_key ) as dlg:
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'advanced content update' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._service_key )
+            
+            dlg.SetPanel( panel )
             
             dlg.ShowModal()
             

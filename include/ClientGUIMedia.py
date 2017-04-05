@@ -11,6 +11,7 @@ import ClientGUIMenus
 import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
 import ClientMedia
+import ClientTags
 import collections
 import HydrusExceptions
 import HydrusNetwork
@@ -1098,7 +1099,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._focussed_media = media
         
-        HydrusGlobals.client_controller.pub( 'focus_changed', self._page_key, media )
+        HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, media )
         
     
     def _ShareOnLocalBooru( self ):
@@ -1263,14 +1264,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def PageHidden( self, page_key ):
         
-        if page_key == self._page_key: HydrusGlobals.client_controller.pub( 'focus_changed', self._page_key, None )
+        if page_key == self._page_key: HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, None )
         
     
     def PageShown( self, page_key ):
         
         if page_key == self._page_key:
             
-            HydrusGlobals.client_controller.pub( 'focus_changed', self._page_key, self._focussed_media )
+            HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
             
             self._PublishSelectionChange()
             
@@ -1571,7 +1572,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if service_key is not None:
                 
-                ClientGUIDialogs.ExportToHTA( self, service_key, hashes )
+                ClientTags.ExportToHTA( self, service_key, hashes )
                 
             
         

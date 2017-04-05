@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
 import ClientData
+import ClientGUICommon
 import ClientGUIMenus
 import ClientSearch
 import ClientTags
@@ -55,7 +56,6 @@ class ListBox( wx.ScrolledWindow ):
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventKeyDown )
         
     
     def __len__( self ):
@@ -486,7 +486,7 @@ class ListBox( wx.ScrolledWindow ):
         
         key_code = event.GetKeyCode()
         
-        if key_code in CC.DELETE_KEYS:
+        if ClientGUICommon.WindowHasFocus( self ) and key_code in CC.DELETE_KEYS:
             
             self._DeleteActivate()
             
@@ -506,7 +506,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 hit_index = None
                 
-                if len( self._ordered_terms ) > 0:
+                if len( self._ordered_terms ) > 1:
                     
                     if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
                         
@@ -1049,7 +1049,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         hit_index = None
         
-        if len( self._ordered_terms ) > 0:
+        if len( self._ordered_terms ) > 1:
             
             if key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
                 
@@ -1699,7 +1699,9 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in CC.DELETE_KEYS:
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in CC.DELETE_KEYS:
             
             self._Activate()
             

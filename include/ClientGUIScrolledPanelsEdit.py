@@ -766,7 +766,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused = wx.CheckBox( self._control_panel )
         
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.seed_cache, self._SeedCache )
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._control_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
         
         self._retry_failed = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailed )

@@ -383,7 +383,9 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ): self.EventReady( None )
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ): self.EventReady( None )
         else: event.Skip()
         
     
@@ -1531,7 +1533,9 @@ class ManagementPanelGalleryImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             query = self._query_input.GetValue()
             
@@ -2060,7 +2064,9 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             page_url = self._page_url_input.GetValue()
             
@@ -3070,7 +3076,9 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             thread_url = self._thread_input.GetValue()
             
@@ -3333,7 +3341,9 @@ class ManagementPanelURLsImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             url = self._url_input.GetValue()
             

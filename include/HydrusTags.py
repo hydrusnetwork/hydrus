@@ -10,6 +10,12 @@ import HydrusExceptions
 import re
 import HydrusGlobals
 
+re_newlines = re.compile( '[\r\n]', re.UNICODE )
+re_multiple_spaces = re.compile( '\\s+', re.UNICODE )
+re_trailing_space = re.compile( '\\s$', re.UNICODE )
+re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)', re.UNICODE )
+re_leading_single_colon = re.compile( '^:(?!:)', re.UNICODE )
+
 def CensorshipMatch( tag, censorships ):
     
     for censorship in censorships:
@@ -143,27 +149,10 @@ def CheckTagNotEmpty( tag ):
         
         raise HydrusExceptions.SizeException( 'Received a zero-length tag!' )
         
-
+    
 def CleanTag( tag ):
     
     try:
-        
-        def strip_gumpf_out( t ):
-            
-            t.replace( '\r', '' )
-            t.replace( '\n', '' )
-            
-            t = re.sub( '[\\s]+', ' ', t, flags = re.UNICODE ) # turns multiple spaces into single spaces
-            
-            t = re.sub( '\\s\\Z', '', t, flags = re.UNICODE ) # removes space at the end
-            
-            while re.match( '\\s|-|system:', t, flags = re.UNICODE ) is not None:
-                
-                t = re.sub( '\\A(\\s|-|system:)', '', t, flags = re.UNICODE ) # removes spaces or garbage at the beginning
-                
-            
-            return t
-            
         
         tag = tag[:1024]
         
@@ -173,22 +162,24 @@ def CleanTag( tag ):
         
         if tag.startswith( ':' ):
             
-            tag = re.sub( '^:(?!:)', '::', tag, flags = re.UNICODE ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+            tag = re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
             
-            tag = strip_gumpf_out( tag )
+            tag = StripTextOfGumpf( tag )
             
         elif ':' in tag:
             
+            tag = StripTextOfGumpf( tag ) # need to repeat here to catch 'system:' stuff
+            
             ( namespace, subtag ) = SplitTag( tag )
             
-            namespace = strip_gumpf_out( namespace )
-            subtag = strip_gumpf_out( subtag )
+            namespace = StripTextOfGumpf( namespace )
+            subtag = StripTextOfGumpf( subtag )
             
             tag = CombineTag( namespace, subtag )
             
         else:
             
-            tag = strip_gumpf_out( tag )
+            tag = StripTextOfGumpf( tag )
             
         
     except Exception as e:
@@ -246,4 +237,19 @@ def SplitTag( tag ):
         
         return ( '', tag )
         
+    
+def StripTextOfGumpf( t ):
+    
+    t = re_newlines.sub( '', t )
+    
+    t = re_multiple_spaces.sub( ' ', t )
+    
+    t = re_trailing_space.sub( '', t )
+    
+    while re_leading_space_or_garbage.search( t ) is not None:
+        
+        t = re_leading_space_or_garbage.sub( '', t )
+        
+    
+    return t
     

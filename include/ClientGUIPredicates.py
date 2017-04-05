@@ -548,11 +548,11 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
                 
                 if rating_state == ClientRatings.LIKE:
                     
-                    value = '1'
+                    value = 1
                     
                 elif rating_state == ClientRatings.DISLIKE:
                     
-                    value = '0'
+                    value = 0
                     
                 
                 service_key = ctrl.GetServiceKey()

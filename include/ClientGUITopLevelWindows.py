@@ -1,5 +1,6 @@
 import ClientCaches
 import ClientConstants as CC
+import ClientData
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -8,7 +9,7 @@ import os
 import wx
 
 CHILD_POSITION_PADDING = 50
-FUZZY_PADDING = 30
+FUZZY_PADDING = 15
 
 def GetDisplayPosition( window ):
     
@@ -343,7 +344,10 @@ class NewDialog( wx.Dialog ):
             
         
     
-    def EventDialogButton( self, event ): self.EndModal( event.GetId() )
+    def EventDialogButton( self, event ):
+        
+        self.EndModal( event.GetId() )
+        
     
 class DialogThatResizes( NewDialog ):
     
@@ -523,7 +527,14 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     
     def EventOk( self, event ):
         
-        self._panel.CommitChanges()
+        try:
+            
+            self._panel.CommitChanges()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
@@ -657,7 +668,9 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
     
     def EventCharHook( self, event ):
         
-        if event.KeyCode == wx.WXK_ESCAPE:
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key == wx.WXK_ESCAPE:
             
             self.Close()
             

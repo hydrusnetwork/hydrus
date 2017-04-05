@@ -43,29 +43,29 @@ with open( os.path.join( HC.STATIC_DIR, 'hydrus_small.png' ), 'rb' ) as f:
 class TestServer( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
         services = []
         
-        self._serverside_file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', HC.DEFAULT_SERVICE_PORT + 1 )
-        self._serverside_tag_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', HC.DEFAULT_SERVICE_PORT )
-        self._serverside_admin_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', HC.DEFAULT_SERVER_ADMIN_PORT )
+        cls._serverside_file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', HC.DEFAULT_SERVICE_PORT + 1 )
+        cls._serverside_tag_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo', HC.DEFAULT_SERVICE_PORT )
+        cls._serverside_admin_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin', HC.DEFAULT_SERVER_ADMIN_PORT )
         
-        self._clientside_file_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo' )
-        self._clientside_tag_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo' )
-        self._clientside_admin_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin' )
+        cls._clientside_file_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo' )
+        cls._clientside_tag_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo' )
+        cls._clientside_admin_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin' )
         
-        self._clientside_file_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT + 1 ) )
-        self._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT ) )
-        self._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT ) )
+        cls._clientside_file_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT + 1 ) )
+        cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT ) )
+        cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT ) )
         
-        self._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
+        cls._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
         
         services_manager = HydrusGlobals.test_controller.GetServicesManager()
         
-        services_manager._keys_to_services[ self._clientside_file_service.GetServiceKey() ] = self._clientside_file_service
-        services_manager._keys_to_services[ self._clientside_tag_service.GetServiceKey() ] = self._clientside_tag_service
-        services_manager._keys_to_services[ self._clientside_admin_service.GetServiceKey() ] = self._clientside_admin_service
+        services_manager._keys_to_services[ cls._clientside_file_service.GetServiceKey() ] = cls._clientside_file_service
+        services_manager._keys_to_services[ cls._clientside_tag_service.GetServiceKey() ] = cls._clientside_tag_service
+        services_manager._keys_to_services[ cls._clientside_admin_service.GetServiceKey() ] = cls._clientside_admin_service
         
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
@@ -76,29 +76,29 @@ class TestServer( unittest.TestCase ):
         used_bytes = 0
         used_requests = 0
         
-        self._account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
+        cls._account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
         
-        self._access_key = HydrusData.GenerateKey()
-        self._file_hash = HydrusData.GenerateKey()
+        cls._access_key = HydrusData.GenerateKey()
+        cls._file_hash = HydrusData.GenerateKey()
         
         def TWISTEDSetup():
             
-            self._ssl_cert_path = os.path.join( TestConstants.DB_DIR, 'server.crt' )
-            self._ssl_key_path = os.path.join( TestConstants.DB_DIR, 'server.key' )
+            cls._ssl_cert_path = os.path.join( TestConstants.DB_DIR, 'server.crt' )
+            cls._ssl_key_path = os.path.join( TestConstants.DB_DIR, 'server.key' )
             
             # if db test ran, this is still hanging around and read-only, so don't bother to fail overwriting
-            if not os.path.exists( self._ssl_cert_path ):
+            if not os.path.exists( cls._ssl_cert_path ):
                 
-                HydrusEncryption.GenerateOpenSSLCertAndKeyFile( self._ssl_cert_path, self._ssl_key_path )
+                HydrusEncryption.GenerateOpenSSLCertAndKeyFile( cls._ssl_cert_path, cls._ssl_key_path )
                 
             
-            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( self._ssl_key_path, self._ssl_cert_path )
+            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( cls._ssl_key_path, cls._ssl_cert_path )
             
-            reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( self._serverside_admin_service ), context_factory )
-            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryFile( self._serverside_file_service ), context_factory )
-            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryTag( self._serverside_tag_service ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( cls._serverside_admin_service ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryFile( cls._serverside_file_service ), context_factory )
+            reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryTag( cls._serverside_tag_service ), context_factory )
             
-            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( self._local_booru ) )
+            reactor.listenTCP( HC.DEFAULT_LOCAL_BOORU_PORT, ClientLocalServer.HydrusServiceBooru( cls._local_booru ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -414,6 +414,8 @@ class TestServer( unittest.TestCase ):
         
         # post content
         
+        raise NotImplementedError()
+        
         update = HydrusData.ClientToServerContentUpdatePackage( {}, hash_ids_to_hashes )
         
         service.Request( HC.POST, 'content_update_package', { 'update' : update } )
@@ -602,20 +604,20 @@ class TestServer( unittest.TestCase ):
 class TestAMP( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self._alice = HydrusData.GenerateKey()
-        self._bob = HydrusData.GenerateKey()
+        cls._alice = HydrusData.GenerateKey()
+        cls._bob = HydrusData.GenerateKey()
         
-        self._server_port = HC.DEFAULT_SERVICE_PORT + 10
+        cls._server_port = HC.DEFAULT_SERVICE_PORT + 10
         
-        self._service_key = HydrusData.GenerateKey()
+        cls._service_key = HydrusData.GenerateKey()
         
         def TWISTEDSetup():
             
-            self._factory = HydrusServer.MessagingServiceFactory( self._service_key )
+            cls._factory = HydrusServer.MessagingServiceFactory( cls._service_key )
             
-            reactor.listenTCP( self._server_port, self._factory )
+            reactor.listenTCP( cls._server_port, cls._factory )
             
         
         reactor.callFromThread( TWISTEDSetup )

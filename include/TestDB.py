@@ -10,6 +10,7 @@ import ClientGUIPages
 import ClientImporting
 import ClientRatings
 import ClientSearch
+import ClientServices
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -32,59 +33,55 @@ import wx
 
 class TestClientDB( unittest.TestCase ):
     
-    def _clear_db( self ):
-        
-        db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'main' ] )
-        
-        db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-        
-        c = db.cursor()
-        
-        c.execute( 'DELETE FROM current_files;' )
-        c.execute( 'DELETE FROM files_info;' )
-        
-        del c
-        del db
-        
-        mappings_db_path = os.path.join( self._db._db_dir, self._db._db_filenames[ 'external_mappings' ] )
-        
-        db = sqlite3.connect( mappings_db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-        
-        c = db.cursor()
-        
-        table_names = [ name for ( name, ) in c.execute( 'SELECT name FROM sqlite_master WHERE type = ?;', ( 'table', ) ).fetchall() ]
-        
-        for name in table_names:
-            
-            c.execute( 'DELETE FROM ' + name + ';' )
-            
-        
-    
-    def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
-    
     @classmethod
-    def setUpClass( self ):
+    def _clear_db( cls ):
         
-        self._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
+        cls._delete_db()
+        
+        # class variable
+        cls._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
         
     
     @classmethod
-    def tearDownClass( self ):
+    def _delete_db( cls ):
         
-        self._db.Shutdown()
+        cls._db.Shutdown()
         
-        while not self._db.LoopIsFinished():
+        while not cls._db.LoopIsFinished():
             
             time.sleep( 0.1 )
             
         
-        del self._db
+        db_filenames = cls._db._db_filenames.values()
         
+        for filename in db_filenames:
+            
+            path = os.path.join( TestConstants.DB_DIR, filename )
+            
+            os.remove( path )
+            
+        
+        del cls._db
+        
+    
+    @classmethod
+    def setUpClass( cls ):
+        
+        cls._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
+        
+    
+    @classmethod
+    def tearDownClass( cls ):
+        
+        cls._delete_db()
+        
+    
+    def _read( self, action, *args, **kwargs ): return TestClientDB._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestClientDB._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
     
     def test_autocomplete( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         result = self._read( 'autocomplete_predicates', tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, search_text = 'c*' )
         
@@ -244,7 +241,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_file_query_ids( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         def run_namespace_predicate_tests( tests ):
             
@@ -507,6 +504,54 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
+        like_rating_service_key = HydrusData.GenerateKey()
+        numerical_rating_service_key = HydrusData.GenerateKey()
+        
+        services = self._read( 'services' )
+        
+        services.append( ClientServices.GenerateService( like_rating_service_key, HC.LOCAL_RATING_LIKE, 'test like rating service' ) )
+        services.append( ClientServices.GenerateService( numerical_rating_service_key, HC.LOCAL_RATING_NUMERICAL, 'test numerical rating service' ) )
+        
+        self._write( 'update_services', services )
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, ( hash, ) ) ) )
+        
+        service_keys_to_content_updates[ like_rating_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        service_keys_to_content_updates = {}
+        
+        content_updates = []
+        
+        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.6, ( hash, ) ) ) )
+        
+        service_keys_to_content_updates[ numerical_rating_service_key ] = content_updates
+        
+        self._write( 'content_updates', service_keys_to_content_updates )
+        
+        tests = []
+        
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, like_rating_service_key ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.0, like_rating_service_key ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', like_rating_service_key ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', like_rating_service_key ), 0 ) )
+        
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 0.6, numerical_rating_service_key ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 1.0, numerical_rating_service_key ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.6, numerical_rating_service_key ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.4, numerical_rating_service_key ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'rated', numerical_rating_service_key ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '=', 'not rated', numerical_rating_service_key ), 0 ) )
+        
+        run_system_predicate_tests( tests )
+        
+        #
+        
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
         
         service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
@@ -532,7 +577,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_file_system_predicates( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
@@ -630,7 +675,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         test_files = []
         
@@ -742,7 +787,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_md5_status( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         hash = '\xadm5\x99\xa6\xc4\x89\xa5u\xeb\x19\xc0&\xfa\xce\x97\xa9\xcdey\xe7G(\xb0\xce\x94\xa6\x01\xd22\xf3\xc3'
         
@@ -785,7 +830,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_media_results( self ):
         
-        self._clear_db()
+        TestClientDB._clear_db()
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
@@ -1159,26 +1204,26 @@ class TestClientDB( unittest.TestCase ):
     
 class TestServerDB( unittest.TestCase ):
     
-    def _read( self, action, *args, **kwargs ): return self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
-    def _write( self, action, *args, **kwargs ): return self._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
+    def _read( self, action, *args, **kwargs ): return TestServerDB._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestServerDB._db.Write( action, HC.HIGH_PRIORITY, True, *args, **kwargs )
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self._db = ServerDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'server' )
+        cls._db = ServerDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'server' )
         
     
     @classmethod
-    def tearDownClass( self ):
+    def tearDownClass( cls ):
         
-        self._db.Shutdown()
+        cls._db.Shutdown()
         
-        while not self._db.LoopIsFinished():
+        while not cls._db.LoopIsFinished():
             
             time.sleep( 0.1 )
             
         
-        del self._db
+        del cls._db
         
     
     def _test_account_creation( self ):

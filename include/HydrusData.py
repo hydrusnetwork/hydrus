@@ -71,6 +71,10 @@ def CleanRunningFile( db_path, instance ):
         pass
         
     
+def ConvertFloatToPercentage( f ):
+    
+    return '%.1f' % ( f * 100 ) + '%'
+    
 def ConvertIntToBytes( size ):
     
     if size is None: return 'unknown size'

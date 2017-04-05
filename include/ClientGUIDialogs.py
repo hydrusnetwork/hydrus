@@ -57,190 +57,6 @@ COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
 COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
 COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
-def ExportToHTA( parent, service_key, hashes ):
-    
-    with wx.FileDialog( parent, style = wx.FD_SAVE, defaultFile = 'archive.db' ) as dlg:
-        
-        if dlg.ShowModal() == wx.ID_OK:
-            
-            path = HydrusData.ToUnicode( dlg.GetPath() )
-            
-        else:
-            
-            return
-            
-        
-    
-    message = 'Would you like to use hydrus\'s normal hash type, or an alternative?'
-    message += os.linesep * 2
-    message += 'Hydrus uses SHA256 to identify files, but other services use different standards. MD5, SHA1 and SHA512 are available, but only for local files, which may limit your export.'
-    message += os.linesep * 2
-    message += 'If you do not know what this stuff means, click \'normal\'.'
-    
-    with DialogYesNo( parent, message, title = 'Choose which hash type.', yes_label = 'normal', no_label = 'alternative' ) as dlg:
-        
-        result = dlg.ShowModal()
-        
-        if result in ( wx.ID_YES, wx.ID_NO ):
-            
-            if result == wx.ID_YES:
-                
-                hash_type = HydrusTagArchive.HASH_TYPE_SHA256
-                
-            else:
-                
-                list_of_tuples = []
-                
-                list_of_tuples.append( ( 'md5', HydrusTagArchive.HASH_TYPE_MD5 ) )
-                list_of_tuples.append( ( 'sha1', HydrusTagArchive.HASH_TYPE_SHA1 ) )
-                list_of_tuples.append( ( 'sha512', HydrusTagArchive.HASH_TYPE_SHA512 ) )
-                
-                with DialogSelectFromList( parent, 'Select the hash type', list_of_tuples ) as hash_dlg:
-                    
-                    if hash_dlg.ShowModal() == wx.ID_OK:
-                        
-                        hash_type = hash_dlg.GetChoice()
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            
-        
-    
-    if hash_type is not None:
-        
-        HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
-        
-    
-def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
-    
-    hta = HydrusTagArchive.HydrusTagArchive( hta_path )
-    
-    potential_namespaces = hta.GetNamespaces()
-    
-    hash_type = hta.GetHashType() # this tests if the hta can produce a hashtype
-    
-    del hta
-    
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
-    
-    service_type = service.GetServiceType()
-    
-    can_delete = True
-    
-    if service_type == HC.TAG_REPOSITORY:
-        
-        if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            can_delete = False
-            
-        
-    
-    if can_delete:
-        
-        text = 'Would you like to add or delete the archive\'s tags?'
-        
-        with DialogYesNo( parent, text, title = 'Add or delete?', yes_label = 'add', no_label = 'delete' ) as dlg_add:
-            
-            result = dlg_add.ShowModal()
-            
-            if result == wx.ID_YES: adding = True
-            elif result == wx.ID_NO: adding = False
-            else: return
-            
-        
-    else:
-        
-        text = 'You cannot quickly delete tags from this service, so I will assume you want to add tags.'
-        
-        wx.MessageBox( text )
-        
-        adding = True
-        
-    
-    text = 'Choose which namespaces to '
-    
-    if adding: text += 'add.'
-    else: text += 'delete.'
-    
-    with DialogCheckFromListOfStrings( parent, text, HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg_namespaces:
-        
-        if dlg_namespaces.ShowModal() == wx.ID_OK:
-            
-            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
-            
-            if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
-                
-                text = 'This tag archive can be fully merged into your database, but this may be more than you want.'
-                text += os.linesep * 2
-                text += 'Would you like to import the tags only for files you actually have, or do you want absolutely everything?'
-                
-                with DialogYesNo( parent, text, title = 'How much do you want?', yes_label = 'just for my local files', no_label = 'everything' ) as dlg_add:
-                    
-                    result = dlg_add.ShowModal()
-                    
-                    if result == wx.ID_YES:
-                        
-                        file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                        
-                    elif result == wx.ID_NO:
-                        
-                        file_service_key = CC.COMBINED_FILE_SERVICE_KEY
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            else:
-                
-                file_service_key = CC.LOCAL_FILE_SERVICE_KEY
-                
-            
-            text = 'Are you absolutely sure you want to '
-            
-            if adding: text += 'add'
-            else: text += 'delete'
-            
-            text += ' the namespaces:'
-            text += os.linesep * 2
-            text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
-            text += os.linesep * 2
-            
-            file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
-            
-            text += 'For '
-            
-            if hashes is None:
-                
-                text += 'all'
-                
-            else:
-                
-                text += HydrusData.ConvertIntToPrettyString( len( hashes ) )
-                
-            
-            text += ' files in \'' + file_service.GetName() + '\''
-            
-            if adding: text += ' to '
-            else: text += ' from '
-            
-            text += '\'' + service.GetName() + '\'?'
-            
-            with DialogYesNo( parent, text ) as dlg_final:
-                
-                if dlg_final.ShowModal() == wx.ID_YES:
-                    
-                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
-                    
-                
-            
-        
-    
 def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
     if service_keys is None:
@@ -348,268 +164,6 @@ class Dialog( wx.Dialog ):
         min_height = min( 240, height )
         
         self.SetMinSize( ( min_width, min_height ) )
-        
-    
-class DialogAdvancedContentUpdate( Dialog ):
-    
-    COPY = 0
-    DELETE = 1
-    DELETE_DELETED = 2
-    
-    ALL_MAPPINGS = 0
-    SPECIFIC_MAPPINGS = 1
-    SPECIFIC_NAMESPACE = 2
-    NAMESPACED = 3
-    UNNAMESPACED = 4
-    
-    def __init__( self, parent, service_key, hashes = None ):
-        
-        Dialog.__init__( self, parent, 'Advanced Content Update' )
-        
-        self._service_key = service_key
-        self._hashes = hashes
-        
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
-        
-        self._service_name = service.GetName()
-        
-        self._command_panel = ClientGUICommon.StaticBox( self, 'database commands' )
-        
-        self._action_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        self._action_dropdown.Bind( wx.EVT_CHOICE, self.EventChoice )
-        self._tag_type_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        self._action_text = wx.StaticText( self._command_panel, label = 'initialising' )
-        self._service_key_dropdown = ClientGUICommon.BetterChoice( self._command_panel )
-        
-        self._go = ClientGUICommon.BetterButton( self._command_panel, 'Go!', self.Go )
-        
-        #
-        
-        self._hta_panel = ClientGUICommon.StaticBox( self, 'hydrus tag archives' )
-        
-        self._import_from_hta = ClientGUICommon.BetterButton( self._hta_panel, 'one-time mass import or delete using a hydrus tag archive', self.ImportFromHTA )
-        self._export_to_hta = ClientGUICommon.BetterButton( self._hta_panel, 'export to hydrus tag archive', self.ExportToHTA )
-        
-        #
-        
-        self._done = wx.Button( self, id = wx.ID_OK, label = 'done' )
-        
-        #
-        
-        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
-        
-        if len( services ) > 0:
-            
-            self._action_dropdown.Append( 'copy', self.COPY )
-            
-        
-        if self._service_key == CC.LOCAL_TAG_SERVICE_KEY:
-            
-            self._action_dropdown.Append( 'delete', self.DELETE )
-            self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
-            
-        
-        self._action_dropdown.Select( 0 )
-        
-        #
-        
-        self._tag_type_dropdown.Append( 'all mappings', self.ALL_MAPPINGS )
-        self._tag_type_dropdown.Append( 'all namespaced mappings', self.NAMESPACED )
-        self._tag_type_dropdown.Append( 'all unnamespaced mappings', self.UNNAMESPACED )
-        self._tag_type_dropdown.Append( 'specific tag\'s mappings', self.SPECIFIC_MAPPINGS )
-        self._tag_type_dropdown.Append( 'specific namespace\'s mappings', self.SPECIFIC_NAMESPACE )
-        
-        self._tag_type_dropdown.Select( 0 )
-        
-        #
-        
-        for service in services:
-            
-            self._service_key_dropdown.Append( service.GetName(), service.GetServiceKey() )
-            
-        
-        self._service_key_dropdown.Select( 0 )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( self._action_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._tag_type_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._action_text, CC.FLAGS_VCENTER )
-        hbox.AddF( self._service_key_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._go, CC.FLAGS_VCENTER )
-        
-        self._command_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
-        self._hta_panel.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
-        self._hta_panel.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        message = 'Regarding '
-        
-        if self._hashes is None:
-            
-            message += 'all'
-            
-        else:
-            
-            message += HydrusData.ConvertIntToPrettyString( len( self._hashes ) )
-            
-        
-        message += ' files on ' + self._service_name
-        
-        title_st = wx.StaticText( self, label = message)
-        
-        title_st.Wrap( 540 )
-        
-        message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable. You may need to refresh your existing searches to see their effect.' 
-        
-        st = wx.StaticText( self, label = message )
-        
-        st.Wrap( 540 )
-        
-        vbox.AddF( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._command_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._hta_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        if x < 540: x = 540
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        self.EventChoice( None )
-        
-    
-    def EventChoice( self, event ):
-        
-        data = self._action_dropdown.GetChoice()
-        
-        if data in ( self.DELETE, self.DELETE_DELETED ):
-            
-            self._action_text.SetLabelText( 'from ' + self._service_name )
-            
-            self._service_key_dropdown.Hide()
-            
-        else:
-            
-            self._action_text.SetLabelText( 'from ' + self._service_name + ' to')
-            
-            self._service_key_dropdown.Show()
-            
-        
-        self.Layout()
-        
-    
-    def ExportToHTA( self ):
-        
-        ExportToHTA( self, self._service_key, self._hashes )
-        
-    
-    def Go( self ):
-        
-        # at some point, rewrite this to cope with multiple tags. setsometag is ready to go on that front
-        # this should prob be with a listbox so people can enter their new multiple tags in several separate goes, rather than overwriting every time
-        
-        action = self._action_dropdown.GetChoice()
-        
-        tag_type = self._tag_type_dropdown.GetChoice()
-        
-        if tag_type == self.ALL_MAPPINGS:
-            
-            tag = None
-            
-        elif tag_type == self.SPECIFIC_MAPPINGS:
-            
-            with DialogTextEntry( self, 'Enter tag' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    entry = dlg.GetValue()
-                    
-                    tag = ( 'tag', entry )
-                    
-                else:
-                    
-                    return
-                    
-                
-            
-        elif tag_type == self.SPECIFIC_NAMESPACE:
-            
-            with DialogTextEntry( self, 'Enter namespace' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    entry = dlg.GetValue()
-                    
-                    if entry.endswith( ':' ): entry = entry[:-1]
-                    
-                    tag = ( 'namespace', entry )
-                    
-                else:
-                    
-                    return
-                    
-                
-            
-        elif tag_type == self.NAMESPACED:
-            
-            tag = ( 'namespaced', None )
-            
-        elif tag_type == self.UNNAMESPACED:
-            
-            tag = ( 'unnamespaced', None )
-            
-        
-        with DialogYesNo( self, 'Are you sure?' ) as dlg:
-            
-            if dlg.ShowModal() != wx.ID_YES: return
-            
-        
-        if action == self.COPY:
-            
-            service_key_target = self._service_key_dropdown.GetChoice()
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'copy', ( tag, self._hashes, service_key_target ) ) )
-            
-        elif action == self.DELETE:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete', ( tag, self._hashes ) ) )
-            
-        elif action == self.DELETE_DELETED:
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
-            
-        
-        service_keys_to_content_updates = { self._service_key : [ content_update ] }
-        
-        HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-        
-    
-    def ImportFromHTA( self ):
-        
-        text = 'Select the Hydrus Tag Archive\'s location.'
-        
-        with wx.FileDialog( self, message = text, style = wx.FD_OPEN ) as dlg_file:
-            
-            if dlg_file.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg_file.GetPath() )
-                
-                ImportFromHTA( self, path, self._service_key, self._hashes )
-                
-            
         
     
 class DialogButtonChoice( Dialog ):
@@ -1395,7 +949,9 @@ class DialogInputFileSystemPredicates( Dialog ):
         
         def EventCharHook( self, event ):
             
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
                 self._DoOK()
                 
@@ -2836,22 +2392,22 @@ class DialogPageChooser( Dialog ):
         
         id = None
         
-        kc = event.KeyCode
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
         
-        if kc == wx.WXK_UP: id = 8
-        elif kc == wx.WXK_LEFT: id = 4
-        elif kc == wx.WXK_RIGHT: id = 6
-        elif kc == wx.WXK_DOWN: id = 2
-        elif kc == wx.WXK_NUMPAD1: id = 1
-        elif kc == wx.WXK_NUMPAD2: id = 2
-        elif kc == wx.WXK_NUMPAD3: id = 3
-        elif kc == wx.WXK_NUMPAD4: id = 4
-        elif kc == wx.WXK_NUMPAD5: id = 5
-        elif kc == wx.WXK_NUMPAD6: id = 6
-        elif kc == wx.WXK_NUMPAD7: id = 7
-        elif kc == wx.WXK_NUMPAD8: id = 8
-        elif kc == wx.WXK_NUMPAD9: id = 9
-        elif kc == wx.WXK_ESCAPE:
+        if key == wx.WXK_UP: id = 8
+        elif key == wx.WXK_LEFT: id = 4
+        elif key == wx.WXK_RIGHT: id = 6
+        elif key == wx.WXK_DOWN: id = 2
+        elif key == wx.WXK_NUMPAD1: id = 1
+        elif key == wx.WXK_NUMPAD2: id = 2
+        elif key == wx.WXK_NUMPAD3: id = 3
+        elif key == wx.WXK_NUMPAD4: id = 4
+        elif key == wx.WXK_NUMPAD5: id = 5
+        elif key == wx.WXK_NUMPAD6: id = 6
+        elif key == wx.WXK_NUMPAD7: id = 7
+        elif key == wx.WXK_NUMPAD8: id = 8
+        elif key == wx.WXK_NUMPAD9: id = 9
+        elif key == wx.WXK_ESCAPE:
             
             self.EndModal( wx.ID_CANCEL )
             
@@ -3969,7 +3525,9 @@ class DialogSelectFromList( Dialog ):
     
     def EventCharHook( self, event ):
         
-        if event.KeyCode == wx.WXK_ESCAPE:
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key == wx.WXK_ESCAPE:
             
             self.EndModal( wx.ID_CANCEL )
             
@@ -3981,7 +3539,9 @@ class DialogSelectFromList( Dialog ):
     
     def EventListKeyDown( self, event ):
         
-        if event.KeyCode in ( wx.WXK_SPACE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_SPACE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
             selection = self._list.GetSelection()
             

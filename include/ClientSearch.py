@@ -122,7 +122,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
         
         for possible_tag in possible_tags:
             
-            if re.search( re_predicate, possible_tag ) is not None:
+            if re_predicate.search( possible_tag ) is not None:
                 
                 result.append( tag )
                 
@@ -1076,7 +1076,50 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                     
-                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + HydrusData.ToUnicode( value )
+                    service_type = service.GetServiceType()
+                    
+                    pretty_value = HydrusData.ToUnicode( value )
+                    
+                    if service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        if value == 0:
+                            
+                            pretty_value = 'dislike'
+                            
+                        elif value == 1:
+                            
+                            pretty_value = 'like'
+                            
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        if isinstance( value, float ):
+                            
+                            allow_zero = service.AllowZero()
+                            num_stars = service.GetNumStars()
+                            
+                            if allow_zero:
+                                
+                                star_range = num_stars
+                                
+                            else:
+                                
+                                star_range = num_stars - 1
+                                
+                            
+                            pretty_x = int( round( value * star_range ) )
+                            pretty_y = num_stars
+                            
+                            if not allow_zero:
+                                
+                                pretty_x += 1
+                                
+                            
+                            pretty_value = HydrusData.ConvertValueRangeToPrettyString( pretty_x, pretty_y )
+                            
+                        
+                    
+                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + pretty_value
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
@@ -1112,9 +1155,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            base += count_text
-            
             base = HydrusTags.CombineTag( 'system', base )
+            
+            base = ClientTags.RenderTag( base, render_for_user )
+            
+            base += count_text
             
         elif self._predicate_type == HC.PREDICATE_TYPE_TAG:
             
@@ -1123,7 +1168,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             if not self._inclusive: base = u'-'
             else: base = u''
             
-            base += tag
+            base += ClientTags.RenderTag( tag, render_for_user )
             
             base += count_text
             
@@ -1147,7 +1192,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             tag = self._value
             
-            base += tag
+            base += ClientTags.RenderTag( tag, render_for_user )
             
             base += count_text
             
@@ -1158,9 +1203,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             if not self._inclusive: base = u'-'
             else: base = u''
             
-            rendered_tag = HydrusTags.CombineTag( namespace, '*anything*' )
+            anything_tag = HydrusTags.CombineTag( namespace, '*anything*' )
             
-            base += rendered_tag
+            anything_tag = ClientTags.RenderTag( anything_tag, render_for_user )
+            
+            base += anything_tag
             
         elif self._predicate_type == HC.PREDICATE_TYPE_WILDCARD:
             
@@ -1171,8 +1218,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             base += wildcard
             
-        
-        base = ClientTags.RenderTag( base, render_for_user )
         
         return base
         

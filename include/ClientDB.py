@@ -1116,7 +1116,7 @@ class DB( HydrusDB.HydrusDB ):
             job_key.DeleteVariable( 'popup_gauge_1' )
             
             job_key.Finish()
-            job_key.Delete( 30 )
+            job_key.Delete( 5 )
             
         
     
@@ -2774,16 +2774,28 @@ class DB( HydrusDB.HydrusDB ):
         
         if exact_match:
             
-            tag = search_text
+            predicates = []
             
-            if not self._TagExists( tag ):
+            if self._TagExists( search_text ):
+                
+                tag_id = self._GetTagId( search_text )
+                
+                predicates.append( 'tag_id = ' + str( tag_id ) )
+                
+            
+            if self._SubtagExists( search_text ):
+                
+                subtag_id = self._GetSubtagId( search_text )
+                
+                predicates.append( 'subtag_id = ' + str( subtag_id ) )
+                
+            
+            if len( predicates ) == 0:
                 
                 return set()
                 
             
-            ( tag_id ) = self._GetTagId( tag )
-            
-            predicates_phrase = 'tag_id = ' + str( tag_id )
+            predicates_phrase = ' OR '.join( predicates )
             
         else:
             
@@ -3548,6 +3560,11 @@ class DB( HydrusDB.HydrusDB ):
             elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
             else:
                 
+                if isinstance( value, ( str, unicode ) ):
+                    
+                    value = float( value )
+                    
+                
                 # floats are a pain!
                 
                 if operator == u'\u2248':
@@ -3564,7 +3581,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 elif operator == '=':
                     
-                    predicate = str( value * 0.995 ) + ' < rating AND rating < ' + str( value * 1.005 )
+                    predicate = str( value * 0.995 ) + ' <= rating AND rating <= ' + str( value * 1.005 )
                     
                 
                 query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
@@ -5139,12 +5156,12 @@ class DB( HydrusDB.HydrusDB ):
         
         ( namespace, subtag ) = HydrusTags.SplitTag( tag )
         
-        namespace_id = self._GetNamespaceId( namespace )
-        subtag_id = self._GetSubtagId( subtag )
-        
-        result = self._c.execute( 'SELECT tag_id FROM tags WHERE namespace_id = ? AND subtag_id = ?;', ( namespace_id, subtag_id ) ).fetchone()
+        result = self._c.execute( 'SELECT tag_id FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE namespace = ? AND subtag = ?;', ( namespace, subtag ) ).fetchone()
         
         if result is None:
+            
+            namespace_id = self._GetNamespaceId( namespace )
+            subtag_id = self._GetSubtagId( subtag )
             
             self._c.execute( 'INSERT INTO tags ( namespace_id, subtag_id ) VALUES ( ?, ? );', ( namespace_id, subtag_id ) )
             
@@ -6885,7 +6902,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._controller.pub( 'splash_set_status_text', status, print_to_log = False )
                 job_key.SetVariable( 'popup_text_1', status )
                 
-                stop_time = HydrusData.GetNow() + min( 5 + num_updates_to_do, 30 )
+                stop_time = HydrusData.GetNow() + min( 5 + ( num_updates_to_do * 2 ), 30 )
                 
                 self._Commit()
                 
@@ -7155,6 +7172,17 @@ class DB( HydrusDB.HydrusDB ):
             
         
         job_key.SetVariable( 'popup_text_1', 'done!' )
+        
+    
+    def _RepairClientFiles( self, correct_rows ):
+        
+        for ( incorrect_location, prefix, correct_location ) in correct_rows:
+            
+            portable_incorrect_location = HydrusPaths.ConvertAbsPathToPortablePath( incorrect_location )
+            portable_correct_location = HydrusPaths.ConvertAbsPathToPortablePath( correct_location )
+            
+            self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE location = ? AND prefix = ?;', ( portable_correct_location, portable_incorrect_location, prefix ) )
+            
         
     
     def _ResetRepository( self, service ):
@@ -9016,6 +9044,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
+        elif action == 'repair_client_files': result = self._RepairClientFiles( *args, **kwargs )
         elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
         elif action == 'serialisable_simple': result = self._SetJSONSimple( *args, **kwargs )

@@ -810,9 +810,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _DeleteGUISession( self, name ):
         
-        self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+        message = 'Delete session "' + name + '"?'
         
-        self._controller.pub( 'notify_new_sessions' )
+        with ClientGUIDialogs.DialogYesNo( self, message, title = 'Delete session?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+                
+                self._controller.pub( 'notify_new_sessions' )
+                
+            
         
     
     def _DeletePending( self, service_key ):
@@ -2220,7 +2228,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                                 
                                 message = 'Session \'' + name + '\' already exists! Do you want to overwrite it?'
                                 
-                                with ClientGUIDialogs.DialogYesNo( self , message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' ) as yn_dlg:
+                                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' ) as yn_dlg:
                                     
                                     if yn_dlg.ShowModal() != wx.ID_YES:
                                         

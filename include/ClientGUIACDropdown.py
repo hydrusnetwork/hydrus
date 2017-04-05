@@ -208,9 +208,7 @@ class AutoCompleteDropdown( wx.Panel ):
             visible = self._text_ctrl.IsShownOnScreen()
             
         
-        focus_window = wx.Window.FindFocus()
-        
-        focus_remains_on_self_or_children = focus_window == self._dropdown_window or focus_window in self._dropdown_window.GetChildren() or focus_window == self._text_ctrl
+        focus_remains_on_self_or_children = ClientGUICommon.WindowHasFocus( self._dropdown_window ) or ClientGUICommon.WindowHasFocus( self._text_ctrl ) or ClientGUICommon.ChildHasFocus( self._dropdown_window )
         
         return tlp_active and visible and focus_remains_on_self_or_children
         
@@ -287,7 +285,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
-        if event.KeyCode in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
+        if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             
             if self._intercept_key_events:
                 
@@ -319,7 +319,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._text_ctrl.Refresh()
             
-        elif event.KeyCode == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
+        elif key == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
             
             self._UpdateList()
             
@@ -327,34 +327,34 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif self._intercept_key_events:
             
-            if event.KeyCode in ( ord( 'A' ), ord( 'a' ) ) and event.CmdDown():
+            if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
                 
                 event.Skip()
                 
-            elif event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
+            elif key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ) and self._ShouldTakeResponsibilityForEnter():
                 
                 self._TakeResponsibilityForEnter()
                 
-            elif event.KeyCode == wx.WXK_ESCAPE:
+            elif key == wx.WXK_ESCAPE:
                 
                 self.GetTopLevelParent().SetFocus()
                 
-            elif event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+            elif key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
-                if event.KeyCode in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
-                elif event.KeyCode in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+                elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
                 
                 new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
                 
                 self._text_ctrl.ProcessEvent( new_event )
                 
-            elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+            elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
-                if event.KeyCode in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                if key in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
                     
                     id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
                     
-                elif event.KeyCode in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
                     
                     id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
                     
@@ -527,7 +527,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._current_matches = []
         
         file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
-        
         
         tag_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._tag_service_key )
         
@@ -875,7 +874,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                     
                     if small_and_specific_search:
                         
-                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, collapse_siblings = True )
+                        predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = cache_text, exact_match = True, inclusive = inclusive, include_current = include_current, include_pending = include_pending, add_namespaceless = add_namespaceless, collapse_siblings = True )
                         
                     else:
                         
@@ -1158,7 +1157,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             if small_and_specific_search:
                 
-                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = search_text, exact_match = True, add_namespaceless = False, collapse_siblings = False )
+                predicates = HydrusGlobals.client_controller.Read( 'autocomplete_predicates', file_service_key = self._file_service_key, tag_service_key = self._tag_service_key, search_text = cache_text, exact_match = True, add_namespaceless = False, collapse_siblings = False )
                 
             else:
                 

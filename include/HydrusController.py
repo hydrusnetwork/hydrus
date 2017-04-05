@@ -154,7 +154,10 @@ class HydrusController( object ):
             
         
     
-    def CurrentlyIdle( self ): return True
+    def CurrentlyIdle( self ):
+        
+        return True
+        
     
     def DBCurrentlyDoingJob( self ):
         
@@ -212,7 +215,7 @@ class HydrusController( object ):
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
             
-            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300 ) )
+            self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300, init_wait = 60 ) )
             
         
     

@@ -10,6 +10,7 @@ import ClientGUIListBoxes
 import ClientGUIPredicates
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
+import ClientGUIScrolledPanelsReview
 import ClientGUISerialisable
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
@@ -1251,7 +1252,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._client_files = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'path', -1 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+            self._client_files = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'preferred path', -1 ), ( 'how the client will store it', 180 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1274,7 +1275,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for ( location, weight ) in locations_to_ideal_weights.items():
                 
-                self._client_files.Append( ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                ( display_tuple, data_tuple ) = self._GetTuples( location, weight )
+                
+                self._client_files.Append( display_tuple, data_tuple )
                 
             
             if resized_thumbnail_override is not None:
@@ -1289,19 +1292,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            current_locations_string = self._GenerateCurrentLocationsString()
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            text = 'Here you can change the folders where the client stores your files. Setting a higher weight increases the proportion of your collection that that folder stores.'
+            text = 'Here you can change where you would like the client to store your files. This is not for new users!'
             text += os.linesep * 2
-            text += 'If you add or remove folders here, it will take time for the client to incrementally rebalance your files across the new selection, but if you are in a hurry, you can force a full rebalance from the database->maintenance menu on the main gui.'
+            text += 'As moving many files can take time, this dialog will not realign your storage folders instantly--instead, it changes your _preferred_ locations. If you add or remove folders here, it will take time for the client to incrementally rebalance your storage to the new selection.'
+            text += os.linesep * 2
+            text += 'Hence, if you wish to migrate your files, it is best started through this dialog, not by manually chopping up client_files while the client is closed and trying to catch up later. (This will lead to headaches!) If you have a portable/USB install or plan to move your install, review the \'how the client will store it\' column--paths beneath your database directory will be stored as relative! Plan migrations carefully and make backups!'
+            text += os.linesep * 2
+            text +='Setting a higher weight increases the proportion of your collection that that folder stores. Outstanding rebalancing will occur in your normal idle time, but if you want to perform it immediately, you can force a full rebalance from the database->maintain menu on the main gui.'
+            text += os.linesep * 2
+            text +='Currently, your files are distributed like so:'
+            text += os.linesep * 2
+            text += current_locations_string
+            text += os.linesep * 2
+            text +='And here are where you would like you files to eventually be:'
             
             st = wx.StaticText( self, label = text )
             
-            st.Wrap( 400 )
+            st.Wrap( 540 )
             
             vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( self._client_files, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._client_files, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -1313,13 +1328,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             text = 'If you like, you can force your thumbnails to be stored elsewhere, for instance on a low-latency SSD.'
             text += os.linesep * 2
-            text += 'Normally, your full size thumbnails are rarely accessed--only to initially generate resized thumbnails--so you can store them somewhere slow, but if you set the thumbnail size to be the maximum of 200x200, these originals will be used instead of resized thumbs and are good in a fast location.'
+            text += 'Normally, your full size thumbnails are very rarely accessed--only to (re)generate resized thumbnails--so you can store them somewhere slow, but if you set the thumbnail size to be the maximum of 200x200, these originals will be used instead of resized thumbs and are thus good in a fast location.'
             text += os.linesep * 2
             text += 'Leave either of these blank to store the thumbnails alongside the original files.'
             
             st = wx.StaticText( self, label = text )
             
-            st.Wrap( 400 )
+            st.Wrap( 540 )
             
             vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1340,6 +1355,69 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.SetSizer( vbox )
             
         
+        def _GenerateCurrentLocationsString( self ):
+            
+            prefixes_to_locations = HydrusGlobals.client_controller.Read( 'client_files_locations' )
+            
+            locations_to_file_weights = collections.Counter()
+            locations_to_fs_thumb_weights = collections.Counter()
+            locations_to_r_thumb_weights = collections.Counter()
+            
+            for ( prefix, location ) in prefixes_to_locations.items():
+                
+                if prefix.startswith( 'f' ):
+                    
+                    locations_to_file_weights[ location ] += 1
+                    
+                
+                if prefix.startswith( 't' ):
+                    
+                    locations_to_fs_thumb_weights[ location ] += 1
+                    
+                
+                if prefix.startswith( 'r' ):
+                    
+                    locations_to_r_thumb_weights[ location ] += 1
+                    
+                
+            
+            all_locations = set()
+            
+            all_locations.update( locations_to_file_weights.keys() )
+            all_locations.update( locations_to_fs_thumb_weights.keys() )
+            all_locations.update( locations_to_r_thumb_weights.keys() )
+            
+            all_locations = list( all_locations )
+            
+            all_locations.sort()
+            
+            rows = []
+            
+            for l in all_locations:
+                
+                fp = locations_to_file_weights[ l ] / 256.0
+                ft = locations_to_fs_thumb_weights[ l ] / 256.0
+                fr = locations_to_r_thumb_weights[ l ] / 256.0
+                
+                p = HydrusData.ConvertFloatToPercentage
+                
+                rows.append( l + ': ' + p( fp ) + ' files, ' + p( ft ) + ' full-size thumbs, ' + p( fr ) + ' resized thumbs' )
+                
+            
+            return os.linesep.join( rows )
+            
+        
+        def _GetTuples( self, location, weight ):
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            pretty_weight = HydrusData.ConvertIntToPrettyString( weight )
+            
+            display_tuple = ( location, portable_location, pretty_weight )
+            data_tuple = ( location, portable_location, weight )
+            
+            return ( display_tuple, data_tuple )
+            
+        
         def Delete( self ):
             
             if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
@@ -1358,7 +1436,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for i in self._client_files.GetAllSelected():
                 
-                ( location, weight ) = self._client_files.GetClientData( i )
+                ( location, portable_location, weight ) = self._client_files.GetClientData( i )
                 
                 with wx.NumberEntryDialog( self, 'Enter the weight of ' + location + '.', '', 'Enter Weight', value = int( weight ), min = 1, max = 256 ) as dlg:
                     
@@ -1366,9 +1444,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         weight = dlg.GetValue()
                         
-                        weight = float( weight )
+                        weight = int( weight )
                         
-                        self._client_files.UpdateRow( i, ( location, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( location, weight ) )
+                        ( display_tuple, data_tuple ) = self._GetTuples( location, weight )
+                        
+                        self._client_files.UpdateRow( i, display_tuple, data_tuple )
                         
                     
                 
@@ -1382,7 +1462,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = HydrusData.ToUnicode( dlg.GetPath() )
                     
-                    for ( location, weight ) in self._client_files.GetClientData():
+                    for ( location, portable_location, weight ) in self._client_files.GetClientData():
                         
                         if path == location:
                             
@@ -1398,9 +1478,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             weight = dlg_num.GetValue()
                             
-                            weight = float( weight )
+                            weight = int( weight )
                             
-                            self._client_files.Append( ( path, HydrusData.ConvertIntToPrettyString( int( weight ) ) ), ( path, weight ) )
+                            ( display_tuple, data_tuple ) = self._GetTuples( path, weight )
+                            
+                            self._client_files.Append( display_tuple, data_tuple )
                             
                         
                     
@@ -1421,7 +1503,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             locations_to_weights = {}
             
-            for ( location, weight ) in self._client_files.GetClientData():
+            for ( location, portable_location, weight ) in self._client_files.GetClientData():
                 
                 locations_to_weights[ location ] = weight
                 
@@ -1540,7 +1622,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownNamespace( self, event ):
             
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
                 namespace = self._new_namespace_colour.GetValue()
                 
@@ -1551,7 +1635,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     self._new_namespace_colour.SetValue( '' )
                     
                 
-            else: event.Skip()
+            else:
+                
+                event.Skip()
+                
             
         
         def UpdateOptions( self ):
@@ -2844,7 +2931,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownSortBy( self, event ):
             
-            if event.KeyCode in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
                 sort_by_string = self._new_sort_by.GetValue()
                 
@@ -2863,7 +2952,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     self._new_sort_by.SetValue( '' )
                     
                 
-            else: event.Skip()
+            else:
+                
+                event.Skip()
+                
             
         
         def EventRemoveSortBy( self, event ):
@@ -3217,6 +3309,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all_tags_in_autocomplete = wx.CheckBox( general_panel )
             
             self._apply_all_parents_to_all_services = wx.CheckBox( general_panel )
+            self._apply_all_siblings_to_all_services = wx.CheckBox( general_panel )
             
             #
             
@@ -3330,6 +3423,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
             
             self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
+            self._apply_all_siblings_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_siblings_to_all_services' ) )
             
             #
             
@@ -3367,6 +3461,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
             rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
             rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
+            rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
             
@@ -3510,6 +3605,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetChoice() )
             
             self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
+            self._new_options.SetBoolean( 'apply_all_siblings_to_all_services', self._apply_all_siblings_to_all_services.GetValue() )
             
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
@@ -4325,12 +4421,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         # the char hook event goes up. if it isn't skipped all the way, the subsequent text event will never occur
         # however we don't want the char hook going all the way up sometimes!
         
+        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        
         if not HC.PLATFORM_LINUX:
             
             # If I let this go uncaught, it propagates to the media viewer above, so an Enter or a '+' closes the window or zooms in!
             # The DoAllowNextEvent tells wx to gen regular key_down/char events so our text box gets them like normal, despite catching the event here
             
-            if event.KeyCode == wx.WXK_ESCAPE:
+            if key == wx.WXK_ESCAPE:
                 
                 event.Skip()
                 
@@ -4341,12 +4439,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            # Top jej, the events weren't being generated after all in Linux, so here's a possibly borked patch for that:
-            
-            if event.KeyCode != wx.WXK_ESCAPE:
-                
-                HydrusGlobals.do_not_catch_char_hook = True
-                
+            # DoAllowNext wasn't working for me in Linux. I had some messy fix but replaced it with wangled focus detection in canvas code
             
             event.Skip()
             
@@ -4835,13 +4928,18 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hashes.update( m.GetHashes() )
                 
             
-            self.Ok()
-        
             parent = self.GetTopLevelParent().GetParent()
             
+            self.Ok()
+            
+            # do this because of the Ok() call, which doesn't want to happen in the dialog event loop
             def do_it():
                 
-                with ClientGUIDialogs.DialogAdvancedContentUpdate( parent, self._tag_service_key, hashes ) as dlg:
+                with ClientGUITopLevelWindows.DialogNullipotent( parent, 'advanced content update' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._tag_service_key, hashes )
+                    
+                    dlg.SetPanel( panel )
                     
                     dlg.ShowModal()
                     
@@ -4978,4 +5076,113 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._add_tag_box.SetFocus()
             
         
+
+class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
+    def __init__( self, parent, missing_locations ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
+        text += os.linesep * 2
+        text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will likely be a simple ctrl+a->correct, but if you have a more complicated system or store your thumbnails different to your files, make sure you skim the whole list. Check everything reports _ok!_'
+        text += os.linesep * 2
+        text += 'Then hit \'apply\', and the client will launch. You should double-check your \'preferred\' file storage locations under options->file storage locations immediately.'
+        text += os.linesep * 2
+        text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help.'
+        
+        st = wx.StaticText( self, label = text )
+        
+        st.Wrap( 640 )
+        
+        self._locations = ClientGUICommon.SaneListCtrl( self, 400, [ ( 'missing location', -1 ), ( 'expected subdirectory', 120 ), ( 'correct location', 240 ), ( 'now ok?', 120 ) ], activation_callback = self._SetLocations )
+        
+        self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
+        
+        # add a button here for 'try to fill them in for me'. you give it a dir, and it tries to figure out and fill in the prefixes for you
+        
+        #
+        
+        for ( incorrect_location, prefix ) in missing_locations:
+            
+            t = ( incorrect_location, prefix, '', '' )
+            
+            self._locations.Append( t, t )
+            
+        
+        self._locations.SortListItems( 1 ) # subdirs secondary
+        self._locations.SortListItems( 0 ) # missing location primary
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._locations, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._set_button, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _SetLocations( self ):
+        
+        selected_indices = self._locations.GetAllSelected()
+        
+        if len( selected_indices ) > 0:
+            
+            with wx.DirDialog( self, 'Select correct location.' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    correct_location = HydrusData.ToUnicode( dlg.GetPath() )
+                    
+                    for index in selected_indices:
+                        
+                        ( incorrect_location, prefix, gumpf, gumpf_ok ) = self._locations.GetClientData( index )
+                        
+                        if os.path.exists( os.path.join( correct_location, prefix ) ):
+                            
+                            ok = 'ok!'
+                            
+                        else:
+                            
+                            ok = 'not found'
+                            
+                        
+                        t = ( incorrect_location, prefix, correct_location, ok )
+                        
+                        self._locations.UpdateRow( index, t, t )
+                        
+                    
+                
+            
+        
+    
+    def CommitChanges( self ):
+        
+        user_was_warned = False
+        
+        correct_rows = []
+        
+        for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
+            
+            if correct_location == '':
+                
+                wx.MessageBox( 'You did not correct all the locations!' )
+                
+                raise HydrusExceptions.VetoException()
+                
+            elif ok != 'ok!':
+                
+                wx.MessageBox( 'You did not find all the correct locations!' )
+                
+                raise HydrusExceptions.VetoException()
+                
+            else:
+                
+                correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+                
+            
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        

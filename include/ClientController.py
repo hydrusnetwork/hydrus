@@ -19,6 +19,8 @@ import ClientConstants as CC
 import ClientDB
 import ClientGUI
 import ClientGUIDialogs
+import ClientGUIScrolledPanelsManagement
+import ClientGUITopLevelWindows
 import os
 import psutil
 import threading
@@ -511,6 +513,34 @@ class Controller( HydrusController.HydrusController ):
         return not self._gui.CurrentlyBusy()
         
     
+    def InitClientFilesManager( self ):
+        
+        self._client_files_manager = ClientCaches.ClientFilesManager( self )
+        
+        missing_locations = self._client_files_manager.GetMissing()
+        
+        while len( missing_locations ) > 0:
+            
+            with ClientGUITopLevelWindows.DialogManage( None, 'repair file system', 'regular_dialog' ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_locations )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._client_files_manager = ClientCaches.ClientFilesManager( self )
+                    
+                    missing_locations = self._client_files_manager.GetMissing()
+                    
+                else:
+                    
+                    raise HydrusExceptions.PermissionException( 'File system failed, user chose to quit.' )
+                    
+                
+            
+        
+    
     def InitModel( self ):
         
         self.pub( 'splash_set_title_text', u'booting db\u2026' )
@@ -534,7 +564,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._services_manager = ClientCaches.ServicesManager( self )
         
-        self._client_files_manager = ClientCaches.ClientFilesManager( self )
+        self.InitClientFilesManager()
         
         self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         

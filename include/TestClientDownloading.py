@@ -12,17 +12,17 @@ import HydrusGlobals
 class TestDownloaders( unittest.TestCase ):
     
     @classmethod
-    def setUpClass( self ):
+    def setUpClass( cls ):
         
-        self.old_http = HydrusGlobals.test_controller.GetHTTP()
+        cls.old_http = HydrusGlobals.test_controller.GetHTTP()
         
         HydrusGlobals.test_controller.SetHTTP( TestConstants.FakeHTTPConnectionManager() )
         
     
     @classmethod
-    def tearDownClass( self ):
+    def tearDownClass( cls ):
         
-        HydrusGlobals.test_controller.SetHTTP( self.old_http )
+        HydrusGlobals.test_controller.SetHTTP( cls.old_http )
         
     
     def test_newgrounds( self ):
