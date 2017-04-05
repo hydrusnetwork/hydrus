@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<ul>
+				<li><h3>version 250</h3></li>
+					<li>improved 'file storage locations' help page descriptive text, including adding statements for actual current storage percentages</li>
+					<li>improved boot missing file storage error handling</li>
+					<li>wrote a 'repair file storage' dialog panel to manually fix missing folders during the boot phase</li>
+					<li>added some bells and whistles to the repair file storage dialog. it now shouldn't be possible to boot the client with an invalid file store--let me know how this works for you</li>
+					<li>added 'apply all siblings to all services' to options->tags</li>
+					<li>whenever combined-service siblings are consulted, local siblings will now always have precedence (so, you can now definitely overwrite any ptr siblings you don't like at the local level). this stuff remains a mess, however. more work is needed</li>
+					<li>fixed searching for 'like' ratings</li>
+					<li>rating predicates will now render their value as 'like'/'dislike' or '3/5' rather than the underlying float</li>
+					<li>fixed a variety of predicate string rendering errors when 'show namespace' is false</li>
+					<li>fixed delete key not firing on autocomplete text entry controls</li>
+					<li>the autocomplete entry's text box will now take home/end/up/down events when there is only one result in the dropdown, when navigation of that list is not important (previously, this was only true when there were no results)</li>
+					<li>fixed an issue where invalid typed 'system:' tags were not being correctly cleaned</li>
+					<li>improved tag cleaning code</li>
+					<li>fixed fetching autocomplete results for small and specific searches (e.g. putting in 'a' will return results just for 'a'</li>
+					<li>fixed small and specific searches to return namespaced instances as well (e.g. putting in '8' can now return 'chapter:8'</li>
+					<li>fixed an issue with showing collected media in the preview window</li>
+					<li>fixed the file import status button not laying out correctly on edit subscription dialog</li>
+					<li>cleaned up some focus checking code</li>
+					<li>harmonised all initial key event processing</li>
+					<li>cleaned some key event processing</li>
+					<li>adjusted some server daemon timings to prefer post-boot update generation catchup over db maintenance</li>
+					<li>corrected a bunch of slightly mistaken unit test code</li>
+					<li>added some 'like' and 'numerical' ratings search unit tests</li>
+					<li>the advanced content update dialog now uses the new sizing system (so the go! button should no longer wander out of frame!)</li>
+					<li>reduced what I believe is excess fuzzy padding on the new sizing system</li>
+					<li>optimised a common client db request, speeding up a number of tag operations</li>
+					<li>gui now asks for confirmation when you make to delete a gui session</li>
+					<li>improved some out of date unit tests</li>
+				</ul>
 				<li><h3>version 249</h3></li>
 				<ul>
 					<li>reintroduced shape and colour options to edit ratings service panels</li>
