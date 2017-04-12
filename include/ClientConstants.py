@@ -11,6 +11,9 @@ ID_TIMER_UPDATES = wx.NewId()
 
 #
 
+APPLICATION_COMMAND_TYPE_SIMPLE = 0
+APPLICATION_COMMAND_TYPE_CONTENT = 1
+
 BLANK_PHASH = '\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything else 0 means only significant part of dct was [0,0], which represents flat colour
 
 CAN_HIDE_MOUSE = True
@@ -225,6 +228,40 @@ media_viewer_scale_string_lookup = {}
 media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_100 ] = 'show at 100%'
 media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_MAX_REGULAR ] = 'scale to the largest regular zoom that fits'
 media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_TO_CANVAS ] = 'scale to the canvas size'
+
+SHORTCUT_MODIFIER_CTRL = 0
+SHORTCUT_MODIFIER_ALT = 1
+SHORTCUT_MODIFIER_SHIFT = 2
+
+shortcut_wx_to_hydrus_lookup = {}
+
+shortcut_wx_to_hydrus_lookup[ wx.ACCEL_ALT ] = SHORTCUT_MODIFIER_ALT
+shortcut_wx_to_hydrus_lookup[ wx.ACCEL_CTRL ] = SHORTCUT_MODIFIER_CTRL
+shortcut_wx_to_hydrus_lookup[ wx.ACCEL_CMD ] = SHORTCUT_MODIFIER_CTRL
+shortcut_wx_to_hydrus_lookup[ wx.ACCEL_SHIFT ] = SHORTCUT_MODIFIER_SHIFT
+
+SHORTCUT_MOUSE_LEFT = 0
+SHORTCUT_MOUSE_RIGHT = 1
+SHORTCUT_MOUSE_MIDDLE = 2
+SHORTCUT_MOUSE_SCROLL_UP = 3
+SHORTCUT_MOUSE_SCROLL_DOWN = 4
+
+shortcut_mouse_string_lookup = {}
+
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_LEFT ] = 'left-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_MIDDLE ] = 'middle-click'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
+
+SHORTCUT_TYPE_KEYBOARD = 0
+SHORTCUT_TYPE_MOUSE = 1
+
+SHORTCUTS_RESERVED_NAMES = [ 'duplicate_filter' ]
+
+# shortcut commands
+
+DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip' ]
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1

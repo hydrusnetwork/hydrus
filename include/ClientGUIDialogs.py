@@ -498,12 +498,9 @@ class DialogInputImportTagOptions( Dialog ):
     
 class DialogInputCustomFilterAction( Dialog ):
     
-    def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, service_key = None, action = 'archive' ):
+    def __init__( self, parent, shortcut, command ):
         
         Dialog.__init__( self, parent, 'input custom filter action' )
-        
-        self._service_key = service_key
-        self._action = action
         
         self._current_ratings_like_service = None
         self._current_ratings_numerical_service = None
@@ -512,11 +509,14 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
         
-        self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel, modifier, key )
+        self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel )
         
         self._none_panel = ClientGUICommon.StaticBox( self, 'non-service actions' )
         
-        self._none_actions = wx.Choice( self._none_panel, choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
+        choices = [ 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'delete', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ]
+        choices.extend( CC.DUPLICATE_FILTER_ACTIONS )
+        
+        self._none_actions = wx.Choice( self._none_panel, choices = choices )
         
         self._ok_none = wx.Button( self._none_panel, label = 'ok' )
         self._ok_none.Bind( wx.EVT_BUTTON, self.EventOKNone )
@@ -573,11 +573,22 @@ class DialogInputCustomFilterAction( Dialog ):
         
         self._SetActions()
         
-        if self._service_key is None:
+        #
+        
+        self._shortcut.SetValue( shortcut )
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            self._none_actions.SetStringSelection( self._action )
+            action = data
+            
+            self._none_actions.SetStringSelection( action )
             
         else:
+            
+            ( service_key, content_type, action, value ) = data
             
             self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
             
@@ -588,7 +599,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._tag_service_keys.SetStringSelection( service_name )
                 
-                self._tag_value.SetValue( self._action )
+                self._tag_value.SetValue( value )
                 
             elif service_type == HC.LOCAL_RATING_LIKE:
                 
@@ -596,9 +607,18 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._SetActions()
                 
-                if self._action is None: self._ratings_like_remove.SetValue( True )
-                elif self._action == True: self._ratings_like_like.SetValue( True )
-                elif self._action == False: self._ratings_like_dislike.SetValue( True )
+                if value is None:
+                    
+                    self._ratings_like_remove.SetValue( True )
+                    
+                elif value == True:
+                    
+                    self._ratings_like_like.SetValue( True )
+                    
+                elif value == False:
+                    
+                    self._ratings_like_dislike.SetValue( True )
+                    
                 
             elif service_type == HC.LOCAL_RATING_NUMERICAL:
                 
@@ -606,7 +626,7 @@ class DialogInputCustomFilterAction( Dialog ):
                 
                 self._SetActions()
                 
-                if self._action is None:
+                if value is None:
                     
                     self._ratings_numerical_remove.SetValue( True )
                     
@@ -614,7 +634,7 @@ class DialogInputCustomFilterAction( Dialog ):
                     
                     num_stars = self._current_ratings_numerical_service.GetNumStars()
                     
-                    slider_value = int( round( self._action * num_stars ) )
+                    slider_value = int( round( value * num_stars ) )
                     
                     self._ratings_numerical_slider.SetValue( slider_value )
                     
@@ -734,9 +754,9 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def EventOKNone( self, event ):
         
-        self._service_key = None
-        self._action = self._none_actions.GetStringSelection()
-        self._pretty_action = self._action
+        action = self._none_actions.GetStringSelection()
+        
+        self._final_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, action )
         
         self.EndModal( wx.ID_OK )
         
@@ -747,27 +767,29 @@ class DialogInputCustomFilterAction( Dialog ):
         
         if selection != wx.NOT_FOUND:
             
-            self._service_key = self._ratings_like_service_keys.GetClientData( selection )
+            service_key = self._ratings_like_service_keys.GetClientData( selection )
             
             if self._ratings_like_like.GetValue():
                 
-                self._action = 1.0
-                self._pretty_action = 'like'
+                value = 1.0
                 
             elif self._ratings_like_dislike.GetValue():
                 
-                self._action = 0.0
-                self._pretty_action = 'dislike'
+                value = 0.0
                 
             else:
                 
-                self._action = None
-                self._pretty_action = 'remove'
+                value = None
                 
+            
+            self._final_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
             
             self.EndModal( wx.ID_OK )
             
-        else: self.EndModal( wx.ID_CANCEL )
+        else:
+            
+            self.EndModal( wx.ID_CANCEL )
+            
         
     
     def EventOKRatingsNumerical( self, event ):
@@ -776,53 +798,57 @@ class DialogInputCustomFilterAction( Dialog ):
         
         if selection != wx.NOT_FOUND:
             
-            self._service_key = self._ratings_numerical_service_keys.GetClientData( selection )
+            service_key = self._ratings_numerical_service_keys.GetClientData( selection )
             
             if self._ratings_numerical_remove.GetValue():
                 
-                self._action = None
-                self._pretty_action = 'remove'
+                value = None
                 
             else:
                 
                 value = self._ratings_numerical_slider.GetValue()
-                
-                self._pretty_action = HydrusData.ToUnicode( value )
                 
                 num_stars = self._current_ratings_numerical_service.GetNumStars()
                 allow_zero = self._current_ratings_numerical_service.AllowZero()
                 
                 if allow_zero:
                     
-                    self._action = float( value ) / num_stars
+                    value = float( value ) / num_stars
                     
                 else:
                     
-                    self._action = float( value - 1 ) / ( num_stars - 1 )
+                    value = float( value - 1 ) / ( num_stars - 1 )
                     
                 
             
+            self._final_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+            
             self.EndModal( wx.ID_OK )
             
-        else: self.EndModal( wx.ID_CANCEL )
+        else:
+            
+            self.EndModal( wx.ID_CANCEL )
+            
         
     
     def EventOKTag( self, event ):
-        
-        # this could support multiple tags now
         
         selection = self._tag_service_keys.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            self._service_key = self._tag_service_keys.GetClientData( selection )
+            service_key = self._tag_service_keys.GetClientData( selection )
             
-            self._action = self._tag_value.GetValue()
-            self._pretty_action = self._action
+            value = self._tag_value.GetValue()
+            
+            self._final_command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, value ) )
             
             self.EndModal( wx.ID_OK )
             
-        else: self.EndModal( wx.ID_CANCEL )
+        else:
+            
+            self.EndModal( wx.ID_CANCEL )
+            
         
     
     def EventRecalcActions( self, event ):
@@ -834,14 +860,9 @@ class DialogInputCustomFilterAction( Dialog ):
     
     def GetInfo( self ):
         
-        ( modifier, key ) = self._shortcut.GetValue()
+        shortcut = self._shortcut.GetValue()
         
-        if self._service_key is None: pretty_service_key = ''
-        else: pretty_service_key = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key ).GetName()
-        
-        ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-        
-        return ( ( pretty_modifier, pretty_key, pretty_service_key, self._pretty_action ), ( modifier, key, self._service_key, self._action ) )
+        return ( shortcut, self._final_command )
         
     
     def SetTags( self, tags ):
@@ -949,7 +970,7 @@ class DialogInputFileSystemPredicates( Dialog ):
         
         def EventCharHook( self, event ):
             
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
@@ -1704,11 +1725,11 @@ class DialogInputShortcut( Dialog ):
     
     def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7, action = 'new_page' ):
         
-        Dialog.__init__( self, parent, 'configure shortcut' )
+        Dialog.__init__( self, parent, 'edit shortcut' )
         
         self._action = action
         
-        self._shortcut = ClientGUICommon.Shortcut( self, modifier, key )
+        self._shortcut = ClientGUICommon.Shortcut( self )
         
         self._actions = wx.Choice( self, choices = [ 'archive', 'inbox', 'close_page', 'filter', 'fullscreen_switch', 'frame_back', 'frame_next', 'manage_ratings', 'manage_tags', 'new_page', 'unclose_page', 'refresh', 'set_media_focus', 'set_search_focus', 'show_hide_splitters', 'synchronised_wait_switch', 'next', 'first', 'last', 'undo', 'redo', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ] )
         
@@ -1720,6 +1741,18 @@ class DialogInputShortcut( Dialog ):
         
         #
         
+        if modifier not in CC.shortcut_wx_to_hydrus_lookup:
+            
+            modifiers = []
+            
+        else:
+            
+            modifiers = [ CC.shortcut_wx_to_hydrus_lookup[ modifier ] ]
+            
+        
+        shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+        
+        self._shortcut.SetValue( shortcut )
         self._actions.SetSelection( self._actions.FindString( action ) )
         
         #
@@ -1727,7 +1760,7 @@ class DialogInputShortcut( Dialog ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( self._shortcut, CC.FLAGS_VCENTER )
-        hbox.AddF( self._actions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox.AddF( self._actions, CC.FLAGS_VCENTER )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
         b_box.AddF( self._ok, CC.FLAGS_VCENTER )
@@ -1749,7 +1782,37 @@ class DialogInputShortcut( Dialog ):
     
     def GetInfo( self ):
         
-        ( modifier, key ) = self._shortcut.GetValue()
+        shortcut = self._shortcut.GetValue()
+        
+        modifiers = shortcut._modifiers
+        
+        if modifiers == []:
+            
+            modifier = wx.ACCEL_NORMAL
+            
+        else:
+            
+            hydrus_modifier = modifiers[0]
+            
+            if hydrus_modifier == CC.SHORTCUT_MODIFIER_ALT:
+                
+                modifier = wx.ACCEL_ALT
+                
+            elif hydrus_modifier == CC.SHORTCUT_MODIFIER_CTRL:
+                
+                modifier = wx.ACCEL_CTRL
+                
+            elif hydrus_modifier == CC.SHORTCUT_MODIFIER_SHIFT:
+                
+                modifier = wx.ACCEL_SHIFT
+                
+            else:
+                
+                modifier = wx.ACCEL_NORMAL
+                
+            
+        
+        key = shortcut._shortcut_key
         
         return ( modifier, key, self._actions.GetStringSelection() )
         
@@ -2392,7 +2455,7 @@ class DialogPageChooser( Dialog ):
         
         id = None
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key == wx.WXK_UP: id = 8
         elif key == wx.WXK_LEFT: id = 4
@@ -3525,7 +3588,7 @@ class DialogSelectFromList( Dialog ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key == wx.WXK_ESCAPE:
             
@@ -3539,7 +3602,7 @@ class DialogSelectFromList( Dialog ):
     
     def EventListKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_SPACE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -4040,7 +4103,6 @@ class DialogShortcuts( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-        
         wx.CallAfter( self.EventSelect, None )
         
         wx.CallAfter( self._ok.SetFocus )
@@ -4054,16 +4116,30 @@ class DialogShortcuts( Dialog ):
             
             for ( key, action ) in key_dict.items():
                 
+                if modifier not in CC.shortcut_wx_to_hydrus_lookup:
+                    
+                    modifiers = []
+                    
+                else:
+                    
+                    modifiers = [ CC.shortcut_wx_to_hydrus_lookup[ modifier ] ]
+                    
+                
+                shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+                
                 if action in ( 'manage_tags', 'manage_ratings', 'archive', 'inbox', 'fullscreen_switch', 'frame_back', 'frame_next', 'next', 'first', 'last', 'open_externally', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'previous', 'remove', 'zoom_in', 'zoom_out', 'zoom_switch' ):
                     
-                    service_key = None
+                    command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, action )
                     
-                    default_shortcuts.SetKeyboardAction( modifier, key, ( service_key, action ) )
+                    default_shortcuts.SetCommand( shortcut, command )
                     
                 
             
         
-        default_shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_DELETE, ( None, 'delete' ) )
+        shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_DELETE, [] )
+        command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'delete' )
+        
+        default_shortcuts.SetCommand( shortcut, command )
         
         return default_shortcuts
         
@@ -4072,7 +4148,7 @@ class DialogShortcuts( Dialog ):
         
         name = self._shortcuts.GetCurrentKey()
         
-        if name is None: # 'default'
+        if name is None or name in CC.SHORTCUTS_RESERVED_NAMES: # None = 'default'
             
             return True
             
@@ -4149,14 +4225,9 @@ class DialogShortcuts( Dialog ):
                     
                     existing_shortcuts = page.GetShortcuts()
                     
-                    for ( ( modifier, key ), action ) in existing_shortcuts.IterateKeyboardShortcuts():
+                    for ( shortcut, command ) in existing_shortcuts:
                         
-                        shortcuts.SetKeyboardAction( modifier, key, action )
-                        
-                    
-                    for ( ( modifier, mouse_button ), action ) in existing_shortcuts.IterateMouseShortcuts():
-                        
-                        shortcuts.SetKeyboardAction( modifier, mouse_button, action )
+                        shortcuts.SetCommand( shortcut, command )
                         
                     
                 
@@ -4194,9 +4265,8 @@ class DialogShortcuts( Dialog ):
             
             wx.Panel.__init__( self, parent )
             
-            self._original_shortcuts = shortcuts
-            
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'modifier', 150 ), ( 'key', 150 ), ( 'service', 150 ), ( 'action', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+            self._name = shortcuts.GetName()
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'shortcut', 150 ), ( 'command', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -4211,36 +4281,16 @@ class DialogShortcuts( Dialog ):
             
             #
             
-            for ( ( modifier, key ), action ) in self._original_shortcuts.IterateKeyboardShortcuts():
+            for ( shortcut, command ) in shortcuts:
                 
-                ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
+                sort_tuple = ( shortcut, command )
                 
-                ( service_key, data ) = action
+                pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
                 
-                if service_key is None:
-                    
-                    pretty_service_key = ''
-                    
-                else:
-                    
-                    try:
-                        
-                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
-                        
-                        pretty_service_key = service.GetName()
-                        
-                    except HydrusExceptions.DataMissing:
-                        
-                        pretty_service_key = 'service not found'
-                        
-                    
-                
-                pretty_data = data
-                
-                self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_service_key, pretty_data ), ( modifier, key, service_key, data ) )
+                self._shortcuts.Append( pretty_tuple, sort_tuple )
                 
             
-            self._SortListCtrl()
+            self._shortcuts.SortListItems( 1 )
             
             #
             
@@ -4258,26 +4308,28 @@ class DialogShortcuts( Dialog ):
             self.SetSizer( vbox )
             
         
-        def _SortListCtrl( self ):
+        def _ConvertSortTupleToPrettyTuple( self, ( shortcut, command ) ):
             
-            self._shortcuts.SortListItems( 3 )
+            return ( shortcut.ToString(), command.ToString() )
             
         
         def EditShortcuts( self ):
             
             for index in self._shortcuts.GetAllSelected():
                 
-                ( modifier, key, service_key, action ) = self._shortcuts.GetClientData( index )
+                ( shortcut, command ) = self._shortcuts.GetClientData( index )
                 
-                with DialogInputCustomFilterAction( self, modifier = modifier, key = key, service_key = service_key, action = action ) as dlg:
+                with DialogInputCustomFilterAction( self, shortcut, command ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        ( pretty_tuple, sort_tuple ) = dlg.GetInfo()
+                        ( shortcut, command ) = dlg.GetInfo()
+                        
+                        sort_tuple = ( shortcut, command )
+                        
+                        pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
                         
                         self._shortcuts.UpdateRow( index, pretty_tuple, sort_tuple )
-                        
-                        self._SortListCtrl()
                         
                     
                 
@@ -4285,15 +4337,20 @@ class DialogShortcuts( Dialog ):
         
         def EventAdd( self, event ):
             
-            with DialogInputCustomFilterAction( self ) as dlg:
+            shortcut = ClientData.Shortcut()
+            command = ClientData.ApplicationCommand()
+            
+            with DialogInputCustomFilterAction( self, shortcut, command ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    ( pretty_tuple, sort_tuple ) = dlg.GetInfo()
+                    ( shortcut, command ) = dlg.GetInfo()
+                    
+                    sort_tuple = ( shortcut, command )
+                    
+                    pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
                     
                     self._shortcuts.Append( pretty_tuple, sort_tuple )
-                    
-                    self._SortListCtrl()
                     
                 
             
@@ -4310,17 +4367,11 @@ class DialogShortcuts( Dialog ):
         
         def GetShortcuts( self ):
             
-            name = self._original_shortcuts.GetName()
+            shortcuts = ClientData.Shortcuts( self._name )
             
-            shortcuts = ClientData.Shortcuts( name )
-            
-            rows = self._shortcuts.GetClientData()
-            
-            for ( modifier, key, service_key, data ) in rows:
+            for ( shortcut, command ) in self._shortcuts.GetClientData():
                 
-                action = ( service_key, data )
-                
-                shortcuts.SetKeyboardAction( modifier, key, action )
+                shortcuts.SetCommand( shortcut, command )
                 
             
             return shortcuts

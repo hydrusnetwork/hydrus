@@ -3127,7 +3127,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in CC.DELETE_KEYS:
             
@@ -3407,12 +3407,71 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         self._objects_to_data_indices[ obj ] = data_index
         
     
-class Shortcut( wx.TextCtrl ):
+class Shortcut( wx.Panel ):
     
-    def __init__( self, parent, modifier = wx.ACCEL_NORMAL, key = wx.WXK_F7 ):
+    def __init__( self, parent ):
         
-        self._modifier = modifier
-        self._key = key
+        wx.Panel.__init__( self, parent )
+        
+        self._mouse_radio = wx.RadioButton( self, style = wx.RB_GROUP, label = 'mouse' )
+        self._mouse_shortcut = ShortcutMouse( self, self._mouse_radio )
+        
+        self._keyboard_radio = wx.RadioButton( self, label = 'keyboard' )
+        self._keyboard_shortcut = ShortcutKeyboard( self, self._keyboard_radio )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( wx.StaticText( self, label = 'Mouse events only work for the duplicate filter atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        gridbox = wx.FlexGridSizer( 0, 2 )
+        
+        gridbox.AddGrowableCol( 1, 1 )
+        
+        gridbox.AddF( self._mouse_radio, CC.FLAGS_VCENTER )
+        gridbox.AddF( self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.AddF( self._keyboard_radio, CC.FLAGS_VCENTER )
+        gridbox.AddF( self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        if self._mouse_radio.GetValue() == True:
+            
+            return self._mouse_shortcut.GetValue()
+            
+        else:
+            
+            return self._keyboard_shortcut.GetValue()
+            
+        
+    
+    def SetValue( self, shortcut ):
+        
+        if shortcut.GetShortcutType() == CC.SHORTCUT_TYPE_MOUSE:
+            
+            self._mouse_radio.SetValue( True )
+            self._mouse_shortcut.SetValue( shortcut )
+            
+        else:
+            
+            self._keyboard_radio.SetValue( True )
+            self._keyboard_shortcut.SetValue( shortcut )
+            
+        
+    
+class ShortcutKeyboard( wx.TextCtrl ):
+    
+    def __init__( self, parent, related_radio = None ):
+        
+        self._shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [] )
+        
+        self._related_radio = related_radio
         
         wx.TextCtrl.__init__( self, parent, style = wx.TE_PROCESS_ENTER )
         
@@ -3423,35 +3482,87 @@ class Shortcut( wx.TextCtrl ):
     
     def _SetShortcutString( self ):
         
-        display_string = ''
-        
-        if self._modifier == wx.ACCEL_ALT: display_string += 'alt + '
-        elif self._modifier == wx.ACCEL_CTRL: display_string += 'ctrl + '
-        elif self._modifier == wx.ACCEL_SHIFT: display_string += 'shift + '
-        
-        if self._key in range( 65, 91 ): display_string += chr( self._key + 32 ) # + 32 for converting ascii A -> a
-        elif self._key in range( 97, 123 ): display_string += chr( self._key )
-        else: display_string += CC.wxk_code_string_lookup[ self._key ]
+        display_string = self._shortcut.ToString()
         
         wx.TextCtrl.SetValue( self, display_string )
         
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        shortcut = ClientData.ConvertKeyEventToShortcut( event )
         
-        if key in range( 65, 91 ) or key in CC.wxk_code_string_lookup.keys():
+        if shortcut is not None:
             
-            ( self._modifier, self._key ) = ( modifier, key )
+            self._shortcut = shortcut
+            
+            if self._related_radio is not None:
+                
+                self._related_radio.SetValue( True )
+                
             
             self._SetShortcutString()
+            
         
     
-    def GetValue( self ): return ( self._modifier, self._key )
-    
-    def SetValue( self, modifier, key ):
+    def GetValue( self ):
         
-        ( self._modifier, self._key ) = ( modifier, key )
+        return self._shortcut
+        
+    
+    def SetValue( self, shortcut ):
+        
+        self._shortcut = shortcut
+        
+        self._SetShortcutString()
+        
+    
+class ShortcutMouse( wx.Button ):
+    
+    def __init__( self, parent, related_radio = None ):
+        
+        self._shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] )
+        
+        self._related_radio = related_radio
+        
+        wx.Button.__init__( self, parent )
+        
+        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        
+        self._SetShortcutString()
+        
+    
+    def _SetShortcutString( self ):
+        
+        display_string = self._shortcut.ToString()
+        
+        self.SetLabel( display_string )
+        
+    
+    def EventMouse( self, event ):
+        
+        shortcut = ClientData.ConvertMouseEventToShortcut( event )
+        
+        if shortcut is not None:
+            
+            self._shortcut = shortcut
+            
+            if self._related_radio is not None:
+                
+                self._related_radio.SetValue( True )
+                
+            
+            self._SetShortcutString()
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._shortcut
+        
+    
+    def SetValue( self, shortcut ):
+        
+        self._shortcut = shortcut
         
         self._SetShortcutString()
         

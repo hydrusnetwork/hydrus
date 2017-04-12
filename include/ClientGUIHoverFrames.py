@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICanvas
 import ClientGUICommon
+import ClientGUIDialogs
 import ClientGUIListBoxes
 import HydrusConstants as HC
 import HydrusData
@@ -438,11 +439,12 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
     def _PopulateCenterButtons( self ):
         
-        # probably better to just launch a dialog with this stuff as proper panels, yeah
-        # I'll be making those panels for the custom dialog anyway
+        # make a merge_options serialisable object to track all this that I can plug into the dialog and obey at the db level
+        # store two in the options, for better and same, and then the custom just displays/produces one depending on chosen status
         
-        # cog icon to control
+        # cog icon launches a dialog
             # file delete on better
+            # extend these to be per-service!
             # rating merging on better (d NO) (these are mutually exclusive, so add a radio menu type or whatever)
             # rating moving on better (d YES)
             # rating merging on same (d YES)
@@ -452,14 +454,30 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         
         menu_items = []
         
-        menu_items.append( ( 'normal', 'edit tag/ratings merge options and whether to delete bad files', 'help compute.', self._Archive ) )
-        menu_items.append( ( 'normal', 'edit shortcuts', 'help compute.', self._Archive ) )
+        menu_items.append( ( 'normal', 'edit tag/ratings merge options and whether to delete bad files', 'edit what happens when you filter files', self._EditMergeOptions ) )
+        menu_items.append( ( 'normal', 'edit shortcuts', 'edit how to quickly filter files', self._EditShortcuts ) )
         
         cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
         self._top_hbox.AddF( cog_button, CC.FLAGS_SIZER_VCENTER )
         
         FullscreenHoverFrameTop._PopulateCenterButtons( self )
+        
+    
+    def _EditMergeOptions( self ):
+        
+        wx.MessageBox( 'This doesn\'t do anything yet!' )
+        
+    
+    def _EditShortcuts( self ):
+        
+        with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                HydrusGlobals.client_controller.pub( 'refresh_shortcuts' )
+                
+            
         
     
     def _PopulateLeftButtons( self ):

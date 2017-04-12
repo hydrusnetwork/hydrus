@@ -1171,35 +1171,41 @@ class TestClientDB( unittest.TestCase ):
     
     def test_shortcuts( self ):
         
+        num_default = len( ClientDefaults.GetDefaultShortcuts() )
+        
         result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
-        self.assertEqual( result, [] )
+        self.assertEqual( len( result ), num_default )
         
         #
         
-        shortcuts = ClientData.Shortcuts( 'test' )
-        
-        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, ( HydrusData.GenerateKey(), 'action_data' ) )
-        shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, ( None, 'other_action_data' ) )
-        
-        self._write( 'serialisable', shortcuts )
-        
-        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-        
-        self.assertEqual( len( result ), 1 )
-        
-        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'test' )
-        
-        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ), shortcuts.GetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1 ) )
-        self.assertEqual( result.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ), shortcuts.GetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END ) )
-        
-        #
-        
-        self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'test' )
-        
-        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-        
-        self.assertEqual( result, [] )
+        for ( i, shortcuts ) in enumerate( ClientDefaults.GetDefaultShortcuts() ):
+            
+            name = 'shortcuts ' + str( i )
+            
+            shortcuts.SetName( name )
+            
+            self._write( 'serialisable', shortcuts )
+            
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+            
+            self.assertEqual( len( result ), num_default + 1 )
+            
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            
+            for ( shortcut, command ) in shortcuts:
+                
+                self.assertEqual( result.GetCommand( shortcut ).GetData(), command.GetData() )
+                
+            
+            #
+            
+            self._write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+            
+            self.assertEqual( len( result ), num_default )
+            
         
     
 class TestServerDB( unittest.TestCase ):

@@ -1111,6 +1111,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 successful_hashes = set()
                 
+                i = 0
+                
                 while True:
                     
                     path = self._path_cache.GetNextSeed( CC.STATUS_UNKNOWN )
@@ -1209,6 +1211,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' )
                         
                         self._path_cache.UpdateSeedStatus( path, CC.STATUS_FAILED, exception = e )
+                        
+                    
+                    i += 1
+                    
+                    if i % 100 == 0:
+                        
+                        self._ActionPaths()
                         
                     
                 

@@ -383,7 +383,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ): self.EventReady( None )
         else: event.Skip()
@@ -776,6 +776,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._file_domain_button = ClientGUICommon.BetterButton( self._filtering_panel, 'file domain', self._FileDomainButtonHit )
         self._num_unknown_duplicates = wx.StaticText( self._filtering_panel )
+        self._num_better_duplicates = wx.StaticText( self._filtering_panel )
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
         self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some pairs (prototype!)', self._ShowSomeDupes )
@@ -828,6 +829,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._filtering_panel.AddF( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.AddF( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_same_file_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1146,9 +1148,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         num_unknown = duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ]
         
-        self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential duplicates found.' )
-        self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' same file pairs filtered.' )
-        self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate file pairs filtered.' )
+        self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential matches found.' )
+        self._num_better_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs filtered.' )
+        self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' exactly similar pairs filtered.' )
+        self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs filtered.' )
         
         if num_unknown > 0:
             
@@ -1533,7 +1536,7 @@ class ManagementPanelGalleryImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -2064,7 +2067,7 @@ class ManagementPanelPageOfImagesImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -3076,7 +3079,7 @@ class ManagementPanelThreadWatcherImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -3341,7 +3344,7 @@ class ManagementPanelURLsImport( ManagementPanel ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             

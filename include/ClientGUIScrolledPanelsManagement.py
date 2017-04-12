@@ -1622,7 +1622,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownNamespace( self, event ):
             
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
@@ -2854,7 +2854,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             shortcuts[ wx.ACCEL_ALT ] = {}
             shortcuts[ wx.ACCEL_SHIFT ] = {}
             
-            for ( modifier, key, action ) in self._shortcuts.GetClientData(): shortcuts[ modifier ][ key ] = action
+            for ( modifier, key, action ) in self._shortcuts.GetClientData():
+                
+                shortcuts[ modifier ][ key ] = action
+                
             
             HC.options[ 'shortcuts' ] = shortcuts
             
@@ -2931,7 +2934,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownSortBy( self, event ):
             
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
@@ -4421,7 +4424,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         # the char hook event goes up. if it isn't skipped all the way, the subsequent text event will never occur
         # however we don't want the char hook going all the way up sometimes!
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if not HC.PLATFORM_LINUX:
             

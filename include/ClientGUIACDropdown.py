@@ -285,7 +285,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             

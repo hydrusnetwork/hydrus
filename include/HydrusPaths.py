@@ -320,7 +320,9 @@ def LaunchDirectory( path ):
             
             cmd.append( path )
             
-            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+            # setsid call un-childs this new process
+            
+            process = subprocess.Popen( cmd, preexec_fn = os.setsid, startupinfo = HydrusData.GetSubprocessStartupInfo() )
             
             process.wait()
             
@@ -349,11 +351,13 @@ def LaunchFile( path ):
             
             cmd.append( path )
             
-            process = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+            # setsid call un-childs this new process
+            
+            process = subprocess.Popen( cmd, preexec_fn = os.setsid, startupinfo = HydrusData.GetSubprocessStartupInfo() )
             
             process.wait()
             
-            process.communicate()        
+            process.communicate()
             
         
     

@@ -18,6 +18,7 @@ import ClientTags
 import gc
 import HydrusImageHandling
 import HydrusPaths
+import HydrusSerialisable
 import HydrusTags
 import os
 import wx
@@ -1033,7 +1034,9 @@ class Canvas( wx.Window ):
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
         
+        self._drag_begin_coordinates = None
         self._last_drag_coordinates = None
+        self._current_drag_is_touch = False
         self._last_motion_coordinates = ( 0, 0 )
         self._total_drag_delta = ( 0, 0 )
         
@@ -1248,7 +1251,14 @@ class Canvas( wx.Window ):
         
         if not ( ClientGUICommon.WindowHasFocus( self ) or ClientGUICommon.ChildHasFocus( self ) ):
             
-            return True
+            focus = wx.Window.FindFocus()
+            
+            focus_is_my_hover_window = focus.GetParent() == self and isinstance( focus, ClientGUIHoverFrames.FullscreenHoverFrame )
+            
+            if not focus_is_my_hover_window:
+                
+                return True
+                
             
         
         if self._current_media is not None and self._current_media.GetMime() == HC.APPLICATION_FLASH:
@@ -1543,8 +1553,9 @@ class Canvas( wx.Window ):
             ( x, y ) = pos
             
         
+        self._drag_begin_coordinates = ( x, y )
         self._last_drag_coordinates = ( x, y )
-        
+        self._current_drag_is_touch = False
         
     
     def EventEraseBackground( self, event ): pass
@@ -2192,12 +2203,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
         
+        self._duplicate_filter_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'duplicate_filter' )
+        
         self._hover_commands.AddCommand( 'this is better', self._CurrentMediaIsBetter )
         self._hover_commands.AddCommand( 'exact duplicates', self._MediaAreTheSame )
         self._hover_commands.AddCommand( 'alternates', self._MediaAreAlternates )
+        self._hover_commands.AddCommand( 'not duplicates', self._MediaAreNotDupes )
         self._hover_commands.AddCommand( 'custom action', self._DoCustomAction )
         
-        self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
+        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         # add support for 'f' to borderless
@@ -2210,6 +2224,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         HydrusGlobals.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         HydrusGlobals.client_controller.sub( self, 'ShowNewPair', 'canvas_show_new_pair' )
         
+        HydrusGlobals.client_controller.sub( self, 'RefreshShortcuts', 'refresh_shortcuts' )
+        
     
     def _Close( self ):
         
@@ -2220,14 +2236,26 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _CurrentMediaIsBetter( self ):
         
-        pass
+        other_media = self._media_list.GetNext( self._current_media )
+        
+        better_hash = self._current_media.GetHash()
+        worse_hash = other_media.GetHash()
+        
+        merge_options = self._GetMergeOptions( HC.DUPLICATE_BETTER )
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'duplicate_pair_status', HC.DUPLICATE_BETTER, better_hash, worse_hash, merge_options )
         
         self._ShowNewPair()
         
     
     def _DoCustomAction( self ):
         
-        pass
+        wx.MessageBox( 'This doesn\'t do anything yet!' )
+        
+        return
+        
+        # ( duplicate_status, hash_a, hash_b, merge_options ) = panel.getvalue()
+        # HydrusGlobals.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_status, hash_a, hash_b, merge_options )
         
         # launch the dialog to choose exactly what happens
         # if OK on that:
@@ -2258,18 +2286,120 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def _GetMergeOptions( self, duplicate_status ):
+        
+        # fetch it from client_options, given a status
+        
+        return None
+        
+    
     def _MediaAreAlternates( self ):
         
-        pass
+        other_media = self._media_list.GetNext( self._current_media )
+        
+        hash_a = self._current_media.GetHash()
+        hash_b = other_media.GetHash()
+        
+        merge_options = self._GetMergeOptions( HC.DUPLICATE_ALTERNATE )
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'duplicate_pair_status', HC.DUPLICATE_ALTERNATE, hash_a, hash_b )
+        
+        self._ShowNewPair()
+        
+    
+    def _MediaAreNotDupes( self ):
+        
+        other_media = self._media_list.GetNext( self._current_media )
+        
+        hash_a = self._current_media.GetHash()
+        hash_b = other_media.GetHash()
+        
+        merge_options = self._GetMergeOptions( HC.DUPLICATE_NOT_DUPLICATE )
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'duplicate_pair_status', HC.DUPLICATE_NOT_DUPLICATE, hash_a, hash_b )
         
         self._ShowNewPair()
         
     
     def _MediaAreTheSame( self ):
         
-        pass
+        other_media = self._media_list.GetNext( self._current_media )
+        
+        hash_a = self._current_media.GetHash()
+        hash_b = other_media.GetHash()
+        
+        merge_options = self._GetMergeOptions( HC.DUPLICATE_SAME_FILE )
+        
+        HydrusGlobals.client_controller.WriteSynchronous( 'duplicate_pair_status', HC.DUPLICATE_SAME_FILE, hash_a, hash_b, merge_options )
         
         self._ShowNewPair()
+        
+    
+    def _ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'duplicate_filter_this_is_better':
+                
+                self._CurrentMediaIsBetter()
+                
+            elif action == 'duplicate_filter_exactly_the_same':
+                
+                self._MediaAreTheSame()
+                
+            elif action == 'duplicate_filter_alternates':
+                
+                self._MediaAreAlternates()
+                
+            elif action == 'duplicate_filter_not_dupes':
+                
+                self._MediaAreNotDupes()
+                
+            elif action == 'duplicate_filter_custom_action':
+                
+                self._DoCustomAction()
+                
+            elif action == 'duplicate_filter_skip':
+                
+                self._ShowNewPair()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def _ProcessShortcut( self, shortcut ):
+        
+        shortcut_processed = False
+        
+        command = self._duplicate_filter_shortcuts.GetCommand( shortcut )
+        
+        if command is not None:
+            
+            command_processed = self._ProcessApplicationCommand( command )
+            
+            if command_processed:
+                
+                shortcut_processed = True
+                
+            
+        
+        return shortcut_processed
         
     
     def _ShowNewPair( self ):
@@ -2300,11 +2430,27 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        shortcut = ClientData.ConvertKeyEventToShortcut( event )
+        
+        if shortcut is not None:
+            
+            shortcut_processed = self._ProcessShortcut( shortcut )
+            
+            if shortcut_processed:
+                
+                return
+                
+            
+        
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ):
             
             self._Close()
+            
+        else:
+            
+            event.Skip()
             
         
     
@@ -2313,7 +2459,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._Close()
         
     
-    def EventMouseWheel( self, event ):
+    def EventMouse( self, event ):
         
         if self._HydrusShouldNotProcessInput():
             
@@ -2321,7 +2467,26 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
-            self._SwitchMedia()
+            shortcut = ClientData.ConvertMouseEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                shortcut_processed = self._ProcessShortcut( shortcut )
+                
+                if shortcut_processed:
+                    
+                    return
+                    
+                
+            
+            if event.GetWheelRotation() != 0:
+                
+                self._SwitchMedia()
+                
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -2343,6 +2508,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         
         wx.CallLater( 100, catch_up )
+        
+    
+    def RefreshShortcuts( self ):
+        
+        self._duplicate_filter_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'duplicate_filter' )
         
     
     def ShowNewPair( self, canvas_key ):
@@ -2592,6 +2762,15 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if event.Dragging() and self._last_drag_coordinates is not None:
             
+            off_starting_point = self._drag_begin_coordinates != self._last_drag_coordinates
+            hit_same_point_twice = ( x, y ) == self._last_drag_coordinates
+            
+            # touch drags generate motion events continuously, even when not moving
+            if off_starting_point and hit_same_point_twice:
+                
+                self._current_drag_is_touch = True
+                
+            
             ( old_x, old_y ) = self._last_drag_coordinates
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
@@ -2600,7 +2779,16 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 show_mouse = False
                 
-                self.WarpPointer( old_x, old_y )
+                if not self._current_drag_is_touch:
+                    
+                    # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
+                    
+                    self.WarpPointer( old_x, old_y )
+                    
+                else:
+                    
+                    self._last_drag_coordinates = ( x, y )
+                    
                 
             else:
                 
@@ -2901,7 +3089,7 @@ class CanvasMediaListFilterInbox( CanvasMediaList ):
         if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
         
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if modifier == wx.ACCEL_NORMAL and key == wx.WXK_SPACE: self._Keep()
             elif modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
@@ -3216,7 +3404,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         else:
             
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
             elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
@@ -3540,15 +3728,17 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
         if self._HydrusShouldNotProcessInput(): event.Skip()
         else:
             
-            ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+            shortcut = ClientData.ConvertKeyEventToShortcut( event )
             
-            action = self._shortcuts.GetKeyboardAction( modifier, key )
+            command = self._shortcuts.GetCommand( shortcut )
             
-            if action is not None:
+            if command is not None:
                 
-                ( service_key, data ) = action
+                data = command.GetData()
                 
-                if service_key is None:
+                command_type = command.GetCommandType()
+                
+                if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
                     
                     if data == 'archive': self._Archive()
                     elif data == 'delete': self._Delete()
@@ -3571,7 +3761,9 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                     elif data == 'previous': self._ShowPrevious()
                     elif data == 'next': self._ShowNext()
                     
-                else:
+                elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+                    
+                    ( service_key, content_type, action, value ) = data
                     
                     service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
                     
@@ -3581,7 +3773,7 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                     
                     if service_type in HC.TAG_SERVICES:
                         
-                        tag = data
+                        tag = value
                         
                         tags_manager = self._current_media.GetTagsManager()
                         
@@ -3663,7 +3855,7 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                         # maybe this needs to be more complicated, if action is, say, remove the rating?
                         # ratings needs a good look at anyway
                         
-                        rating = data
+                        rating = value
                         
                         row = ( rating, hashes )
                         
@@ -3674,6 +3866,8 @@ class CanvasMediaListCustomFilter( CanvasMediaListNavigable ):
                     
                 
             else:
+                
+                ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
                 
                 if modifier == wx.ACCEL_NORMAL and key in ( ord( '+' ), wx.WXK_ADD, wx.WXK_NUMPAD_ADD ): self._ZoomIn()
                 elif modifier == wx.ACCEL_NORMAL and key in ( ord( '-' ), wx.WXK_SUBTRACT, wx.WXK_NUMPAD_SUBTRACT ): self._ZoomOut()

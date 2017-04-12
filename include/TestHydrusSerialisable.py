@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientData
+import ClientDefaults
 import ClientDownloading
 import ClientImporting
 import ClientSearch
@@ -117,53 +118,108 @@ class TestSerialisables( unittest.TestCase ):
         self._dump_and_load_and_test( db, test )
         
     
+    def test_SERIALISABLE_TYPE_APPLICATION_COMMAND( self ):
+        
+        def test( obj, dupe_obj ):
+            
+            self.assertEqual( obj.GetCommandType(), dupe_obj.GetCommandType() )
+            
+            self.assertEqual( obj.GetData(), dupe_obj.GetData() )
+            
+        
+        acs = []
+        
+        acs.append( ( ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive' ), 'archive' ) )
+        acs.append( ( ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) ), 'flip on/off mappings "test" for unknown service!' ) )
+        acs.append( ( ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) ), 'flip on/off mappings "test" for local tags' ) )
+        acs.append( ( ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_SET, 0.4 ) ), 'set ratings "0.4" for unknown service!' ) )
+        
+        for ( ac, s ) in acs:
+            
+            self._dump_and_load_and_test( ac, test )
+            
+            self.assertEqual( ac.ToString(), s )
+            
+        
+    
+    def test_SERIALISABLE_TYPE_SHORTCUT( self ):
+        
+        def test( obj, dupe_obj ):
+            
+            self.assertEqual( dupe_obj.__hash__(), ( dupe_obj._shortcut_type, dupe_obj._shortcut_key, tuple( dupe_obj._modifiers ) ).__hash__() )
+            
+            self.assertEqual( obj, dupe_obj )
+            
+        
+        shortcuts = []
+        
+        shortcuts.append( ( ClientData.Shortcut(), 'f7' ) )
+        
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SPACE, [] ), 'space' ) )
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'a' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'A' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+a' ) )
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_HOME, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+alt+home' ) )
+        
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] ), 'left-click' ) )
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [ CC.SHORTCUT_MODIFIER_CTRL ] ), 'ctrl+middle-click' ) )
+        shortcuts.append( ( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_SHIFT ] ), 'alt+shift+scroll down' ) )
+        
+        for ( shortcut, s ) in shortcuts:
+            
+            self._dump_and_load_and_test( shortcut, test )
+            
+            self.assertEqual( shortcut.ToString(), s )
+            
+        
+    
     def test_SERIALISABLE_TYPE_SHORTCUTS( self ):
         
         def test( obj, dupe_obj ):
             
-            for ( ( modifier, key ), action ) in obj.IterateKeyboardShortcuts():
+            for ( shortcut, command ) in obj:
                 
-                self.assertEqual( dupe_obj.GetKeyboardAction( modifier, key ), action )
-                
-            
-            for ( ( modifier, mouse_button ), action ) in obj.IterateMouseShortcuts():
-                
-                self.assertEqual( dupe_obj.GetMouseAction( modifier, mouse_button ), action )
+                self.assertEqual( dupe_obj.GetCommand( shortcut ).GetData(), command.GetData() )
                 
             
         
-        action_1 = ( HydrusData.GenerateKey(), u'test unicode tag\u2026' )
-        action_2 = ( HydrusData.GenerateKey(), 0.5 )
-        action_3 = ( None, 'archive' )
+        default_shortcuts = ClientDefaults.GetDefaultShortcuts()
+        
+        for shortcuts in default_shortcuts:
+            
+            self._dump_and_load_and_test( shortcuts, test )
+            
+        
+        command_1 = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive' )
+        command_2 = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( HydrusData.GenerateKey(), HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
+        command_3 = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, 'test' ) )
+        
+        k_shortcut_1 = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SPACE, [] )
+        k_shortcut_2 = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'a' ), [ CC.SHORTCUT_MODIFIER_CTRL ] )
+        k_shortcut_3 = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'A' ), [ CC.SHORTCUT_MODIFIER_CTRL ] )
+        k_shortcut_4 = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_HOME, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_CTRL ] )
+        
+        m_shortcut_1 = ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] )
+        m_shortcut_2 = ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [ CC.SHORTCUT_MODIFIER_CTRL ] )
+        m_shortcut_3 = ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, [ CC.SHORTCUT_MODIFIER_ALT, CC.SHORTCUT_MODIFIER_SHIFT ] )
         
         shortcuts = ClientData.Shortcuts( 'test' )
         
-        shortcuts.SetKeyboardAction( wx.ACCEL_NORMAL, wx.WXK_NUMPAD1, action_1 )
-        shortcuts.SetKeyboardAction( wx.ACCEL_SHIFT, wx.WXK_END, action_2 )
-        shortcuts.SetKeyboardAction( wx.ACCEL_CTRL, ord( 'R' ), action_3 )
+        shortcuts.SetCommand( k_shortcut_1, command_1 )
+        shortcuts.SetCommand( k_shortcut_2, command_2 )
+        shortcuts.SetCommand( k_shortcut_3, command_2 )
+        shortcuts.SetCommand( k_shortcut_4, command_3 )
         
-        shortcuts.SetMouseAction( wx.ACCEL_NORMAL, wx.MOUSE_BTN_LEFT, action_1 )
-        shortcuts.SetMouseAction( wx.ACCEL_SHIFT, wx.MOUSE_BTN_MIDDLE, action_2 )
-        shortcuts.SetMouseAction( wx.ACCEL_CTRL, wx.MOUSE_BTN_RIGHT, action_3 )
-        shortcuts.SetMouseAction( wx.ACCEL_ALT, wx.MOUSE_WHEEL_VERTICAL, action_3 )
+        shortcuts.SetCommand( m_shortcut_1, command_1 )
+        shortcuts.SetCommand( m_shortcut_2, command_2 )
+        shortcuts.SetCommand( m_shortcut_3, command_3 )
         
-        k_a = [ item for item in shortcuts.IterateKeyboardShortcuts() ]
+        self._dump_and_load_and_test( shortcuts, test )
         
-        self.assertEqual( len( k_a ), 3 )
+        self.assertEqual( shortcuts.GetCommand( k_shortcut_1 ).GetData(), command_1.GetData() )
         
-        for ( ( modifier, key ), action ) in k_a:
-            
-            self.assertEqual( shortcuts.GetKeyboardAction( modifier, key ), action )
-            
+        shortcuts.SetCommand( k_shortcut_1, command_3 )
         
-        m_a = [ item for item in shortcuts.IterateMouseShortcuts() ]
-        
-        self.assertEqual( len( m_a ), 4 )
-        
-        for ( ( modifier, mouse_button ), action ) in m_a:
-            
-            self.assertEqual( shortcuts.GetMouseAction( modifier, mouse_button ), action )
-            
+        self.assertEqual( shortcuts.GetCommand( k_shortcut_1 ).GetData(), command_3.GetData() )
         
     
     def test_SERIALISABLE_TYPE_SUBSCRIPTION( self ):

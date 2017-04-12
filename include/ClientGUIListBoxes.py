@@ -1304,7 +1304,6 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
             
             if len( predicates ) > 0:
                 
-                self._Hit( False, False, None )
                 self._Hit( False, False, 0 )
                 
             
@@ -1699,7 +1698,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key in CC.DELETE_KEYS:
             
@@ -1817,6 +1816,8 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def _RecalcStrings( self, limit_to_these_tags = None ):
         
+        previous_selected_terms = set( self._selected_terms )
+        
         if limit_to_these_tags is None:
             
             self._Clear()
@@ -1855,6 +1856,14 @@ class ListBoxTagsSelection( ListBoxTags ):
             for tag in nonzero_tags:
                 
                 self._AppendTerm( tag )
+                
+            
+        
+        for term in previous_selected_terms:
+            
+            if term in self._terms:
+                
+                self._selected_terms.add( term )
                 
             
         
@@ -2197,7 +2206,7 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
         
         if len( self._selected_terms ) > 0:
             
-            self._add_func( self._selected_terms )
+            self._add_func( set( self._selected_terms ) )
             
         
     
@@ -2205,6 +2214,6 @@ class ListBoxTagsSelectionTagsDialog( ListBoxTagsSelection ):
         
         if len( self._selected_terms ) > 0:
             
-            self._delete_func( self._selected_terms )
+            self._delete_func( set( self._selected_terms ) )
             
         

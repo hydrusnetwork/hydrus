@@ -485,6 +485,112 @@ def WaitPolitely( page_key = None ):
         HydrusGlobals.client_controller.pub( 'waiting_politely', page_key, False )
         
     
+class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, command_type = None, data = None ):
+        
+        if command_type is None:
+            
+            command_type = CC.APPLICATION_COMMAND_TYPE_SIMPLE
+            
+        
+        if data is None:
+            
+            data = 'archive'
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._command_type = command_type
+        self._data = data
+        
+    
+    def __cmp__( self, other ):
+        
+        return cmp( self.ToString(), other.ToString() )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self._command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            serialisable_data = self._data
+            
+        elif self._command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            ( service_key, content_type, action, value ) = self._data
+            
+            serialisable_data = ( service_key.encode( 'hex' ), content_type, action, value )
+            
+        
+        return ( self._command_type, serialisable_data )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._command_type, serialisable_data ) = serialisable_info
+        
+        if self._command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            self._data = serialisable_data
+            
+        elif self._command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            ( serialisable_service_key, content_type, action, value ) = serialisable_data
+            
+            self._data = ( serialisable_service_key.decode( 'hex' ), content_type, action, value )
+            
+        
+    
+    def GetCommandType( self ):
+        
+        return self._command_type
+        
+    
+    def GetData( self ):
+        
+        return self._data
+        
+    
+    def ToString( self ):
+        
+        if self._command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            return self._data
+            
+        elif self._command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            ( service_key, content_type, action, value ) = self._data
+            
+            components = []
+            
+            components.append( HC.content_update_string_lookup[ action ] )
+            components.append( HC.content_type_string_lookup[ content_type ] )
+            components.append( '"' + HydrusData.ToUnicode( value ) + '"' )
+            components.append( 'for' )
+            
+            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            
+            if services_manager.ServiceExists( service_key ):
+                
+                service = services_manager.GetService( service_key )
+                
+                components.append( service.GetName() )
+                
+            else:
+                
+                components.append( 'unknown service!' )
+                
+            
+            return ' '.join( components )
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND ] = ApplicationCommand
+
 class Booru( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Booru'
@@ -1483,126 +1589,223 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
 
+class Shortcut( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, shortcut_type = None, shortcut_key = None, modifiers = None ):
+        
+        if shortcut_type is None:
+            
+            shortcut_type = CC.SHORTCUT_TYPE_KEYBOARD
+            
+        
+        if shortcut_key is None:
+            
+            shortcut_key = wx.WXK_F7
+            
+        
+        if modifiers is None:
+            
+            modifiers = []
+            
+        
+        modifiers.sort()
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._shortcut_type = shortcut_type
+        self._shortcut_key = shortcut_key
+        self._modifiers = modifiers
+        
+    
+    def __cmp__( self, other ):
+        
+        return cmp( self.ToString(), other.ToString() )
+        
+    
+    def __eq__( self, other ):
+        
+        return self.__hash__() == other.__hash__()
+        
+    
+    def __hash__( self ):
+        
+        return ( self._shortcut_type, self._shortcut_key, tuple( self._modifiers ) ).__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._shortcut_type, self._shortcut_key, self._modifiers )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._shortcut_type, self._shortcut_key, self._modifiers ) = serialisable_info
+        
+    
+    def GetShortcutType( self ):
+        
+        return self._shortcut_type
+        
+    
+    def ToString( self ):
+        
+        components = []
+        
+        if CC.SHORTCUT_MODIFIER_CTRL in self._modifiers:
+            
+            components.append( 'ctrl' )
+            
+        
+        if CC.SHORTCUT_MODIFIER_ALT in self._modifiers:
+            
+            components.append( 'alt' )
+            
+        
+        if CC.SHORTCUT_MODIFIER_SHIFT in self._modifiers:
+            
+            components.append( 'shift' )
+            
+        
+        if self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD:
+            
+            if self._shortcut_key in range( 65, 91 ):
+                
+                components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
+                
+            elif self._shortcut_key in range( 97, 123 ):
+                
+                components.append( chr( self._shortcut_key ) )
+                
+            else:
+                
+                components.append( CC.wxk_code_string_lookup[ self._shortcut_key ] )
+                
+            
+        elif self._shortcut_type == CC.SHORTCUT_TYPE_MOUSE:
+            
+            components.append( CC.shortcut_mouse_string_lookup[ self._shortcut_key ] )
+            
+        
+        return '+'.join( components )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
+
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._mouse_actions = {}
-        self._keyboard_actions = {}
-        
-        # update this to have actions as a separate serialisable class
+        self._shortcuts_to_commands = {}
         
     
-    def _ConvertActionToSerialisableAction( self, action ):
+    def __iter__( self ):
         
-        ( service_key, data ) = action
-        
-        if service_key is None:
+        for ( shortcut, command ) in self._shortcuts_to_commands.items():
             
-            return [ service_key, data ]
-            
-        else:
-            
-            serialisable_service_key = service_key.encode( 'hex' )
-            
-            return [ serialisable_service_key, data ]
-            
-        
-    
-    def _ConvertSerialisableActionToAction( self, serialisable_action ):
-        
-        ( serialisable_service_key, data ) = serialisable_action
-        
-        if serialisable_service_key is None:
-            
-            return ( serialisable_service_key, data ) # important to return tuple, as serialisable_action is likely a list
-            
-        else:
-            
-            service_key = serialisable_service_key.decode( 'hex' )
-            
-            return ( service_key, data )
+            yield ( shortcut, command )
             
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_mouse_actions = []
-        
-        for ( ( modifier, mouse_button ), action ) in self._mouse_actions.items():
-            
-            serialisable_action = self._ConvertActionToSerialisableAction( action )
-            
-            serialisable_mouse_actions.append( ( modifier, mouse_button, serialisable_action ) )
-            
-        
-        serialisable_keyboard_actions = []
-        
-        for ( ( modifier, key ), action ) in self._keyboard_actions.items():
-            
-            serialisable_action = self._ConvertActionToSerialisableAction( action )
-            
-            serialisable_keyboard_actions.append( ( modifier, key, serialisable_action ) )
-            
-        
-        return ( serialisable_mouse_actions, serialisable_keyboard_actions )
+        return [ ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in self._shortcuts_to_commands.items() ]
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_mouse_actions, serialisable_keyboard_actions ) = serialisable_info
-        
-        self._mouse_actions = {}
-        
-        for ( modifier, mouse_button, serialisable_action ) in serialisable_mouse_actions:
+        for ( serialisable_shortcut, serialisable_command ) in serialisable_info:
             
-            action = self._ConvertSerialisableActionToAction( serialisable_action )
+            shortcut = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_shortcut )
+            command = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_command )
             
-            self._mouse_actions[ ( modifier, mouse_button ) ] = action
-            
-        
-        self._keyboard_actions = {}
-        
-        for ( modifier, key, serialisable_action ) in serialisable_keyboard_actions:
-            
-            action = self._ConvertSerialisableActionToAction( serialisable_action )
-            
-            self._keyboard_actions[ ( modifier, key ) ] = action
+            self._shortcuts_to_commands[ shortcut ] = command
             
         
     
-    def ClearActions( self ):
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
-        self._mouse_actions = {}
-        self._keyboard_actions = {}
+        if version == 1:
+            
+            ( serialisable_mouse_actions, serialisable_keyboard_actions ) = old_serialisable_info
+            
+            shortcuts_to_commands = {}
+            
+            # this never stored mouse actions, so skip
+            
+            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            
+            for ( modifier, key, ( serialisable_service_key, data ) ) in serialisable_keyboard_actions:
+                
+                if modifier not in CC.shortcut_wx_to_hydrus_lookup:
+                    
+                    modifiers = []
+                    
+                else:
+                    
+                    modifiers = [ CC.shortcut_wx_to_hydrus_lookup[ modifier ] ]
+                    
+                
+                shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+                
+                if serialisable_service_key is None:
+                    
+                    command = ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, data )
+                    
+                else:
+                    
+                    service_key = serialisable_service_key.decode( 'hex' )
+                    
+                    if not services_manager.ServiceExists( service_key ):
+                        
+                        continue
+                        
+                    
+                    action = HC.CONTENT_UPDATE_FLIP
+                    
+                    value = data
+                    
+                    service = services_manager.GetService( service_key )
+                    
+                    service_type = service.GetServiceType()
+                    
+                    if service_type in HC.TAG_SERVICES:
+                        
+                        content_type = HC.CONTENT_TYPE_MAPPINGS
+                        
+                    elif service_type in HC.RATINGS_SERVICES:
+                        
+                        content_type = HC.CONTENT_TYPE_RATINGS
+                        
+                    else:
+                        
+                        continue
+                        
+                    
+                    command = ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, content_type, action, value ) )
+                    
+                
+                shortcuts_to_commands[ shortcut ] = command
+                
+            
+            new_serialisable_info = ( ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in shortcuts_to_commands.items() )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
-    def DeleteKeyboardAction( self, modifier, key ):
+    def GetCommand( self, shortcut ):
         
-        if ( modifier, key ) in self._keyboard_actions:
+        if shortcut in self._shortcuts_to_commands:
             
-            del self._keyboard_actions[ ( modifier, key ) ]
-            
-        
-    
-    def DeleteMouseAction( self, modifier, mouse_button ):
-        
-        if ( modifier, mouse_button ) in self._mouse_actions:
-            
-            del self._mouse_actions[ ( modifier, mouse_button ) ]
-            
-        
-    
-    def GetKeyboardAction( self, modifier, key ):
-        
-        if ( modifier, key ) in self._keyboard_actions:
-            
-            return self._keyboard_actions[ ( modifier, key ) ]
+            return self._shortcuts_to_commands[ shortcut ]
             
         else:
             
@@ -1610,41 +1813,44 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def GetMouseAction( self, modifier, mouse_button ):
+    def SetCommand( self, shortcut, command ):
         
-        if ( modifier, mouse_button ) in self._mouse_actions:
-            
-            return self._mouse_actions[ ( modifier, mouse_button ) ]
-            
-        else:
-            
-            return None
-            
-        
-    
-    def IterateKeyboardShortcuts( self ):
-        
-        for ( ( modifier, key ), action ) in self._keyboard_actions.items(): yield ( ( modifier, key ), action )
-        
-    
-    def IterateMouseShortcuts( self ):
-        
-        for ( ( modifier, mouse_button ), action ) in self._mouse_actions.items(): yield ( ( modifier, mouse_button ), action )
-        
-    
-    def SetKeyboardAction( self, modifier, key, action ):
-        
-        self._keyboard_actions[ ( modifier, key ) ] = action
-        
-    
-    def SetMouseAction( self, modifier, mouse_button, action ):
-        
-        self._mouse_actions[ ( modifier, mouse_button ) ] = action
+        self._shortcuts_to_commands[ shortcut ] = command
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS ] = Shortcuts
 
-def GetShortcutFromEvent( event ):
+def ConvertKeyEventToShortcut( event ):
+    
+    key = event.KeyCode
+    
+    if key in range( 65, 91 ) or key in CC.wxk_code_string_lookup.keys():
+        
+        modifiers = []
+        
+        if event.AltDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
+            
+        
+        if event.CmdDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
+            
+        
+        if event.ShiftDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
+            
+        
+        shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
+        
+        return shortcut
+        
+    
+    return None
+    
+def ConvertKeyEventToSimpleTuple( event ):
     
     modifier = wx.ACCEL_NORMAL
     
@@ -1655,4 +1861,55 @@ def GetShortcutFromEvent( event ):
     key = event.KeyCode
     
     return ( modifier, key )
+    
+def ConvertMouseEventToShortcut( event ):
+    
+    key = None
+    
+    if event.LeftDown():
+        
+        key = CC.SHORTCUT_MOUSE_LEFT
+        
+    elif event.MiddleDown():
+        
+        key = CC.SHORTCUT_MOUSE_MIDDLE
+        
+    elif event.RightDown():
+        
+        key = CC.SHORTCUT_MOUSE_RIGHT
+        
+    elif event.GetWheelRotation() > 0:
+        
+        key = CC.SHORTCUT_MOUSE_SCROLL_UP
+        
+    elif event.GetWheelRotation() < 0:
+        
+        key = CC.SHORTCUT_MOUSE_SCROLL_DOWN
+        
+    
+    if key is not None:
+        
+        modifiers = []
+        
+        if event.AltDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_ALT )
+            
+        
+        if event.CmdDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_CTRL )
+            
+        
+        if event.ShiftDown():
+            
+            modifiers.append( CC.SHORTCUT_MODIFIER_SHIFT )
+            
+        
+        shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, modifiers )
+        
+        return shortcut
+        
+    
+    return None
     

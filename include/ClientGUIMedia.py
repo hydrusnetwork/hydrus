@@ -2788,6 +2788,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
                     
+                    shortcut_names = [ name for name in shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
+                    
                     if len( shortcut_names ) > 0:
                         
                         custom_shortcuts_menu = wx.Menu()

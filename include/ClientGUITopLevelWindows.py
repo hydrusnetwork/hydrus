@@ -668,7 +668,7 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.GetShortcutFromEvent( event )
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         
         if key == wx.WXK_ESCAPE:
             

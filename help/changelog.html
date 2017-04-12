@@ -8,8 +8,35 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 251</h3></li>
 				<ul>
+					<li>started shortcut overhaul by updating shortcut storage and underlying objects</li>
+					<li>shortcuts will now support multiple modifiers (ctrl, alt, shift) in some places</li>
+					<li>the regular shortcut entry control now supports mouse events through a radiobox (although only the duplicate filter will capture and deal with mouse events on the new system!)</li>
+					<li>on db creation or update, a new 'duplicate_filter' shortcut set will be generated that includes mouse shortcuts and new duplicate_filter commands</li>
+					<li>the duplicate filter now obeys this shortcut set</li>
+					<li>duplicate filter shortcut edit cog menu now works, and the active shortcut set will update if edited</li>
+					<li>wrote simple duplicate pair status update db code</li>
+					<li>added dupe filtering optimisation--given A > B, anything else better than A will be set to be better than B, and anything worse than B will be set to be worse than A</li>
+					<li>added dupe filtering optimisation--after any duplicate status change affecting A and B, any 'same file' siblings of A and B will receive the same relationship</li>
+					<li>the 'process now' button on review services is now gated by a yes/no dialog that better explains what's about to happen</li>
+					<li>the repository buttons on review services will disable when they can't do anything</li>
+					<li>repository update processing will now cancel mid-job much faster</li>
+					<li>reintroduced the 'service-wide update' button to tag services in review services</li>
+					<li>reintroduced the 'clear trash' button to the trash file service in review services</li>
+					<li>reintroduced num_files rating service reporting in review services</li>
+					<li>fixed mouse scroll wheel events from the ratings hover window not being correctly processed by the main media canvas</li>
+					<li>added some 'touch' event detection to try to better deal with media dragging through a touchscreen</li>
+					<li>import folders will now 'action' their import paths as they go, rather than only at the end of their import run</li>
+					<li>the new taglists are now better at remembering their selection through a content change</li>
+					<li>opening a file or path from a non-windows client should now create a non-child process for open/xdg-open calls that block (so closing the client should not then close the child process movie player application or whatever)</li>
+					<li>added unit tests for the new shortcut object</li>
+					<li>added unit tests for the new application command object</li>
+					<li>fixed unit tests for the updated shortcuts object</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 250</h3></li>
+				<ul>
 					<li>improved 'file storage locations' help page descriptive text, including adding statements for actual current storage percentages</li>
 					<li>improved boot missing file storage error handling</li>
 					<li>wrote a 'repair file storage' dialog panel to manually fix missing folders during the boot phase</li>

@@ -823,7 +823,6 @@ class DB( HydrusDB.HydrusDB ):
         self._CacheSimilarFilesDisassociatePHashes( hash_id, phash_ids )
         
         self._c.execute( 'DELETE FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) )
-        self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? or larger_hash_id = ?;', ( hash_id, hash_id ) )
         self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
         
     
@@ -1000,6 +999,8 @@ class DB( HydrusDB.HydrusDB ):
         ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
         
         duplicate_types_to_count = collections.Counter( dict( self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' GROUP BY duplicate_type;' ) ) )
+        
+        duplicate_types_to_count[ HC.DUPLICATE_BETTER ] = duplicate_types_to_count[ HC.DUPLICATE_SMALLER_BETTER ] + duplicate_types_to_count[ HC.DUPLICATE_LARGER_BETTER ]
         
         return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count )
         
@@ -1637,6 +1638,182 @@ class DB( HydrusDB.HydrusDB ):
         return similar_hash_ids
         
     
+    def _CacheSimilarFilesSetDuplicatePairStatus( self, duplicate_status, hash_a, hash_b, merge_options = None ):
+        
+        if duplicate_status == HC.DUPLICATE_WORSE:
+            
+            t = hash_a
+            hash_a = hash_b
+            hash_b = t
+            
+            duplicate_status = HC.DUPLICATE_BETTER
+            
+        
+        hash_id_a = self._GetHashId( hash_a )
+        hash_id_b = self._GetHashId( hash_b )
+        
+        self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, hash_id_a, hash_id_b, merge_options )
+        
+        if duplicate_status == HC.DUPLICATE_BETTER:
+            
+            # anything better than A is now better than B
+            # i.e. for all X for which X > A, set X > B
+            # anything worse than B is now worse than A
+            # i.e. for all X for which B > X, set A > X
+            
+            better_than_a = set()
+            
+            better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
+            better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
+            
+            for better_than_a_hash_id in better_than_a:
+                
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b, merge_options )
+                
+            
+            worse_than_b = set()
+            
+            worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
+            worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
+            
+            for worse_than_b_hash_id in worse_than_b:
+                
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id, merge_options )
+                
+            
+        
+        # do a sync for better dupes that applies not_dupe and alternate relationships across better-than groups
+        
+        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_a, merge_options )
+        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_b, merge_options )
+        
+    
+    def _CacheSimilarFilesSetDuplicatePairStatusSingleRow( self, duplicate_status, hash_id_a, hash_id_b, merge_options, only_update_given_previous_status = None ):
+        
+        smaller_hash_id = min( hash_id_a, hash_id_b )
+        larger_hash_id = max( hash_id_a, hash_id_b )
+        
+        if duplicate_status == HC.DUPLICATE_BETTER:
+            
+            if smaller_hash_id == hash_id_a:
+                
+                duplicate_status = HC.DUPLICATE_SMALLER_BETTER
+                
+            else:
+                
+                duplicate_status = HC.DUPLICATE_LARGER_BETTER
+                
+            
+        elif duplicate_status == HC.DUPLICATE_WORSE:
+            
+            if smaller_hash_id == hash_id_a:
+                
+                duplicate_status = HC.DUPLICATE_LARGER_BETTER
+                
+            else:
+                
+                duplicate_status = HC.DUPLICATE_SMALLER_BETTER
+                
+            
+        
+        change_occured = False
+        
+        if only_update_given_previous_status is None:
+            
+            result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_status ) ).fetchone()
+            
+            if result is None: # i.e. we are not needlessly overwriting
+                
+                self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_status ) )
+                
+                change_occured = True
+                
+            
+        else:
+            
+            self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( duplicate_status, smaller_hash_id, larger_hash_id, only_update_given_previous_status ) )
+            
+            if self._GetRowCount() > 0:
+                
+                change_occured = True
+                
+            
+        
+        if change_occured and merge_options is not None:
+            
+            # follow merge_options
+            
+            # if better:
+            
+            # do tags
+            
+            # do ratings
+            
+            # delete file
+            
+            # if same:
+            
+            # do tags
+            
+            # do ratings
+            
+            pass
+            
+        
+    
+    def _CacheSimilarFilesSyncSameFileDuplicates( self, hash_id, merge_options ):
+        
+        # for every known relationship our file has, that should be replicated to all of its 'same file' siblings
+        
+        all_relationships = set()
+        
+        for ( smaller_hash_id, duplicate_status ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND larger_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+            
+            if duplicate_status == HC.DUPLICATE_SMALLER_BETTER:
+                
+                duplicate_status = HC.DUPLICATE_WORSE
+                
+            elif duplicate_status == HC.DUPLICATE_LARGER_BETTER:
+                
+                duplicate_status = HC.DUPLICATE_BETTER
+                
+            
+            all_relationships.add( ( smaller_hash_id, duplicate_status ) )
+            
+        
+        for ( larger_hash_id, duplicate_status ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type != ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_UNKNOWN, hash_id ) ):
+            
+            if duplicate_status == HC.DUPLICATE_SMALLER_BETTER:
+                
+                duplicate_status = HC.DUPLICATE_BETTER
+                
+            elif duplicate_status == HC.DUPLICATE_LARGER_BETTER:
+                
+                duplicate_status = HC.DUPLICATE_WORSE
+                
+            
+            all_relationships.add( ( larger_hash_id, duplicate_status ) )
+            
+        
+        all_siblings = set()
+        
+        all_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
+        all_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
+        
+        for sibling_hash_id in all_siblings:
+            
+            for ( other_hash_id, duplicate_status ) in all_relationships:
+                
+                if other_hash_id == sibling_hash_id:
+                    
+                    continue
+                    
+                
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, sibling_hash_id, other_hash_id, merge_options )
+                
+            
+        
+    
     def _CacheSpecificMappingsAddFiles( self, file_service_id, tag_service_id, hash_ids ):
         
         ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
@@ -2251,6 +2428,13 @@ class DB( HydrusDB.HydrusDB ):
         new_options = ClientData.ClientOptions( self._db_dir )
         
         self._SetJSONDump( new_options )
+        
+        list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
+        
+        for shortcuts in list_of_shortcuts:
+            
+            self._SetJSONDump( shortcuts )
+            
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
@@ -5894,6 +6078,13 @@ class DB( HydrusDB.HydrusDB ):
         
         for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewFiles(), FILES_CHUNK_SIZE ):
             
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
+            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             files_info_rows = []
@@ -5927,6 +6118,13 @@ class DB( HydrusDB.HydrusDB ):
         
         for chunk in HydrusData.SplitListIntoChunks( content_update.GetDeletedFiles(), FILES_CHUNK_SIZE ):
             
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
+            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             service_hash_ids = chunk
@@ -5946,6 +6144,13 @@ class DB( HydrusDB.HydrusDB ):
         #
         
         for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetNewMappings(), MAPPINGS_CHUNK_SIZE ):
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -5975,6 +6180,13 @@ class DB( HydrusDB.HydrusDB ):
         
         for chunk in HydrusData.SplitMappingListIntoChunks( content_update.GetDeletedMappings(), MAPPINGS_CHUNK_SIZE ):
             
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
+            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             deleted_mappings_ids = []
@@ -6002,6 +6214,13 @@ class DB( HydrusDB.HydrusDB ):
         #
         
         for chunk in HydrusData.SplitListIntoChunks( content_update.GetNewTagParents(), NEW_TAG_PARENTS_CHUNK_SIZE ):
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -6031,6 +6250,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( deleted_parents ) > 0:
             
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
+            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             parent_ids = []
@@ -6058,6 +6284,13 @@ class DB( HydrusDB.HydrusDB ):
         new_siblings = content_update.GetNewTagSiblings()
         
         if len( new_siblings ) > 0:
+            
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
             
             precise_timestamp = HydrusData.GetNowPrecise()
             
@@ -6087,6 +6320,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( deleted_siblings ) > 0:
             
+            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            
+            if should_quit:
+                
+                return False
+                
+            
             precise_timestamp = HydrusData.GetNowPrecise()
             
             sibling_ids = []
@@ -6109,6 +6349,8 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_gauge_2', ( rows_processed, total_rows ) )
             
         
+        return True
+        
     
     def _ProcessRepositoryDefinitionUpdate( self, service_id, definition_update ):
         
@@ -6129,115 +6371,6 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CacheRepositoryAddTags( service_id, service_tag_ids_to_tags )
             
-        
-    
-    def _ProcessContentUpdatePackage( self, service_key, content_update_package, job_key ):
-        
-        ( previous_journal_mode, ) = self._c.execute( 'PRAGMA journal_mode;' ).fetchone()
-        
-        if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
-            
-            self._Commit()
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
-            self._BeginImmediate()
-            
-        
-        c_u_p_num_rows = content_update_package.GetNumRows()
-        c_u_p_total_weight_processed = 0
-        
-        update_speed_string = u'writing\u2026'
-        
-        content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-        
-        quit_early = False
-        
-        package_precise_timestamp = HydrusData.GetNowPrecise()
-        
-        for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
-            
-            options = self._controller.GetOptions()
-            
-            if options[ 'pause_repo_sync' ]:
-                
-                quit_early = True
-                
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
-                
-                quit_early = True
-                
-            
-            if quit_early:
-                
-                package_took = HydrusData.GetNowPrecise() - package_precise_timestamp
-                
-                rows_s = c_u_p_total_weight_processed / package_took
-                
-                committing_string = 'wrote ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s - now committing to disk'
-                
-                job_key.SetVariable( 'popup_text_2', committing_string )
-                
-                HydrusData.Print( job_key.ToString() )
-                
-                if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
-                    
-                    self._Commit()
-                    
-                    self._c.execute( 'PRAGMA journal_mode = WAL;' )
-                    
-                    self._BeginImmediate()
-                    
-                
-                return ( False, c_u_p_total_weight_processed )
-                
-            
-            content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
-            
-            self._controller.pub( 'splash_set_status_text', content_update_index_string + update_speed_string, print_to_log = False )
-            job_key.SetVariable( 'popup_text_2', content_update_index_string + update_speed_string )
-            
-            job_key.SetVariable( 'popup_gauge_2', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
-            
-            chunk_precise_timestamp = HydrusData.GetNowPrecise()
-            
-            self._ProcessContentUpdates( { service_key : content_updates }, do_pubsubs = False )
-            
-            chunk_took = HydrusData.GetNowPrecise() - chunk_precise_timestamp
-            
-            rows_s = weight / chunk_took
-            
-            update_speed_string = 'writing at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
-            
-            c_u_p_total_weight_processed += weight
-            
-        
-        package_took = HydrusData.GetNowPrecise() - package_precise_timestamp
-        
-        rows_s = c_u_p_total_weight_processed / package_took
-        
-        committing_string = 'wrote ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s - now committing to disk'
-        
-        self._controller.pub( 'splash_set_status_text', committing_string )
-        job_key.SetVariable( 'popup_text_2', committing_string )
-        
-        job_key.SetVariable( 'popup_gauge_2', ( c_u_p_num_rows, c_u_p_num_rows ) )
-        
-        HydrusData.Print( job_key.ToString() )
-        
-        if previous_journal_mode == 'wal' and not self._fast_big_transaction_wal:
-            
-            self._Commit()
-            
-            self._c.execute( 'PRAGMA journal_mode = WAL;' )
-            
-            self._BeginImmediate()
-            
-        
-        return ( True, c_u_p_total_weight_processed )
         
     
     def _ProcessContentUpdates( self, service_keys_to_content_updates, do_pubsubs = True ):
@@ -7009,7 +7142,14 @@ class DB( HydrusDB.HydrusDB ):
                             
                             content_update = HydrusSerialisable.CreateFromNetworkString( update_network_string )
                             
-                            self._ProcessRepositoryContentUpdate( job_key, service_id, content_update )
+                            did_whole_update = self._ProcessRepositoryContentUpdate( job_key, service_id, content_update )
+                            
+                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                            
+                            if should_quit or not did_whole_update:
+                                
+                                return ( True, False )
+                                
                             
                             self._c.execute( 'UPDATE ' + repository_updates_table_name + ' SET processed = ? WHERE hash_id = ?;', ( True, hash_id ) )
                             
@@ -8437,6 +8577,23 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 250:
+            
+            duplicate_filter = ClientData.Shortcuts( 'duplicate_filter' )
+            
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_not_dupes' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+            
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SPACE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+            
+            self._SetJSONDump( duplicate_filter )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8454,10 +8611,6 @@ class DB( HydrusDB.HydrusDB ):
         if petitioned_rescinded_mappings_ids is None: petitioned_rescinded_mappings_ids = []
         
         file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
-        
-        # this method grew into a monster that merged deleted, pending and current according to a hierarchy of services
-        # this cost a lot of CPU time and was extremely difficult to maintain
-        # now it attempts a simpler union, not letting delete overwrite a current or pending
         
         change_in_num_mappings = 0
         change_in_num_deleted_mappings = 0
@@ -9016,8 +9169,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'analyze': result = self._AnalyzeStaleBigTables( *args, **kwargs )
         elif action == 'associate_repository_update_hashes': result = self._AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
-        elif action == 'content_update_package':result = self._ProcessContentUpdatePackage( *args, **kwargs )
-        elif action == 'content_updates':result = self._ProcessContentUpdates( *args, **kwargs )
+        elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )
         elif action == 'delete_imageboard': result = self._DeleteYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
@@ -9028,6 +9180,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'delete_service_info': result = self._DeleteServiceInfo( *args, **kwargs )
         elif action == 'delete_unknown_duplicate_pairs': result = self._CacheSimilarFilesDeleteUnknownDuplicatePairs( *args, **kwargs )
         elif action == 'dirty_services': result = self._SaveDirtyServices( *args, **kwargs )
+        elif action == 'duplicate_pair_status': result = self._CacheSimilarFilesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'export_mappings': result = self._ExportToTagArchive( *args, **kwargs )
         elif action == 'file_integrity': result = self._CheckFileIntegrity( *args, **kwargs )
         elif action == 'hydrus_session': result = self._AddHydrusSession( *args, **kwargs )

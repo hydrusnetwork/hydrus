@@ -44,6 +44,11 @@ class ReviewServicePanel( wx.Panel ):
             subpanels.append( self._ServiceFilePanel( self, service ) )
             
         
+        if self._service.GetServiceKey() == CC.TRASH_SERVICE_KEY:
+            
+            subpanels.append( self._ServiceTrashPanel( self, service ) )
+            
+        
         if service_type in HC.TAG_SERVICES:
             
             subpanels.append( self._ServiceTagPanel( self, service ) )
@@ -225,24 +230,6 @@ class ReviewServicePanel( wx.Panel ):
             
         
     
-    def EventClearTrash( self, event ):
-        
-        def do_it():
-            
-            hashes = self._controller.Read( 'trash_hashes' )
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
-            
-            service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
-            
-            self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-            
-            wx.CallAfter( self._DisplayService )
-            
-        
-        self._controller.CallToThread( do_it )
-        
-    
     def EventCopyExternalShareURL( self, event ):
         
         shares = self._booru_shares.GetSelectedClientData()
@@ -414,18 +401,6 @@ class ReviewServicePanel( wx.Panel ):
         self.UnpinIPFSDirectories()
         
     
-    def EventServiceWideUpdate( self, event ):
-        
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'advanced content update' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._service_key )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.ShowModal()
-            
-        
-    
     def GetServiceKey( self ):
         
         return self._service.GetServiceKey()
@@ -521,7 +496,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
+            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateFileInfo )
             
         
         def _UpdateFromThread( self, text ):
@@ -546,7 +521,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADUpdateTagInfo( self ):
+        def THREADUpdateFileInfo( self ):
             
             service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
@@ -1008,16 +983,28 @@ class ReviewServicePanel( wx.Panel ):
         
         def _SyncNow( self ):
             
-            def do_it():
-                
-                self._service.Sync( False )
-                
-                self._my_updater.Update()
-                
+            message = 'This will tell the database to process any outstanding update files.'
+            message += os.linesep * 2
+            message += 'This is a big task that usually runs during idle time. It locks the entire database. If you interact significantly with the program while it runs, your gui will hang, and then you will have to wait a long time for the processing to completely finish before you get it back.'
+            message += os.linesep * 2
+            message += 'If you are a new user, click \'no\'!'
             
-            self._sync_now_button.Disable()
-            
-            HydrusGlobals.client_controller.CallToThread( do_it )
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    def do_it():
+                        
+                        self._service.Sync( False )
+                        
+                        self._my_updater.Update()
+                        
+                    
+                    self._sync_now_button.Disable()
+                    
+                    HydrusGlobals.client_controller.CallToThread( do_it )
+                    
+                
             
         
         def _UpdateFromThread( self, download_text, download_value, processing_text, processing_value, range ):
@@ -1026,6 +1013,29 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._download_progress.SetValue( download_text, download_value, range )
                 self._processing_progress.SetValue( processing_text, processing_value, range )
+                
+                if processing_value == download_value:
+                    
+                    self._sync_now_button.Disable()
+                    
+                
+                if download_value == 0:
+                    
+                    self._export_updates_button.Disable()
+                    
+                else:
+                    
+                    self._export_updates_button.Enable()
+                    
+                
+                if processing_value == 0:
+                    
+                    self._reset_button.Disable()
+                    
+                else:
+                    
+                    self._reset_button.Enable()
+                    
                 
             except wx.PyDeadObjectError:
                 
@@ -1143,7 +1153,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._rating_info_st = wx.StaticText( self )
             
             #
             
@@ -1151,16 +1161,26 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
             
         
         def _Refresh( self ):
             
-            # put this fetch on a thread, since it'll have to go to the db
+            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateRatingInfo )
             
-            self._name_and_type.SetLabelText( 'This service has ratings. This box will regain its old information in a later version.' )
+        
+        def _UpdateFromThread( self, text ):
+            
+            try:
+                
+                self._rating_info_st.SetLabelText( text )
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
             
         
         def Update( self, service ):
@@ -1171,6 +1191,17 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._my_updater.Update()
                 
+            
+        
+        def THREADUpdateRatingInfo( self ):
+            
+            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            
+            num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+            
+            text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files are rated'
+            
+            wx.CallAfter( self._UpdateFromThread, text )
             
         
     
@@ -1186,6 +1217,8 @@ class ReviewServicePanel( wx.Panel ):
             
             self._tag_info_st = wx.StaticText( self )
             
+            self._advanced_content_update = ClientGUICommon.BetterButton( self, 'advanced service-wide update', self._AdvancedContentUpdate )
+            
             #
             
             self._Refresh()
@@ -1193,8 +1226,21 @@ class ReviewServicePanel( wx.Panel ):
             #
             
             self.AddF( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( self._advanced_content_update, CC.FLAGS_LONE_BUTTON )
             
             HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            
+        
+        def _AdvancedContentUpdate( self ):
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'advanced content update' ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsReview.AdvancedContentUpdatePanel( dlg, self._service.GetServiceKey() )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
             
         
         def _Refresh( self ):
@@ -1242,6 +1288,52 @@ class ReviewServicePanel( wx.Panel ):
                 
             
             wx.CallAfter( self._UpdateFromThread, text )
+            
+        
+    
+    class _ServiceTrashPanel( ClientGUICommon.StaticBox ):
+        
+        def __init__( self, parent, service ):
+            
+            ClientGUICommon.StaticBox.__init__( self, parent, 'trash' )
+            
+            self._service = service
+            
+            self._clear_trash = ClientGUICommon.BetterButton( self, 'clear trash', self._ClearTrash )
+            
+            #
+            
+            self.AddF( self._clear_trash, CC.FLAGS_LONE_BUTTON )
+            
+        
+        def _ClearTrash( self ):
+            
+            message = 'This will completely clear your trash of all its files, deleting them permanently from the client. This operation cannot be undone.'
+            message += os.linesep * 2
+            message += 'If you have many files in your trash, it will take some time to complete and for all the files to eventually be deleted.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+                
+                result = dlg_add.ShowModal()
+                
+                if result == wx.ID_YES:
+                    
+                    def do_it():
+                        
+                        hashes = HydrusGlobals.client_controller.Read( 'trash_hashes' )
+                        
+                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+                        
+                        service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
+                        
+                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        
+                        HydrusGlobals.client_controller.pub( 'service_updated', self._service )
+                        
+                    
+                    HydrusGlobals.client_controller.CallToThread( do_it )
+                    
+                
             
         
     

@@ -306,8 +306,14 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 for namespace in namespaces:
                     
-                    if namespace == '': label = 'no namespace'
-                    else: label = namespace
+                    if namespace == '':
+                        
+                        label = 'unnamespaced'
+                        
+                    else:
+                        
+                        label = namespace
+                        
                     
                     namespace_checkbox = wx.CheckBox( self, label = label )
                     
