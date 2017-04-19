@@ -8,6 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 252</h3></li>
+				<ul>
+					<li>the duplicate filter now processes pairs in batches and hence supports 'back' actions to revisit decisions. you will be prompted every fifty or so pairs to commit and checkpoint your progress</li>
+					<li>the duplicate filter now presents related pairs together, rather than picking at random</li>
+					<li>fixed a bug in duplicate filter shortcuts initialisation</li>
+					<li>simplified duplicate filter default shortcuts (these will be overwritten on update) to only use simple left- and right-click for 'this is better' and 'alternates', since those are by far the most common actions. middle-click now goes back, like the archive/delete filter</li>
+					<li>converted old 'main shortcuts' system to the new shortcuts system, also splitting it up into 'media', 'main_gui', 'media_viewer', and 'media_viewer_browser' constituent parts that will be applied in different contexts</li>
+					<li>because the change is so significant, all clients will have their old 'options' shortcuts reset to the new default--I expect to expand shortcuts further in the next few weeks, so this default-overwriting will likely happen again, so you will likely wish to wait before recustomising your basic shortcuts</li>
+					<li>completely eliminated the old main shortcuts system--all references now bodge with the new system to varying neatness</li>
+					<li>as the old main shortcuts system no longer exists, the 'shortcuts' page on file->options is gone--all shortcuts are now managed through file->shortcuts, which is a completely revamped version of the custom filter shortcuts editing dialog</li>
+					<li>selecting shortcut commands is significantly simpler for the reserved shortcut sets</li>
+					<li>all media viewers with hover windows now have a 'keyboard' shortcuts icon button on their top hover window--it links to the manage shortcuts dialog as well as the current active custom shortcut sets and default custom shortcut sets</li>
+					<li>as the above system supercedes the old custom filter system, custom filters are completely removed from the program! your existing custom shortcut sets will survive, but you probably want to purge them of all the redundant junk they still have</li>
+					<li>all the media canvases use the new shortcuts system</li>
+					<li>the canvas frame uses the new shortcuts system</li>
+					<li>the thumbnails canvas uses the new shortcuts system</li>
+					<li>the main gui uses the new shortcuts system</li>
+					<li>some other misc places use the new shortcuts system</li>
+					<li>most simple shortcut command actions have been renamed to be more readable</li>
+					<li>some shortcut actions, like zoom stuff, is no longer hardcoded!</li>
+					<li>mouse shortcuts are still not widely supported!</li>
+					<li>the shortcut command edit dialog now throws a veto-driven error message if you try to ok on an invalid command (a blank services choice or action string, that sort of thing)</li>
+					<li>ctrl+r is now 'remove_files_from_view' by default. the old 'show_hide_splitters' is now ctrl+shift+r by default</li>
+					<li>the preview canvas, if focused, now responds to many normal media viewer shortcuts (content stuff like archive/manage tags, and canvas-specific like frame back/forth, zooming and panning)</li>
+					<li>the new shortcut system now interprets double-clicks of any mouse button to be a second single click</li>
+					<li>the new shortcut system correctly 'flips' ratings on and off, rather than always 'setting' to the chosen value. optional 'set only' support will come in the near future</li>
+					<li>more shortcuts will correctly and reliably propagate to canvases when any part of a hover frame has focus</li>
+					<li>fixed a conflict between the new shortcut system and taglists, which were no longer accepting otherwise interesting keys, like enter</li>
+					<li>created a shortcuts manager cache that deals with a bunch of the shortcut workflow centrally</li>
+					<li>completely eliminated the old accelerator table/menu command system for the main gui window</li>
+					<li>lots of misc shortcut-related work</li>
+					<li>fixed wildcard file search predicates that are on a specific file service and have no namespace (like 'mar*')</li>
+					<li>certain routines that can cause mass refreshing of the menubar (like import folders) will now not spam (and often queue this spam up and hang the gui) the menu so much. the menubar will now always collapse multple overlapping refresh calls to reduce cpu load</li>
+					<li>fixed a focus-None issue in the new hover window focus detection code</li>
+					<li>improved some more focus detection and comparison logic--quick rating-scrolling in the media viewer should be less janked</li>
+					<li>improved 'touch' drag event detection and improved media canvas cursor hide/show logic in general</li>
+					<li>fixed '&' display in notebook page names</li>
+					<li>fixed '&' display in some common dialogs' text</li>
+					<li>wrote a new statictext class that deals with '&' better and in future will autowrap and maybe some other stuff and then switched most of the simple instances of wx.statictext over</li>
+					<li>updated some out-of-date server help r.e. admin service initialisation</li>
+					<li>converted a little of the help on custom filter->custom shortcuts. I'll do more in future</li>
+					<li>wrote a simple checkboxlist dialog</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 251</h3></li>
 				<ul>
 					<li>started shortcut overhaul by updating shortcut storage and underlying objects</li>

@@ -17,7 +17,7 @@
 			<p>The basic process for setting up a server is:</p>
 			<ul>
 				<li>Start the server.</li>
-				<li>Set up your client with its address and initialise the administration interface</li>
+				<li>Set up your client with its address and initialise the admin account</li>
 				<li>Set the server's options and services.</li>
 				<li>Make some accounts for your users.</li>
 				<li>???</li>
@@ -27,16 +27,11 @@
 			<h3>start the server</h3>
 			<p>Since the server and client have so much common code, I package them together. If you have the client, you have the server. If you installed in Windows, you can hit the shortcut in your start menu. Otherwise, go straight to 'server' or 'server.exe' or 'server.pyw' in your installation directory. The program will first try to take port 45870 for its administration interface, so make sure that is free. Open your firewall as appropriate.</p>
 			<h3>set up the client</h3>
-			<p>In the <i>services->manage services</i> dialog, go to the <i>servers admin</i> tab, give your server admin interface a nickname and set the credentials to:</p>
-			<ul>
-				<li>whateveritshostnameis:45870</li>
-			</ul>
-			<p>If you are running the server on the same computer as the client, its hostname is 'localhost'.</p>
-			<p>Ok those changes, and go to <i>review services</i>.</p>
-			<p>On the page for your new server, hit the initialise button. If you have everything set right, the server should generate its first, administrator account and return the access key, which the client will automatically set to the account for you.</p>
-			<p class="warning">YOU'LL WANT TO SAVE THAT KEY IN A SAFE PLACE</p>
+			<p>In the <i>services->manage services</i> dialog, add a new 'hydrus server administration service' and set up the basic options as appropriate. If you are running the server on the same computer as the client, its hostname is 'localhost'.</p>
+			<p>In order to set up the first admin account and an access key, use 'init' as a registration key. This special registration key will only work to initialise this first super-account.</p>
+			<p class="warning">YOU'LL WANT TO SAVE YOUR ACCESS KEY IN A SAFE PLACE</p>
 			<p>If you lose your admin access key, there is no way to get it back, and if you are not sqlite-proficient, you'll have to restart from the beginning by deleting your server's database files.</p>
-			<p>If the client can't connect to the server, it is either not running or you have a firewall/port-mapping problem. If you want a quick way to test the server's visibility, just put https://host:port into your browser--if it is working, your browser will probably complain about its self-signed https certificate. Once you add a certificate exception, the server should return some simple html identifying itself.</p>
+			<p>If the client can't connect to the server, it is either not running or you have a firewall/port-mapping problem. If you want a quick way to test the server's visibility, just put https://host:port into your browser (make sure it is https! http will not work)--if it is working, your browser will probably complain about its self-signed https certificate. Once you add a certificate exception, the server should return some simple html identifying itself.</p>
 			<h3>set up the server</h3>
 			<p>You should have a new submenu, 'administrate services', under 'services', in the client gui. This is where you control most server and service-wide stuff.</p>
 			<p><i>admin->your server->manage services</i> lets you add, edit, and delete the services your server runs. Every time you add one, you will also be added as that service's first administrator, and the admin menu will gain a new entry for it.</i>
