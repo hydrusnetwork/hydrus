@@ -491,6 +491,11 @@ class Controller( HydrusController.HydrusController ):
         return self._client_session_manager
         
     
+    def GetCommandFromShortcut( self, shortcut_names, shortcut ):
+        
+        return self._shortcuts_manager.GetCommand( shortcut_names, shortcut )
+        
+    
     def GetGUI( self ): return self._gui
     
     def GetOptions( self ):
@@ -521,7 +526,7 @@ class Controller( HydrusController.HydrusController ):
         
         while len( missing_locations ) > 0:
             
-            with ClientGUITopLevelWindows.DialogManage( None, 'repair file system', 'regular_dialog' ) as dlg:
+            with ClientGUITopLevelWindows.DialogManage( None, 'repair file system' ) as dlg:
                 
                 panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_locations )
                 
@@ -567,6 +572,8 @@ class Controller( HydrusController.HydrusController ):
         self.InitClientFilesManager()
         
         self._client_session_manager = ClientCaches.HydrusSessionManager( self )
+        
+        self._shortcuts_manager = ClientCaches.ShortcutsManager( self )
         
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )

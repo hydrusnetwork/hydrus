@@ -48,7 +48,7 @@ class OptionsPanelImportFiles( OptionsPanel ):
         
         vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -300,7 +300,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 
-                outer_gridbox.AddF( wx.StaticText( self, label = service.GetName() ), CC.FLAGS_VCENTER )
+                outer_gridbox.AddF( ClientGUICommon.BetterStaticText( self, service.GetName() ), CC.FLAGS_VCENTER )
             
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 

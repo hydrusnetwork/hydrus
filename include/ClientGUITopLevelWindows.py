@@ -360,7 +360,7 @@ class DialogThatResizes( NewDialog ):
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
-    def __init__( self, parent, title, frame_key ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
         
         self._panel = None
         
@@ -468,7 +468,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
     
     def __init__( self, parent, title ):
         
-        DialogThatTakesScrollablePanelClose.__init__( self, parent, title, 'regular_dialog' )
+        DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
         
     
     def EventOk( self, event ):
@@ -504,7 +504,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
     def __init__( self, parent, title ):
         
-        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, 'regular_dialog' )
+        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title )
         
     
     def EventOk( self, event ):

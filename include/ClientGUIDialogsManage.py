@@ -81,7 +81,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         self._token = wx.TextCtrl( self )
         self._pin = wx.TextCtrl( self )
         
-        self._status = wx.StaticText( self )
+        self._status = ClientGUICommon.BetterStaticText( self )
         
         self._SetStatus()
         
@@ -1227,7 +1227,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'
         
-        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
@@ -2331,7 +2331,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         intro = 'Here you can set the client to regularly check certain folders for new files to import.'
         
-        vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
@@ -2898,7 +2898,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         self._id = wx.TextCtrl( self )
         self._password = wx.TextCtrl( self )
         
-        self._status = wx.StaticText( self )
+        self._status = ClientGUICommon.BetterStaticText( self )
         
         self._test = wx.Button( self, label = 'test' )
         self._test.Bind( wx.EVT_BUTTON, self.EventTest )
@@ -2945,7 +2945,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         text += os.linesep
         text += 'You can use a throwaway account if you want--this only needs to log in.'
         
-        vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._test, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3073,23 +3073,71 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self.RefreshAcceleratorTable()
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
     
-    def EventMenu( self, event ):
+    def _ProcessApplicationCommand( self, command ):
         
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        command_processed = True
         
-        if action is not None:
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            ( command, data ) = action
+            action = data
             
-            if command == 'manage_ratings': self.EventOK( event )
-            elif command == 'ok': self.EventOK( event )
-            else: event.Skip()
+            if action == 'manage_file_ratings':
+                
+                self.EventOK( None )
+                
+            else:
+                
+                command_processed = False
+                
             
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def _ProcessShortcut( self, shortcut ):
+        
+        shortcut_processed = False
+        
+        command = HydrusGlobals.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
+        
+        if command is not None:
+            
+            command_processed = self._ProcessApplicationCommand( command )
+            
+            if command_processed:
+                
+                shortcut_processed = True
+                
+            
+        
+        return shortcut_processed
+        
+    
+    def EventCharHook( self, event ):
+        
+        shortcut = ClientData.ConvertKeyEventToShortcut( event )
+        
+        if shortcut is not None:
+            
+            shortcut_processed = self._ProcessShortcut( shortcut )
+            
+            if shortcut_processed:
+                
+                return
+                
+            
+        
+        event.Skip()
         
     
     def EventOK( self, event ):
@@ -3121,18 +3169,10 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 HydrusGlobals.client_controller.Write( 'save_options', HC.options )
                 
             
-        finally: self.EndModal( wx.ID_OK )
-        
-    
-    def RefreshAcceleratorTable( self ):
-        
-        interested_actions = [ 'manage_ratings' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
+        finally:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
     class _LikePanel( wx.Panel ):
@@ -3472,7 +3512,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         intro = "Here you can set which tags or classes of tags you do not want to see. Input something like 'series:' to censor an entire namespace, or ':' for all namespaced tags, and the empty string (just hit enter with no text added) for all unnamespaced tags. You will have to refresh your current queries to see any changes."
         
-        st = wx.StaticText( self, label = intro )
+        st = ClientGUICommon.BetterStaticText( self, intro )
         
         st.Wrap( 350 )
         
@@ -3483,14 +3523,6 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         self.SetSizer( vbox )
         
         self.SetInitialSize( ( -1, 480 ) )
-        
-        interested_actions = [ 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
     def _SetSearchFocus( self ):
@@ -3660,16 +3692,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 550, 780 ) )
         
-        interested_actions = [ 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
     
     def _SetSearchFocus( self ):
         
@@ -3805,7 +3827,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4252,18 +4274,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 550, 780 ) )
         
-        #
-        
-        interested_actions = [ 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
-        
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
     
     def _SetSearchFocus( self ):
         
@@ -4345,7 +4355,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
-            self._new_sibling = wx.StaticText( self )
+            self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             expand_parents = False
             
@@ -4407,7 +4417,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( wx.StaticText( self, label = intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )

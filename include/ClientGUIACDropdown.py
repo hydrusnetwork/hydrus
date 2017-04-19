@@ -58,7 +58,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
         self._text_ctrl.Bind( wx.EVT_TEXT, self.EventText )
-        self._text_ctrl.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._text_ctrl.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
         self._text_ctrl.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
@@ -208,7 +208,7 @@ class AutoCompleteDropdown( wx.Panel ):
             visible = self._text_ctrl.IsShownOnScreen()
             
         
-        focus_remains_on_self_or_children = ClientGUICommon.WindowHasFocus( self._dropdown_window ) or ClientGUICommon.WindowHasFocus( self._text_ctrl ) or ClientGUICommon.ChildHasFocus( self._dropdown_window )
+        focus_remains_on_self_or_children = ClientGUICommon.WindowOrAnyTLPChildHasFocus( self )
         
         return tlp_active and visible and focus_remains_on_self_or_children
         
@@ -276,12 +276,7 @@ class AutoCompleteDropdown( wx.Panel ):
         self._BroadcastChoices( predicates )
         
     
-    def EventCloseDropdown( self, event ):
-        
-        HydrusGlobals.client_controller.GetGUI().Close()
-        
-    
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         HydrusGlobals.client_controller.ResetIdleTimer()
         
@@ -346,7 +341,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
                 
-                self._text_ctrl.ProcessEvent( new_event )
+                self.ProcessEvent( new_event )
                 
             elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
@@ -361,17 +356,22 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
                 
-                self._text_ctrl.ProcessEvent( new_event )
+                self.ProcessEvent( new_event )
                 
             else:
                 
-                self._dropdown_list.ProcessEvent( event )
+                self._dropdown_list.ProcessEvent( event ) # this typically skips the event, letting the text ctrl take it
                 
             
         else:
             
             event.Skip()
             
+        
+    
+    def EventCloseDropdown( self, event ):
+        
+        HydrusGlobals.client_controller.GetGUI().Close()
         
     
     def EventKillFocus( self, event ):
@@ -396,10 +396,16 @@ class AutoCompleteDropdown( wx.Panel ):
             
             if event.CmdDown():
                 
-                key_event = wx.KeyEvent( wx.EVT_KEY_DOWN.typeId )
+                key_event = wx.KeyEvent( wx.EVT_CHAR_HOOK.typeId )
                 
-                if event.GetWheelRotation() > 0: key_event.m_keyCode = wx.WXK_UP
-                else: key_event.m_keyCode = wx.WXK_DOWN
+                if event.GetWheelRotation() > 0:
+                    
+                    key_event.m_keyCode = wx.WXK_UP
+                    
+                else:
+                    
+                    key_event.m_keyCode = wx.WXK_DOWN
+                    
                 
                 self._dropdown_list.ProcessEvent( key_event )
                 

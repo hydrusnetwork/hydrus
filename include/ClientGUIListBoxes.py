@@ -55,7 +55,7 @@ class ListBox( wx.ScrolledWindow ):
         self.Bind( wx.EVT_LEFT_DOWN, self.EventMouseSelect )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventDClick )
         
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
     
     def __len__( self ):
@@ -472,14 +472,7 @@ class ListBox( wx.ScrolledWindow ):
         self._ordered_terms.sort( key = lexicographic_key )
         
     
-    def EventDClick( self, event ):
-        
-        self._Activate()
-        
-    
-    def EventEraseBackground( self, event ): pass
-    
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         shift = event.ShiftDown()
         ctrl = event.CmdDown()
@@ -548,6 +541,13 @@ class ListBox( wx.ScrolledWindow ):
                 
             
         
+    
+    def EventDClick( self, event ):
+        
+        self._Activate()
+        
+    
+    def EventEraseBackground( self, event ): pass
     
     def EventMouseSelect( self, event ):
         
@@ -1041,7 +1041,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
             
         
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         # this realigns the hit index in the down direction
         
@@ -1070,7 +1070,7 @@ class ListBoxTagsPredicates( ListBoxTags ):
         
         if hit_index is None:
             
-            ListBoxTags.EventKeyDown( self, event )
+            ListBoxTags.EventCharHook( self, event )
             
         else:
             
@@ -1696,7 +1696,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
             
         
     
-    def EventKeyDown( self, event ):
+    def EventCharHook( self, event ):
         
         ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
         

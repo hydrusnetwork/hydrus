@@ -499,7 +499,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         
         if data is None:
             
-            data = 'archive'
+            data = 'archive_file'
             
         
         HydrusSerialisable.SerialisableBase.__init__( self )
@@ -727,6 +727,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
+        
+        self._dictionary[ 'string_list' ] = {}
+        
+        self._dictionary[ 'string_list' ][ 'default_media_viewer_custom_shortcuts' ] = []
         
         #
         
@@ -1176,6 +1180,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetStringList( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'string_list' ][ name ]
+            
+        
+    
     def GetSuggestedTagsFavourites( self, service_key ):
         
         with self._lock:
@@ -1301,6 +1313,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 self._dictionary[ 'strings' ][ name ] = value
                 
+            
+        
+    
+    def SetStringList( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'string_list' ][ name ] = value
             
         
     
@@ -1635,6 +1655,11 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return ( self._shortcut_type, self._shortcut_key, tuple( self._modifiers ) ).__hash__()
         
     
+    def __repr__( self ):
+        
+        return 'Shortcut: ' + self.ToString()
+        
+    
     def _GetSerialisableInfo( self ):
         
         return ( self._shortcut_type, self._shortcut_key, self._modifiers )
@@ -1712,6 +1737,11 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
             
             yield ( shortcut, command )
             
+        
+    
+    def __len__( self ):
+        
+        return len( self._shortcuts_to_commands )
         
     
     def _GetSerialisableInfo( self ):
@@ -1866,15 +1896,15 @@ def ConvertMouseEventToShortcut( event ):
     
     key = None
     
-    if event.LeftDown():
+    if event.LeftDown() or event.LeftDClick():
         
         key = CC.SHORTCUT_MOUSE_LEFT
         
-    elif event.MiddleDown():
+    elif event.MiddleDown() or event.MiddleDClick():
         
         key = CC.SHORTCUT_MOUSE_MIDDLE
         
-    elif event.RightDown():
+    elif event.RightDown() or event.RightDClick():
         
         key = CC.SHORTCUT_MOUSE_RIGHT
         

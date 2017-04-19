@@ -964,6 +964,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._search_distance_button.Disable()
             self._search_distance_spinctrl.Disable()
             self._show_some_dupes.Disable()
+            self._launch_filter.Disable()
             
             self._job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -1156,10 +1157,12 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         if num_unknown > 0:
             
             self._show_some_dupes.Enable()
+            self._launch_filter.Enable()
             
         else:
             
             self._show_some_dupes.Disable()
+            self._launch_filter.Disable()
             
         
     

@@ -29,58 +29,69 @@ ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
 ID_TIMER_POPUP = wx.NewId()
 
-def ChildHasFocus( window ):
+def WindowOrAnyTLPChildHasFocus( window ):
     
     focus = wx.Window.FindFocus()
     
-    if focus is None:
-        
-        return False
-        
-    
-    while not isinstance( focus, wx.TopLevelWindow ):
-        
-        focus = focus.GetParent()
-        
-        if focus is None:
-            
-            return False
-            
+    while focus is not None:
         
         if focus == window:
             
             return True
             
         
+        focus = focus.GetParent()
+        
     
     return False
     
-def TLPHasFocus( window ):
+def WindowOrSameTLPChildHasFocus( window ):
     
     focus = wx.Window.FindFocus()
     
-    if focus is None:
+    while focus is not None:
         
-        return False
+        if focus == window:
+            
+            return True
+            
+        
+        if isinstance( focus, wx.TopLevelWindow ):
+            
+            return False
+            
+        
+        focus = focus.GetParent()
         
     
-    if isinstance( focus, wx.TopLevelWindow ):
+    return False
+    
+def GetFocusTLP():
+    
+    focus = wx.Window.FindFocus()
+    
+    return GetTLP( focus )
+    
+def GetTLP( window ):
+    
+    if window is None:
         
-        focus_tlp = focus
+        return None
+        
+    elif isinstance( window, wx.TopLevelWindow ):
+        
+        return window
         
     else:
         
-        focus_tlp = wx.GetTopLevelParent( focus )
+        return window.GetTopLevelParent()
         
     
-    if isinstance( window, wx.TopLevelWindow ):
-        
-        window_tlp = window
-        
-    else:
-        
-        window_tlp = wx.GetTopLevelParent( window )
-        
+def TLPHasFocus( window ):
+    
+    focus_tlp = GetFocusTLP()
+    
+    window_tlp = GetTLP( window )
     
     return window_tlp == focus_tlp
     
@@ -143,7 +154,9 @@ def WrapInGrid( parent, rows, expand_text = False ):
             cflags = control_flags
             
         
-        gridbox.AddF( wx.StaticText( parent, label = text ), text_flags )
+        st = BetterStaticText( parent, text )
+        
+        gridbox.AddF( st, text_flags )
         gridbox.AddF( control, cflags )
         
     
@@ -153,7 +166,9 @@ def WrapInText( control, parent, text ):
     
     hbox = wx.BoxSizer( wx.HORIZONTAL )
     
-    hbox.AddF( wx.StaticText( parent, label = text ), CC.FLAGS_VCENTER )
+    st = BetterStaticText( parent, text )
+    
+    hbox.AddF( st, CC.FLAGS_VCENTER )
     hbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
@@ -231,7 +246,9 @@ class BetterButton( wx.Button ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
         
-        wx.Button.__init__( self, parent, label = label, style = wx.BU_EXACTFIT )
+        wx.Button.__init__( self, parent, style = wx.BU_EXACTFIT )
+        
+        self.SetLabelText( label )
         
         self._func = func
         self._args = args
@@ -289,6 +306,22 @@ class BetterRadioBox( wx.RadioBox ):
         index = self.GetSelection()
         
         return self._indices_to_data[ index ]
+        
+    
+class BetterStaticText( wx.StaticText ):
+    
+    def __init__( self, parent, label = None ):
+        
+        wx.StaticText.__init__( self, parent )
+        
+        if label is not None:
+            
+            # to escape mnemonic '&' swallowing
+            self.SetLabelText( label )
+            
+        
+        # at some point, rewrite this to be a control that'll produce a custom geteffectiveminsize and use wx.lib.wordwrap to dc draw the text
+        # st.Wrap is a pain to deal with here, seems to sometimes/always not be able to increase after an initial non-zero call
         
     
 class BufferedWindow( wx.Window ):
@@ -1315,8 +1348,9 @@ class NoneableSpinCtrl( wx.Panel ):
         self._multiplier = multiplier
         self._num_dimensions = num_dimensions
         
-        self._checkbox = wx.CheckBox( self, label = none_phrase )
+        self._checkbox = wx.CheckBox( self )
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
+        self._checkbox.SetLabelText( none_phrase )
         
         self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 60, -1 ) )
         
@@ -1329,20 +1363,20 @@ class NoneableSpinCtrl( wx.Panel ):
         
         if len( message ) > 0:
             
-            hbox.AddF( wx.StaticText( self, label = message + ': ' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
             
         
         hbox.AddF( self._one, CC.FLAGS_VCENTER )
         
         if self._num_dimensions == 2:
             
-            hbox.AddF( wx.StaticText( self, label = 'x' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'x' ), CC.FLAGS_VCENTER )
             hbox.AddF( self._two, CC.FLAGS_VCENTER )
             
         
         if self._unit is not None:
             
-            hbox.AddF( wx.StaticText( self, label = unit ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, self._unit ), CC.FLAGS_VCENTER )
             
         
         hbox.AddF( self._checkbox, CC.FLAGS_VCENTER )
@@ -1498,7 +1532,7 @@ class PopupDismissAll( PopupWindow ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._text = wx.StaticText( self )
+        self._text = BetterStaticText( self )
         self._text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
         button = wx.Button( self, label = 'dismiss all' )
@@ -3423,7 +3457,7 @@ class Shortcut( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( self, label = 'Mouse events only work for the duplicate filter atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( BetterStaticText( self, 'Mouse events only work for the duplicate filter atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         gridbox = wx.FlexGridSizer( 0, 2 )
         
@@ -3657,7 +3691,7 @@ class TextAndGauge( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._st = wx.StaticText( self )
+        self._st = BetterStaticText( self )
         self._gauge = Gauge( self )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -3899,7 +3933,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._days.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._days, CC.FLAGS_VCENTER )
-            hbox.AddF( wx.StaticText( self, label = 'days' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
             
         
         if self._show_hours:
@@ -3908,7 +3942,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._hours.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._hours, CC.FLAGS_VCENTER )
-            hbox.AddF( wx.StaticText( self, label = 'hours' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
             
         
         if self._show_minutes:
@@ -3917,7 +3951,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._minutes.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._minutes, CC.FLAGS_VCENTER )
-            hbox.AddF( wx.StaticText( self, label = 'minutes' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'minutes' ), CC.FLAGS_VCENTER )
             
         
         if self._show_seconds:
@@ -3926,7 +3960,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._seconds.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._seconds, CC.FLAGS_VCENTER )
-            hbox.AddF( wx.StaticText( self, label = 'seconds' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'seconds' ), CC.FLAGS_VCENTER )
             
         
         if self._monthly_allowed:
@@ -3935,7 +3969,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._monthly.Bind( wx.EVT_CHECKBOX, self.EventChange )
             
             hbox.AddF( self._monthly, CC.FLAGS_VCENTER )
-            hbox.AddF( wx.StaticText( self, label = 'monthly' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, 'monthly' ), CC.FLAGS_VCENTER )
             
         
         self.SetSizer( hbox )

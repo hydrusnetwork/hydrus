@@ -9,6 +9,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIMenus
 import ClientGUIScrolledPanelsManagement
+import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientMedia
 import ClientTags
@@ -122,6 +123,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HydrusGlobals.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         
         self._PublishSelectionChange()
+        
+        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
     
     def _Archive( self ):
@@ -322,40 +325,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _CustomFilter( self, shortcuts_name = None ):
-        
-        shortcuts = None
-        
-        if shortcuts_name is not None:
-            
-            shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, shortcuts_name )
-            
-        else:
-            
-            with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    shortcuts = dlg.GetShortcuts()
-                    
-                
-            
-        
-        if shortcuts is not None:
-    
-            media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ), for_media_viewer = True )
-            
-            if len( media_results ) > 0:
-                
-                canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
-                
-                canvas_window = ClientGUICanvas.CanvasMediaListCustomFilter( canvas_frame, self._page_key, media_results, shortcuts )
-                
-                canvas_frame.SetCanvas( canvas_window )
-                
-            
-        
-    
     def _Delete( self, file_service_key = None ):
         
         if file_service_key is None:
@@ -536,7 +505,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _Filter( self ):
+    def _ArchiveDeleteFilter( self ):
         
         media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
         
@@ -544,7 +513,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
             
-            canvas_window = ClientGUICanvas.CanvasMediaListFilterInbox( canvas_frame, self._page_key, media_results )
+            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, media_results )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -968,6 +937,74 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_ratings':
+                
+                self._ManageRatings()
+                
+            elif action == 'manage_file_tags':
+                
+                self._ManageTags()
+                
+            elif action == 'archive_file':
+                
+                self._Archive()
+                
+            elif action == 'inbox_file':
+                
+                self._Inbox()
+                
+            elif action == 'remove_file_from_view':
+                
+                self._Remove()
+                
+            elif action == 'open_file_in_external_program':
+                
+                self._OpenExternally()
+                
+            if action == 'launch_the_archive_delete_filter':
+                
+                self._ArchiveDeleteFilter()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def _ProcessShortcut( self, shortcut ):
+        
+        shortcut_processed = False
+        
+        command = HydrusGlobals.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
+        
+        if command is not None:
+            
+            command_processed = self._ProcessApplicationCommand( command )
+            
+            shortcut_processed = command_processed
+            
+        
+        return shortcut_processed
+        
+    
     def _PublishSelectionChange( self, force_reload = False ):
         
         if len( self._selected_media ) == 0:
@@ -992,6 +1029,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     def _RecalculateVirtualSize( self ): pass
     
     def _RedrawMedia( self, media ): pass
+    
+    def _Remove( self ):
+        
+        singletons = [ media for media in self._selected_media if not media.IsCollection() ]
+        
+        collections = [ media for media in self._selected_media if media.IsCollection() ]
+        
+        self._RemoveMedia( singletons, collections )
+        
     
     def _RescindDownloadSelected( self ):
         
@@ -1248,6 +1294,26 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             # no refresh needed since the sort call that always comes after will do it
             
+        
+    
+    def EventCharHook( self, event ):
+        
+        if ClientGUIShortcuts.IShouldCatchCharHook( self ):
+            
+            shortcut = ClientData.ConvertKeyEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                shortcut_processed = self._ProcessShortcut( shortcut )
+                
+                if shortcut_processed:
+                    
+                    return
+                    
+                
+            
+        
+        event.Skip()
         
     
     def FileDumped( self, page_key, hash, status ):
@@ -1869,15 +1935,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def _Remove( self ):
-        
-        singletons = [ media for media in self._selected_media if not media.IsCollection() ]
-        
-        collections = [ media for media in self._selected_media if media.IsCollection() ]
-        
-        self._RemoveMedia( singletons, collections )
-        
-    
     def _RemoveMedia( self, singleton_media, collected_media ):
         
         if self._focussed_media is not None:
@@ -2105,7 +2162,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( command, data ) = action
             
-            if command == 'archive': self._Archive()
+            if command == 'archive_file': self._Archive()
             elif command == 'copy_bmp': self._CopyBMPToClipboard()
             elif command == 'copy_files': self._CopyFilesToClipboard()
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
@@ -2120,11 +2177,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
                 
-            elif command == 'custom_filter':
-                
-                self._CustomFilter( data )
-                
-            elif command == 'delete':
+            elif command == 'delete_file':
                 
                 if data is None:
                     
@@ -2137,15 +2190,15 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             elif command == 'export_files': self._ExportFiles()
             elif command == 'export_tags': self._ExportTags()
-            elif command == 'filter': self._Filter()
+            elif command == 'launch_the_archive_delete_filter': self._ArchiveDeleteFilter()
             elif command == 'fullscreen': self._FullScreen()
-            elif command == 'inbox': self._Inbox()
-            elif command == 'manage_ratings': self._ManageRatings()
-            elif command == 'manage_tags': self._ManageTags()
+            elif command == 'inbox_file': self._Inbox()
+            elif command == 'manage_file_ratings': self._ManageRatings()
+            elif command == 'manage_file_tags': self._ManageTags()
             elif command == 'modify_account': self._ModifyUploaders( data )
-            elif command == 'open_externally': self._OpenExternally()
+            elif command == 'open_file_in_external_program': self._OpenExternally()
             elif command == 'petition': self._PetitionFiles( data )
-            elif command == 'remove': self._Remove()
+            elif command == 'remove_file_from_view': self._Remove()
             elif command == 'rescind_petition': self._RescindPetitionFiles( data )
             elif command == 'rescind_upload': self._RescindUploadFiles( data )
             elif command == 'scroll_end': self._ScrollEnd( False )
@@ -2779,38 +2832,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if selection_has_local and multiple_selected:
                     
-                    filter_menu = wx.Menu()
-                    
-                    if selection_has_local_file_domain:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, filter_menu, 'archive/delete', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._Filter )
-                        
-                    
-                    shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
-                    
-                    shortcut_names = [ name for name in shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
-                    
-                    if len( shortcut_names ) > 0:
-                        
-                        custom_shortcuts_menu = wx.Menu()
-                        
-                        ClientGUIMenus.AppendMenuItem( self, custom_shortcuts_menu, 'manage', 'Manage your different custom filters and their shortcuts.', self._CustomFilter )
-                        
-                        ClientGUIMenus.AppendSeparator( custom_shortcuts_menu )
-                        
-                        for shortcut_name in shortcut_names:
-                            
-                            ClientGUIMenus.AppendMenuItem( self, custom_shortcuts_menu, shortcut_name, 'Open the ' + shortcut_name + ' custom filter.', self._CustomFilter, shortcut_name )
-                            
-                        
-                        ClientGUIMenus.AppendMenu( filter_menu, custom_shortcuts_menu, 'custom filters' )
-                        
-                    else:
-                        
-                        ClientGUIMenus.AppendMenuItem( self, filter_menu, 'create a custom filter', 'Create a custom filter that uses non-default shortcuts.', self._CustomFilter )
-                        
-                    
-                    ClientGUIMenus.AppendMenu( menu, filter_menu, 'filter' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._ArchiveDeleteFilter )
                     
                 
                 ClientGUIMenus.AppendSeparator( menu )
@@ -3038,8 +3060,8 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'scroll_home' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'scroll_end' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_END, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'scroll_end' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) ),
-        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_file' ) ),
+        ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_DELETE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_file' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_RETURN, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_ENTER, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'fullscreen' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_UP, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'key_up' ) ),
@@ -3071,11 +3093,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if HC.PLATFORM_OSX:
             
-            entries.append( ( wx.ACCEL_NORMAL, wx.WXK_BACK, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete' ) ) )
+            entries.append( ( wx.ACCEL_NORMAL, wx.WXK_BACK, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'delete_file' ) ) )
             entries.append( ( wx.ACCEL_SHIFT, wx.WXK_BACK, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'undelete' ) ) )
             
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items(): entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action not in ( 'previous', 'next' ) 	] )
         
         self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         

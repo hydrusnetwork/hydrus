@@ -8,6 +8,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusFileHandling
 import HydrusPaths
+import HydrusSerialisable
 import HydrusSessions
 import itertools
 import json
@@ -2164,6 +2165,49 @@ class ServicesManager( object ):
         with self._lock:
             
             return service_key in self._keys_to_services
+            
+        
+    
+class ShortcutsManager( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        
+        self._shortcuts = {}
+        
+        self.RefreshShortcuts()
+        
+        self._controller.sub( self, 'RefreshShortcuts', 'new_shortcuts' )
+        
+    
+    def GetCommand( self, shortcuts_names, shortcut ):
+        
+        for name in shortcuts_names:
+            
+            if name in self._shortcuts:
+                
+                command = self._shortcuts[ name ].GetCommand( shortcut )
+                
+                if command is not None:
+                    
+                    return command
+                    
+                
+            
+        
+        return None
+        
+    
+    def RefreshShortcuts( self ):
+        
+        self._shortcuts = {}
+        
+        all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        
+        for shortcuts in all_shortcuts:
+            
+            self._shortcuts[ shortcuts.GetName() ] = shortcuts
             
         
     

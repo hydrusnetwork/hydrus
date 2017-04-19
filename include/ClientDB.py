@@ -939,26 +939,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
         
     
-    def _CacheSimilarFilesGetDuplicatePair( self, service_key, duplicate_type ):
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( service_key )
-        
-        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 1;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchone()
-        
-        if result is None:
-            
-            return None
-            
-        else:
-            
-            ( smaller_hash_id, larger_hash_id ) = result
-            
-            media_results = self._GetMediaResults( ( smaller_hash_id, larger_hash_id ) )
-            
-            return media_results
-            
-        
-    
     def _CacheSimilarFilesGetDuplicatePairsTableJoinInfo( self, file_service_key ):
         
         service_id = self._GetServiceId( file_service_key )
@@ -1029,6 +1009,77 @@ class DB( HydrusDB.HydrusDB ):
         dupe_hashes = self._GetHashes( dupe_hash_ids )
         
         return dupe_hashes
+        
+    
+    def _CacheSimilarFilesGetUniqueDuplicatePairs( self, service_key, duplicate_type ):
+        
+        # per batch, we want a bunch of non-intersecting decisions to keep it simple at the gui-level
+        # we also want to clear things out in groups
+        # so lets get a group of non-intersecting stars
+        
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( service_key )
+        
+        MAX_BATCH_SIZE = 50
+        
+        pairs_of_hash_ids = []
+        seen_hash_ids = set()
+        
+        while True:
+            
+            result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? ORDER BY RANDOM() LIMIT 10;', ( HC.DUPLICATE_UNKNOWN, ) ).fetchall()
+            
+            possible_master_hash_ids = set()
+            
+            for ( smaller_hash_id, larger_hash_id ) in result:
+                
+                possible_master_hash_ids.add( smaller_hash_id )
+                possible_master_hash_ids.add( larger_hash_id )
+                
+            
+            possible_master_hash_ids.difference_update( seen_hash_ids )
+            
+            if len( possible_master_hash_ids ) == 0:
+                
+                break # none left from our sample, or none at all in the db
+                
+            
+            possible_master_hash_ids = list( possible_master_hash_ids )
+            
+            master_hash_id = random.choice( possible_master_hash_ids )
+            
+            all_master_pairs = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM ' + table_join + ' WHERE ' + predicate_string + ' AND duplicate_type = ? AND ( smaller_hash_id = ? OR larger_hash_id = ? );', ( HC.DUPLICATE_UNKNOWN, master_hash_id, master_hash_id ) ).fetchall()
+            
+            good_pairs = []
+            
+            for ( smaller_hash_id, larger_hash_id ) in all_master_pairs:
+                
+                if smaller_hash_id in seen_hash_ids or larger_hash_id in seen_hash_ids:
+                    
+                    continue
+                    
+                
+                good_pairs.append( ( smaller_hash_id, larger_hash_id ) )
+                
+            
+            if len( good_pairs ) == 0:
+                
+                break # none left from our sample
+                
+            
+            for ( smaller_hash_id, larger_hash_id ) in good_pairs:
+                
+                seen_hash_ids.add( smaller_hash_id )
+                seen_hash_ids.add( larger_hash_id )
+                
+                pairs_of_hash_ids.append( ( smaller_hash_id, larger_hash_id ) )
+                
+            
+        
+        hash_ids_to_hashes = self._GetHashIdsToHashes( seen_hash_ids )
+        
+        pairs_of_hashes = [ ( hash_ids_to_hashes[ smaller_hash_id ], hash_ids_to_hashes[ larger_hash_id ] ) for ( smaller_hash_id, larger_hash_id ) in pairs_of_hash_ids ]
+        
+        return pairs_of_hashes
         
     
     def _CacheSimilarFilesMaintainDuplicatePairs( self, search_distance, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
@@ -4104,8 +4155,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND tag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND tag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     
                 
             
@@ -7208,7 +7259,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'autocomplete_predicates': result = self._GetAutocompletePredicates( *args, **kwargs )
         elif action == 'client_files_locations': result = self._GetClientFilesLocations( *args, **kwargs )
         elif action == 'downloads': result = self._GetDownloads( *args, **kwargs )
-        elif action == 'duplicate_pair': result = self._CacheSimilarFilesGetDuplicatePair( *args, **kwargs )
+        elif action == 'unique_duplicate_pairs': result = self._CacheSimilarFilesGetUniqueDuplicatePairs( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
@@ -8592,6 +8643,105 @@ class DB( HydrusDB.HydrusDB ):
             duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
             
             self._SetJSONDump( duplicate_filter )
+            
+        
+        if version == 251:
+            
+            duplicate_filter = ClientData.Shortcuts( 'duplicate_filter' )
+            
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ) )
+            
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SPACE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+            duplicate_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+            
+            self._SetJSONDump( duplicate_filter )
+            
+            media = ClientData.Shortcuts( 'media' )
+            
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F4, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_ratings' ) )
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F3, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'manage_file_tags' ) )
+            
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ) )
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' ) )
+            
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'E' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ) )
+            
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'R' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'remove_file_from_view' ) )
+            
+            media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F12, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_the_archive_delete_filter' ) )
+            
+            self._SetJSONDump( media )
+            
+            main_gui = ClientData.Shortcuts( 'main_gui' )
+            
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F5, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'refresh' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F9, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+            
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'I' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'synchronised_wait_switch' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'M' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_media_focus' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'R' ), [ CC.SHORTCUT_MODIFIER_CTRL, CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'show_hide_splitters' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'S' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'set_search_focus' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'T' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'U' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'unclose_page' ) )    
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'W' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'close_page' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'Y' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'redo' ) )
+            main_gui.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'Z' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'undo' ) )
+            
+            self._SetJSONDump( main_gui )
+            
+            media_viewer_browser = ClientData.Shortcuts( 'media_viewer_browser' )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_PAGEUP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_PAGEUP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_DOWN, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_RIGHT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_RIGHT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_DOWN, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_PAGEDOWN, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_PAGEDOWN, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_HOME, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_HOME, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
+            
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_END, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
+            media_viewer_browser.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_END, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
+            
+            self._SetJSONDump( media_viewer_browser )
+            
+            media_viewer = ClientData.Shortcuts( 'media_viewer' )
+            
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'B' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_previous_frame' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'N' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'move_animation_to_next_frame' ) )
+            
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'F' ), [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_fullscreen_borderless_and_regular_framed_window' ) )
+            
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'Z' ), [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_ADD, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_ADD, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SUBTRACT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_SUBTRACT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+            
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_UP, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_SCROLL_DOWN, [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+            
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_UP, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_up' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_DOWN, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_down' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_LEFT, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_left' ) )
+            media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_RIGHT, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_right' ) )
+            
+            self._SetJSONDump( media_viewer )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

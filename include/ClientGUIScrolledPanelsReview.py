@@ -124,7 +124,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message += ' files on ' + self._service_name
         
-        title_st = wx.StaticText( self, label = message)
+        title_st = ClientGUICommon.BetterStaticText( self, message )
         
         title_st.Wrap( 540 )
         
@@ -132,7 +132,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         message += os.linesep * 2
         message += 'You may need to refresh your existing searches to see their effect.' 
         
-        st = wx.StaticText( self, label = message )
+        st = ClientGUICommon.BetterStaticText( self, message )
         
         st.Wrap( 540 )
         

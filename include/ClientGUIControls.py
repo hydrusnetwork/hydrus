@@ -164,7 +164,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             self._max_allowed = wx.SpinCtrl( self, min = 1, max = 1024 * 1024 * 1024 )
             
-            self._max_allowed_st = wx.StaticText( self )
+            self._max_allowed_st = ClientGUICommon.BetterStaticText( self )
             
             #
             

@@ -1,5 +1,21 @@
+import ClientGUICommon
+import HydrusGlobals
 import wx
 
+def IShouldCatchCharHook( evt_handler ):
+    
+    if HydrusGlobals.client_controller.MenuIsOpen():
+        
+        return False
+        
+    
+    if not ClientGUICommon.WindowOrSameTLPChildHasFocus( evt_handler ):
+        
+        return False
+        
+    
+    return True
+    
 class ShortcutsHandler( object ):
     
     def __init__( self, parent, initial_shortcuts = None ):

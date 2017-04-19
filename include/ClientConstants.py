@@ -257,11 +257,24 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
 SHORTCUT_TYPE_KEYBOARD = 0
 SHORTCUT_TYPE_MOUSE = 1
 
-SHORTCUTS_RESERVED_NAMES = [ 'duplicate_filter' ]
+SHORTCUTS_RESERVED_NAMES = [ 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
 
 # shortcut commands
 
-DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip' ]
+SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'archive_file', 'inbox_file', 'delete_file', 'remove_file_from_view', 'open_file_in_external_program', 'launch_the_archive_delete_filter' ]
+SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom' ]
+SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous' ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo' ]
+SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back' ]
+
+simple_shortcut_name_to_action_lookup = {}
+
+simple_shortcut_name_to_action_lookup[ 'media' ] = SHORTCUTS_MEDIA_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'main_gui' ] = SHORTCUTS_MAIN_GUI_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'duplicate_filter' ] = SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0
 SHUTDOWN_TIMESTAMP_FATTEN_AC_CACHE = 1
@@ -485,6 +498,8 @@ class GlobalBMPs( object ):
         GlobalBMPs.dump_fail = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'dump_fail.png' ) )
         
         GlobalBMPs.cog = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
+        GlobalBMPs.keyboard = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'keyboard.png' ) )
+        
         GlobalBMPs.check = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'check.png' ) )
         GlobalBMPs.pause = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'pause.png' ) )
         GlobalBMPs.play = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'play.png' ) )

@@ -190,7 +190,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = 'Setting frame location info for ' + name + '.'
         
-        vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._remember_size, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._remember_position, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._last_size, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -312,7 +312,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = 'Setting media view options for ' + HC.mime_string_lookup[ self._mime ] + '.'
         
-        vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( ClientGUICommon.WrapInText( self._media_show_action, self, 'media viewer show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( ClientGUICommon.WrapInText( self._preview_show_action, self, 'preview show action:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -343,7 +343,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             vbox.AddF( self._exact_zooms_only, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( wx.StaticText( self, label = 'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.' ), CC.FLAGS_VCENTER )
+            vbox.AddF( ClientGUICommon.BetterStaticText( self, 'Nearest neighbour is fast and ugly, 8x8 lanczos and area resampling are slower but beautiful.' ), CC.FLAGS_VCENTER )
             
             vbox.AddF( ClientGUICommon.WrapInText( self._scale_up_quality, self, '>100% (interpolation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( ClientGUICommon.WrapInText( self._scale_down_quality, self, '<100% (decimation) quality:' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -419,7 +419,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._controller = controller
         self._seed_cache = seed_cache
         
-        self._text = wx.StaticText( self, label = 'initialising' )
+        self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
         self._seed_cache_control = ClientGUIControls.SeedCacheControl( self, self._seed_cache )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -524,7 +524,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             self._port = wx.SpinCtrl( self, min = 1, max = 65535 )
             self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
             
-            self._bandwidth_tracker_st = wx.StaticText( self )
+            self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -648,7 +648,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUICommon.StaticBox.__init__( self, parent, 'server-wide bandwidth' )
             
-            self._bandwidth_tracker_st = wx.StaticText( self )
+            self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
             bandwidth_rules = dictionary[ 'server_bandwidth_rules' ]
             
@@ -678,6 +678,47 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             return dictionary_part
             
+        
+    
+class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, choice_tuples ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._checkboxes = wx.CheckListBox( self )
+        
+        self._checkboxes.SetMinSize( ( 320, 420 ) )
+        
+        for ( i, ( label, data, selected ) ) in enumerate( choice_tuples ):
+            
+            self._checkboxes.Append( label, data )
+            
+            if selected:
+                
+                self._checkboxes.Check( i )
+                
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        datas = []
+        
+        for index in self._checkboxes.GetChecked():
+            
+            datas.append( self._checkboxes.GetClientData( index ) )
+            
+        
+        return datas
         
     
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):

@@ -437,7 +437,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._name_and_type = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -481,7 +481,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._file_info_st = wx.StaticText( self )
+            self._file_info_st = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -551,9 +551,9 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._address = wx.StaticText( self )
-            self._functional = wx.StaticText( self )
-            self._bandwidth_summary = wx.StaticText( self )
+            self._address = ClientGUICommon.BetterStaticText( self )
+            self._functional = ClientGUICommon.BetterStaticText( self )
+            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_panel = wx.Panel( self )
             
             #
@@ -631,10 +631,10 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._title_and_expires_st = wx.StaticText( self )
-            self._status_st = wx.StaticText( self )
-            self._next_sync_st = wx.StaticText( self )
-            self._bandwidth_summary = wx.StaticText( self )
+            self._title_and_expires_st = ClientGUICommon.BetterStaticText( self )
+            self._status_st = ClientGUICommon.BetterStaticText( self )
+            self._next_sync_st = ClientGUICommon.BetterStaticText( self )
+            self._bandwidth_summary = ClientGUICommon.BetterStaticText( self )
             self._bandwidth_panel = wx.Panel( self )
             
             self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
@@ -805,7 +805,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._content_panel = wx.Panel( self )
             
-            self._metadata_st = wx.StaticText( self )
+            self._metadata_st = ClientGUICommon.BetterStaticText( self )
             
             self._download_progress = ClientGUICommon.TextAndGauge( self )
             self._processing_progress = ClientGUICommon.TextAndGauge( self )
@@ -1075,7 +1075,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._name_and_type = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -1114,7 +1114,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = wx.StaticText( self )
+            self._name_and_type = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -1153,7 +1153,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._rating_info_st = wx.StaticText( self )
+            self._rating_info_st = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -1215,7 +1215,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._tag_info_st = wx.StaticText( self )
+            self._tag_info_st = ClientGUICommon.BetterStaticText( self )
             
             self._advanced_content_update = ClientGUICommon.BetterButton( self, 'advanced service-wide update', self._AdvancedContentUpdate )
             

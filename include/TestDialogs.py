@@ -72,9 +72,8 @@ class TestDBDialogs( unittest.TestCase ):
         HydrusGlobals.test_controller.SetRead( 'serialisable_named', [] )
         
         title = 'subs test'
-        frame_key = 'regular_dialog'
         
-        with ClientGUITopLevelWindows.DialogManage( None, title, frame_key ) as dlg:
+        with ClientGUITopLevelWindows.DialogManage( None, title ) as dlg:
             
             panel = ClientGUIScrolledPanelsManagement.ManageSubscriptionsPanel( dlg )
             
@@ -134,7 +133,7 @@ class TestNonDBDialogs( unittest.TestCase ):
     
     def test_dialog_finish_filtering( self ):
         
-        with ClientGUIDialogs.DialogFinishFiltering( None, 3, 5 ) as dlg:
+        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
             
             HitButton( dlg._back )
             
@@ -143,7 +142,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             self.assertEqual( result, wx.ID_CANCEL )
             
         
-        with ClientGUIDialogs.DialogFinishFiltering( None, 3, 5 ) as dlg:
+        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
             
             HitButton( dlg._commit )
             
@@ -152,7 +151,7 @@ class TestNonDBDialogs( unittest.TestCase ):
             self.assertEqual( result, wx.ID_YES )
             
         
-        with ClientGUIDialogs.DialogFinishFiltering( None, 3, 5 ) as dlg:
+        with ClientGUIDialogs.DialogFinishFiltering( None, 'keep 3 files and delete 5 files?' ) as dlg:
             
             HitButton( dlg._forget )
             

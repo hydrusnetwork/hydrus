@@ -4,9 +4,13 @@ import ClientGUICanvas
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIListBoxes
+import ClientGUITopLevelWindows
+import ClientGUIScrolledPanelsEdit
+import ClientGUIScrolledPanelsManagement
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
+import HydrusSerialisable
 import os
 import wx
 
@@ -168,8 +172,8 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._current_index_string = ''
         
         self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        self._title_text = wx.StaticText( self, label = 'title' )
-        self._info_text = wx.StaticText( self, label = 'info' )
+        self._title_text = ClientGUICommon.BetterStaticText( self, 'title' )
+        self._info_text = ClientGUICommon.BetterStaticText( self, 'info' )
         self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         self._PopulateLeftButtons()
@@ -224,6 +228,18 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         return ( should_resize, ideal_size, ideal_position )
         
     
+    def _ManageShortcuts( self ):
+        
+        with ClientGUITopLevelWindows.DialogManage( self, 'manage shortcuts' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageShortcutsPanel( dlg )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+    
     def _PopulateCenterButtons( self ):
         
         self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.archive, self._Archive )
@@ -248,7 +264,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HydrusGlobals.client_controller.pub, 'canvas_show_previous', self._canvas_key )
         self._previous_button.SetToolTipString( 'previous' )
         
-        self._index_text = wx.StaticText( self, label = 'index' )
+        self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HydrusGlobals.client_controller.pub, 'canvas_show_next', self._canvas_key )
         self._next_button.SetToolTipString( 'next' )
@@ -260,7 +276,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _PopulateRightButtons( self ):
         
-        self._zoom_text = wx.StaticText( self, label = 'zoom' )
+        self._zoom_text = ClientGUICommon.BetterStaticText( self, 'zoom' )
         
         zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HydrusGlobals.client_controller.pub, 'canvas_zoom_in', self._canvas_key )
         zoom_in.SetToolTipString( 'zoom in' )
@@ -270,6 +286,15 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HydrusGlobals.client_controller.pub, 'canvas_zoom_switch', self._canvas_key )
         zoom_switch.SetToolTipString( 'zoom switch' )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts ) )
+        menu_items.append( ( 'normal', 'set current shortcuts', 'change which custom shortcuts are active on this media viewers', HydrusData.Call( HydrusGlobals.client_controller.pub, 'edit_media_viewer_custom_shortcuts', self._canvas_key ) ) )
+        menu_items.append( ( 'normal', 'set default shortcuts', 'change which custom shortcuts are typically active on new media viewers', self._SetDefaultShortcuts ) )
+        
+        shortcuts = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.keyboard, menu_items )
+        shortcuts.SetToolTipString( 'shortcuts' )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HydrusGlobals.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.SetToolTipString( 'fullscreen switch' )
@@ -284,6 +309,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._top_hbox.AddF( zoom_in, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( zoom_out, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( zoom_switch, CC.FLAGS_VCENTER )
+        self._top_hbox.AddF( shortcuts, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( fullscreen_switch, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( open_externally, CC.FLAGS_VCENTER )
         self._top_hbox.AddF( close, CC.FLAGS_VCENTER )
@@ -356,6 +382,40 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             self._info_text.SetLabelText( label )
             
             self._info_text.Show()
+            
+        
+    
+    def _SetDefaultShortcuts( self ):
+        
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        default_media_viewer_custom_shortcuts = new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
+        
+        all_shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        
+        custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
+        
+        if len( custom_shortcuts_names ) == 0:
+            
+            wx.MessageBox( 'You have no custom shortcuts set up, so you cannot choose any!' )
+            
+            return
+            
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'manage shortcuts' ) as dlg:
+            
+            choice_tuples = [ ( name, name, name in default_media_viewer_custom_shortcuts ) for name in custom_shortcuts_names ]
+            
+            panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_default_media_viewer_custom_shortcuts = panel.GetValue()
+                
+                new_options.SetStringList( 'default_media_viewer_custom_shortcuts', new_default_media_viewer_custom_shortcuts )
+                
             
         
     
@@ -455,7 +515,6 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         menu_items = []
         
         menu_items.append( ( 'normal', 'edit tag/ratings merge options and whether to delete bad files', 'edit what happens when you filter files', self._EditMergeOptions ) )
-        menu_items.append( ( 'normal', 'edit shortcuts', 'edit how to quickly filter files', self._EditShortcuts ) )
         
         cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
@@ -467,17 +526,6 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     def _EditMergeOptions( self ):
         
         wx.MessageBox( 'This doesn\'t do anything yet!' )
-        
-    
-    def _EditShortcuts( self ):
-        
-        with ClientGUIDialogs.DialogShortcuts( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                HydrusGlobals.client_controller.pub( 'refresh_shortcuts' )
-                
-            
         
     
     def _PopulateLeftButtons( self ):
@@ -717,7 +765,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             self._ResetData()
             
         
-
+    
 class FullscreenHoverFrameTags( FullscreenHoverFrame ):
     
     def __init__( self, parent, canvas_key ):

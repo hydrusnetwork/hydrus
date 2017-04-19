@@ -647,7 +647,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 hbox.AddF( self._host, CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( wx.StaticText( self, label = ':' ), CC.FLAGS_VCENTER )
+                hbox.AddF( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
                 hbox.AddF( self._port, CC.FLAGS_VCENTER )
                 
                 wrapped_hbox = ClientGUICommon.WrapInText( hbox, self, 'address: ' )
@@ -927,7 +927,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'tags' )
                 
-                self._st = wx.StaticText( self )
+                self._st = ClientGUICommon.BetterStaticText( self )
                 '''
             if service_type in HC.TAG_SERVICES:
                 
@@ -1000,7 +1000,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 #dictionary[ 'upnp_port' ] = None
                 #dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
                 
-                self._st = wx.StaticText( self )
+                self._st = ClientGUICommon.BetterStaticText( self )
                 '''
             if service_type == HC.LOCAL_BOORU:
                 
@@ -1191,7 +1191,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._multihash_prefix.SetToolTipString( tts )
                 
             '''
-                self._st = wx.StaticText( self )
+                self._st = ClientGUICommon.BetterStaticText( self )
                 
                 #
                 
@@ -1232,7 +1232,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
-        self._listbook.AddPage( 'shortcuts', 'shortcuts', self._ShortcutsPanel( self._listbook ) )
         self._listbook.AddPage( 'file storage locations', 'file storage locations', self._ClientFilesPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
@@ -1310,7 +1309,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep * 2
             text +='And here are where you would like you files to eventually be:'
             
-            st = wx.StaticText( self, label = text )
+            st = ClientGUICommon.BetterStaticText( self, text )
             
             st.Wrap( 540 )
             
@@ -1332,7 +1331,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep * 2
             text += 'Leave either of these blank to store the thumbnails alongside the original files.'
             
-            st = wx.StaticText( self, label = text )
+            st = ClientGUICommon.BetterStaticText( self, text )
             
             st.Wrap( 540 )
             
@@ -1340,14 +1339,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'full size thumbnail override location: ' ), CC.FLAGS_VCENTER )
+            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'full size thumbnail override location: ' ), CC.FLAGS_VCENTER )
             hbox.AddF( self._full_size_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self, label = 'resized thumbnail override location: ' ), CC.FLAGS_VCENTER )
+            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'resized thumbnail override location: ' ), CC.FLAGS_VCENTER )
             hbox.AddF( self._resized_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2326,7 +2325,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
-            vbox.AddF( wx.StaticText( self, label = text ), CC.FLAGS_CENTER )
+            vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( vbox )
@@ -2726,143 +2725,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _ShortcutsPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'modifier', 120 ), ( 'key', 120 ), ( 'action', -1 ) ], delete_key_callback = self.DeleteShortcuts, activation_callback = self.EditShortcuts )
-            
-            self._shortcuts_add = wx.Button( self, label = 'add' )
-            self._shortcuts_add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._shortcuts_edit = wx.Button( self, label = 'edit' )
-            self._shortcuts_edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._shortcuts_delete = wx.Button( self, label = 'delete' )
-            self._shortcuts_delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            #
-            
-            for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
-                
-                for ( key, action ) in key_dict.items():
-                    
-                    ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-                    
-                    pretty_action = action
-                    
-                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                    
-                
-            
-            self._SortListCtrl()
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( wx.StaticText( self, label = 'These shortcuts are global to the main gui! You probably want to stick to function keys or ctrl + something!' ), CC.FLAGS_VCENTER )
-            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._shortcuts_add, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._shortcuts_edit, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._shortcuts_delete, CC.FLAGS_BUTTON_SIZER )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def _SortListCtrl( self ): self._shortcuts.SortListItems( 2 )
-        
-        def DeleteShortcuts( self ):
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    self._shortcuts.RemoveAllSelected()
-                    
-                
-            
-        
-        def EditShortcuts( self ):
-        
-            indices = self._shortcuts.GetAllSelected()
-            
-            for index in indices:
-                
-                ( modifier, key, action ) = self._shortcuts.GetClientData( index )
-                
-                with ClientGUIDialogs.DialogInputShortcut( self, modifier, key, action ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        ( modifier, key, action ) = dlg.GetInfo()
-                        
-                        ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-                        
-                        pretty_action = action
-                        
-                        self._shortcuts.UpdateRow( index, ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                        
-                        self._SortListCtrl()
-                        
-                    
-                
-            
-        
-        def EventAdd( self, event ):
-            
-            with ClientGUIDialogs.DialogInputShortcut( self ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( modifier, key, action ) = dlg.GetInfo()
-                    
-                    ( pretty_modifier, pretty_key ) = ClientData.ConvertShortcutToPrettyShortcut( modifier, key )
-                    
-                    pretty_action = action
-                    
-                    self._shortcuts.Append( ( pretty_modifier, pretty_key, pretty_action ), ( modifier, key, action ) )
-                    
-                    self._SortListCtrl()
-                    
-                
-            
-        
-        def EventDelete( self, event ):
-            
-            self.DeleteShortcuts()
-            
-        
-        def EventEdit( self, event ):
-            
-            self.EditShortcuts()
-            
-        
-        def UpdateOptions( self ):
-            
-            shortcuts = {}
-            
-            shortcuts[ wx.ACCEL_NORMAL ] = {}
-            shortcuts[ wx.ACCEL_CTRL ] = {}
-            shortcuts[ wx.ACCEL_ALT ] = {}
-            shortcuts[ wx.ACCEL_SHIFT ] = {}
-            
-            for ( modifier, key, action ) in self._shortcuts.GetClientData():
-                
-                shortcuts[ modifier ][ key ] = action
-                
-            
-            HC.options[ 'shortcuts' ] = shortcuts
-            
-        
-    
     class _SortCollectPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -2925,7 +2787,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             sort_by_text += 'Any changes will be shown in the sort-by dropdowns of any new pages you open.'
             
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( wx.StaticText( self, label = sort_by_text ), CC.FLAGS_VCENTER )
+            vbox.AddF( ClientGUICommon.BetterStaticText( self, sort_by_text ), CC.FLAGS_VCENTER )
             vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3867,6 +3729,859 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        reserved_panel = ClientGUICommon.StaticBox( self, 'reserved' )
+        
+        self._reserved_shortcuts = ClientGUICommon.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'size', 100 ) ], activation_callback = self._EditReserved )
+        
+        self._reserved_shortcuts.SetMinSize( ( 320, 200 ) )
+        
+        self._edit_reserved_button = ClientGUICommon.BetterButton( reserved_panel, 'edit', self._EditReserved )
+        
+        #
+        
+        custom_panel = ClientGUICommon.StaticBox( self, 'custom' )
+        
+        self._custom_shortcuts = ClientGUICommon.SaneListCtrlForSingleObject( custom_panel, 120, [ ( 'name', -1 ), ( 'size', 100 ) ], delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        
+        self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
+        self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
+        self._delete_button = ClientGUICommon.BetterButton( custom_panel, 'delete', self._Delete )
+        
+        #
+        
+        all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        
+        reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in CC.SHORTCUTS_RESERVED_NAMES ]
+        custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in CC.SHORTCUTS_RESERVED_NAMES ]
+        
+        for shortcuts in reserved_shortcuts:
+            
+            ( display_tuple, sort_tuple ) = self._GetTuples( shortcuts )
+            
+            self._reserved_shortcuts.Append( display_tuple, sort_tuple, shortcuts )
+            
+        
+        self._original_custom_names = set()
+        
+        for shortcuts in custom_shortcuts:
+            
+            ( display_tuple, sort_tuple ) = self._GetTuples( shortcuts )
+            
+            self._custom_shortcuts.Append( display_tuple, sort_tuple, shortcuts )
+            
+            self._original_custom_names.add( shortcuts.GetName() )
+            
+        
+        #
+        
+        reserved_panel.AddF( self._reserved_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        reserved_panel.AddF( self._edit_reserved_button, CC.FLAGS_LONE_BUTTON )
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._edit_custom_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        
+        custom_panel.AddF( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        custom_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _GetTuples( self, shortcuts ):
+        
+        name = shortcuts.GetName()
+        size = len( shortcuts )
+        
+        display_tuple = ( name, HydrusData.ConvertIntToPrettyString( size ) )
+        sort_tuple = ( name, size )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Add( self ):
+        
+        shortcuts = ClientData.Shortcuts( 'new shortcuts' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            panel = self._EditPanel( dlg, shortcuts )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_shortcuts = panel.GetValue()
+                
+                ( display_tuple, sort_tuple ) = self._GetTuples( new_shortcuts )
+                
+                self._custom_shortcuts.Append( display_tuple, sort_tuple, new_shortcuts )
+                
+            
+        
+    
+    def _Delete( self, event ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._custom_shortcuts.RemoveAllSelected()
+                
+            
+        
+    
+    def _EditCustom( self ):
+        
+        all_selected = self._custom_shortcuts.GetAllSelected()
+        
+        for index in all_selected:
+            
+            shortcuts = self._custom_shortcuts.GetObject( index )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+                
+                panel = self._EditPanel( dlg, shortcuts )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_shortcuts = panel.GetValue()
+                    
+                    ( display_tuple, sort_tuple ) = self._GetTuples( edited_shortcuts )
+                    
+                    self._custom_shortcuts.UpdateRow( index, display_tuple, sort_tuple, edited_shortcuts )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _EditReserved( self ):
+        
+        all_selected = self._reserved_shortcuts.GetAllSelected()
+        
+        for index in all_selected:
+            
+            shortcuts = self._reserved_shortcuts.GetObject( index )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
+                
+                panel = self._EditPanel( dlg, shortcuts )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_shortcuts = panel.GetValue()
+                    
+                    ( display_tuple, sort_tuple ) = self._GetTuples( edited_shortcuts )
+                    
+                    self._reserved_shortcuts.UpdateRow( index, display_tuple, sort_tuple, edited_shortcuts )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def CommitChanges( self ):
+        
+        for shortcuts in self._reserved_shortcuts.GetObjects():
+            
+            HydrusGlobals.client_controller.Write( 'serialisable', shortcuts )
+            
+        
+        good_names = set()
+        
+        for shortcuts in self._custom_shortcuts.GetObjects():
+            
+            good_names.add( shortcuts.GetName() )
+            
+            HydrusGlobals.client_controller.Write( 'serialisable', shortcuts )
+            
+        
+        deletees = self._original_custom_names.difference( good_names )
+        
+        for name in deletees:
+            
+            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            
+        
+        HydrusGlobals.client_controller.pub( 'new_shortcuts' )
+        
+    
+    class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
+        
+        def __init__( self, parent, shortcuts ):
+            
+            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            
+            self._name = wx.TextCtrl( self )
+            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'shortcut', 150 ), ( 'command', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+            
+            self._shortcuts.SetMinSize( ( 360, 480 ) )
+            
+            self._add = wx.Button( self, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._edit = wx.Button( self, label = 'edit' )
+            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._remove = wx.Button( self, label = 'remove' )
+            self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
+            
+            #
+            
+            name = shortcuts.GetName()
+            
+            self._name.SetValue( name )
+            
+            if name in CC.SHORTCUTS_RESERVED_NAMES:
+                
+                self._name.Disable()
+                
+            
+            for ( shortcut, command ) in shortcuts:
+                
+                sort_tuple = ( shortcut, command )
+                
+                pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
+                
+                self._shortcuts.Append( pretty_tuple, sort_tuple )
+                
+            
+            self._shortcuts.SortListItems( 1 )
+            
+            #
+            
+            action_buttons = wx.BoxSizer( wx.HORIZONTAL )
+            
+            action_buttons.AddF( self._add, CC.FLAGS_VCENTER )
+            action_buttons.AddF( self._edit, CC.FLAGS_VCENTER )
+            action_buttons.AddF( self._remove, CC.FLAGS_VCENTER )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+            
+            self.SetSizer( vbox )
+            
+        
+        def _ConvertSortTupleToPrettyTuple( self, ( shortcut, command ) ):
+            
+            return ( shortcut.ToString(), command.ToString() )
+            
+        
+        def EditShortcuts( self ):
+            
+            name = self._name.GetValue()
+            
+            selected_indices = self._shortcuts.GetAllSelected()
+            
+            for index in selected_indices:
+                
+                ( shortcut, command ) = self._shortcuts.GetClientData( index )
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcut command' ) as dlg:
+                    
+                    panel = self._EditPanel( dlg, shortcut, command, name )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( shortcut, command ) = panel.GetValue()
+                        
+                        sort_tuple = ( shortcut, command )
+                        
+                        pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
+                        
+                        self._shortcuts.UpdateRow( index, pretty_tuple, sort_tuple )
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            
+        
+        def EventAdd( self, event ):
+            
+            shortcut = ClientData.Shortcut()
+            command = ClientData.ApplicationCommand()
+            name = self._name.GetValue()
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcut command' ) as dlg:
+                
+                panel = self._EditPanel( dlg, shortcut, command, name )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( shortcut, command ) = panel.GetValue()
+                    
+                    sort_tuple = ( shortcut, command )
+                    
+                    pretty_tuple = self._ConvertSortTupleToPrettyTuple( sort_tuple )
+                    
+                    self._shortcuts.Append( pretty_tuple, sort_tuple )
+                    
+                
+            
+        
+        def EventEdit( self, event ):
+            
+            self.EditShortcuts()
+            
+        
+        def EventRemove( self, event ):
+            
+            self.RemoveShortcuts()
+            
+        
+        def GetValue( self ):
+            
+            shortcuts = ClientData.Shortcuts( self._name.GetValue() )
+            
+            for ( shortcut, command ) in self._shortcuts.GetClientData():
+                
+                shortcuts.SetCommand( shortcut, command )
+                
+            
+            return shortcuts
+            
+        
+        def RemoveShortcuts( self ):
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._shortcuts.RemoveAllSelected()
+                    
+                
+            
+        
+        class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
+            
+            def __init__( self, parent, shortcut, command, shortcuts_name ):
+                
+                ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+                
+                self._am_reserved = shortcuts_name in CC.SHORTCUTS_RESERVED_NAMES
+                
+                self._final_command = 'simple'
+                
+                self._current_ratings_like_service = None
+                self._current_ratings_numerical_service = None
+                
+                #
+                
+                self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
+                
+                self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel )
+                
+                #
+                
+                self._none_panel = ClientGUICommon.StaticBox( self, 'simple actions' )
+                
+                if self._am_reserved:
+                    
+                    choices = CC.simple_shortcut_name_to_action_lookup[ shortcuts_name ]
+                    
+                else:
+                    
+                    choices = CC.simple_shortcut_name_to_action_lookup[ 'custom' ]
+                    
+                
+                choices = list( choices )
+                
+                choices.sort()
+                
+                self._simple_actions = wx.Choice( self._none_panel, choices = choices )
+                
+                self._set_simple = ClientGUICommon.BetterButton( self._none_panel, 'set command', self._SetSimple )
+                
+                #
+                
+                self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
+                
+                self._tag_service_keys = wx.Choice( self._tag_panel )
+                self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
+                
+                expand_parents = False
+                
+                self._tag_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tag_panel, self.SetTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+                
+                self._set_tag = ClientGUICommon.BetterButton( self._tag_panel, 'set command', self._SetTag )
+                
+                #
+                
+                self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
+                
+                self._ratings_like_service_keys = wx.Choice( self._ratings_like_panel )
+                self._ratings_like_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+                self._ratings_like_like = wx.RadioButton( self._ratings_like_panel, style = wx.RB_GROUP, label = 'like' )
+                self._ratings_like_dislike = wx.RadioButton( self._ratings_like_panel, label = 'dislike' )
+                self._ratings_like_remove = wx.RadioButton( self._ratings_like_panel, label = 'remove rating' )
+                
+                self._set_ratings_like = ClientGUICommon.BetterButton( self._ratings_like_panel, 'set command', self._SetRatingsLike )
+                
+                #
+                
+                self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
+                
+                self._ratings_numerical_service_keys = wx.Choice( self._ratings_numerical_panel )
+                self._ratings_numerical_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
+                self._ratings_numerical_slider = wx.Slider( self._ratings_numerical_panel, style = wx.SL_AUTOTICKS | wx.SL_LABELS )
+                self._ratings_numerical_remove = wx.CheckBox( self._ratings_numerical_panel, label = 'remove rating' )
+                
+                self._set_ratings_numerical = ClientGUICommon.BetterButton( self._ratings_numerical_panel, 'set command', self._SetRatingsNumerical )
+                
+                #
+                
+                services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+                
+                for service in services:
+                    
+                    service_type = service.GetServiceType()
+                    
+                    if service_type in HC.TAG_SERVICES: choice = self._tag_service_keys
+                    elif service_type == HC.LOCAL_RATING_LIKE: choice = self._ratings_like_service_keys
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL: choice = self._ratings_numerical_service_keys
+                    
+                    choice.Append( service.GetName(), service.GetServiceKey() )
+                    
+                
+                self._SetActions()
+                
+                #
+                
+                self._shortcut.SetValue( shortcut )
+                
+                command_type = command.GetCommandType()
+                data = command.GetData()
+                
+                if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+                    
+                    action = data
+                    
+                    self._simple_actions.SetStringSelection( action )
+                    
+                    self._SetSimple()
+                    
+                else:
+                    
+                    ( service_key, content_type, action, value ) = data
+                    
+                    self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                    
+                    service_name = self._service.GetName()
+                    service_type = self._service.GetServiceType()
+                    
+                    if service_type in HC.TAG_SERVICES:
+                        
+                        self._tag_service_keys.SetStringSelection( service_name )
+                        
+                        self._tag_value.SetValue( value )
+                        
+                        self._SetTag()
+                        
+                    elif service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        self._ratings_like_service_keys.SetStringSelection( service_name )
+                        
+                        self._SetActions()
+                        
+                        if value is None:
+                            
+                            self._ratings_like_remove.SetValue( True )
+                            
+                        elif value == True:
+                            
+                            self._ratings_like_like.SetValue( True )
+                            
+                        elif value == False:
+                            
+                            self._ratings_like_dislike.SetValue( True )
+                            
+                        
+                        self._SetRatingsLike()
+                        
+                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        
+                        self._ratings_numerical_service_keys.SetStringSelection( service_name )
+                        
+                        self._SetActions()
+                        
+                        if value is None:
+                            
+                            self._ratings_numerical_remove.SetValue( True )
+                            
+                        else:
+                            
+                            num_stars = self._current_ratings_numerical_service.GetNumStars()
+                            
+                            slider_value = int( round( value * num_stars ) )
+                            
+                            self._ratings_numerical_slider.SetValue( slider_value )
+                            
+                        
+                        self._SetRatingsNumerical()
+                        
+                    
+                    if self._final_command is None:
+                        
+                        self._SetSimple()
+                        
+                    
+                
+                #
+                
+                self._shortcut_panel.AddF( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                none_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                none_hbox.AddF( self._simple_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                none_hbox.AddF( self._set_simple, CC.FLAGS_VCENTER )
+                
+                self._none_panel.AddF( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
+                tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                tag_hbox.AddF( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                tag_hbox.AddF( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                tag_hbox.AddF( self._set_tag, CC.FLAGS_VCENTER )
+                
+                self._tag_panel.AddF( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                ratings_like_hbox.AddF( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                ratings_like_hbox.AddF( self._ratings_like_like, CC.FLAGS_VCENTER )
+                ratings_like_hbox.AddF( self._ratings_like_dislike, CC.FLAGS_VCENTER )
+                ratings_like_hbox.AddF( self._ratings_like_remove, CC.FLAGS_VCENTER )
+                ratings_like_hbox.AddF( self._set_ratings_like, CC.FLAGS_VCENTER )
+                
+                self._ratings_like_panel.AddF( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                ratings_numerical_hbox.AddF( self._ratings_numerical_slider, CC.FLAGS_VCENTER )
+                ratings_numerical_hbox.AddF( self._ratings_numerical_remove, CC.FLAGS_VCENTER )
+                ratings_numerical_hbox.AddF( self._set_ratings_numerical, CC.FLAGS_VCENTER )
+                
+                self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                if self._am_reserved:
+                    
+                    self._set_simple.Hide()
+                    
+                    self._tag_panel.Hide()
+                    self._ratings_like_panel.Hide()
+                    self._ratings_numerical_panel.Hide()
+                    
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._shortcut_panel, CC.FLAGS_VCENTER )
+                hbox.AddF( ClientGUICommon.BetterStaticText( self, u'\u2192' ), CC.FLAGS_VCENTER )
+                hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+                self.SetSizer( hbox )
+                
+            
+            def _EnableButtons( self ):
+                
+                for button in [ self._set_simple, self._set_ratings_like, self._set_ratings_numerical, self._set_tag ]:
+                    
+                    button.Enable()
+                    
+                
+            
+            def _GetCommand( self ):
+                
+                if self._final_command == 'simple':
+                    
+                    return self._GetSimple()
+                    
+                elif self._final_command == 'ratings_like':
+                    
+                    return self._GetRatingsLike()
+                    
+                if self._final_command == 'ratings_numerical':
+                    
+                    return self._GetRatingsNumerical()
+                    
+                if self._final_command == 'tag':
+                    
+                    return self._GetTag()
+                    
+                
+            
+            def _GetSimple( self ):
+                
+                action = self._simple_actions.GetStringSelection()
+                
+                if action == '':
+                    
+                    wx.MessageBox( 'Please select an action!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                else:
+                    
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, action )
+                    
+                
+            
+            def _GetRatingsLike( self ):
+                
+                selection = self._ratings_like_service_keys.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    service_key = self._ratings_like_service_keys.GetClientData( selection )
+                    
+                    if self._ratings_like_like.GetValue():
+                        
+                        value = 1.0
+                        
+                    elif self._ratings_like_dislike.GetValue():
+                        
+                        value = 0.0
+                        
+                    else:
+                        
+                        value = None
+                        
+                    
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    
+                else:
+                    
+                    wx.MessageBox( 'Please select a rating service!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+            def _GetRatingsNumerical( self ):
+                
+                selection = self._ratings_numerical_service_keys.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    service_key = self._ratings_numerical_service_keys.GetClientData( selection )
+                    
+                    if self._ratings_numerical_remove.GetValue():
+                        
+                        value = None
+                        
+                    else:
+                        
+                        value = self._ratings_numerical_slider.GetValue()
+                        
+                        num_stars = self._current_ratings_numerical_service.GetNumStars()
+                        allow_zero = self._current_ratings_numerical_service.AllowZero()
+                        
+                        if allow_zero:
+                            
+                            value = float( value ) / num_stars
+                            
+                        else:
+                            
+                            value = float( value - 1 ) / ( num_stars - 1 )
+                            
+                        
+                    
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    
+                else:
+                    
+                    wx.MessageBox( 'Please select a rating service!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+            def _GetTag( self ):
+                
+                selection = self._tag_service_keys.GetSelection()
+                
+                if selection != wx.NOT_FOUND:
+                    
+                    service_key = self._tag_service_keys.GetClientData( selection )
+                    
+                    value = self._tag_value.GetValue()
+                    
+                    if value == '':
+                        
+                        wx.MessageBox( 'Please enter a tag!' )
+                        
+                        raise HydrusExceptions.VetoException()
+                        
+                    
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    
+                else:
+                    
+                    wx.MessageBox( 'Please select a tag service!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
+            def _SetActions( self ):
+                
+                if self._ratings_like_service_keys.GetCount() > 0:
+                    
+                    selection = self._ratings_like_service_keys.GetSelection()
+                    
+                    if selection != wx.NOT_FOUND:
+                        
+                        service_key = self._ratings_like_service_keys.GetClientData( selection )
+                        
+                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                        
+                        self._current_ratings_like_service = service
+                        
+                    
+                
+                if self._ratings_numerical_service_keys.GetCount() > 0:
+                    
+                    selection = self._ratings_numerical_service_keys.GetSelection()
+                    
+                    if selection != wx.NOT_FOUND:
+                        
+                        service_key = self._ratings_numerical_service_keys.GetClientData( selection )
+                        
+                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                        
+                        self._current_ratings_numerical_service = service
+                        
+                        num_stars = service.GetNumStars()
+                        
+                        allow_zero = service.AllowZero()
+                        
+                        if allow_zero:
+                            
+                            min = 0
+                            
+                        else:
+                            
+                            min = 1
+                            
+                        
+                        self._ratings_numerical_slider.SetRange( min, num_stars )
+                        
+                    
+                
+            
+            def _SetSimple( self ):
+                
+                self._EnableButtons()
+                
+                self._set_simple.Disable()
+                
+                self._final_command = 'simple'
+                
+            
+            def _SetRatingsLike( self ):
+                
+                self._EnableButtons()
+                
+                self._set_ratings_like.Disable()
+                
+                self._final_command = 'ratings_like'
+                
+            
+            def _SetRatingsNumerical( self ):
+                
+                self._EnableButtons()
+                
+                self._set_ratings_numerical.Disable()
+                
+                self._final_command = 'ratings_numerical'
+                
+            
+            def _SetTag( self ):
+                
+                self._EnableButtons()
+                
+                self._set_tag.Disable()
+                
+                self._final_command = 'tag'
+                
+            
+            def EventRecalcActions( self, event ):
+                
+                self._SetActions()
+                
+                event.Skip()
+                
+            
+            def GetValue( self ):
+                
+                shortcut = self._shortcut.GetValue()
+                
+                command = self._GetCommand()
+                
+                return ( shortcut, command )
+                
+            
+            def SetTags( self, tags ):
+                
+                if len( tags ) > 0:
+                    
+                    tag = list( tags )[0]
+                    
+                    self._tag_value.SetValue( tag )
+                    
+                
+            
+        
+    
 class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent ):
@@ -3919,7 +4634,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         text_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        text_hbox.AddF( wx.StaticText( self, label = 'For more information about subscriptions, please check' ), CC.FLAGS_VCENTER )
+        text_hbox.AddF( ClientGUICommon.BetterStaticText( self, 'For more information about subscriptions, please check' ), CC.FLAGS_VCENTER )
         text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_VCENTER )
         
         action_box = wx.BoxSizer( wx.HORIZONTAL )
@@ -4325,6 +5040,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
         
+        self._media_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'media' )
+        
         media = ClientMedia.FlattenMedia( media )
         
         self._current_media = [ m.Duplicate() for m in media ]
@@ -4368,12 +5085,62 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
-        self.RefreshAcceleratorTable()
-        
         if self._canvas_key is not None:
             
             HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
+        
+    
+    def _OKParent( self ):
+        
+        wx.PostEvent( self.GetParent(), wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+        
+    
+    def _ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_tags':
+                
+                self._OKParent()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
+        
+    
+    def _ProcessShortcut( self, shortcut ):
+        
+        shortcut_processed = False
+        
+        command = self._media_shortcuts.GetCommand( shortcut )
+        
+        if command is not None:
+            
+            command_processed = self._ProcessApplicationCommand( command )
+            
+            if command_processed:
+                
+                shortcut_processed = True
+                
+            
+        
+        return shortcut_processed
         
     
     def _SetSearchFocus( self ):
@@ -4421,31 +5188,19 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventCharHook( self, event ):
         
-        # the char hook event goes up. if it isn't skipped all the way, the subsequent text event will never occur
-        # however we don't want the char hook going all the way up sometimes!
+        shortcut = ClientData.ConvertKeyEventToShortcut( event )
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        if shortcut is not None:
+            
+            shortcut_processed = self._ProcessShortcut( shortcut )
+            
+            if shortcut_processed:
+                
+                return
+                
+            
         
-        if not HC.PLATFORM_LINUX:
-            
-            # If I let this go uncaught, it propagates to the media viewer above, so an Enter or a '+' closes the window or zooms in!
-            # The DoAllowNextEvent tells wx to gen regular key_down/char events so our text box gets them like normal, despite catching the event here
-            
-            if key == wx.WXK_ESCAPE:
-                
-                event.Skip()
-                
-            else:
-                
-                event.DoAllowNextEvent()
-                
-            
-        else:
-            
-            # DoAllowNext wasn't working for me in Linux. I had some messy fix but replaced it with wangled focus detection in canvas code
-            
-            event.Skip()
-            
+        event.Skip()
         
     
     def EventMenu( self, event ):
@@ -4456,9 +5211,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ( command, data ) = action
             
-            if command == 'manage_tags':
+            if command == 'manage_file_tags':
                 
-                wx.PostEvent( self.GetParent(), wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+                self._OKParent()
                 
             elif command == 'set_search_focus':
                 
@@ -4493,20 +5248,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.CallAfter( page.SetTagBoxFocus )
             
-        
-    
-    def RefreshAcceleratorTable( self ):
-        
-        interested_actions = [ 'manage_tags', 'set_search_focus' ]
-        
-        entries = []
-        
-        for ( modifier, key_dict ) in HC.options[ 'shortcuts' ].items():
-            
-            entries.extend( [ ( modifier, key, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( action ) ) for ( key, action ) in key_dict.items() if action in interested_actions ] )
-            
-        
-        self.SetAcceleratorTable( wx.AcceleratorTable( entries ) )
         
     
     class _Panel( wx.Panel ):
@@ -5094,7 +5835,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         text += os.linesep * 2
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help.'
         
-        st = wx.StaticText( self, label = text )
+        st = ClientGUICommon.BetterStaticText( self, text )
         
         st.Wrap( 640 )
         
