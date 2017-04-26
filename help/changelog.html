@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 253</h3></li>
+				<ul>
+					<li>created a new object to hold tag and rating merging and 'worse file' deletion options</li>
+					<li>wrote a dialog to edit this new object</li>
+					<li>established some simple defaults for this object for different duplicate status actions</li>
+					<li>the cog icon on the duplicates filter now lets you edit these defaults</li>
+					<li>the 'custom' duplicate filter action now works--first by asking you what status you want to set, and then by throwing up the new merge options dialog to tune it to whatever you like</li>
+					<li>wrote comprehensive unit tests for the new object</li>
+					<li>fixed the super slow dupe filter launch time problem</li>
+					<li>added a 'known urls' submenu to thumbnail and browser canvas right-click menu that lists all known urls for a file with an option to launch or copy the url</li>
+					<li>added known urls' hosts to the top-right canvas details background, just below where known file repos are listed</li>
+					<li>added the same known urls' hosts as clickable hyperlinks to the ratings hover window that pops over that top-right area</li>
+					<li>added 'delete from deleted files' action to the local tags's service-wide update panel. it will limit the deletion to mappings that are currently on files that have been previously completely physically deleted from the program</li>
+					<li>fixed namespace filtering on service-wide update panel</li>
+					<li>the hentai foundry downloader broke, so the update code will pause all hf subs. the solution is not trivial (it is part of the downloader overhaul), but I will try to fix it soon</li>
+					<li>debuted a new question-mark help button to better explain .txt tag importing on the manual import tagging dialog and the manage import folders dialog</li>
+					<li>fixed a small potential error due to bad parsing in the 'page of images' downloader</li>
+					<li>fixed a typo bug that stopped the 'delete shortcuts set' action working in the manage shortcuts dialog</li>
+					<li>I may have fixed an issue where the server was sometimes not shutting cleanly with a keyboardinterrupt</li>
+					<li>fixed the media embed button not reliably updating its thumbnail</li>
+					<li>fixed an issue where a dummy animation bar was displaying on embed buttons that showed static images that included transparency</li>
+					<li>the serious db missing tag and hash states will now not throw an error but will inform/spam the user (and hence not prohibit a boot)</li>
+					<li>attempting to open a second manage tags frame from the media viewer will now instead put the focus on the first (previously, multiple manage tags frames could be made)</li>
+					<li>misc db code cleanup that should result in faster result building in certain situations</li>
+					<li>misc improvements</li>
+					<li>misc layout fixes</li>
+				</ul>
 				<li><h3>version 252</h3></li>
 				<ul>
 					<li>the duplicate filter now processes pairs in batches and hence supports 'back' actions to revisit decisions. you will be prompted every fifty or so pairs to commit and checkpoint your progress</li>
