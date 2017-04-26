@@ -13,6 +13,20 @@ DB_DIR = None
 
 tinest_gif = '\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x00\x3B'
 
+LOCAL_RATING_LIKE_SERVICE_KEY = HydrusData.GenerateKey()
+LOCAL_RATING_NUMERICAL_SERVICE_KEY = HydrusData.GenerateKey()
+
+def ConvertServiceKeysToContentUpdatesToComparable( service_keys_to_content_updates ):
+    
+    comparable_dict = {}
+    
+    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        
+        comparable_dict[ service_key ] = set( content_updates )
+        
+    
+    return comparable_dict
+    
 class FakeHTTPConnectionManager():
     
     def __init__( self ):

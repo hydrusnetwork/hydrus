@@ -2162,7 +2162,6 @@ class DialogPathsToTags( Dialog ):
             self.SetSizer( vbox )
             
         
-        
         def _GetTags( self, index, path ):
             
             tags = []
@@ -2522,8 +2521,10 @@ class DialogPathsToTags( Dialog ):
                 self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
                 
                 self._load_from_txt_files_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'try to load tags from neighbouring .txt files' )
-                self._load_from_txt_files_checkbox.SetToolTipString( 'This looks for a [path].txt file, and will try to load line-separated tags from it. Look at thumbnail->share->export->files\'s txt file checkbox for an example.' )
                 self._load_from_txt_files_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+                
+                txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.GlobalBMPs.help, self._ShowTXTHelp )
+                txt_files_help_button.SetToolTipString( 'Show help regarding importing tags from .txt files.' )
                 
                 self._filename_namespace = wx.TextCtrl( self._checkboxes_panel )
                 self._filename_namespace.Bind( wx.EVT_TEXT, self.EventRefresh )
@@ -2557,6 +2558,11 @@ class DialogPathsToTags( Dialog ):
                 self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
                 self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
+                txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                txt_hbox.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+                txt_hbox.AddF( txt_files_help_button, CC.FLAGS_VCENTER )
+                
                 filename_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
                 filename_hbox.AddF( self._filename_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -2577,7 +2583,7 @@ class DialogPathsToTags( Dialog ):
                 dir_hbox_3.AddF( self._dir_checkbox_3, CC.FLAGS_EXPAND_BOTH_WAYS )
                 dir_hbox_3.AddF( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self._checkboxes_panel.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._checkboxes_panel.AddF( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 self._checkboxes_panel.AddF( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 self._checkboxes_panel.AddF( dir_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 self._checkboxes_panel.AddF( dir_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2590,6 +2596,21 @@ class DialogPathsToTags( Dialog ):
                 hbox.AddF( self._checkboxes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.SetSizer( hbox )
+                
+            
+            def _ShowTXTHelp( self ):
+                
+                message = 'If you would like to add custom tags with your files, add a .txt file beside the file like so:'
+                message += os.linesep * 2
+                message += 'my_file.jpg'
+                message += os.linesep
+                message += 'my_file.jpg.txt'
+                message += os.linesep * 2
+                message += 'And include your tags inside the .txt file in a newline-separated list (if you know how to script, generating these files automatically from another source of tags can save a lot of time!).'
+                message += os.linesep * 2
+                message += 'Make sure you preview the results in the table above to be certain everything is parsing correctly. Until you are comfortable with this, you should test it on just one or two files.'
+                
+                wx.MessageBox( message )
                 
             
             def EnterTags( self, tags ):
@@ -2675,11 +2696,20 @@ class DialogPathsToTags( Dialog ):
                             
                             txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
                             
+                            if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
+                                
+                                HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
+                                
+                                raise Exception()
+                                
+                            
                             tags.extend( txt_tags )
                             
                         except:
                             
-                            HydrusData.Print( 'Could not parse the tags from ' + txt_path + '!' )
+                            HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
+                            
+                            tags.append( '___had problem parsing .txt file' )
                             
                         
                     

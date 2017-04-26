@@ -1150,9 +1150,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         num_unknown = duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ]
         
         self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential matches found.' )
-        self._num_better_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs filtered.' )
-        self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' exactly similar pairs filtered.' )
-        self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs filtered.' )
+        self._num_better_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs found.' )
+        self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' exactly similar pairs found.' )
+        self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs found.' )
         
         if num_unknown > 0:
             
@@ -2238,7 +2238,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         check_all = ClientGUICommon.BetterButton( self._petition_panel, 'check all', self._CheckAll )
         check_none = ClientGUICommon.BetterButton( self._petition_panel, 'check none', self._CheckNone )
         
-        self._contents = wx.CheckListBox( self._petition_panel, size = ( -1, 300 ) )
+        self._contents = wx.CheckListBox( self._petition_panel )
         self._contents.Bind( wx.EVT_LISTBOX_DCLICK, self.EventContentDoubleClick )
         
         self._process = wx.Button( self._petition_panel, label = 'process' )
@@ -2279,7 +2279,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._MakeCollect( vbox )
         
         vbox.AddF( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         

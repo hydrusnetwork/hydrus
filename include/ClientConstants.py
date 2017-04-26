@@ -245,6 +245,8 @@ SHORTCUT_MOUSE_RIGHT = 1
 SHORTCUT_MOUSE_MIDDLE = 2
 SHORTCUT_MOUSE_SCROLL_UP = 3
 SHORTCUT_MOUSE_SCROLL_DOWN = 4
+SHORTCUT_MOUSE_SCROLL_LEFT = 5
+SHORTCUT_MOUSE_SCROLL_RIGHT = 6
 
 shortcut_mouse_string_lookup = {}
 
@@ -253,6 +255,8 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_MIDDLE ] = 'middle-click'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_UP ] = 'scroll up'
 shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_DOWN ] = 'scroll down'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_LEFT ] = 'scroll left'
+shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 
 SHORTCUT_TYPE_KEYBOARD = 0
 SHORTCUT_TYPE_MOUSE = 1
@@ -499,6 +503,7 @@ class GlobalBMPs( object ):
         
         GlobalBMPs.cog = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'cog.png' ) )
         GlobalBMPs.keyboard = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'keyboard.png' ) )
+        GlobalBMPs.help = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'help.png' ) )
         
         GlobalBMPs.check = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'check.png' ) )
         GlobalBMPs.pause = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'pause.png' ) )

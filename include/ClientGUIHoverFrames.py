@@ -11,6 +11,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals
 import HydrusSerialisable
+import urlparse
 import os
 import wx
 
@@ -402,7 +403,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             return
             
         
-        with ClientGUITopLevelWindows.DialogEdit( self, 'manage shortcuts' ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'choose shortcuts' ) as dlg:
             
             choice_tuples = [ ( name, name, name in default_media_viewer_custom_shortcuts ) for name in custom_shortcuts_names ]
             
@@ -499,22 +500,12 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
     def _PopulateCenterButtons( self ):
         
-        # make a merge_options serialisable object to track all this that I can plug into the dialog and obey at the db level
-        # store two in the options, for better and same, and then the custom just displays/produces one depending on chosen status
-        
-        # cog icon launches a dialog
-            # file delete on better
-            # extend these to be per-service!
-            # rating merging on better (d NO) (these are mutually exclusive, so add a radio menu type or whatever)
-            # rating moving on better (d YES)
-            # rating merging on same (d YES)
-            # tag merging on better (d NO) (these are mutually exclusive, so add a radio menu type or whatever)
-            # tag moving on better (d YES)
-            # tag merging on same (d YES)
-        
         menu_items = []
         
-        menu_items.append( ( 'normal', 'edit tag/ratings merge options and whether to delete bad files', 'edit what happens when you filter files', self._EditMergeOptions ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'exact duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_FILE ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+        menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
         
         cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
@@ -523,9 +514,25 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         FullscreenHoverFrameTop._PopulateCenterButtons( self )
         
     
-    def _EditMergeOptions( self ):
+    def _EditMergeOptions( self, duplicate_status ):
         
-        wx.MessageBox( 'This doesn\'t do anything yet!' )
+        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_status )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg, duplicate_status, duplicate_action_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                duplicate_action_options = panel.GetValue()
+                
+                new_options.SetDuplicateActionOptions( duplicate_status, duplicate_action_options )
+                
+            
         
     
     def _PopulateLeftButtons( self ):
@@ -601,6 +608,11 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         self._file_repos = wx.StaticText( self, label = '', style = wx.ALIGN_RIGHT )
         
+        # urls
+        
+        self._last_seen_urls = []
+        self._urls_vbox = wx.BoxSizer( wx.VERTICAL )
+        
         # likes
         
         like_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -622,6 +634,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
@@ -714,6 +727,32 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
                 self._file_repos.SetLabelText( remote_string )
                 
                 self._file_repos.Show()
+                
+            
+            # urls
+            
+            urls = self._current_media.GetLocationsManager().GetURLs()
+            
+            urls = list( urls )
+            
+            urls.sort()
+            
+            if urls != self._last_seen_urls:
+                
+                self._last_seen_urls = list( urls )
+                
+                self._urls_vbox.Clear( deleteWindows = True )
+                
+                for url in urls:
+                    
+                    parse = urlparse.urlparse( url )
+                    
+                    url_string = parse.scheme + '://' + parse.hostname
+                    
+                    link = wx.HyperlinkCtrl( self, id = -1, label = url_string, url = url )
+                    
+                    self._urls_vbox.AddF( link, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
                 
             
             self.Fit()

@@ -310,9 +310,9 @@ class BetterRadioBox( wx.RadioBox ):
     
 class BetterStaticText( wx.StaticText ):
     
-    def __init__( self, parent, label = None ):
+    def __init__( self, parent, label = None, **kwargs ):
         
-        wx.StaticText.__init__( self, parent )
+        wx.StaticText.__init__( self, parent, **kwargs )
         
         if label is not None:
             

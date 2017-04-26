@@ -386,9 +386,9 @@ class Controller( HydrusController.HydrusController ):
                     
                     interrupt_received = True
                     
-                    HydrusData.Print( u'Received a keyboard interrupt\u2026' )
-                    
                     def do_it():
+                        
+                        HydrusData.Print( u'Received a keyboard interrupt\u2026' )
                         
                         self.Exit()
                         

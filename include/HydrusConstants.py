@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 252
+SOFTWARE_VERSION = 253
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -70,10 +70,15 @@ bandwidth_type_string_lookup = {}
 bandwidth_type_string_lookup[ BANDWIDTH_TYPE_DATA ] = 'data'
 bandwidth_type_string_lookup[ BANDWIDTH_TYPE_REQUESTS ] = 'requests'
 
-CONTENT_MERGE_ACTION_DO_NOTHING = 0
-CONTENT_MERGE_ACTION_COPY = 1
-CONTENT_MERGE_ACTION_MOVE = 2
-CONTENT_MERGE_ACTION_UNION = 3
+CONTENT_MERGE_ACTION_COPY = 0
+CONTENT_MERGE_ACTION_MOVE = 1
+CONTENT_MERGE_ACTION_TWO_WAY_MERGE = 2
+
+content_merge_string_lookup = {}
+
+content_merge_string_lookup[ CONTENT_MERGE_ACTION_COPY ] = 'copy from worse to better'
+content_merge_string_lookup[ CONTENT_MERGE_ACTION_MOVE ] = 'move from worse to better'
+content_merge_string_lookup[ CONTENT_MERGE_ACTION_TWO_WAY_MERGE ] = 'copy in both directions'
 
 CONTENT_STATUS_CURRENT = 0
 CONTENT_STATUS_PENDING = 1
@@ -167,6 +172,17 @@ DUPLICATE_BETTER = 4
 DUPLICATE_SMALLER_BETTER = 5
 DUPLICATE_LARGER_BETTER = 6
 DUPLICATE_WORSE = 7
+
+duplicate_status_string_lookup = {}
+
+duplicate_status_string_lookup[ DUPLICATE_UNKNOWN ] = 'unknown relationship'
+duplicate_status_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
+duplicate_status_string_lookup[ DUPLICATE_SAME_FILE ] = 'exact same files'
+duplicate_status_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
+duplicate_status_string_lookup[ DUPLICATE_BETTER ] = 'this is better'
+duplicate_status_string_lookup[ DUPLICATE_SMALLER_BETTER ] = 'smaller hash_id is better'
+duplicate_status_string_lookup[ DUPLICATE_LARGER_BETTER ] = 'larger hash_id is better'
+duplicate_status_string_lookup[ DUPLICATE_WORSE ] = 'this is worse'
 
 ENCODING_RAW = 0
 ENCODING_HEX = 1

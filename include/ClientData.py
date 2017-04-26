@@ -684,6 +684,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ], True )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_FILE ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ], False )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = DuplicateActionOptions( [], False )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = DuplicateActionOptions( [], False )
+        
+        #
+        
         self._dictionary[ 'integers' ] = {}
         
         self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
@@ -1068,6 +1077,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDuplicateActionOptions( self, duplicate_status ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'duplicate_action_options' ][ duplicate_status ]
+            
+        
+    
     def GetFrameLocation( self, frame_key ):
         
         with self._lock:
@@ -1249,6 +1266,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDuplicateActionOptions( self, duplicate_status, duplicate_action_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'duplicate_action_options' ][ duplicate_status ] = duplicate_action_options
+            
+        
+    
     def SetFrameLocation( self, frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ):
         
         with self._lock:
@@ -1378,6 +1403,216 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
     def SetAccessKey( self, access_key ): self._access_key = access_key
     
+class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, service_actions = None, delete_second_file = None ):
+        
+        if service_actions is None:
+            
+            service_actions = []
+            
+        
+        if delete_second_file is None:
+            
+            delete_second_file = False
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._service_actions = service_actions
+        self._delete_second_file = delete_second_file
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in self._service_actions ]
+        
+        return ( serialisable_service_actions, self._delete_second_file )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_service_actions, self._delete_second_file ) = serialisable_info
+        
+        self._service_actions = [ ( serialisable_service_key.decode( 'hex' ), action ) for ( serialisable_service_key, action ) in serialisable_service_actions ]
+        
+    
+    def SetTuple( self, service_actions, delete_second_file ):
+        
+        self._service_actions = service_actions
+        self._delete_second_file = delete_second_file
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._service_actions, self._delete_second_file )
+        
+    
+    def ProcessPairIntoContentUpdates( self, first_media, second_media ):
+        
+        content_service_keys_to_content_updates = {}
+        file_service_keys_to_content_updates = {}
+        
+        first_hashes = first_media.GetHashes()
+        second_hashes = second_media.GetHashes()
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        for ( service_key, action ) in self._service_actions:
+            
+            content_updates = []
+            
+            try:
+                
+                service = services_manager.GetService( service_key )
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
+            
+            service_type = service.GetServiceType()
+            
+            if service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+                
+                first_current_value = first_media.GetRatingsManager().GetRating( service_key )
+                second_current_value = second_media.GetRatingsManager().GetRating( service_key )
+                
+                if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                    
+                    if first_current_value == second_current_value:
+                        
+                        continue
+                        
+                    
+                    if first_current_value is None and second_current_value is not None:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                        
+                    elif first_current_value is not None and second_current_value is None:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
+                        
+                    
+                elif action == HC.CONTENT_MERGE_ACTION_COPY:
+                    
+                    if first_current_value == second_current_value:
+                        
+                        continue
+                        
+                    
+                    if first_current_value is None and second_current_value is not None:
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                        
+                    
+                elif action == HC.CONTENT_MERGE_ACTION_MOVE:
+                    
+                    if second_current_value is not None:
+                        
+                        if first_current_value is None:
+                            
+                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                            
+                        
+                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, second_hashes ) ) )
+                        
+                    
+                
+            elif service_type in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ):
+                
+                if service_type == HC.LOCAL_TAG:
+                    
+                    add_content_action = HC.CONTENT_UPDATE_ADD
+                    
+                elif service_type == HC.TAG_REPOSITORY:
+                    
+                    add_content_action = HC.CONTENT_UPDATE_PEND
+                    
+                
+                first_current_tags = first_media.GetTagsManager().GetCurrent( service_key )
+                second_current_tags = second_media.GetTagsManager().GetCurrent( service_key )
+                
+                if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                    
+                    first_needs = second_current_tags.difference( first_current_tags )
+                    second_needs = first_current_tags.difference( second_current_tags )
+                    
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, second_hashes ) ) for tag in second_needs ) )
+                    
+                elif action == HC.CONTENT_MERGE_ACTION_COPY:
+                    
+                    first_needs = second_current_tags.difference( first_current_tags )
+                    
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                    
+                elif service_type == HC.LOCAL_TAG and action == HC.CONTENT_MERGE_ACTION_MOVE:
+                    
+                    first_needs = second_current_tags.difference( first_current_tags )
+                    
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                    content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, second_hashes ) ) for tag in second_current_tags ) )
+                    
+                
+            
+            if len( content_updates ) > 0:
+                
+                content_service_keys_to_content_updates[ service_key ] = content_updates
+                
+            
+        
+        if self._delete_second_file:
+            
+            current_locations = second_media.GetLocationsManager().GetCurrent()
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in current_locations:
+                
+                deletee_service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            elif CC.TRASH_SERVICE_KEY in current_locations:
+                
+                deletee_service_key = CC.TRASH_SERVICE_KEY
+                
+            else:
+                
+                deletee_service_key = None
+                
+            
+            if deletee_service_key is not None:
+                
+                if deletee_service_key not in file_service_keys_to_content_updates:
+                    
+                    file_service_keys_to_content_updates[ deletee_service_key ] = []
+                    
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, second_hashes )
+                
+                file_service_keys_to_content_updates[ deletee_service_key ].append( content_update )
+                
+                
+            
+        
+        list_of_service_keys_to_content_updates = []
+        
+        if len( content_service_keys_to_content_updates ) > 0:
+            
+            list_of_service_keys_to_content_updates.append( content_service_keys_to_content_updates )
+            
+        
+        if len( file_service_keys_to_content_updates ) > 0:
+            
+            list_of_service_keys_to_content_updates.append( file_service_keys_to_content_updates )
+            
+        
+        return list_of_service_keys_to_content_updates
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS ] = DuplicateActionOptions
+
 class Imageboard( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = u'!Imageboard'

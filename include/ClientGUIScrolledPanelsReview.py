@@ -19,6 +19,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
     COPY = 0
     DELETE = 1
     DELETE_DELETED = 2
+    DELETE_FOR_DELETED_FILES = 3
     
     ALL_MAPPINGS = 0
     SPECIFIC_MAPPINGS = 1
@@ -67,6 +68,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._action_dropdown.Append( 'delete', self.DELETE )
             self._action_dropdown.Append( 'clear deleted record', self.DELETE_DELETED )
+            self._action_dropdown.Append( 'delete from deleted files', self.DELETE_FOR_DELETED_FILES )
             
         
         self._action_dropdown.Select( 0 )
@@ -150,7 +152,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         data = self._action_dropdown.GetChoice()
         
-        if data in ( self.DELETE, self.DELETE_DELETED ):
+        if data in ( self.DELETE, self.DELETE_DELETED, self.DELETE_FOR_DELETED_FILES ):
             
             self._action_text.SetLabelText( 'from ' + self._service_name )
             
@@ -245,6 +247,10 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         elif action == self.DELETE_DELETED:
             
             content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', ( tag, self._hashes ) ) )
+            
+        elif action == self.DELETE_FOR_DELETED_FILES:
+            
+            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_for_deleted_files', ( tag, self._hashes ) ) )
             
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }

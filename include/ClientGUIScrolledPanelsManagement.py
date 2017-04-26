@@ -3836,7 +3836,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _Delete( self, event ):
+    def _Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             

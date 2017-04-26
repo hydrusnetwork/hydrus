@@ -1311,7 +1311,7 @@ class GalleryHentaiFoundry( Gallery ):
         
         # can't parse this easily normally because HF is a pain with the preview->click to see full size business.
         # find http://pictures.hentai-foundry.com//
-        # then extend it to http://pictures.hentai-foundry.com//k/KABOS/172144.jpg
+        # then extend it to http://pictures.hentai-foundry.com//k/KABOS/172144/image.jpg
         # the .jpg bit is what we really need, but whatever
         try:
             

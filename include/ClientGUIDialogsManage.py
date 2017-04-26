@@ -2543,6 +2543,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._txt_parse_button = wx.Button( self._tag_box, label = 'edit .txt parsing' )
         self._txt_parse_button.Bind( wx.EVT_BUTTON, self.EventEditTxtParsing )
         
+        txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._tag_box, CC.GlobalBMPs.help, self._ShowTXTHelp )
+        txt_files_help_button.SetToolTipString( 'Show help regarding importing tags from .txt files.' )
+        
         #
         
         self._ok = wx.Button( self, label = 'ok' )
@@ -2639,9 +2642,14 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         #
         
+        txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        txt_hbox.AddF( self._txt_parse_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        txt_hbox.AddF( txt_files_help_button, CC.FLAGS_VCENTER )
+        
         self._tag_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._tag_box.AddF( self._txt_parse_button, CC.FLAGS_VCENTER )
+        self._tag_box.AddF( txt_hbox, CC.FLAGS_SIZER_VCENTER )
         
         #
         
@@ -2740,6 +2748,21 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
         self._txt_parse_st.SetLabelText( text )
+        
+    
+    def _ShowTXTHelp( self ):
+        
+        message = 'If you would like to add custom tags with your files, add a .txt file beside the file like so:'
+        message += os.linesep * 2
+        message += 'my_file.jpg'
+        message += os.linesep
+        message += 'my_file.jpg.txt'
+        message += os.linesep * 2
+        message += 'And include your tags inside the .txt file in a newline-separated list (if you know how to script, generating these files automatically from another source of tags can save a lot of time!).'
+        message += os.linesep * 2
+        message += 'If you are not absolutely comfortable with this, practise it through the manual import process.'
+        
+        wx.MessageBox( message )
         
     
     def EventCheckLocations( self, event ):

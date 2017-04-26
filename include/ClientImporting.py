@@ -1174,6 +1174,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                         
                                         txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
                                         
+                                        if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
+                                            
+                                            HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
+                                            
+                                            raise Exception()
+                                            
+                                        
                                         txt_tags = HydrusTags.CleanTags( txt_tags )
                                         
                                         service_keys_to_tags = { service_key : txt_tags for service_key in self._txt_parse_tag_service_keys }
@@ -1498,12 +1505,12 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
                 if self._download_image_links:
                     
-                    file_urls.extend( [ urlparse.urljoin( page_url, link[ 'href' ] ) for link in links_with_images ] )
+                    file_urls.extend( [ urlparse.urljoin( page_url, link[ 'href' ] ) for link in links_with_images if link.has_attr( 'href' ) ] )
                     
                 
                 if self._download_unlinked_images:
                     
-                    file_urls.extend( [ urlparse.urljoin( page_url, image[ 'src' ] ) for image in unlinked_images ] )
+                    file_urls.extend( [ urlparse.urljoin( page_url, image[ 'src' ] ) for image in unlinked_images if image.has_attr( 'src' ) ] )
                     
                 
                 num_new = 0

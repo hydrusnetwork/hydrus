@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientImporting
@@ -130,6 +131,221 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         bandwidth_rules = self._bandwidth_rules_control.GetValue()
         
         return HydrusNetwork.AccountType.GenerateAccountTypeFromParameters( self._account_type_key, title, permissions, bandwidth_rules )
+        
+    
+class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, duplicate_action, duplicate_action_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._duplicate_action = duplicate_action
+        
+        self._service_actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._service_actions.SetMinSize( ( 320, 120 ) )
+        
+        add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
+        edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        
+        self._delete_second_file = wx.CheckBox( self, label = 'delete worse file' )
+        
+        #
+        
+        ( service_actions, delete_second_file ) = duplicate_action_options.ToTuple()
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        for ( service_key, action ) in service_actions:
+            
+            if services_manager.ServiceExists( service_key ):
+                
+                sort_tuple = ( service_key, action )
+                
+                display_tuple = self._GetDisplayTuple( sort_tuple )
+                
+                self._service_actions.Append( display_tuple, sort_tuple )
+                
+            
+        
+        self._delete_second_file.SetValue( delete_second_file )
+        
+        #
+        
+        if self._duplicate_action != HC.DUPLICATE_BETTER:
+            
+            self._delete_second_file.Hide()
+            edit_button.Hide()
+            
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( add_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( edit_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( delete_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( self._delete_second_file, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        existing_service_keys = set()
+        
+        for ( service_key, action ) in self._service_actions.GetClientData():
+            
+            existing_service_keys.add( service_key )
+            
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        choice_tuples = []
+        
+        for service in services_manager.GetServices( [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] ):
+            
+            service_key = service.GetServiceKey()
+            
+            if service_key not in existing_service_keys:
+                
+                name = service.GetName()
+                
+                choice_tuples.append( ( name, service_key ) )
+                
+            
+        
+        if len( choice_tuples ) == 0:
+            
+            wx.MessageBox( 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            
+        else:
+            
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select service', choice_tuples ) as dlg_1:
+                
+                if dlg_1.ShowModal() == wx.ID_OK:
+                    
+                    service_key = dlg_1.GetChoice()
+                    
+                    if self._duplicate_action == HC.DUPLICATE_BETTER:
+                        
+                        service = services_manager.GetService( service_key )
+                        
+                        if service.GetServiceType() == HC.TAG_REPOSITORY:
+                            
+                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                            
+                        else:
+                            
+                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                            
+                        
+                        choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                        
+                        with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                            
+                            if dlg_2.ShowModal() == wx.ID_OK:
+                                
+                                action = dlg_2.GetChoice()
+                                
+                            else:
+                                
+                                return
+                                
+                            
+                        
+                    else:
+                        
+                        action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                        
+                    
+                    sort_tuple = ( service_key, action )
+                    
+                    display_tuple = self._GetDisplayTuple( sort_tuple )
+                    
+                    self._service_actions.Append( display_tuple, sort_tuple )
+                    
+                
+            
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._service_actions.RemoveAllSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        all_selected = self._service_actions.GetAllSelected()
+        
+        for index in all_selected:
+            
+            ( service_key, action ) = self._service_actions.GetClientData( index )
+            
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
+                
+                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                
+                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                
+                with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        action = dlg_2.GetChoice()
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            else: # This shouldn't get fired because the edit button is hidden, but w/e
+                
+                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                
+            
+            sort_tuple = ( service_key, action )
+            
+            display_tuple = self._GetDisplayTuple( sort_tuple )
+            
+            self._service_actions.UpdateRow( index, display_tuple, sort_tuple )
+            
+        
+    
+    def _GetDisplayTuple( self, sort_tuple ):
+        
+        ( service_key, action ) = sort_tuple
+        
+        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        
+        service = services_manager.GetService( service_key )
+        
+        name = service.GetName()
+        
+        pretty_action = HC.content_merge_string_lookup[ action ]
+        
+        return ( name, pretty_action )
+        
+    
+    def GetValue( self ):
+        
+        service_actions = self._service_actions.GetClientData()
+        delete_second_file = self._delete_second_file.GetValue()
+        
+        duplicate_action_options = ClientData.DuplicateActionOptions( service_actions, delete_second_file )
+        
+        return duplicate_action_options
         
     
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):

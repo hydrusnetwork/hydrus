@@ -1479,11 +1479,22 @@ class ContentUpdate( object ):
         self._row = row
         
     
-    def __eq__( self, other ): return self._data_type == other._data_type and self._action == other._action and self._row == other._row
+    def __eq__( self, other ):
+        
+        return hash( self ) == hash( other )
+        
     
     def __ne__( self, other ): return not self.__eq__( other )
     
-    def __repr__( self ): return 'Content Update: ' + ToUnicode( ( self._data_type, self._action, self._row ) )
+    def __hash__( self ):
+        
+        return hash( ( self._data_type, self._action, repr( self._row ) ) )
+        
+    
+    def __repr__( self ):
+        
+        return 'Content Update: ' + ToUnicode( ( self._data_type, self._action, self._row ) )
+        
     
     def GetHashes( self ):
         

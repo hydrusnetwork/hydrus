@@ -1073,6 +1073,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 pairs_of_hash_ids.append( ( smaller_hash_id, larger_hash_id ) )
                 
+                if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
+                    
+                    break
+                    
+                
             
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( seen_hash_ids )
@@ -1334,6 +1339,8 @@ class DB( HydrusDB.HydrusDB ):
             job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
             
             with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
+                
+                # can't turn this into selectfromlist due to the order clause. we need to do this all at once
                 
                 ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree NATURAL JOIN ' + temp_table_name + ' ORDER BY inner_population + outer_population DESC;' ).fetchone()
                 
@@ -3386,7 +3393,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.DataMissing( 'File hash error in database' )
+            HydrusData.ShowText( 'Database hash error: hash_id ' + str( hash_id ) + ' was missing! This is a serious error that likely needs a repository reset to fix! Think about contacting hydrus dev!' )
+            
+            return 'aaaaaaaaaaaaaaaa'.decode( 'hex' ) + os.urandom( 16 )
             
         
         ( hash, ) = result
@@ -3394,7 +3403,10 @@ class DB( HydrusDB.HydrusDB ):
         return hash
         
     
-    def _GetHashes( self, hash_ids ): return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) ]
+    def _GetHashes( self, hash_ids ):
+        
+        return [ hash for ( hash, ) in self._c.execute( 'SELECT hash FROM hashes WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ) ]
+        
     
     def _GetHashId( self, hash ):
         
@@ -3406,7 +3418,10 @@ class DB( HydrusDB.HydrusDB ):
             
             hash_id = self._c.lastrowid
             
-        else: ( hash_id, ) = result
+        else:
+            
+            ( hash_id, ) = result
+            
         
         return hash_id
         
@@ -4431,15 +4446,6 @@ class DB( HydrusDB.HydrusDB ):
         return value
         
     
-    def _GetKnownURLs( self, hash ):
-        
-        hash_id = self._GetHashId( hash )
-        
-        urls = [ url for ( url, ) in self._c.execute( 'SELECT url FROM urls WHERE hash_id = ?;', ( hash_id, ) ) ]
-        
-        return urls
-        
-    
     def _GetMD5Status( self, md5 ):
         
         result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
@@ -4460,46 +4466,43 @@ class DB( HydrusDB.HydrusDB ):
         
         # get first detailed results
         
-        with HydrusDB.TemporaryIntegerTable( self._c, hash_ids, 'hash_id' ) as temp_table_name:
+        hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+        
+        hash_ids_to_info = { hash_id : ( size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._SelectFromList( 'SELECT * FROM files_info WHERE hash_id IN %s;', hash_ids ) }
+        
+        hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._SelectFromList( 'SELECT hash_id, service_id, timestamp FROM current_files WHERE hash_id IN %s;', hash_ids ) ) )
+        
+        hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM deleted_files WHERE hash_id IN %s;', hash_ids ) )
+        
+        hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_transfers WHERE hash_id IN %s;', hash_ids ) )
+        
+        hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN %s;', hash_ids ) )
+        
+        hash_ids_to_urls = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, url FROM urls WHERE hash_id IN %s;', hash_ids ) )
+        
+        hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN %s;', hash_ids ) ) )
+        
+        hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN %s;', hash_ids ) ) )
+        
+        tag_data = []
+        
+        tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+        
+        for tag_service_id in tag_service_ids:
             
-            hash_ids_to_info = { hash_id : ( size, mime, width, height, duration, num_frames, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, num_words ) in self._c.execute( 'SELECT * FROM files_info NATURAL JOIN ' + temp_table_name + ';' ) }
+            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
             
-            hash_ids_to_hashes = self._GetHashIdsToHashes( hash_ids )
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
             
-            hash_ids_to_current_file_service_ids_and_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, timestamp ) ) for ( hash_id, service_id, timestamp ) in self._c.execute( 'SELECT hash_id, service_id, timestamp FROM current_files NATURAL JOIN ' + temp_table_name + ';' ) ) )
-            
-            hash_ids_to_deleted_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM deleted_files NATURAL JOIN ' + temp_table_name + ';' ) )
-            
-            hash_ids_to_pending_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_transfers NATURAL JOIN ' + temp_table_name + ';' ) )
-            
-            hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, service_id FROM file_petitions NATURAL JOIN ' + temp_table_name + ';' ) )
-            
-            hash_ids_to_urls = HydrusData.BuildKeyToListDict( self._c.execute( 'SELECT hash_id, url FROM urls NATURAL JOIN ' + temp_table_name + ';' ) )
-            
-            hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._c.execute( 'SELECT hash_id, service_id, filename FROM service_filenames NATURAL JOIN ' + temp_table_name + ';' ) ) )
-            
-            hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._c.execute( 'SELECT service_id, hash_id, rating FROM local_ratings NATURAL JOIN ' + temp_table_name + ';' ) ) )
-            
-            tag_data = []
-            
-            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-            
-            for tag_service_id in tag_service_ids:
-                
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
-                
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._c.execute( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' NATURAL JOIN ' + temp_table_name + ';' ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._c.execute( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' NATURAL JOIN ' + temp_table_name + ';' ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._c.execute( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN ' + temp_table_name + ';' ) )
-                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._c.execute( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' NATURAL JOIN ' + temp_table_name + ';' ) )
-                
-            
-            seen_tag_ids = { tag_id for ( hash_id, ( tag_service_id, status, tag_id ) ) in tag_data }
-            
-            hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
-            
-            tag_ids_to_tags = self._GetTagIdsToTags( seen_tag_ids )
-            
+        
+        seen_tag_ids = { tag_id for ( hash_id, ( tag_service_id, status, tag_id ) ) in tag_data }
+        
+        hash_ids_to_raw_tag_data = HydrusData.BuildKeyToListDict( tag_data )
+        
+        tag_ids_to_tags = self._GetTagIdsToTags( seen_tag_ids )
         
         # build it
         
@@ -5330,7 +5333,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            raise HydrusExceptions.DataMissing( 'Tag error in database' )
+            HydrusData.ShowText( 'Database tag error: tag_id ' + str( tag_id ) + ' was missing! This is a serious error that likely needs a tag repository reset to fix! Think about contacting hydrus dev!' )
+            
+            return 'invalid namespace:invalid tag'
             
         
         ( namespace, subtag ) = result
@@ -5348,7 +5353,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( results ) != len( tag_ids ):
             
-            raise HydrusExceptions.DataMissing( 'Tag error in database' )
+            HydrusData.ShowText( 'Database tag error: some tag_ids were missing! This is a serious error that likely needs a tag repository reset to fix! Think about contacting hydrus dev!' )
+            
+            return [ 'invalid namespace:invalid tag ' + str( i ) for i in range( len( tag_ids ) ) ]
             
         
         tags = [ HydrusTags.CombineTag( namespace, subtag ) for ( namespace, subtag ) in results ]
@@ -6595,11 +6602,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                             ( sub_action, sub_row ) = row
                             
-                            if sub_action in ( 'copy', 'delete', 'delete_deleted' ):
+                            if sub_action in ( 'copy', 'delete', 'delete_deleted', 'delete_for_deleted_files' ):
                                 
                                 self._c.execute( 'CREATE TEMPORARY TABLE temp_operation ( job_id INTEGER PRIMARY KEY AUTOINCREMENT, tag_id INTEGER, hash_id INTEGER );' )
                                 
                                 ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+                                
+                                predicates = []
                                 
                                 if sub_action == 'copy':
                                     
@@ -6619,10 +6628,16 @@ class DB( HydrusDB.HydrusDB ):
                                     
                                     source_table_name = deleted_mappings_table_name
                                     
+                                elif sub_action == 'delete_for_deleted_files':
+                                    
+                                    ( tag, hashes ) = sub_row
+                                    
+                                    source_table_name = current_mappings_table_name + ' NATURAL JOIN deleted_files'
+                                    
+                                    predicates.append( 'deleted_files.service_id = ' + str( self._combined_local_file_service_id ) )
+                                    
                                 
-                                predicates = []
-                                
-                                do_tags_join = False
+                                do_namespace_join = False
                                 
                                 if tag is not None:
                                     
@@ -6636,7 +6651,7 @@ class DB( HydrusDB.HydrusDB ):
                                         
                                     elif tag_type == 'namespace':
                                         
-                                        do_tags_join = True
+                                        do_namespace_join = True
                                         
                                         namespace = tag
                                         
@@ -6646,21 +6661,21 @@ class DB( HydrusDB.HydrusDB ):
                                         
                                     elif tag_type == 'namespaced':
                                         
-                                        do_tags_join = True
+                                        do_namespace_join = True
                                         
                                         predicates.append( 'namespace_id != ' + str( self._null_namespace_id ) )
                                         
                                     elif tag_type == 'unnamespaced':
                                         
-                                        do_tags_join = True
+                                        do_namespace_join = True
                                         
                                         predicates.append( 'namespace_id = ' + str( self._null_namespace_id ) )
                                         
                                     
                                 
-                                if do_tags_join:
+                                if do_namespace_join:
                                     
-                                    source_table_name = source_table_name + ' NATURAL JOIN tags'
+                                    source_table_name = source_table_name + ' NATURAL JOIN namespaces'
                                     
                                 
                                 if hashes is not None:
@@ -6710,7 +6725,7 @@ class DB( HydrusDB.HydrusDB ):
                                         
                                         self._UpdateMappings( service_id_target, **kwargs )
                                         
-                                    elif sub_action == 'delete':
+                                    elif sub_action in ( 'delete', 'delete_for_deleted_files' ):
                                         
                                         self._UpdateMappings( service_id, deleted_mappings_ids = advanced_mappings_ids )
                                         
@@ -6875,7 +6890,6 @@ class DB( HydrusDB.HydrusDB ):
                         
                         notify_new_parents = True
                         
-                    
                     elif data_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
                         
                         if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
@@ -6965,6 +6979,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         notify_new_siblings = True
                         
+                    
                 elif service_type in HC.RATINGS_SERVICES:
                     
                     if action == HC.CONTENT_UPDATE_ADD:
@@ -7267,7 +7282,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
-        elif action == 'known_urls': result = self._GetKnownURLs( *args, **kwargs )
         elif action == 'load_into_disk_cache': result = self._LoadIntoDiskCache( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
@@ -8742,6 +8756,44 @@ class DB( HydrusDB.HydrusDB ):
             media_viewer.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_RIGHT, [ CC.SHORTCUT_MODIFIER_SHIFT ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pan_right' ) )
             
             self._SetJSONDump( media_viewer )
+            
+        
+        if version == 252:
+            
+            try:
+                
+                do_the_message = False
+                
+                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                for subscription in subscriptions:
+                    
+                    g_i = subscription._gallery_identifier
+                    
+                    if g_i.GetSiteType() in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST_PICTURES, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST_SCRAPS, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ):
+                        
+                        subscription._paused = True
+                        
+                        self._SetJSONDump( subscription )
+                        
+                        do_the_message = True
+                        
+                    
+                
+                if do_the_message:
+                    
+                    message = 'The Hentai Foundry downloader broke around version 243, so all of your Hentai Foundry subscriptions have been paused!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'While attempting to pause all hentai foundry subs, I had this problem:' )
+                HydrusData.PrintException( e )
+                
+            
+            self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE duplicate_type != ?;', ( HC.DUPLICATE_UNKNOWN, HC.DUPLICATE_UNKNOWN ) )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

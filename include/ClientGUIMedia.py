@@ -31,6 +31,7 @@ import wx
 import yaml
 import HydrusData
 import HydrusGlobals
+import webbrowser
 
 # Option Enums
 
@@ -222,24 +223,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
         HydrusGlobals.client_controller.pub( 'clipboard', 'text', hex_hashes )
-        
-    
-    def _CopyKnownURLsToClipboard( self ):
-        
-        hash = self._focussed_media.GetDisplayMedia().GetHash()
-        
-        known_urls = HydrusGlobals.client_controller.Read( 'known_urls', hash )
-        
-        if len( known_urls ) == 0:
-            
-            HydrusData.ShowText( 'No known urls!' )
-            
-        else:
-            
-            text = os.linesep.join( known_urls )
-            
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
-            
         
     
     def _CopyPathToClipboard( self ):
@@ -2167,7 +2150,6 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'copy_files': self._CopyFilesToClipboard()
             elif command == 'copy_hash': self._CopyHashToClipboard( data )
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
-            elif command == 'copy_known_urls': self._CopyKnownURLsToClipboard()
             elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
             elif command == 'copy_service_filename': self._CopyServiceFilenameToClipboard( data )
             elif command == 'copy_service_filenames': self._CopyServiceFilenamesToClipboard( data )
@@ -2860,7 +2842,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenuItem( self, menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
                     
                 
-                # share
+                #
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
@@ -2868,6 +2850,35 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
                     
+                
+                #
+                
+                urls = self._focussed_media.GetLocationsManager().GetURLs()
+                
+                if len( urls ) > 0:
+                    
+                    urls = list( urls )
+                    
+                    urls.sort()
+                    
+                    urls_menu = wx.Menu()
+                    
+                    urls_visit_menu = wx.Menu()
+                    urls_copy_menu = wx.Menu()
+                    
+                    for url in urls:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', webbrowser.open, url )
+                        ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HydrusGlobals.client_controller.pub, 'clipboard', 'text', url )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
+                    ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
+                    
+                    ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
+                    
+                
+                # share
                 
                 share_menu = wx.Menu()
                 
@@ -2941,8 +2952,6 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, copy_menu, 'paths', 'Copy the selected files\' paths to the clipboard.', self._CopyPathsToClipboard )
                     
-                
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'known urls (prototype)', 'Copy the selected file\'s known urls to the clipboard.', self._CopyKnownURLsToClipboard )
                 
                 ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
                 

@@ -1,13 +1,17 @@
+import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientImporting
+import ClientMedia
+import ClientRatings
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData
 import HydrusNetwork
 import HydrusSerialisable
+import TestConstants as TC
 import os
 import unittest
 import wx
@@ -140,6 +144,214 @@ class TestSerialisables( unittest.TestCase ):
             
             self.assertEqual( ac.ToString(), s )
             
+        
+    
+    def test_SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS( self ):
+        
+        def test( obj, dupe_obj ):
+            
+            self.assertEqual( obj.ToTuple(), dupe_obj.ToTuple() )
+            
+        
+        duplicate_action_options_delete_and_move = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ], True )
+        duplicate_action_options_copy = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ], False )
+        duplicate_action_options_merge = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ], False )
+        
+        inbox = True
+        size = 40960
+        mime = HC.IMAGE_JPEG
+        width = 640
+        height = 480
+        duration = None
+        num_frames = None
+        num_words = None
+        
+        local_locations_manager = ClientMedia.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set() )
+        trash_locations_manager = ClientMedia.LocationsManager( { CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set() )
+        deleted_locations_manager = ClientMedia.LocationsManager( set(), { CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set() )
+        
+        # duplicate to generate proper dicts
+        
+        one_tags_manager = ClientMedia.TagsManager( { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'one' } } } ).Duplicate()
+        two_tags_manager = ClientMedia.TagsManager( { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'two' } } } ).Duplicate()
+        substantial_tags_manager = ClientMedia.TagsManager( { CC.LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'test tag', 'series:namespaced test tag' } } } ).Duplicate()
+        empty_tags_manager = ClientMedia.TagsManager( {} ).Duplicate()
+        
+        one_ratings_manager = ClientRatings.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 1.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.8 } )
+        two_ratings_manager = ClientRatings.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 0.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.6 } )
+        substantial_ratings_manager = ClientRatings.RatingsManager( { TC.LOCAL_RATING_LIKE_SERVICE_KEY : 1.0, TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY : 0.8 } )
+        empty_ratings_manager = ClientRatings.RatingsManager( {} )
+        
+        local_hash_has_values = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( local_hash_has_values, inbox, size, mime, width, height, duration, num_frames, num_words, substantial_tags_manager, local_locations_manager, substantial_ratings_manager ) )
+        
+        local_media_has_values = ClientMedia.MediaSingleton( media_result )
+        
+        other_local_hash_has_values = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( other_local_hash_has_values, inbox, size, mime, width, height, duration, num_frames, num_words, substantial_tags_manager, local_locations_manager, substantial_ratings_manager ) )
+        
+        other_local_media_has_values = ClientMedia.MediaSingleton( media_result )
+        
+        local_hash_empty = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( local_hash_empty, inbox, size, mime, width, height, duration, num_frames, num_words, empty_tags_manager, local_locations_manager, empty_ratings_manager ) )
+        
+        local_media_empty = ClientMedia.MediaSingleton( media_result )
+        
+        trashed_hash_empty = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( trashed_hash_empty, inbox, size, mime, width, height, duration, num_frames, num_words, empty_tags_manager, trash_locations_manager, empty_ratings_manager ) )
+        
+        trashed_media_empty = ClientMedia.MediaSingleton( media_result )
+        
+        deleted_hash_empty = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( deleted_hash_empty, inbox, size, mime, width, height, duration, num_frames, num_words, empty_tags_manager, deleted_locations_manager, empty_ratings_manager ) )
+        
+        deleted_media_empty = ClientMedia.MediaSingleton( media_result )
+        
+        one_hash = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( one_hash, inbox, size, mime, width, height, duration, num_frames, num_words, one_tags_manager, local_locations_manager, one_ratings_manager ) )
+        
+        one_media = ClientMedia.MediaSingleton( media_result )
+        
+        two_hash = HydrusData.GenerateKey()
+        
+        media_result = ClientMedia.MediaResult( ( two_hash, inbox, size, mime, width, height, duration, num_frames, num_words, two_tags_manager, local_locations_manager, two_ratings_manager ) )
+        
+        two_media = ClientMedia.MediaSingleton( media_result )
+        
+        #
+        
+        self._dump_and_load_and_test( duplicate_action_options_delete_and_move, test )
+        self._dump_and_load_and_test( duplicate_action_options_copy, test )
+        self._dump_and_load_and_test( duplicate_action_options_merge, test )
+        
+        #
+        
+        def assertSCUEqual( one, two ):
+            
+            self.assertEqual( TC.ConvertServiceKeysToContentUpdatesToComparable( one ), TC.ConvertServiceKeysToContentUpdatesToComparable( two ) )
+            
+        
+        #
+        
+        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { local_hash_empty } ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        #
+        
+        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, trashed_media_empty )
+        
+        scu = {}
+        
+        scu[ CC.TRASH_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { trashed_hash_empty } ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        #
+        
+        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, deleted_media_empty )
+        
+        self.assertEqual( result, [] )
+        
+        #
+        
+        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_has_values, other_local_media_has_values )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test tag', { other_local_hash_has_values } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'series:namespaced test tag', { other_local_hash_has_values } ) ) ]
+        scu[ TC.LOCAL_RATING_LIKE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) ]
+        scu[ TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values } ) ]
+        
+        assertSCUEqual( result[1], scu )
+        
+        #
+        
+        result = duplicate_action_options_delete_and_move.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test tag', { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:namespaced test tag', { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test tag', { other_local_hash_has_values } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'series:namespaced test tag', { other_local_hash_has_values } ) ) ]
+        scu[ TC.LOCAL_RATING_LIKE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) ]
+        scu[ TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { other_local_hash_has_values } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values } ) ]
+        
+        assertSCUEqual( result[1], scu )
+        
+        #
+        #
+        
+        result = duplicate_action_options_copy.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty )
+        
+        self.assertEqual( result, [] )
+        
+        #
+        
+        result = duplicate_action_options_copy.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test tag', { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:namespaced test tag', { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_LIKE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        #
+        #
+        
+        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( local_media_has_values, local_media_empty )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test tag', { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:namespaced test tag', { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_LIKE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        #
+        
+        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( local_media_empty, other_local_media_has_values )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test tag', { local_hash_empty } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:namespaced test tag', { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_LIKE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { local_hash_empty } ) ) ]
+        scu[ TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.8, { local_hash_empty } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
+        
+        #
+        
+        result = duplicate_action_options_merge.ProcessPairIntoContentUpdates( one_media, two_media )
+        
+        scu = {}
+        
+        scu[ CC.LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'one', { two_hash } ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'two', { one_hash } ) ) ]
+        
+        assertSCUEqual( result[0], scu )
         
     
     def test_SERIALISABLE_TYPE_SHORTCUT( self ):
