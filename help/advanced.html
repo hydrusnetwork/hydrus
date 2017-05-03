@@ -55,14 +55,8 @@
 			<p>There are two kinds of shortcuts in the program--<i>reserved</i>, which have fixed names, are undeletable, and are always active in certain contexts (related to their name), and <i>custom</i>, which you create and name and edit and are only active in a media viewer when you want them to. You can redefine some simple shortcut commands, but most importantly, you can create shortcuts for adding/removing a tag or setting/unsetting a rating.</p>
 			<p>Use the same 'keyboard' icon to set the current and default custom shortcuts. </p>
 			<h3>finding duplicates</h3>
-			<p>system:similar_to takes two arguments: a hash and an integer representing max hamming distance (0 means exactly the same, 64 means everything. 5 is good for finding dupes). You can quick-select it from a file's right-click menu. It returns all images that are <i>very</i> similar to the hash. For example:</p>
-			<p>Here are a couple of duplicates, found despite their different resolution.</p>
+			<p><i>system:similar_to</i> lets you run the duplicates processing page's searches manually. You can either insert the hash and hamming distance manually, or you can launch these searches automatically from the thumbnail <i>right-click->find similar files</i> menu. For example:</p>
 			<p><img src="similar_gununu.png" /></p>
-			<p>And some images of similar shape but not colour.</p>
-			<p><img src="similar_icons.png" /></p>
-			<p>If you are careful, you can find images that look only <i>somewhat</i> like your hash. You get a lot of false positives with hamming distance of much more than 12, though.</p>
-			<p><img src="similar_gununus.png" /></p>
-			<p>I will, <i>sometime</i>, write an algorithm that says 'show me all the dupes currently in the database'.</p>
 			<h3>PIL errors</h3>
 			<p>At some point, you will probably encounter a PIL error when importing a file. PIL is the Python Image Library, the code I use to manipulate image files. Some files are kooky, and just won't load with it. I can't fix these errors, since PIL is not mine. Just gotta deal with it.</p>
 			<p>If the PIL error'ing file is one you particularly care about, I suggest you import it into photoshop or similar and save it again. Photoshop should be clever enough to parse the file's weirdness, and then it'll hopefully save again to a simpler format that PIL, and hence the client, will be able to understand.</p>
