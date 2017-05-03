@@ -3735,6 +3735,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button.SetToolTipString( 'Show help regarding editing shortcuts.' )
+        
         reserved_panel = ClientGUICommon.StaticBox( self, 'reserved' )
         
         self._reserved_shortcuts = ClientGUICommon.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'size', 100 ) ], activation_callback = self._EditReserved )
@@ -3798,21 +3801,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
-        
-    
-    def _GetTuples( self, shortcuts ):
-        
-        name = shortcuts.GetName()
-        size = len( shortcuts )
-        
-        display_tuple = ( name, HydrusData.ConvertIntToPrettyString( size ) )
-        sort_tuple = ( name, size )
-        
-        return ( display_tuple, sort_tuple )
         
     
     def _Add( self ):
@@ -3907,6 +3900,36 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    def _GetTuples( self, shortcuts ):
+        
+        name = shortcuts.GetName()
+        size = len( shortcuts )
+        
+        display_tuple = ( name, HydrusData.ConvertIntToPrettyString( size ) )
+        sort_tuple = ( name, size )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ShowHelp( self ):
+        
+        message = 'I am in the process of converting the multiple old messy shortcut systems to this single unified engine. Many actions are not yet available here, and mouse support is very limited. I expect to overwrite the reserved shortcut sets back to (new and expanded) defaults at least once more, so don\'t remap everything yet unless you are ok with doing it again.'
+        message += os.linesep * 2
+        message += '---'
+        message += os.linesep * 2
+        message += 'In hydrus, shortcuts are split into different sets that are active in different contexts. Depending on where the program focus is, multiple sets can be active at the same time. On a keyboard or mouse event, the active sets will be consulted one after another (typically from the smallest and most precise focus to the largest and broadest parent) until an action match is found.'
+        message += os.linesep * 2
+        message += 'There are two kinds--\'reserved\' and \'custom\':'
+        message += os.linesep * 2
+        message += 'Reserved shortcuts are always active in their contexts--the \'main_gui\' one is always consulted when you hit a key on the main gui window, for instance. They have limited actions to choose from, appropriate to their context. If you would prefer to, say, open the manage tags dialog with Ctrl+F3, edit or add that entry in the \'media\' set and that new shortcut will apply anywhere you are focused on some particular media.'
+        message += os.linesep * 2
+        message += 'Custom shortcuts sets are those you can create and rename at will. They are only ever active in the media viewer window, and only when you set them so from the top hover-window\'s keyboard icon. They are primarily meant for setting tags and ratings with shortcuts, and are intended to be turned on and off as you perform different \'filtering\' jobs--for instance, you might like to set the 1-5 keys to the different values of a five-star rating system, or assign a few simple keystrokes to a number of common tags.'
+        message += os.linesep * 2
+        message += 'The reserved \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
+        
+        wx.MessageBox( message )
+        
+    
     def CommitChanges( self ):
         
         for shortcuts in self._reserved_shortcuts.GetObjects():
@@ -3959,7 +3982,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._name.SetValue( name )
             
+            self._this_is_custom = True
+            
             if name in CC.SHORTCUTS_RESERVED_NAMES:
+                
+                self._this_is_custom = False
                 
                 self._name.Disable()
                 
@@ -4068,7 +4095,16 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def GetValue( self ):
             
-            shortcuts = ClientData.Shortcuts( self._name.GetValue() )
+            name = self._name.GetValue()
+            
+            if self._this_is_custom and name in CC.SHORTCUTS_RESERVED_NAMES:
+                
+                wx.MessageBox( 'That name is reserved--please pick another!' )
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            shortcuts = ClientData.Shortcuts( name )
             
             for ( shortcut, command ) in self._shortcuts.GetClientData():
                 
@@ -4095,8 +4131,6 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
                 
-                self._am_reserved = shortcuts_name in CC.SHORTCUTS_RESERVED_NAMES
-                
                 self._final_command = 'simple'
                 
                 self._current_ratings_like_service = None
@@ -4112,7 +4146,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._none_panel = ClientGUICommon.StaticBox( self, 'simple actions' )
                 
-                if self._am_reserved:
+                if shortcuts_name in CC.SHORTCUTS_RESERVED_NAMES:
                     
                     choices = CC.simple_shortcut_name_to_action_lookup[ shortcuts_name ]
                     
@@ -4313,7 +4347,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
-                if self._am_reserved:
+                is_custom_or_media = shortcuts_name not in CC.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
+                
+                if not is_custom_or_media:
                     
                     self._set_simple.Hide()
                     

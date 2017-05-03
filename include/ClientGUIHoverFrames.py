@@ -737,6 +737,8 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             
             urls.sort()
             
+            urls = urls[ : 10 ]
+            
             if urls != self._last_seen_urls:
                 
                 self._last_seen_urls = list( urls )

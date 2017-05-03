@@ -98,6 +98,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         self._controller.sub( self, 'NewCompose', 'new_compose_frame' )
+        self._controller.sub( self, 'NewPageDuplicateFilter', 'new_duplicate_filter' )
         self._controller.sub( self, 'NewPageImportBooru', 'new_import_booru' )
         self._controller.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
@@ -1062,10 +1063,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._NewPageQuery, service.GetServiceKey() )
                 
             
-            ClientGUIMenus.AppendSeparator( search_menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, search_menu, 'duplicates (under construction!)', 'Open a new tab to discover and filter duplicate files.', self._NewPageDuplicateFilter )
-            
             ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
             
             #
@@ -1121,6 +1118,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
             ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
             
+            #
+            
             download_popup_menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, download_popup_menu, 'a youtube video', 'Enter a YouTube URL and choose which formats you would like to download', self._StartYoutubeDownload )
@@ -1133,6 +1132,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
             ClientGUIMenus.AppendMenu( menu, download_popup_menu, 'new download popup' )
+            
+            #
+            
+            special_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._NewPageDuplicateFilter )
+            
+            ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
             
             #
             
@@ -1414,6 +1421,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HydrusGlobals.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'gui report mode', 'Have the gui report inside information, where supported.', HydrusGlobals.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
@@ -2494,6 +2502,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HydrusGlobals.db_profile_mode = not HydrusGlobals.db_profile_mode
             
+        elif name == 'gui_report_mode':
+            
+            HydrusGlobals.gui_report_mode = not HydrusGlobals.gui_report_mode
+            
         elif name == 'pubsub_profile_mode':
             
             HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
@@ -3104,6 +3116,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
+    def NewPageDuplicateFilter( self ):
+        
+        self._NewPageDuplicateFilter()
+        
+    
     def NewPageImportBooru( self ):
         
         self._NewPageImportBooru()
@@ -3190,7 +3207,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater.Update()
         
     
-    def PageDeleted( self, page_key ):
+    def PageCompletelyDestroyed( self, page_key ):
         
         with self._lock:
             
@@ -3198,7 +3215,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def PageHidden( self, page_key ):
+    def PageClosedButNotDestroyed( self, page_key ):
         
         with self._lock:
             

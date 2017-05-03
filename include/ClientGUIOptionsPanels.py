@@ -8,6 +8,7 @@ import ClientGUIDialogs
 import collections
 import HydrusConstants as HC
 import HydrusData
+import os
 import wx
 import wx.lib.masked.timectrl
 import HydrusGlobals
@@ -221,9 +222,32 @@ class OptionsPanelTags( OptionsPanel ):
         self._service_keys_to_explicit_button_info = {}
         self._button_ids_to_service_keys = {}
         
-        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        #
         
-        self.SetSizer( self._vbox )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button.SetToolTipString( 'Show help regarding these tag options.' )
+        
+        self._services_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ShowHelp( self ):
+        
+        message = 'Here you can select which kinds of tags you would like applied to the files that are imported.'
+        message += os.linesep * 2
+        message += 'If this import context can parse tags (such as a gallery downloader, which may provide \'creator\' or \'series\' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.'
+        message += os.linesep * 2
+        message += 'You can also set some fixed \'explicit\' tags to be applied to all successful files. For instance, you might want to add something like \'read later\' or \'from my unsorted folder\' or \'pixiv subscription\'.'
+        
+        wx.MessageBox( message )
         
     
     def EventChecked( self, event ):
@@ -282,7 +306,7 @@ class OptionsPanelTags( OptionsPanel ):
         self._service_keys_to_explicit_button_info = {}
         self._button_ids_to_service_keys = {}
         
-        self._vbox.Clear( True )
+        self._services_vbox.Clear( True )
         
         services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES, randomised = False )
         
@@ -341,7 +365,7 @@ class OptionsPanelTags( OptionsPanel ):
                 outer_gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
             
-            self._vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._services_vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
     

@@ -1,0 +1,132 @@
+<html>
+	<head>
+		<title>duplicates</title>
+		<link href="hydrus.ico" rel="shortcut icon" />
+		<link href="style.css" rel="stylesheet" type="text/css" />
+	</head>
+	<body>
+		<div class="content">
+			<h3>duplicates</h3>
+			<p>As files are shared on the internet, they are often resized, cropped, converted to a different format, subsequently altered by the original or a new artist, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <i>duplicates</i>. Some will be interesting alternate versions that you want to keep, and others will be thumbnails and other low-quality garbage you accidentally imported and would rather delete. Along the way, it would be nice to harmonise your ratings and tags to the better files so you don't lose any work.</p>
+			<p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It is all on--</p>
+			<h3>the duplicates processing page</h3>
+			<p>On the normal 'new page' selection window, hit <i>special->duplicates processing</i>. This will open this page:</p>
+			<p><img src="dupe_management.png" /></p>
+			<p>There are three steps to this page:</p>
+			<ul>
+				<li>
+					<h3>preparation</h3>
+					<p>It takes a lot of CPU time to search for duplicates. The client has to generate difficult 'looks like' metadata about each file and then insert that into a complicated search tree, which itself must be carefully rebalanced to stay fast.</p>
+					<p>Thankfully, this first section is simple to use: if it tells you it wants to do work, then just hit the play buttons and leave the client alone for a bit--it will go down to the database and iterate through as many files and tree branches it needs to to make sure it can search efficiently.</p>
+					<p>This section doesn't usually need to do much work, but if it does, you should not try to do anything else with the client while it does its job--it will likely be burning 100% CPU, and it will aggressively lock the database in order to run as fast as possible. If you then try to run some normal search pages or tag some files on different pages in the client, the whole thing is likely to hang, and then you'll have to wait five or ten minutes (or eight hours, if it really does need to do a lot of work!) for it to all free up again. If you need to do some other work or shut down the client, just hit the stop button to pause its progress--you can continue where you left off whenever you like.</p>
+					<p>A future version of this will be neater and less rude, but this is all a first version, so please bear with it. If you end up using the duplicate filter regularly, you can set this heavy work to occur automatically in your regular idle/shutdown maintenance cycles from the cog icon on the same page.</p>
+				</li>
+				<li>
+					<h3>discovery</h3>
+					<p>Once the database is ready to search, you actually have to do it! You can set a 'search distance', which represents how 'fuzzy' or imprecise a match the database will consider a duplicate. I recommend you start with 'exact match', which looks for files that are as similar as it can understand. The smaller the search distance, the faster and better and fewer the results will be. I do not recommend you go above 8--the 'speculative' option--as you will be inundated with false positives.</p>
+					<p>Like the preparation step, this is very CPU intensive and will lock your db. Either leave it alone while it works or let the client handle everything automatically during idle time.</p>
+					<p>If you are interested, the current version of this system uses a <i>phash</i> (a 64-bit binary string 'perceptual hash' based on whether the values of an 8x8 DCT of a 32x32 greyscale version of the image are above or below the average value) to represent the image shape and a VPTree to search different files' phashes' relative <a href="https://en.wikipedia.org/wiki/Hamming_distance">hamming distance</a>. I expect to extend it in future with multiple phash generation (flips, rotations, crops on interesting parts of the image) and most-common colour comparisons.</p>
+				</li>
+				<li>
+					<h3>processing</h3>
+					<p>After you have searched your files, you should have a few dozen to a few ten-thousand 'potential' pairs. The number may be frighteningly high, but you will be able to cut it down quicker than you expect. There are several mathematical optimisations at the database level that can use one of your decisions to resolve multiple unknown relationships.</p>
+					<p>If you like, you can review some of these groups of potential pairs as thumbnails by hitting the 'show some random pairs' button. It is often surprising and interesting to discover what it has found.</p>
+					<p>You can do some manual filtering on these thumbnails--merging tags and deleting bad quality files, or even setting duplicate statuses manually through the right-click menu (PROTIP: This last bit isn't done yet!)--but like archiving and deleting from your inbox, this is much more quickly done through a specialised filter:</p>
+				</li>
+			</ul>
+			<h3>the duplicates filter</h3>
+			<p>Just like the archive/delete filter, this uses quick mouse-clicks or keyboard shortcuts to assign pairs of potential duplicates a particular new status that is saved back to the database. Depending on the status, different tag and rating and deletion actions will occur.</p>
+			<p>The system uses pairs because they are the simplest building block of the underlying network of similar files. Two similar files, A and B, have one relationship, <i>A-B</i>, but three similar files would have three: <i>A-B, B-C, and A-C</i>. Larger groups can get very complicated. Making decisions on just two files at a time is fast and easy, leaving the database to handle the difficult implications.</p>
+			<p>So, the filter works just like a normal media viewer window, except that it only ever presents two files at a time to scroll through. You can set shortcuts for any action, but by default, it uses:</p>
+			<ul>
+				<li>
+					<p>Left-click or space: <b>The files are dupes and the one I am looking at is better than the other.</b></p>
+				</li>
+				<li>
+					<p>Right-click: <b>The files are not dupes but <i>alternates</i>.</b></p>
+				</li>
+				<li>
+					<p>Middle-click: <b>Go back one decision.</b></p>
+				</li>
+				<li>
+					<p>Enter/Escape: <b>Stop filtering.</b></p>
+				</li>
+			</ul>
+			<p>The idea is to compare the two files by scrolling with your mouse wheel and then clicking to assign a status, at which point the next pair will be loaded. If you prefer different shortcuts, you can set them under <i>file->shortcuts</i> or the keyboard icon on the duplicate filter's top hover window. You can also access more 'duplicate decisions' through the labelled buttons and change what happens to the files and their tags and ratings on each different decision through the cog icon on the same top hover window.</p>
+			<p><a href="dupe_icons.png"><img src="dupe_icons.png" /></a></p>
+			<p><i>Move your move to the top of the media viewer to bring up the top hover window. Hit the cog or keyboard icons to edit how it works, and click the buttons if you do not have a shortcut mapped. 'Custom action' lets you one of the other four actions but with one-off content merge options--say if you want to set that files are alternate but still with to merge some tags.</i></p>
+			<p>Because of technical limitations, you will be asked to checkpoint (save your progress to the database and then continue) every fifty decisions or so.</p>
+			<h3>different duplicate statuses</h3>
+			<p>There are currently five possible statuses. The client uses different logic to apply them at the database level, so please treat them as described and not a different scheme.</p>
+			<ul>
+				<li>
+					<h3>potential</h3>
+					<p>This is the default state for new pairs the client thinks might be duplicates. It is essentially an 'unknown' state and represents the pool of pairs the client would like you, the human, to look at and make decisions about.</p>
+					<p>The duplicates filter shows these so you can filter them into the other four categories.</p>
+				</li>
+				<li>
+					<h3>better/worse</h3>
+					<p>This tells the client that the pair of files represent the exact same thing--except that the one you are looking for is 'better' in some way. What that means is up to you, but for most people this generally means:</p>
+					<ul>
+						<li>higher resolution</li>
+						<li>better image quality</li>
+						<li>png over jpg for screenshots</li>
+						<li>jpg over png for busy images</li>
+						<li>a slightly better crop</li>
+						<li>no watermark or other site-frame or undesired blemish</li>
+						<li>has been tagged by other people, so is likely to be the more 'popular'</li>
+					</ul>
+					<p>However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. You really have to look at it and decide for yourself.</p>
+					<p>Here is a good example of a better/worse pair:</p>
+					<p><a href="dupe_better_1.png"><img src="dupe_better_1.png" /></a></p>
+					<p><a href="dupe_better_2.jpg"><img src="dupe_better_2.jpg" /></a></p>
+					<p>The first image is better because it is a png (pixel-perfect pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts are on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, we do not care about being able to fit our images into monetised social media <i>&lt;div&gt;</i> elements nor about consuming a few more KB on our hard drives, so let's keep the first and drop the second.</p>
+					<p>The default action on setting a better/worse pair is to move all <i>local tags</i> from the worse file to the best (i.e. adding them to the better file and then deleting them from the worse) and then sending the worse file to the trash.</p>
+				</li>
+				<li>
+					<h3>exact duplicates</h3>
+					<p>This is the same as better/worse, except that you absolutely cannot discern a better file. This is typically a rare decision.</p>
+					<p>Here are two exact matches:</p>
+					<p><a href="dupe_exact_match_1.png"><img src="dupe_exact_match_1.png" /></a></p>
+					<p><a href="dupe_exact_match_2.png"><img src="dupe_exact_match_2.png" /></a></p>
+					<p>I cannot tell any difference, although the filesize is significantly different, so I suspect the smaller is a lossless png optimisation. Many of the big content providers--Facebook, Google, Clouflare--automatically 'optimise' the data that goes through their networks in order to save bandwidth. With pngs it is usually mostly harmless, but jpegs are often a slaughterhouse.</p>
+					<p>Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. Sometimes you just want to keep both without a firm decision on which is best, in which case you can just set this 'exact duplicates' status and move on.</p>
+					<p>The default action on setting an exact duplicates pair is to copy all <i>local tags</i> between the two files in both directions.</p>
+				</li>
+				<li>
+					<h3>alternates</h3>
+					<p>This tells the client the pair of files are not exactly the same but that one is an alteration of the other or they are both descended from a common original. Again, the precise definition is up to you, but it generally means something like:</p>
+					<ul>
+						<li>the files are recolours</li>
+						<li>the files are alternate versions of the same image produced by the same or different artists (e.g. clean/messy or with/without hair ribbon)</li>
+						<li>iterations on a close template</li>
+						<li>different versions of a file's progress, such as the steps from the initial draft sketch to a final shaded version</li>
+					</ul>
+					<p>Here are two alternate files:</p>
+					<p><a href="dupe_mug_1.png"><img src="dupe_mug_1.png" /></a></p>
+					<p><a href="dupe_mug_2.png"><img src="dupe_mug_2.png" /></a></p>
+					<p>Though they are mostly similar, they are not duplicates. If one is not an edit of the other, they are certainly children of the same original.</p>
+					<p>Here are three files you might or might not consider to be alternates:</p>
+					<p><a href="dupe_alternate_1.jpg"><img src="dupe_alternate_1.jpg" /></a></p>
+					<p><a href="dupe_alternate_2.jpg"><img src="dupe_alternate_2.jpg" /></a></p>
+					<p><a href="dupe_alternate_3.jpg"><img src="dupe_alternate_3.jpg" /></a></p>
+					<p>These are all based on the same template--which is why the dupe filter found them--but they are not so closely related, and the last one is joking about a different ideology entirely and might deserve to be in its own group. Ultimately, you might prefer just to give them some shared tag and consider them not alternates <i>per se</i>.</p>
+					<p>The default action here is to do nothing but record the alternate status. A future version of the client will support revisiting the large unsorted archive you build here and adding file relationship metadata, but creating that will be a complicated job that was not in the scope of this initial duplicate management system.</p>
+				</li>
+				<li>
+					<h3>not duplicates</h3>
+					<p>The duplicate finder sometimes has false positives, so this status is to tell the client that the potential pair are actually not duplicates of any kind. This usually happens when two images have a similar shape by accident.</p>
+					<p>Here are two such files:</p>
+					<p><a href="dupe_not_dupes_1.png"><img style="max-width: 100%;" src="dupe_not_dupes_1.png" /></a></p>
+					<p><a href="dupe_not_dupes_2.jpg"><img style="max-width: 100%;"  src="dupe_not_dupes_2.jpg" /></a></p>
+					<p>Despite their similarity, they are neither duplicates nor of even the same topic. The only commonality is the medium. I would not consider them close enough to be alternates--just adding something like 'screenshot' and 'imageboard' as tags to both is probably the closest connection they have.</p>
+					<p>The default action here is obviously to do nothing but record the status and move on.</p>
+					<p>The incidence of false positives increases as you broaden the search distance--the less precise your search, the less likely it is to be correct. At distance 14, these files all match, but uselessly:</p>
+					<p><a href="dupe_garbage.png"><img style="max-width: 100%;"  src="dupe_garbage.png" /></a></p>
+				</li>
+			</ul>
+			<h3>the future</h3>
+			<p>This only supports jpgs and pngs at the moment, but I will attempt to add video in a future iteration. And as I said above, I would like to add more search algorithms beyond this first <i>phash</i> system, and there is plenty of db and gui stuff to add to provide support for 'this image has a parent'-type notification and navigation actions for alternates.</p>
+		</div>
+	</body>
+</html>

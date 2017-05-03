@@ -405,15 +405,17 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus( page_key )
             
         
-        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if HydrusGlobals.client_controller.PageHidden( page_key ):
+            if HydrusGlobals.client_controller.PageClosedButNotDestroyed( page_key ):
                 
-                time.sleep( 0.1 )
+                time.sleep( 1 )
                 
             else:
                 
                 try:
+                    
+                    did_work = False
                     
                     if not self._gallery_paused:
                         
@@ -422,10 +424,17 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                     if not self._files_paused:
                         
-                        self._WorkOnFiles( page_key )
+                        did_work = self._WorkOnFiles( page_key )
                         
                     
-                    time.sleep( 0.1 )
+                    if did_work:
+                        
+                        time.sleep( 0.1 )
+                        
+                    else:
+                        
+                        time.sleep( 1 )
+                        
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -674,9 +683,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         if path is None:
             
-            time.sleep( 1 )
-            
-            return
+            return False
             
         
         with self._lock:
@@ -782,6 +789,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
+        return True
+        
     
     def _THREADWork( self, page_key ):
         
@@ -792,17 +801,26 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HydrusGlobals.client_controller.PageHidden( page_key ):
+            if self._paused or HydrusGlobals.client_controller.PageClosedButNotDestroyed( page_key ):
                 
-                time.sleep( 0.1 )
+                time.sleep( 1 )
                 
             else:
                 
                 try:
                     
-                    self._WorkOnFiles( page_key )
+                    did_work = self._WorkOnFiles( page_key )
+                    
+                    if did_work:
+                        
+                        time.sleep( 0.05 )
+                        
+                    else:
+                        
+                        time.sleep( 1 )
+                        
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -1370,7 +1388,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         if file_url is None:
             
-            return
+            return False
             
         
         try:
@@ -1450,6 +1468,8 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             ClientData.WaitPolitely( page_key )
             
+        
+        return True
         
     
     def _WorkOnQueue( self, page_key ):
@@ -1551,18 +1571,15 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 5 )
                 
             
-            HydrusGlobals.client_controller.pub( 'update_status', page_key )
-            
-            ClientData.WaitPolitely( page_key )
-            
-        else:
-            
             with self._lock:
                 
-                self._SetParserStatus( page_key, '' )
+                if len( self._pending_page_urls ) == 0:
+                    
+                    self._SetParserStatus( page_key, '' )
+                    
                 
             
-            HydrusGlobals.client_controller.pub( 'update_status', page_key )
+            ClientData.WaitPolitely( page_key )
             
         
     
@@ -1575,11 +1592,11 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HydrusGlobals.client_controller.PageHidden( page_key ):
+            if self._paused or HydrusGlobals.client_controller.PageClosedButNotDestroyed( page_key ):
                 
-                time.sleep( 0.1 )
+                time.sleep( 1 )
                 
             else:
                 
@@ -1587,9 +1604,16 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._WorkOnQueue( page_key )
                     
-                    self._WorkOnFiles( page_key )
+                    did_work = self._WorkOnFiles( page_key )
                     
-                    time.sleep( 0.1 )
+                    if did_work:
+                        
+                        time.sleep( 0.1 )
+                        
+                    else:
+                        
+                        time.sleep( 1 )
+                        
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -2708,7 +2732,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if file_url is None:
             
-            return
+            return False
             
         
         try:
@@ -2817,6 +2841,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             ClientData.WaitPolitely( page_key )
             
+        
+        return True
         
     
     def _WorkOnThread( self, page_key ):
@@ -2959,24 +2985,35 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HydrusGlobals.client_controller.PageHidden( page_key ):
+            if self._paused or HydrusGlobals.client_controller.PageClosedButNotDestroyed( page_key ):
                 
-                time.sleep( 0.1 )
+                time.sleep( 1 )
                 
             else:
                 
                 try:
                     
-                    if self._thread_url != '':
+                    if self._thread_url == '':
+                        
+                        time.sleep( 1 )
+                        
+                    else:
                         
                         self._WorkOnThread( page_key )
                         
-                        self._WorkOnFiles( page_key )
+                        did_work = self._WorkOnFiles( page_key )
                         
-                    
-                    time.sleep( 0.1 )
+                        if did_work:
+                            
+                            time.sleep( 0.1 )
+                            
+                        else:
+                            
+                            time.sleep( 1 )
+                            
+                        
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -3147,7 +3184,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         if file_url is None:
             
-            return
+            return False
             
         
         try:
@@ -3228,6 +3265,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             ClientData.WaitPolitely( page_key )
             
         
+        return True
+        
     
     def _THREADWork( self, page_key ):
         
@@ -3238,19 +3277,26 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusGlobals.client_controller.pub( 'update_status', page_key )
         
-        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageDeleted( page_key ) ):
+        while not ( HydrusGlobals.view_shutdown or HydrusGlobals.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HydrusGlobals.client_controller.PageHidden( page_key ):
+            if self._paused or HydrusGlobals.client_controller.PageClosedButNotDestroyed( page_key ):
                 
-                time.sleep( 0.1 )
+                time.sleep( 1 )
                 
             else:
                 
                 try:
                     
-                    self._WorkOnFiles( page_key )
+                    did_work = self._WorkOnFiles( page_key )
                     
-                    time.sleep( 0.1 )
+                    if did_work:
+                        
+                        time.sleep( 0.1 )
+                        
+                    else:
+                        
+                        time.sleep( 1 )
+                        
                     
                     HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
                     

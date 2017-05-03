@@ -1173,7 +1173,6 @@ class Canvas( wx.Window ):
         self._current_zoom = 1.0
         self._canvas_zoom = 1.0
         
-        self._drag_begin_coordinates = None
         self._last_drag_coordinates = None
         self._current_drag_is_touch = False
         self._last_motion_coordinates = ( 0, 0 )
@@ -2004,7 +2003,6 @@ class Canvas( wx.Window ):
             ( x, y ) = pos
             
         
-        self._drag_begin_coordinates = ( x, y )
         self._last_drag_coordinates = ( x, y )
         self._current_drag_is_touch = False
         
@@ -2515,6 +2513,8 @@ class CanvasWithDetails( Canvas ):
             
             urls.sort()
             
+            urls = urls[ : 10 ]
+            
             for url in urls:
                 
                 parse = urlparse.urlparse( url )
@@ -2627,10 +2627,117 @@ class CanvasWithHovers( CanvasWithDetails ):
             self._hover_ratings = ClientGUIHoverFrames.FullscreenHoverFrameRatings( self, self._canvas_key )
             
         
+        #
+        
+        self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
+        
+        self.Bind( wx.EVT_MOTION, self.EventDrag )
+        
     
     def _GenerateHoverTopFrame( self ):
         
         raise NotImplementedError()
+        
+    
+    def EventDrag( self, event ):
+        
+        CC.CAN_HIDE_MOUSE = True
+        
+        ( x, y ) = event.GetPosition()
+        
+        show_mouse = self.GetCursor() == wx.StockCursor( wx.CURSOR_ARROW )
+        
+        is_dragging = event.Dragging() and self._last_drag_coordinates is not None
+        has_moved = ( x, y ) != self._last_motion_coordinates
+        
+        if is_dragging:
+            
+            ( old_x, old_y ) = self._last_drag_coordinates
+            
+            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            
+            delta_distance = ( float( delta_x ) ** 2 + float( delta_y ) ** 2 ) ** 0.5
+            
+            if delta_distance > 0:
+                
+                if not self._current_drag_is_touch and delta_distance > 50:
+                    
+                    # if user is able to generate such a large distance, they are almost certainly touching
+                    
+                    self._current_drag_is_touch = True
+                    
+                
+                if HC.PLATFORM_WINDOWS and not self._current_drag_is_touch:
+                    
+                    # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
+                    
+                    show_mouse = False
+                    
+                    self.WarpPointer( old_x, old_y )
+                    
+                else:
+                    
+                    show_mouse = True
+                    
+                    self._last_drag_coordinates = ( x, y )
+                    
+                
+                ( old_delta_x, old_delta_y ) = self._total_drag_delta
+                
+                self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+                
+                self._DrawCurrentMedia()
+                
+            
+        elif has_moved:
+            
+            self._last_motion_coordinates = ( x, y )
+            
+            show_mouse = True
+            
+        
+        if show_mouse:
+            
+            self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+            
+            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+            
+        else:
+            
+            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+            
+        
+    
+    def TIMEREventCursorHide( self, event ):
+        
+        try:
+            
+            if not CC.CAN_HIDE_MOUSE:
+                
+                return
+                
+            
+            if HydrusGlobals.client_controller.MenuIsOpen():
+                
+                self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+                
+            else:
+                
+                self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+                
+            
+        except wx.PyDeadObjectError:
+            
+            self._timer_cursor_hide.Stop()
+            
+        except:
+            
+            self._timer_cursor_hide.Stop()
+            
+            raise
+            
         
     
 class CanvasFilterDuplicates( CanvasWithHovers ):
@@ -2663,9 +2770,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         wx.CallAfter( self._ShowNewPair ) # don't set this until we have a size > (20, 20)!
         
         HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HydrusGlobals.client_controller.sub( self, 'Archive', 'canvas_archive' )
+        HydrusGlobals.client_controller.sub( self, 'Delete', 'canvas_delete' )
+        HydrusGlobals.client_controller.sub( self, 'Inbox', 'canvas_inbox' )
+        HydrusGlobals.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         HydrusGlobals.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         HydrusGlobals.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
         HydrusGlobals.client_controller.sub( self, 'ShowNewPair', 'canvas_show_new_pair' )
+        
         
     
     def _Close( self ):
@@ -2695,6 +2807,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 
             
+        
+        HydrusGlobals.client_controller.pub( 'refresh_dupe_numbers' )
         
         self._closing = True
         
@@ -2943,6 +3057,22 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def Archive( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Archive()
+            
+        
+    
+    def Delete( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Delete()
+            
+        
+    
     def EventCharHook( self, event ):
         
         ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
@@ -2953,7 +3083,15 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
-            CanvasWithHovers.EventCharHook( self, event )
+            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            
+            if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
+            elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
+            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
+            else:
+                
+                CanvasWithHovers.EventCharHook( self, event )
+                
             
         
     
@@ -2993,6 +3131,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def Inbox( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Inbox()
+            
+        
+    
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
         def catch_up():
@@ -3029,6 +3175,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def Undelete( self, canvas_key ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._Undelete()
+            
+        
+    
 class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def __init__( self, parent, page_key, media_results ):
@@ -3040,11 +3194,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         self._just_started = True
         
-        self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
-        
-        self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventDragBegin )
         self.Bind( wx.EVT_LEFT_UP, self.EventDragEnd )
         
@@ -3240,75 +3389,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         self._Close()
         
     
-    def EventDrag( self, event ):
-        
-        CC.CAN_HIDE_MOUSE = True
-        
-        ( x, y ) = event.GetPosition()
-        
-        show_mouse = self.GetCursor() == wx.StockCursor( wx.CURSOR_ARROW )
-        
-        is_dragging = event.Dragging() and self._last_drag_coordinates is not None
-        has_moved = ( x, y ) != self._last_motion_coordinates
-        
-        if is_dragging:
-            
-            ( old_x, old_y ) = self._last_drag_coordinates
-            
-            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
-            
-            delta_distance = ( float( delta_x ) ** 2 + float( delta_y ) ** 2 ) ** 0.5
-            
-            if delta_distance > 0:
-                
-                if not self._current_drag_is_touch and delta_distance > 50:
-                    
-                    # if user is able to generate such a large distance, they are almost certainly touching
-                    
-                    self._current_drag_is_touch = True
-                    
-                
-                if HC.PLATFORM_WINDOWS and not self._current_drag_is_touch:
-                    
-                    # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
-                    
-                    show_mouse = False
-                    
-                    self.WarpPointer( old_x, old_y )
-                    
-                else:
-                    
-                    show_mouse = True
-                    
-                    self._last_drag_coordinates = ( x, y )
-                    
-                
-                ( old_delta_x, old_delta_y ) = self._total_drag_delta
-                
-                self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
-                
-                self._DrawCurrentMedia()
-                
-            
-        elif has_moved:
-            
-            self._last_motion_coordinates = ( x, y )
-            
-            show_mouse = True
-            
-        
-        if show_mouse:
-            
-            self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
-            
-            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-            
-        else:
-            
-            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
-            
-        
-    
     def EventDragBegin( self, event ):
         
         ( x, y ) = event.GetPosition()
@@ -3372,36 +3452,6 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         else:
             
             self.SetMedia( self._GetFirst() )
-            
-        
-    
-    def TIMEREventCursorHide( self, event ):
-        
-        try:
-            
-            if not CC.CAN_HIDE_MOUSE:
-                
-                return
-                
-            
-            if HydrusGlobals.client_controller.MenuIsOpen():
-                
-                self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
-                
-            else:
-                
-                self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
-                
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_cursor_hide.Stop()
-            
-        except:
-            
-            self._timer_cursor_hide.Stop()
-            
-            raise
             
         
     

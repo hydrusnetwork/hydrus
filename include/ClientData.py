@@ -513,6 +513,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return cmp( self.ToString(), other.ToString() )
         
     
+    def __repr__( self ):
+        
+        return self.ToString()
+        
+    
     def _GetSerialisableInfo( self ):
         
         if self._command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
@@ -2110,6 +2115,11 @@ def ConvertKeyEventToShortcut( event ):
         
         shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
         
+        if HydrusGlobals.gui_report_mode:
+            
+            HydrusData.ShowText( 'key event caught: ' + repr( shortcut ) )
+            
+        
         return shortcut
         
     
@@ -2172,6 +2182,11 @@ def ConvertMouseEventToShortcut( event ):
             
         
         shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, modifiers )
+        
+        if HydrusGlobals.gui_report_mode:
+            
+            HydrusData.ShowText( 'mouse event caught: ' + repr( shortcut ) )
+            
         
         return shortcut
         

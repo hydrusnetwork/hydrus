@@ -80,7 +80,10 @@ def BuildSimpleChildrenToParents( pairs ):
     
     for ( child, parent ) in pairs:
         
-        if child == parent: continue
+        if child == parent:
+            
+            continue
+            
         
         if LoopInSimpleChildrenToParents( simple_children_to_parents, child, parent ): continue
         
@@ -2190,6 +2193,11 @@ class ShortcutsManager( object ):
                 command = self._shortcuts[ name ].GetCommand( shortcut )
                 
                 if command is not None:
+                    
+                    if HydrusGlobals.gui_report_mode:
+                        
+                        HydrusData.ShowText( 'command matched: ' + repr( command ) )
+                        
                     
                     return command
                     

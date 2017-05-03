@@ -1814,7 +1814,14 @@ class DialogPageChooser( Dialog ):
         
         ( entry_type, obj ) = entry
         
-        if entry_type == 'menu': button.SetLabelText( obj )
+        if entry_type == 'menu':
+            
+            button.SetLabelText( obj )
+            
+        elif entry_type == 'page_duplicate_filter':
+            
+            button.SetLabelText( 'duplicates processing' )
+            
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
             name = HydrusGlobals.client_controller.GetServicesManager().GetService( obj ).GetName()
@@ -1833,9 +1840,18 @@ class DialogPageChooser( Dialog ):
             
             button.SetLabelText( text )
             
-        elif entry_type == 'page_import_page_of_images': button.SetLabelText( 'page of images' )
-        elif entry_type == 'page_import_thread_watcher': button.SetLabelText( 'thread watcher' )
-        elif entry_type == 'page_import_urls': button.SetLabelText( 'raw urls' )
+        elif entry_type == 'page_import_page_of_images':
+            
+            button.SetLabelText( 'page of images' )
+            
+        elif entry_type == 'page_import_thread_watcher':
+            
+            button.SetLabelText( 'thread watcher' )
+            
+        elif entry_type == 'page_import_urls':
+            
+            button.SetLabelText( 'raw urls' )
+            
         
         button.Show()
         
@@ -1855,6 +1871,10 @@ class DialogPageChooser( Dialog ):
                 if entry_type == 'page_query': 
                     
                     HydrusGlobals.client_controller.pub( 'new_page_query', obj )
+                    
+                elif entry_type == 'page_duplicate_filter':
+                    
+                    HydrusGlobals.client_controller.pub( 'new_duplicate_filter' )
                     
                 elif entry_type == 'page_import_booru':
                     
@@ -1903,6 +1923,8 @@ class DialogPageChooser( Dialog ):
                 
                 entries.append( ( 'menu', 'petitions' ) )
                 
+            
+            entries.append( ( 'menu', 'special' ) )
             
         elif menu_keyword == 'files':
             
@@ -1956,6 +1978,10 @@ class DialogPageChooser( Dialog ):
         elif menu_keyword == 'petitions':
             
             entries = [ ( 'page_petitions', service_key ) for service_key in self._petition_service_keys ]
+            
+        elif menu_keyword == 'special':
+            
+            entries.append( ( 'page_duplicate_filter', None ) )
             
         
         if len( entries ) <= 4:

@@ -1079,6 +1079,11 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
+                
+                break
+                
+            
         
         hash_ids_to_hashes = self._GetHashIdsToHashes( seen_hash_ids )
         

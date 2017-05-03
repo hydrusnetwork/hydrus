@@ -808,11 +808,11 @@ class Controller( HydrusController.HydrusController ):
         wx.CallAfter( self.ProcessPubSub )
         
     
-    def PageDeleted( self, page_key ):
+    def PageCompletelyDestroyed( self, page_key ):
         
         try:
             
-            return self._gui.PageDeleted( page_key )
+            return self._gui.PageCompletelyDestroyed( page_key )
             
         except wx.PyDeadObjectError:
             
@@ -820,9 +820,9 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def PageHidden( self, page_key ):
+    def PageClosedButNotDestroyed( self, page_key ):
         
-        return self._gui.PageHidden( page_key )
+        return self._gui.PageClosedButNotDestroyed( page_key )
         
     
     def PopupMenu( self, window, menu ):

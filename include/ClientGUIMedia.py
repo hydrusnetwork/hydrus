@@ -955,7 +955,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._OpenExternally()
                 
-            if action == 'launch_the_archive_delete_filter':
+            elif action == 'launch_the_archive_delete_filter':
                 
                 self._ArchiveDeleteFilter()
                 
@@ -1313,7 +1313,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def PageHidden( self, page_key ):
         
-        if page_key == self._page_key: HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, None )
+        if page_key == self._page_key:
+            
+            HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, None )
+            
         
     
     def PageShown( self, page_key ):
