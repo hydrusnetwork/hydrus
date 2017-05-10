@@ -4,7 +4,7 @@ import httplib
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusServer
 import itertools
@@ -29,9 +29,9 @@ def DAEMONDeleteOrphans( controller ):
     
 def DAEMONGenerateUpdates( controller ):
     
-    if not HydrusGlobals.server_busy:
+    if not HG.server_busy:
         
-        HydrusGlobals.server_controller.SyncRepositories()
+        HG.server_controller.SyncRepositories()
         
     
 def DAEMONUPnP( controller ):

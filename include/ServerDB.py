@@ -26,7 +26,7 @@ import time
 import traceback
 import HydrusData
 import HydrusTags
-import HydrusGlobals
+import HydrusGlobals as HG
 
 def GenerateRepositoryMasterMapTableNames( service_id ):
     
@@ -237,7 +237,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( names_to_analyze ) > 0:
             
-            HydrusGlobals.server_busy = True
+            HG.server_busy = True
             
         
         for name in names_to_analyze:
@@ -265,7 +265,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'ANALYZE sqlite_master;' ) # this reloads the current stats into the query planner
         
-        HydrusGlobals.server_busy = False
+        HG.server_busy = False
         
     
     def _Backup( self ):
@@ -274,7 +274,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._CloseDBCursor()
         
-        HydrusGlobals.server_busy = True
+        HG.server_busy = True
         
         try:
             
@@ -321,7 +321,7 @@ class DB( HydrusDB.HydrusDB ):
             
         finally:
             
-            HydrusGlobals.server_busy = False
+            HG.server_busy = False
             
             self._InitDBCursor()
             
@@ -1138,7 +1138,7 @@ class DB( HydrusDB.HydrusDB ):
         
         subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
         
-        HydrusGlobals.server_controller.pub( 'update_session_accounts', service_key, subject_account_keys )
+        HG.server_controller.pub( 'update_session_accounts', service_key, subject_account_keys )
         
     
     def _ModifyAccountTypes( self, service_key, account, account_types, deletee_account_type_keys_to_new_account_type_keys ):
@@ -1195,7 +1195,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RefreshAccountTypeCache( service_id )
         
-        HydrusGlobals.server_controller.pub( 'update_all_session_accounts', service_key )
+        HG.server_controller.pub( 'update_all_session_accounts', service_key )
         
     
     def _ModifyServices( self, account, services ):
@@ -2096,6 +2096,9 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
+        total_num_petitions = 0
+        total_weight = 0
+        
         for ( service_tag_id, service_hash_ids ) in tag_ids_to_hash_ids.items():
             
             master_tag_id = self._RepositoryGetMasterTagId( service_id, service_tag_id )
@@ -2108,6 +2111,14 @@ class DB( HydrusDB.HydrusDB ):
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
             
             contents.append( content )
+            
+            total_num_petitions += 1
+            total_weight += content.GetVirtualWeight()
+            
+            if total_num_petitions > 20 and total_weight > 1000:
+                
+                break
+                
             
         
         return HydrusNetwork.Petition( action, petitioner_account, reason, contents )

@@ -2,7 +2,7 @@ import numpy.core.multiarray # important this comes before cv!
 import ClientConstants as CC
 import cv2
 import HydrusImageHandling
-import HydrusGlobals
+import HydrusGlobals as HG
 
 if cv2.__version__.startswith( '2' ):
     
@@ -43,7 +43,7 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path ):
     
-    if HydrusGlobals.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
+    if HG.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
         
         # a regular cv.imread call, can crash the whole process on random thumbs, hooray, so have this as backup
         # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
@@ -116,6 +116,11 @@ def GenerateShapePerceptualHashes( path ):
     ( y, x, depth ) = numpy_image.shape
     
     if depth == 4:
+        
+        # doing this on 10000x10000 pngs eats ram like mad
+        numpy_image = EfficientlyThumbnailNumpyImage( numpy_image, ( 1024, 1024 ) )
+        
+        ( y, x, depth ) = numpy_image.shape
         
         # create weight and transform numpy_image to greyscale
         
@@ -217,7 +222,7 @@ def GenerateShapePerceptualHashes( path ):
     
 def ResizeNumpyImage( mime, numpy_image, ( target_x, target_y ) ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    new_options = HG.client_controller.GetNewOptions()
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )
     

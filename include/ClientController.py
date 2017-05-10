@@ -10,7 +10,7 @@ import HydrusConstants as HC
 import HydrusController
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetworking
 import HydrusSerialisable
 import HydrusThreading
@@ -38,11 +38,13 @@ class Controller( HydrusController.HydrusController ):
         
         self._last_shutdown_was_bad = False
         
+        self._is_booted = False
+        
         HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
         
         self._name = 'client'
         
-        HydrusGlobals.client_controller = self
+        HG.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self._options = ClientDefaults.GetClientDefaultOptions()
@@ -313,7 +315,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CurrentlyIdle( self ):
         
-        if HydrusGlobals.force_idle_mode:
+        if HG.force_idle_mode:
             
             self._idle_started = 0
             
@@ -411,7 +413,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Exit( self ):
         
-        if HydrusGlobals.emergency_exit:
+        if HG.emergency_exit:
             
             self.ShutdownView()
             self.ShutdownModel()
@@ -440,13 +442,13 @@ class Controller( HydrusController.HydrusController ):
                                 
                                 if dlg_yn.ShowModal() == wx.ID_YES:
                                     
-                                    HydrusGlobals.do_idle_shutdown_work = True
+                                    HG.do_idle_shutdown_work = True
                                     
                                 
                             
                         else:
                             
-                            HydrusGlobals.do_idle_shutdown_work = True
+                            HG.do_idle_shutdown_work = True
                             
                         
                     
@@ -461,7 +463,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
-                HydrusGlobals.emergency_exit = True
+                HG.emergency_exit = True
                 
                 self.Exit()
                 
@@ -470,7 +472,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ForceIdle( self ):
         
-        HydrusGlobals.force_idle_mode = not HydrusGlobals.force_idle_mode
+        HG.force_idle_mode = not HG.force_idle_mode
         
         self.pub( 'wake_daemons' )
         self.pub( 'refresh_status' )
@@ -554,6 +556,8 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
+        self._services_manager = ClientCaches.ServicesManager( self )
+        
         self._options = self.Read( 'options' )
         self._new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         
@@ -566,8 +570,6 @@ class Controller( HydrusController.HydrusController ):
                 HydrusVideoHandling.FFMPEG_PATH = os.path.basename( HydrusVideoHandling.FFMPEG_PATH )
                 
             
-        
-        self._services_manager = ClientCaches.ServicesManager( self )
         
         self.InitClientFilesManager()
         
@@ -695,30 +697,17 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def IsBooted( self ):
+        
+        return self._is_booted
+        
+    
     def LastShutdownWasBad( self ):
         
         return self._last_shutdown_was_bad
         
     
     def MaintainDB( self, stop_time = None ):
-        
-        disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
-        
-        if disk_cache_maintenance_mb is not None:
-            
-            self.pub( 'splash_set_status_text', 'preparing disk cache for maintenance' )
-            
-            if self.CurrentlyVeryIdle():
-                
-                disk_cache_stop_time = HydrusData.GetNow() + 20
-                
-            else:
-                
-                disk_cache_stop_time = HydrusData.GetNow() + 6
-                
-            
-            HydrusGlobals.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
-            
         
         if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
@@ -785,16 +774,31 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.MaintainMemory( self )
         
-        if self._timestamps[ 'last_page_change' ] == 0:
-            
-            self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
-            
-        
         if HydrusData.TimeHasPassed( self._timestamps[ 'last_page_change' ] + 30 * 60 ):
             
             self.pub( 'clear_closed_pages' )
             
             self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
+            
+        
+        disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
+        
+        if disk_cache_maintenance_mb is not None:
+            
+            if self.CurrentlyVeryIdle():
+                
+                disk_cache_stop_time = HydrusData.GetNow() + 5
+                
+            elif self.CurrentlyIdle():
+                
+                disk_cache_stop_time = HydrusData.GetNow() + 2
+                
+            else:
+                
+                disk_cache_stop_time = HydrusData.GetNow() + 1
+                
+            
+            HG.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
     
@@ -962,7 +966,7 @@ class Controller( HydrusController.HydrusController ):
                             
                             self._db.RestoreBackup( path )
                             
-                            while not HydrusGlobals.shutdown_complete:
+                            while not HG.shutdown_complete:
                                 
                                 time.sleep( 0.1 )
                                 
@@ -1003,7 +1007,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SaveDirtyObjects( self ):
         
-        with HydrusGlobals.dirty_object_lock:
+        with HG.dirty_object_lock:
             
             dirty_services = [ service for service in self._services_manager.GetServices() if service.IsDirty() ]
             
@@ -1016,7 +1020,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SetServices( self, services ):
         
-        with HydrusGlobals.dirty_object_lock:
+        with HG.dirty_object_lock:
             
             self.WriteSynchronous( 'update_services', services )
             
@@ -1026,13 +1030,13 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownView( self ):
         
-        if not HydrusGlobals.emergency_exit:
+        if not HG.emergency_exit:
             
             self.pub( 'splash_set_status_text', 'waiting for daemons to exit' )
             
             self._ShutdownDaemons()
             
-            if HydrusGlobals.do_idle_shutdown_work:
+            if HG.do_idle_shutdown_work:
                 
                 try:
                     
@@ -1055,7 +1059,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SystemBusy( self ):
         
-        if HydrusGlobals.force_idle_mode:
+        if HG.force_idle_mode:
             
             return False
             
@@ -1150,11 +1154,13 @@ class Controller( HydrusController.HydrusController ):
             
             self.InitView()
             
+            self._is_booted = True
+            
         except HydrusExceptions.PermissionException as e:
             
             HydrusData.Print( e )
             
-            HydrusGlobals.emergency_exit = True
+            HG.emergency_exit = True
             
             self.Exit()
             
@@ -1169,7 +1175,7 @@ class Controller( HydrusController.HydrusController ):
             wx.CallAfter( wx.MessageBox, traceback.format_exc() )
             wx.CallAfter( wx.MessageBox, text )
             
-            HydrusGlobals.emergency_exit = True
+            HG.emergency_exit = True
             
             self.Exit()
             

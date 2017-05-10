@@ -10,7 +10,7 @@ import os
 import TestConstants
 import unittest
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class TestFunctions( unittest.TestCase ):
     
@@ -77,9 +77,9 @@ class TestManagers( unittest.TestCase ):
         services.append( repo )
         services.append( other )
         
-        HydrusGlobals.test_controller.SetRead( 'services', services )
+        HG.test_controller.SetRead( 'services', services )
         
-        services_manager = ClientCaches.ServicesManager( HydrusGlobals.client_controller )
+        services_manager = ClientCaches.ServicesManager( HG.client_controller )
         
         #
         
@@ -103,7 +103,7 @@ class TestManagers( unittest.TestCase ):
         
         services.append( repo )
         
-        HydrusGlobals.test_controller.SetRead( 'services', services )
+        HG.test_controller.SetRead( 'services', services )
         
         services_manager.RefreshServices()
         
@@ -123,7 +123,7 @@ class TestManagers( unittest.TestCase ):
         command_1_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
         command_2_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
         
-        undo_manager = ClientCaches.UndoManager( HydrusGlobals.client_controller )
+        undo_manager = ClientCaches.UndoManager( HG.client_controller )
         
         #
         
@@ -139,21 +139,21 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( ( u'undo archive 1 files', u'redo inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
-        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Redo()
         
-        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
         
         self.assertEqual( ( u'undo inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
-        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
         
         undo_manager.Undo()
         
-        self.assertEqual( HydrusGlobals.test_controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
         
         self.assertEqual( ( None, u'redo archive 1 files' ), undo_manager.GetUndoRedoStrings() )
         

@@ -7,7 +7,7 @@ import hashlib
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusNetworking
 import HydrusSerialisable
@@ -169,7 +169,7 @@ class Service( object ):
         
         self._dirty = True
         
-        HydrusGlobals.client_controller.pub( 'service_updated', self )
+        HG.client_controller.pub( 'service_updated', self )
         
     
     def Duplicate( self ):
@@ -549,7 +549,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._SetDirty()
         
-        HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+        HG.client_controller.pub( 'important_dirt_to_clean' )
         
     
     def _DealWithFundamentalNetworkError( self ):
@@ -562,7 +562,7 @@ class ServiceRestricted( ServiceRemote ):
         
         self._SetDirty()
         
-        HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+        HG.client_controller.pub( 'important_dirt_to_clean' )
         
     
     def _GetErrorWaitPeriod( self ):
@@ -719,7 +719,7 @@ class ServiceRestricted( ServiceRemote ):
             
             url = 'https://' + host + ':' + str( port ) + path_and_query
             
-            ( response, size_of_response, response_headers, cookies ) = HydrusGlobals.client_controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, hydrus_network = True )
+            ( response, size_of_response, response_headers, cookies ) = HG.client_controller.DoHTTP( method, url, request_headers, body, report_hooks = report_hooks, temp_path = temp_path, hydrus_network = True )
             
             ClientNetworking.CheckHydrusVersion( self._service_key, self._service_type, response_headers )
             
@@ -760,7 +760,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                 elif isinstance( e, HydrusExceptions.SessionException ):
                     
-                    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
+                    session_manager = HG.client_controller.GetClientSessionManager()
                     
                     session_manager.DeleteSessionKey( self._service_key )
                     
@@ -844,7 +844,7 @@ class ServiceRestricted( ServiceRemote ):
                         
                     
                 
-                HydrusGlobals.client_controller.pub( 'notify_new_permissions' )
+                HG.client_controller.pub( 'notify_new_permissions' )
                 
             except HydrusExceptions.NetworkException as e:
                 
@@ -876,7 +876,7 @@ class ServiceRestricted( ServiceRemote ):
                     
                     self._SetDirty()
                     
-                    HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+                    HG.client_controller.pub( 'important_dirt_to_clean' )
                     
                 
             
@@ -891,7 +891,7 @@ class ServiceRepository( ServiceRestricted ):
             return ( False, 'currently paused' )
             
         
-        options = HydrusGlobals.client_controller.GetOptions()
+        options = HG.client_controller.GetOptions()
         
         if options[ 'pause_repo_sync' ]:
             
@@ -925,7 +925,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            options = HydrusGlobals.client_controller.GetOptions()
+            options = HG.client_controller.GetOptions()
             
             if self._paused or options[ 'pause_repo_sync' ]:
                 
@@ -935,7 +935,7 @@ class ServiceRepository( ServiceRestricted ):
             service_key = self._service_key
             
         
-        ( download_value, processing_value, range ) = HydrusGlobals.client_controller.Read( 'repository_progress', service_key )
+        ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service_key )
         
         return processing_value < range
         
@@ -988,11 +988,11 @@ class ServiceRepository( ServiceRestricted ):
             
             self._SetDirty()
             
-            HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+            HG.client_controller.pub( 'important_dirt_to_clean' )
             
             if not self._paused:
                 
-                HydrusGlobals.client_controller.pub( 'notify_new_permissions' )
+                HG.client_controller.pub( 'notify_new_permissions' )
                 
             
         
@@ -1011,9 +1011,9 @@ class ServiceRepository( ServiceRestricted ):
             
             self._SetDirty()
             
-            HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+            HG.client_controller.pub( 'important_dirt_to_clean' )
             
-            HydrusGlobals.client_controller.Write( 'reset_repository', self )
+            HG.client_controller.Write( 'reset_repository', self )
             
         
     
@@ -1033,7 +1033,7 @@ class ServiceRepository( ServiceRestricted ):
             
             if self.IsDirty():
                 
-                HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+                HG.client_controller.pub( 'important_dirt_to_clean' )
                 
             
         
@@ -1053,7 +1053,7 @@ class ServiceRepository( ServiceRestricted ):
             service_key = self._service_key
             
         
-        update_hashes = HydrusGlobals.client_controller.Read( 'missing_repository_update_hashes', service_key )
+        update_hashes = HG.client_controller.Read( 'missing_repository_update_hashes', service_key )
         
         if len( update_hashes ) > 0:
             
@@ -1063,13 +1063,13 @@ class ServiceRepository( ServiceRestricted ):
                 
                 job_key.SetVariable( 'popup_title', name + ' sync: downloading updates' )
                 
-                HydrusGlobals.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_key )
                 
                 for ( i, update_hash ) in enumerate( update_hashes ):
                     
                     status = 'update ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( update_hashes ) )
                     
-                    HydrusGlobals.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
+                    HG.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
                     job_key.SetVariable( 'popup_text_1', status )
                     job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( update_hashes ) ) )
                     
@@ -1180,7 +1180,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        HydrusGlobals.client_controller.WriteSynchronous( 'import_update', update_network_string, update_hash, mime )
+                        HG.client_controller.WriteSynchronous( 'import_update', update_network_string, update_hash, mime )
                         
                     except Exception as e:
                         
@@ -1249,7 +1249,7 @@ class ServiceRepository( ServiceRestricted ):
                 return
                 
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
+            HG.client_controller.WriteSynchronous( 'associate_repository_update_hashes', service_key, metadata_slice )
             
             with self._lock:
                 
@@ -1264,7 +1264,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            options = HydrusGlobals.client_controller.GetOptions()
+            options = HG.client_controller.GetOptions()
             
             if self._paused or options[ 'pause_repo_sync' ]:
                 
@@ -1272,14 +1272,14 @@ class ServiceRepository( ServiceRestricted ):
                 
             
         
-        if only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
+        if only_when_idle and not HG.client_controller.CurrentlyIdle():
             
             return
             
         
         try:
             
-            ( did_some_work, did_everything ) = HydrusGlobals.client_controller.WriteSynchronous( 'process_repository', self._service_key, only_when_idle, stop_time )
+            ( did_some_work, did_everything ) = HG.client_controller.WriteSynchronous( 'process_repository', self._service_key, only_when_idle, stop_time )
             
             if did_some_work:
                 
@@ -1309,7 +1309,7 @@ class ServiceRepository( ServiceRestricted ):
                 self._SetDirty()
                 
             
-            HydrusGlobals.client_controller.pub( 'important_dirt_to_clean' )
+            HG.client_controller.pub( 'important_dirt_to_clean' )
             
         
     
@@ -1317,7 +1317,7 @@ class ServiceRepository( ServiceRestricted ):
         
         if not force:
             
-            options = HydrusGlobals.client_controller.GetOptions()
+            options = HG.client_controller.GetOptions()
             
             if self._paused or options[ 'pause_repo_sync' ]:
                 
@@ -1343,13 +1343,13 @@ class ServiceRepository( ServiceRestricted ):
             service_key = self._service_key
             
         
-        thumbnail_hashes = HydrusGlobals.client_controller.Read( 'missing_thumbnail_hashes', service_key )
+        thumbnail_hashes = HG.client_controller.Read( 'missing_thumbnail_hashes', service_key )
         
         num_to_do = len( thumbnail_hashes )
         
         if num_to_do > 0:
             
-            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.GetClientFilesManager()
             
             job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
             
@@ -1357,13 +1357,13 @@ class ServiceRepository( ServiceRestricted ):
                 
                 job_key.SetVariable( 'popup_title', name + ' sync: downloading thumbnails' )
                 
-                HydrusGlobals.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_key )
                 
                 for ( i, thumbnail_hash ) in enumerate( thumbnail_hashes ):
                     
                     status = 'thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do )
                     
-                    HydrusGlobals.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
+                    HG.client_controller.pub( 'splash_set_status_text', status, print_to_log = False )
                     job_key.SetVariable( 'popup_text_1', status )
                     job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
                     
@@ -1487,9 +1487,7 @@ class ServiceIPFS( ServiceRemote ):
     
     def _GetAPIBaseURL( self ):
         
-        credentials = self.GetCredentials()
-        
-        ( host, port ) = credentials.GetAddress()
+        ( host, port ) = self._credentials.GetAddress()
         
         api_base_url = 'http://' + host + ':' + str( port ) + '/api/v0/'
         
@@ -1534,7 +1532,7 @@ class ServiceIPFS( ServiceRemote ):
                         
                         if len( urls ) > 0:
                             
-                            HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
+                            HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
                             
                         
                     
@@ -1547,7 +1545,7 @@ class ServiceIPFS( ServiceRemote ):
             
             job_key.SetVariable( 'popup_text_1', 'Looking up multihash information' )
             
-            HydrusGlobals.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_key )
             
             with self._lock:
                 
@@ -1558,7 +1556,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = url_tree[3]
                 
-                HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, multihash )
+                HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, multihash )
                 
             else:
                 
@@ -1568,7 +1566,7 @@ class ServiceIPFS( ServiceRemote ):
                 
             
         
-        HydrusGlobals.client_controller.CallToThread( off_wx )
+        HG.client_controller.CallToThread( off_wx )
         
     
     def PinDirectory( self, hashes, note ):
@@ -1577,7 +1575,7 @@ class ServiceIPFS( ServiceRemote ):
         
         job_key.SetVariable( 'popup_title', 'creating ipfs directory on ' + self._name )
         
-        HydrusGlobals.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_key )
         
         try:
             
@@ -1599,11 +1597,11 @@ class ServiceIPFS( ServiceRemote ):
                 job_key.SetVariable( 'popup_text_1', 'pinning files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
                 job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
                 
-                ( media_result, ) = HydrusGlobals.client_controller.Read( 'media_results', ( hash, ) )
+                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
                 
                 mime = media_result.GetMime()
                 
-                result = HydrusGlobals.client_controller.Read( 'service_filenames', self._service_key, { hash } )
+                result = HG.client_controller.Read( 'service_filenames', self._service_key, { hash } )
                 
                 if len( result ) == 0:
                     
@@ -1657,7 +1655,7 @@ class ServiceIPFS( ServiceRemote ):
             
             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+            HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
             
             job_key.SetVariable( 'popup_text_1', 'done!' )
             job_key.DeleteVariable( 'popup_gauge_1' )
@@ -1695,7 +1693,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'add'
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         path = client_files_manager.GetFilePath( hash, mime )
         
@@ -1711,7 +1709,7 @@ class ServiceIPFS( ServiceRemote ):
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
         
-        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
         
         return multihash
         
@@ -1729,7 +1727,7 @@ class ServiceIPFS( ServiceRemote ):
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
         
-        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
         
     
     def UnpinFile( self, hash, multihash ):
@@ -1755,6 +1753,6 @@ class ServiceIPFS( ServiceRemote ):
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
         
-        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
         
     

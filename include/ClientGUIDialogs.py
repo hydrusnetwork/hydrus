@@ -43,7 +43,7 @@ import wx.lib.agw.customtreectrl
 import yaml
 import HydrusData
 import ClientSearch
-import HydrusGlobals
+import HydrusGlobals as HG
 
 # Option Enums
 
@@ -61,7 +61,7 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
     
     if service_keys is None:
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( service_types )
+        services = HG.client_controller.GetServicesManager().GetServices( service_types )
         
         service_keys = [ service.GetServiceKey() for service in services ]
         
@@ -83,11 +83,11 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
     else:
         
-        services = { HydrusGlobals.client_controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
+        services = { HG.client_controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
         
         list_of_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        with DialogSelectFromList( HydrusGlobals.client_controller.GetGUI(), 'select service', list_of_tuples ) as dlg:
+        with DialogSelectFromList( HG.client_controller.GetGUI(), 'select service', list_of_tuples ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
@@ -133,7 +133,7 @@ class Dialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -146,7 +146,7 @@ class Dialog( wx.Dialog ):
             wx.CallAfter( self.Center )
             
         
-        HydrusGlobals.client_controller.ResetIdleTimer()
+        HG.client_controller.ResetIdleTimer()
         
     
     def EventDialogButton( self, event ): self.EndModal( event.GetId() )
@@ -372,7 +372,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._num.SetValue( 1 )
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -439,7 +439,7 @@ class DialogGenerateNewAccounts( Dialog ):
             expires = HydrusData.GetNow() + lifetime
             
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
+        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
         
         try:
             
@@ -484,7 +484,7 @@ class DialogInputImportTagOptions( Dialog ):
         
         if import_tag_options is None:
             
-            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            new_options = HG.client_controller.GetNewOptions()
             
             import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
             
@@ -546,7 +546,7 @@ class DialogInputFileSystemPredicates( Dialog ):
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
-            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.GetServicesManager()
             
             ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
@@ -740,7 +740,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HG.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
         
@@ -753,12 +753,12 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', url )
+        HG.client_controller.pub( 'clipboard', 'text', url )
         
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HG.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         internal_ip = '127.0.0.1'
         
@@ -766,7 +766,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + self._share_key.encode( 'hex' )
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', url )
+        HG.client_controller.pub( 'clipboard', 'text', url )
         
     
     def GetInfo( self ):
@@ -920,7 +920,7 @@ class DialogInputLocalFiles( Dialog ):
                 
                 self._job_key = ClientThreading.JobKey()
                 
-                HydrusGlobals.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
+                HG.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
                 
             
         
@@ -1001,7 +1001,7 @@ class DialogInputLocalFiles( Dialog ):
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HydrusGlobals.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
             
         
         self.EndModal( wx.ID_OK )
@@ -1021,7 +1021,7 @@ class DialogInputLocalFiles( Dialog ):
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
-                    HydrusGlobals.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
                     
                     self.EndModal( wx.ID_OK )
                     
@@ -1417,7 +1417,7 @@ class DialogInputTags( Dialog ):
 
     def EnterTags( self, tags ):
         
-        tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+        tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
         
         parents = set()
         
@@ -1568,7 +1568,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        self._service = HG.client_controller.GetServicesManager().GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         #
@@ -1790,7 +1790,7 @@ class DialogPageChooser( Dialog ):
         
         self.SetInitialSize( ( 420, 210 ) )
         
-        self._services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
+        self._services = HG.client_controller.GetServicesManager().GetServices()
         
         repository_petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
         
@@ -1824,7 +1824,7 @@ class DialogPageChooser( Dialog ):
             
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = HydrusGlobals.client_controller.GetServicesManager().GetService( obj ).GetName()
+            name = HG.client_controller.GetServicesManager().GetService( obj ).GetName()
             
             button.SetLabelText( name )
             
@@ -1870,37 +1870,37 @@ class DialogPageChooser( Dialog ):
                 
                 if entry_type == 'page_query': 
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_query', obj )
+                    HG.client_controller.pub( 'new_page_query', obj )
                     
                 elif entry_type == 'page_duplicate_filter':
                     
-                    HydrusGlobals.client_controller.pub( 'new_duplicate_filter' )
+                    HG.client_controller.pub( 'new_duplicate_filter' )
                     
                 elif entry_type == 'page_import_booru':
                     
-                    HydrusGlobals.client_controller.pub( 'new_import_booru' )
+                    HG.client_controller.pub( 'new_import_booru' )
                     
                 elif entry_type == 'page_import_gallery':
                     
                     site_type = obj
                     
-                    HydrusGlobals.client_controller.pub( 'new_import_gallery', site_type )
+                    HG.client_controller.pub( 'new_import_gallery', site_type )
                     
                 elif entry_type == 'page_import_page_of_images':
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_import_page_of_images' )
+                    HG.client_controller.pub( 'new_page_import_page_of_images' )
                     
                 elif entry_type == 'page_import_thread_watcher':
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_import_thread_watcher' )
+                    HG.client_controller.pub( 'new_page_import_thread_watcher' )
                     
                 elif entry_type == 'page_import_urls':
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_import_urls' )
+                    HG.client_controller.pub( 'new_page_import_urls' )
                     
                 elif entry_type == 'page_petitions':
                     
-                    HydrusGlobals.client_controller.pub( 'new_page_petitions', obj )
+                    HG.client_controller.pub( 'new_page_petitions', obj )
                     
                 
                 self.EndModal( wx.ID_OK )
@@ -1956,7 +1956,7 @@ class DialogPageChooser( Dialog ):
             entries.append( ( 'menu', 'hentai foundry' ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
-            result = HydrusGlobals.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
+            result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
                 
@@ -2081,7 +2081,7 @@ class DialogPathsToTags( Dialog ):
         
         #
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -2197,8 +2197,8 @@ class DialogPathsToTags( Dialog ):
             
             tags = HydrusTags.CleanTags( tags )
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-            parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            parents_manager = HG.client_controller.GetManager( 'tag_parents' )
             
             tags = siblings_manager.CollapseTags( self._service_key, tags )
             tags = parents_manager.ExpandTags( self._service_key, tags )
@@ -2641,7 +2641,7 @@ class DialogPathsToTags( Dialog ):
             
             def EnterTags( self, tags ):
                 
-                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
                 
                 parents = set()
                 
@@ -2663,7 +2663,7 @@ class DialogPathsToTags( Dialog ):
             
             def EnterTagsSingle( self, tags ):
                 
-                tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
                 
                 parents = set()
                 
@@ -2728,6 +2728,12 @@ class DialogPathsToTags( Dialog ):
                                 
                                 raise Exception()
                                 
+                            
+                            txt_tags = HydrusTags.CleanTags( txt_tags )
+                            
+                            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+                            
+                            txt_tags = siblings_manager.CollapseTags( self._service_key, txt_tags )
                             
                             tags.extend( txt_tags )
                             
@@ -2817,6 +2823,8 @@ class DialogPathsToTags( Dialog ):
                     tags.append( tag )
                     
                 
+                tags = HydrusTags.CleanTags( tags )
+                
                 return tags
                 
             
@@ -2882,7 +2890,7 @@ class DialogSelectBooru( Dialog ):
         
         #
         
-        boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+        boorus = HG.client_controller.Read( 'remote_boorus' )
         
         booru_names = boorus.keys()
         
@@ -3070,7 +3078,7 @@ class DialogSelectImageboard( Dialog ):
         
         #
         
-        all_imageboards = HydrusGlobals.client_controller.Read( 'imageboards' )
+        all_imageboards = HG.client_controller.Read( 'imageboards' )
         
         root_item = self._tree.AddRoot( 'all sites' )
         
@@ -3300,9 +3308,9 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
-                HydrusGlobals.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+                HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
                 
-                HydrusGlobals.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_key )
                 
             
         
@@ -3373,7 +3381,7 @@ class DialogSetupExport( Dialog ):
         
         self._directory_picker.SetPath( export_path )
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         phrase = new_options.GetString( 'export_phrase' )
         
@@ -3491,13 +3499,13 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         new_options.SetString( 'export_phrase', pattern )
         
         terms = ClientExporting.ParseExportPhrase( pattern )
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         self._export.Disable()
         
@@ -3562,14 +3570,14 @@ class DialogSetupExport( Dialog ):
             wx.CallAfter( self._export.Enable )
             
         
-        HydrusGlobals.client_controller.CallToThread( do_it )
+        HG.client_controller.CallToThread( do_it )
         
     
     def EventExportTagTxtsChanged( self, event ):
         
         if self._export_tag_txts.GetValue() == True:
             
-            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.GetServicesManager()
             
             tag_services = services_manager.GetServices( HC.TAG_SERVICES )
             
@@ -3618,7 +3626,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         new_options.SetString( 'export_phrase', pattern )
         

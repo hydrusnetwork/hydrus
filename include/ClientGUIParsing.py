@@ -12,7 +12,7 @@ import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import os
@@ -558,7 +558,7 @@ class EditNodes( wx.Panel ):
             
             json = export_object.DumpToString()
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', json )
+            HG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -1596,7 +1596,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for script_type in self.SCRIPT_TYPES:
             
-            scripts.extend( HydrusGlobals.client_controller.Read( 'serialisable_named', script_type ) )
+            scripts.extend( HG.client_controller.Read( 'serialisable_named', script_type ) )
             
         
         for script in scripts:
@@ -1728,7 +1728,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         scripts = self._scripts.GetObjects()
         
-        HydrusGlobals.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
+        HG.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
         
     
     def Delete( self ):
@@ -1805,7 +1805,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             json = export_object.DumpToString()
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', json )
+            HG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -2068,7 +2068,7 @@ class ScriptManagementControl( wx.Panel ):
             ClientGUIMenus.AppendMenuItem( self, menu, url, 'launch this url in your browser', webbrowser.open, url )
             
         
-        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        HG.client_controller.PopupMenu( self, menu )
         
         
     

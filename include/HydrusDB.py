@@ -4,7 +4,7 @@ import distutils.version
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPaths
 import os
 import psutil
@@ -454,7 +454,7 @@ class HydrusDB( object ):
                     
                     def create_no_wal_file():
                         
-                        HydrusGlobals.controller.CreateNoWALFile()
+                        HG.controller.CreateNoWALFile()
                         
                         self._no_wal = True
                         
@@ -716,7 +716,7 @@ class HydrusDB( object ):
                 
                 try:
                     
-                    if HydrusGlobals.db_profile_mode:
+                    if HG.db_profile_mode:
                         
                         summary = 'Profiling ' + job.ToString()
                         

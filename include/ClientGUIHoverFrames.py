@@ -9,7 +9,7 @@ import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import urlparse
 import os
@@ -46,7 +46,7 @@ class FullscreenHoverFrame( wx.Frame ):
         
         self._hide_until =  None
         
-        HydrusGlobals.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -110,7 +110,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
                 in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
                 
-                menu_open = HydrusGlobals.client_controller.MenuIsOpen()
+                menu_open = HG.client_controller.MenuIsOpen()
                 
                 dialog_open = False
                 
@@ -192,9 +192,9 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.client_controller.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
-        HydrusGlobals.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'SetCurrentZoom', 'canvas_new_zoom' )
+        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
@@ -203,12 +203,14 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         if self._current_media.HasInbox():
             
-            HydrusGlobals.client_controller.pub( 'canvas_archive', self._canvas_key )
+            command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' )
             
         else:
             
-            HydrusGlobals.client_controller.pub( 'canvas_inbox', self._canvas_key )
+            command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' )
             
+        
+        HG.client_controller.pub( 'canvas_application_command', self._canvas_key, command )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -245,13 +247,13 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.archive, self._Archive )
         
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.delete, HydrusGlobals.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.SetToolTipString( 'send to trash' )
         
-        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.trash_delete, HydrusGlobals.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.trash_delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._delete_button.SetToolTipString( 'delete completely' )
         
-        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.undelete, HydrusGlobals.client_controller.pub, 'canvas_undelete', self._canvas_key )
+        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
         self._undelete_button.SetToolTipString( 'undelete' )
         
         self._top_hbox.AddF( self._archive_button, CC.FLAGS_VCENTER )
@@ -262,12 +264,12 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _PopulateLeftButtons( self ):
         
-        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HydrusGlobals.client_controller.pub, 'canvas_show_previous', self._canvas_key )
+        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
         self._previous_button.SetToolTipString( 'previous' )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HydrusGlobals.client_controller.pub, 'canvas_show_next', self._canvas_key )
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
         self._next_button.SetToolTipString( 'next' )
         
         self._top_hbox.AddF( self._previous_button, CC.FLAGS_VCENTER )
@@ -279,31 +281,31 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         self._zoom_text = ClientGUICommon.BetterStaticText( self, 'zoom' )
         
-        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HydrusGlobals.client_controller.pub, 'canvas_zoom_in', self._canvas_key )
+        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
         zoom_in.SetToolTipString( 'zoom in' )
         
-        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_out, HydrusGlobals.client_controller.pub, 'canvas_zoom_out', self._canvas_key )
+        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_out, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
         zoom_out.SetToolTipString( 'zoom out' )
         
-        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HydrusGlobals.client_controller.pub, 'canvas_zoom_switch', self._canvas_key )
+        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ) )
         zoom_switch.SetToolTipString( 'zoom switch' )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', self._ManageShortcuts ) )
-        menu_items.append( ( 'normal', 'set current shortcuts', 'change which custom shortcuts are active on this media viewers', HydrusData.Call( HydrusGlobals.client_controller.pub, 'edit_media_viewer_custom_shortcuts', self._canvas_key ) ) )
+        menu_items.append( ( 'normal', 'set current shortcuts', 'change which custom shortcuts are active on this media viewers', HydrusData.Call( HG.client_controller.pub, 'edit_media_viewer_custom_shortcuts', self._canvas_key ) ) )
         menu_items.append( ( 'normal', 'set default shortcuts', 'change which custom shortcuts are typically active on new media viewers', self._SetDefaultShortcuts ) )
         
         shortcuts = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.keyboard, menu_items )
         shortcuts.SetToolTipString( 'shortcuts' )
         
-        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HydrusGlobals.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
+        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.SetToolTipString( 'fullscreen switch' )
         
-        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HydrusGlobals.client_controller.pub, 'canvas_open_externally', self._canvas_key )
+        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ) )
         open_externally.SetToolTipString( 'open externally' )
         
-        close = ClientGUICommon.BetterButton( self, 'X', HydrusGlobals.client_controller.pub, 'canvas_close', self._canvas_key )
+        close = ClientGUICommon.BetterButton( self, 'X', HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.SetToolTipString( 'close' )
         
         self._top_hbox.AddF( self._zoom_text, CC.FLAGS_VCENTER )
@@ -388,11 +390,11 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _SetDefaultShortcuts( self ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         default_media_viewer_custom_shortcuts = new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
         
-        all_shortcut_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in CC.SHORTCUTS_RESERVED_NAMES ]
         
@@ -496,6 +498,27 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
         
     
+class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
+    
+    def _Archive( self ):
+        
+        HG.client_controller.pub( 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ) )
+        
+    
+    def _PopulateLeftButtons( self ):
+        
+        FullscreenHoverFrameTop._PopulateLeftButtons( self )
+        
+        self._previous_button.SetToolTipString( 'back' )
+        self._next_button.SetToolTipString( 'skip' )
+        
+    
+    def _ResetArchiveButton( self ):
+        
+        self._archive_button.SetBitmapLabel( CC.GlobalBMPs.archive )
+        self._archive_button.SetToolTipString( 'archive' )
+        
+    
 class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
     def _PopulateCenterButtons( self ):
@@ -516,7 +539,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
     def _EditMergeOptions( self, duplicate_status ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_status )
         
@@ -539,51 +562,30 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HydrusGlobals.client_controller.pub, 'canvas_show_new_pair', self._canvas_key )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
         self._last_button.SetToolTipString( 'show a different pair' )
         
         self._top_hbox.AddF( self._last_button, CC.FLAGS_VCENTER )
-        
-    
-class FullscreenHoverFrameTopInboxFilter( FullscreenHoverFrameTop ):
-    
-    def _Archive( self ):
-        
-        HydrusGlobals.client_controller.pub( 'canvas_archive', self._canvas_key )
-        
-    
-    def _PopulateLeftButtons( self ):
-        
-        FullscreenHoverFrameTop._PopulateLeftButtons( self )
-        
-        self._previous_button.SetToolTipString( 'back' )
-        self._next_button.SetToolTipString( 'skip' )
-        
-    
-    def _ResetArchiveButton( self ):
-        
-        self._archive_button.SetBitmapLabel( CC.GlobalBMPs.archive )
-        self._archive_button.SetToolTipString( 'archive' )
         
     
 class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
-        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HydrusGlobals.client_controller.pub, 'canvas_show_first', self._canvas_key )
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
         self._first_button.SetToolTipString( 'first' )
         
         self._top_hbox.AddF( self._first_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HydrusGlobals.client_controller.pub, 'canvas_show_last', self._canvas_key )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
         self._last_button.SetToolTipString( 'last' )
         
         self._top_hbox.AddF( self._last_button, CC.FLAGS_VCENTER )
         
     
-class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
+class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
     
     def __init__( self, parent, canvas_key ):
         
@@ -619,7 +621,7 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        like_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         for service in like_services:
             
@@ -632,12 +634,9 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
         
         # each numerical one in turn
         
-        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        numerical_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         for service in numerical_services:
             
@@ -653,11 +652,15 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
             vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
+        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
         self.SetSizer( vbox )
         
         self._ResetData()
         
-        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         
@@ -781,12 +784,9 @@ class FullscreenHoverFrameRatings( FullscreenHoverFrame ):
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
-                    if True in ( content_update.IsInboxRelated() for content_update in content_updates ):
-                        
-                        do_redraw = True
-                        
-                        break
-                        
+                    do_redraw = True
+                    
+                    break
                     
                 
             
@@ -821,7 +821,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         
         self.SetSizer( vbox )
         
-        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
     
     def _GetIdealSizeAndPosition( self ):

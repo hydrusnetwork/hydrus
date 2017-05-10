@@ -1,5 +1,5 @@
 import HydrusConstants as HC
-import HydrusGlobals
+import HydrusGlobals as HG
 import wx
 
 LIKE = 0
@@ -188,7 +188,7 @@ def GetNumericalStateFromMedia( media, service_key ):
     
 def GetNumericalWidth( service_key ):
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+    service = HG.client_controller.GetServicesManager().GetService( service_key )
     
     num_stars = service.GetNumStars()
     
@@ -196,7 +196,7 @@ def GetNumericalWidth( service_key ):
     
 def GetPenAndBrushColours( service_key, rating_state ):
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+    service = HG.client_controller.GetServicesManager().GetService( service_key )
     
     colour = service.GetColour( rating_state )
     
@@ -209,7 +209,7 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
 def GetShape( service_key ):
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+    service = HG.client_controller.GetServicesManager().GetService( service_key )
     
     shape = service.GetShape()
     
@@ -217,7 +217,7 @@ def GetShape( service_key ):
     
 def GetStars( service_key, rating_state, rating ):
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+    service = HG.client_controller.GetServicesManager().GetService( service_key )
     
     allow_zero = service.AllowZero()
     

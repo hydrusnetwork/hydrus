@@ -23,7 +23,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusNetworking
 import HydrusPaths
@@ -40,7 +40,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, service_key ):
         
-        self._admin_service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        self._admin_service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
@@ -259,7 +259,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_services = HydrusGlobals.client_controller.GetServicesManager().GetServices()
+        all_services = HG.client_controller.GetServicesManager().GetServices()
         
         for service in all_services:
             
@@ -385,7 +385,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         services = self._listctrl.GetObjects()
         
-        HydrusGlobals.client_controller.SetServices( services )
+        HG.client_controller.SetServices( services )
         
     
     class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -674,7 +674,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    result = HydrusGlobals.client_controller.DoHTTP( HC.GET, url, hydrus_network = True )
+                    result = HG.client_controller.DoHTTP( HC.GET, url, hydrus_network = True )
                     
                     wx.MessageBox( 'Got an ok response!' )
                     
@@ -825,7 +825,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._register.Disable()
                 self._register.SetLabel( u'fetching\u2026' )
                 
-                HydrusGlobals.client_controller.CallToThread( do_it, service, registration_key )
+                HG.client_controller.CallToThread( do_it, service, registration_key )
                 
             
             def _TestCredentials( self ):
@@ -910,7 +910,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     dictionary_part[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( account )
                     
-                    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
+                    session_manager = HG.client_controller.GetClientSessionManager()
                     
                     session_manager.DeleteSessionKey( self._service_key )
                     
@@ -1217,7 +1217,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         self._listbook = ClientGUICommon.ListBook( self )
         
@@ -1268,7 +1268,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.GetNewOptions()
             
             ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
             
@@ -1356,7 +1356,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _GenerateCurrentLocationsString( self ):
             
-            prefixes_to_locations = HydrusGlobals.client_controller.Read( 'client_files_locations' )
+            prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
             
             locations_to_file_weights = collections.Counter()
             locations_to_fs_thumb_weights = collections.Counter()
@@ -1879,7 +1879,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.GetNewOptions()
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
@@ -2191,7 +2191,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU ) )
             
-            boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+            boorus = HG.client_controller.Read( 'remote_boorus' )
             
             for booru_name in boorus.keys():
                 
@@ -2382,11 +2382,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.GetNewOptions()
             
             self._main_gui_title.SetValue( self._new_options.GetString( 'main_gui_title' ) )
             
-            gui_session_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
             if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
             
@@ -2519,7 +2519,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetString( 'main_gui_title', title )
             
-            HydrusGlobals.client_controller.pub( 'main_gui_title', title )
+            HG.client_controller.pub( 'main_gui_title', title )
             
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
@@ -2542,7 +2542,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.GetNewOptions()
             
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
@@ -3209,7 +3209,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_services.Append( CC.LOCAL_TAG_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
-            tag_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for tag_service in tag_services:
                 
@@ -3244,7 +3244,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._favourite_file_lookup_script = ClientGUICommon.BetterChoice( suggested_tags_file_lookup_script_panel )
             
-            script_names = HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+            script_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
             for name in script_names:
                 
@@ -3270,7 +3270,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.Append( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
+            services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
             
             for service in services:
                 
@@ -3504,9 +3504,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'save_options', HC.options )
+            HG.client_controller.WriteSynchronous( 'save_options', HC.options )
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self._new_options )
+            HG.client_controller.WriteSynchronous( 'serialisable', self._new_options )
             
         except:
             
@@ -3518,7 +3518,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, service_key ):
         
-        self._clientside_admin_service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        self._clientside_admin_service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
@@ -3721,11 +3721,11 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         admin_service_key = self._clientside_admin_service.GetServiceKey()
         
-        with HydrusGlobals.dirty_object_lock:
+        with HG.dirty_object_lock:
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'update_server_services', admin_service_key, services, service_keys_to_access_keys, self._deletee_service_keys )
+            HG.client_controller.WriteSynchronous( 'update_server_services', admin_service_key, services, service_keys_to_access_keys, self._deletee_service_keys )
             
-            HydrusGlobals.client_controller.RefreshServices()
+            HG.client_controller.RefreshServices()
             
         
     
@@ -3758,7 +3758,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in CC.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in CC.SHORTCUTS_RESERVED_NAMES ]
@@ -3934,7 +3934,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for shortcuts in self._reserved_shortcuts.GetObjects():
             
-            HydrusGlobals.client_controller.Write( 'serialisable', shortcuts )
+            HG.client_controller.Write( 'serialisable', shortcuts )
             
         
         good_names = set()
@@ -3943,17 +3943,17 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             good_names.add( shortcuts.GetName() )
             
-            HydrusGlobals.client_controller.Write( 'serialisable', shortcuts )
+            HG.client_controller.Write( 'serialisable', shortcuts )
             
         
         deletees = self._original_custom_names.difference( good_names )
         
         for name in deletees:
             
-            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
+            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, name )
             
         
-        HydrusGlobals.client_controller.pub( 'new_shortcuts' )
+        HG.client_controller.pub( 'new_shortcuts' )
         
     
     class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -4201,7 +4201,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+                services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
                 
                 for service in services:
                     
@@ -4235,7 +4235,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     ( service_key, content_type, action, value ) = data
                     
-                    self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                    self._service = HG.client_controller.GetServicesManager().GetService( service_key )
                     
                     service_name = self._service.GetName()
                     service_type = self._service.GetServiceType()
@@ -4518,7 +4518,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         service_key = self._ratings_like_service_keys.GetClientData( selection )
                         
-                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                        service = HG.client_controller.GetServicesManager().GetService( service_key )
                         
                         self._current_ratings_like_service = service
                         
@@ -4532,7 +4532,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                         
-                        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                        service = HG.client_controller.GetServicesManager().GetService( service_key )
                         
                         self._current_ratings_numerical_service = service
                         
@@ -4624,7 +4624,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        subscriptions = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
         #
         
@@ -4842,9 +4842,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         subscriptions = self._subscriptions.GetObjects()
         
-        HydrusGlobals.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
+        HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
         
-        HydrusGlobals.client_controller.pub( 'notify_new_subscriptions' )
+        HG.client_controller.pub( 'notify_new_subscriptions' )
         
     
     def Delete( self ):
@@ -4925,7 +4925,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             json = export_object.DumpToString()
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', json )
+            HG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -5076,7 +5076,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
         
-        self._media_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'media' )
+        self._media_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'media' )
         
         media = ClientMedia.FlattenMedia( media )
         
@@ -5094,7 +5094,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
+        services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
         
         for service in services:
             
@@ -5123,7 +5123,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if self._canvas_key is not None:
             
-            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
     
@@ -5218,7 +5218,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if len( service_keys_to_content_updates ) > 0:
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
         
     
@@ -5259,14 +5259,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if self._canvas_key is not None:
                     
-                    HydrusGlobals.client_controller.pub( 'canvas_show_next', self._canvas_key )
+                    HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
                     
                 
             elif command == 'canvas_show_previous':
                 
                 if self._canvas_key is not None:
                     
-                    HydrusGlobals.client_controller.pub( 'canvas_show_previous', self._canvas_key )
+                    HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
                     
                 
             else:
@@ -5303,7 +5303,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if not self._i_am_local_tag_service:
                 
-                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
+                self._service = HG.client_controller.GetServicesManager().GetService( tag_service_key )
                 
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )
@@ -5312,7 +5312,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
-            self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.GetNewOptions()
             
             self._add_parents_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-add entered tags\' parents' )
             self._add_parents_checkbox.SetValue( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
@@ -5403,6 +5403,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self.SetSizer( hbox )
+            
+            if self._immediate_commit:
+                
+                HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+                
             
         
         def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
@@ -5638,7 +5643,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if self._add_parents_checkbox.GetValue():
                             
-                            tag_parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+                            tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
                             
                             parents = tag_parents_manager.GetParents( self._tag_service_key, tag )
                             
@@ -5648,27 +5653,26 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            if len( recent_tags ) > 0 and HydrusGlobals.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
+            if len( recent_tags ) > 0 and HG.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
                 
-                HydrusGlobals.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
-                
-            
-            
-            for m in self._media:
-                
-                for content_update in content_updates:
-                    
-                    m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
-                    
+                HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 
             
             if self._immediate_commit:
                 
                 service_keys_to_content_updates = { self._tag_service_key : content_updates }
                 
-                HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                 
             else:
+                
+                for m in self._media:
+                    
+                    for content_update in content_updates:
+                        
+                        m.GetMediaResult().ProcessContentUpdate( self._tag_service_key, content_update )
+                        
+                    
                 
                 self._content_updates.extend( content_updates )
                 
@@ -5688,7 +5692,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._collapse_siblings_checkbox.GetValue():
                 
-                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
                 
                 tags = siblings_manager.CollapseTags( self._tag_service_key, tags )
                 
@@ -5746,7 +5750,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             text = os.linesep.join( tags )
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            HG.client_controller.pub( 'clipboard', 'text', text )
             
         
         def EventModify( self, event ):
@@ -5829,6 +5833,25 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def Ok( self ):
             
             wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+            
+        
+        def ProcessContentUpdates( self, service_keys_to_content_updates ):
+            
+            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                
+                for content_update in content_updates:
+                    
+                    for m in self._media:
+                        
+                        if len( m.GetHashes().intersection( content_update.GetHashes() ) ) > 0:
+                            
+                            m.GetMediaResult().ProcessContentUpdate( service_key, content_update )
+                            
+                        
+                    
+                
+            
+            self._tags_box.SetTagsByMedia( self._media, force_reload = True )
             
         
         def RemoveTags( self, tags ):
@@ -5964,5 +5987,5 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        HydrusGlobals.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
         

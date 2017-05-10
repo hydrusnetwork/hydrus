@@ -8,7 +8,7 @@ import ClientTags
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNATPunch
 import os
 import traceback
@@ -34,7 +34,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._service_key = service_key
         self._hashes = hashes
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._service_key )
+        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
         
         self._service_name = service.GetName()
         
@@ -57,7 +57,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        services = [ service for service in HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
+        services = [ service for service in HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
         
         if len( services ) > 0:
             
@@ -255,7 +255,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         service_keys_to_content_updates = { self._service_key : [ content_update ] }
         
-        HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
         
     
     def ImportFromHTA( self ):

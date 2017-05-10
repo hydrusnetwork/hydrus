@@ -1,6 +1,6 @@
 import ClientConstants as CC
 import collections
-import HydrusGlobals
+import HydrusGlobals as HG
 import wx
 
 menus_to_submenus = collections.defaultdict( set )
@@ -87,7 +87,7 @@ def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
 def DestroyMenuItems( menu ):
     
-    handler = HydrusGlobals.client_controller.GetApp()
+    handler = HG.client_controller.GetApp()
     
     menu_item_data = menus_to_menu_item_data[ menu ]
     

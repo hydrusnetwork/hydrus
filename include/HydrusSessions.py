@@ -14,7 +14,7 @@ import traceback
 import urllib
 from twisted.internet.threads import deferToThread
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 
 HYDRUS_SESSION_LIFETIME = 30 * 86400
 
@@ -26,21 +26,21 @@ class HydrusSessionManagerServer( object ):
         
         self.RefreshAllAccounts()
         
-        HydrusGlobals.controller.sub( self, 'RefreshAccounts', 'update_session_accounts' )
-        HydrusGlobals.controller.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
+        HG.controller.sub( self, 'RefreshAccounts', 'update_session_accounts' )
+        HG.controller.sub( self, 'RefreshAllAccounts', 'update_all_session_accounts' )
         
     
     def AddSession( self, service_key, access_key ):
         
         with self._lock:
             
-            account_key = HydrusGlobals.controller.Read( 'account_key_from_access_key', service_key, access_key )
+            account_key = HG.controller.Read( 'account_key_from_access_key', service_key, access_key )
             
             account_keys_to_accounts = self._service_keys_to_account_keys_to_accounts[ service_key ]
             
             if account_key not in account_keys_to_accounts:
                 
-                account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
+                account = HG.controller.Read( 'account', service_key, account_key )
                 
                 account_keys_to_accounts[ account_key ] = account
                 
@@ -51,7 +51,7 @@ class HydrusSessionManagerServer( object ):
             
             expires = now + HYDRUS_SESSION_LIFETIME
             
-            HydrusGlobals.controller.Write( 'session', session_key, service_key, account_key, expires )
+            HG.controller.Write( 'session', session_key, service_key, account_key, expires )
             
             self._service_keys_to_session_keys_to_sessions[ service_key ][ session_key ] = ( account_key, expires )
             
@@ -118,7 +118,7 @@ class HydrusSessionManagerServer( object ):
             
             for account_key in account_keys:
                 
-                account = HydrusGlobals.controller.Read( 'account', service_key, account_key )
+                account = HG.controller.Read( 'account', service_key, account_key )
                 
                 account_keys_to_accounts[ account_key ] = account
                 
@@ -135,7 +135,7 @@ class HydrusSessionManagerServer( object ):
                 
                 self._service_keys_to_account_keys_to_accounts = collections.defaultdict( dict )
                 
-                existing_sessions = HydrusGlobals.controller.Read( 'sessions' )
+                existing_sessions = HG.controller.Read( 'sessions' )
                 
             else:
                 
@@ -143,7 +143,7 @@ class HydrusSessionManagerServer( object ):
                 
                 del self._service_keys_to_account_keys_to_accounts[ service_key ]
                 
-                existing_sessions = HydrusGlobals.controller.Read( 'sessions', service_key )
+                existing_sessions = HG.controller.Read( 'sessions', service_key )
                 
             
             for ( session_key, service_key, account, expires ) in existing_sessions:

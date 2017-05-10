@@ -7,13 +7,13 @@ import os
 import TestConstants
 import unittest
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class TestSessions( unittest.TestCase ):
     
     def test_server( self ):
         
-        discard = HydrusGlobals.test_controller.GetWrite( 'session' ) # just to discard gumph from testserver
+        discard = HG.test_controller.GetWrite( 'session' ) # just to discard gumph from testserver
         
         session_key_1 = HydrusData.GenerateKey()
         service_key = HydrusData.GenerateKey()
@@ -32,7 +32,7 @@ class TestSessions( unittest.TestCase ):
         
         expires = HydrusData.GetNow() - 10
         
-        HydrusGlobals.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
+        HG.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -45,7 +45,7 @@ class TestSessions( unittest.TestCase ):
         
         expires = HydrusData.GetNow() + 300
         
-        HydrusGlobals.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
+        HG.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, account, expires ) ] )
         
         session_manager = HydrusSessions.HydrusSessionManagerServer()
         
@@ -61,12 +61,12 @@ class TestSessions( unittest.TestCase ):
         
         account_2 = HydrusData.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
         
-        HydrusGlobals.test_controller.SetRead( 'account_key_from_access_key', account_key_2 )
-        HydrusGlobals.test_controller.SetRead( 'account', account_2 )
+        HG.test_controller.SetRead( 'account_key_from_access_key', account_key_2 )
+        HG.test_controller.SetRead( 'account', account_2 )
         
         ( session_key_2, expires_2 ) = session_manager.AddSession( service_key, access_key )
         
-        [ ( args, kwargs ) ] = HydrusGlobals.test_controller.GetWrite( 'session' )
+        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'session' )
         
         ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
@@ -78,12 +78,12 @@ class TestSessions( unittest.TestCase ):
         
         # test adding a new session for an account already in the manager
         
-        HydrusGlobals.test_controller.SetRead( 'account_key_from_access_key', account_key )
-        HydrusGlobals.test_controller.SetRead( 'account', account )
+        HG.test_controller.SetRead( 'account_key_from_access_key', account_key )
+        HG.test_controller.SetRead( 'account', account )
         
         ( session_key_3, expires_3 ) = session_manager.AddSession( service_key, access_key )
         
-        [ ( args, kwargs ) ] = HydrusGlobals.test_controller.GetWrite( 'session' )
+        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'session' )
         
         ( written_session_key, written_service_key, written_account_key, written_expires ) = args
         
@@ -103,7 +103,7 @@ class TestSessions( unittest.TestCase ):
         
         updated_account = HydrusData.Account( account_key, account_type, created, expires, 1, 1 )
         
-        HydrusGlobals.test_controller.SetRead( 'account', updated_account )
+        HG.test_controller.SetRead( 'account', updated_account )
         
         session_manager.RefreshAccounts( service_key, [ account_key ] )
         
@@ -121,7 +121,7 @@ class TestSessions( unittest.TestCase ):
         
         updated_account_2 = HydrusData.Account( account_key, account_type, created, expires, 2, 2 )
         
-        HydrusGlobals.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
+        HG.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
         
         session_manager.RefreshAllAccounts()
         

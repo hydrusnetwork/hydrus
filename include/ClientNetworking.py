@@ -18,7 +18,7 @@ import urlparse
 import yaml
 import HydrusData
 import itertools
-import HydrusGlobals
+import HydrusGlobals as HG
 
 requests.packages.urllib3.disable_warnings( InsecureRequestWarning )
 
@@ -37,7 +37,7 @@ def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
 def AddHydrusSessionKeyToHeaders( service_key, request_headers ):
     
-    session_manager = HydrusGlobals.client_controller.GetClientSessionManager()
+    session_manager = HG.client_controller.GetClientSessionManager()
     
     session_key = session_manager.GetSessionKey( service_key )
     
@@ -374,7 +374,7 @@ class HTTPConnectionManager( object ):
         
         while True:
             
-            if HydrusGlobals.model_shutdown:
+            if HG.model_shutdown:
                 
                 break
                 
@@ -462,10 +462,19 @@ class HTTPConnection( object ):
                     
                     # assume it is like 'index.php' or '/index.php', rather than 'http://blah.com/index.php'
                     
-                    if url.startswith( '/' ): slash_sep = ''
-                    else: slash_sep = '/'
-                    
-                    url = self._scheme + '://' + self._host + slash_sep + url
+                    if url.startswith( '//' ):
+                        
+                        url = self._scheme + ':' + url
+                        
+                    else:
+                        
+                        if not url.startswith( '/' ):
+                            
+                            url = '/' + url
+                            
+                        
+                        url = self._scheme + '://' + self._host + url
+                        
                     
                 
                 if response.status in ( 301, 307 ):
@@ -773,7 +782,7 @@ class HTTPConnection( object ):
         
         for block in HydrusPaths.ReadFileLikeAsBlocks( response ):
             
-            if HydrusGlobals.model_shutdown:
+            if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
@@ -837,10 +846,13 @@ class HTTPConnection( object ):
     
     def _RefreshConnection( self ):
         
-        if self._scheme == 'http': self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
+        if self._scheme == 'http':
+            
+            self._connection = httplib.HTTPConnection( self._host, self._port, timeout = self._timeout )
+            
         elif self._scheme == 'https':
             
-            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            new_options = HG.client_controller.GetNewOptions()
             
             if self._hydrus_network or not new_options.GetBoolean( 'verify_regular_https' ):
                 
@@ -854,7 +866,9 @@ class HTTPConnection( object ):
                 
             else:
                 
-                self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout )
+                context = ssl._create_default_https_context( cafile = requests.certs.where() )
+                
+                self._connection = httplib.HTTPSConnection( self._host, self._port, timeout = self._timeout, context = context )
                 
             
         
@@ -884,7 +898,7 @@ class HTTPConnection( object ):
             
             for block in HydrusPaths.ReadFileLikeAsBlocks( response ):
                 
-                if HydrusGlobals.model_shutdown:
+                if HG.model_shutdown:
                     
                     raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                     

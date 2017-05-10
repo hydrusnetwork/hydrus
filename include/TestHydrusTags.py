@@ -10,7 +10,7 @@ import ClientConstants as CC
 import ClientData
 import ClientMedia
 import ClientSearch
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class TestMergeTagsManagers( unittest.TestCase ):
     
@@ -565,9 +565,9 @@ class TestTagParents( unittest.TestCase ):
         tag_parents[ cls._second_key ] = second_dict
         tag_parents[ cls._third_key ] = third_dict
         
-        HydrusGlobals.test_controller.SetRead( 'tag_parents', tag_parents )
+        HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        cls._tag_parents_manager = ClientCaches.TagParentsManager( HydrusGlobals.client_controller )
+        cls._tag_parents_manager = ClientCaches.TagParentsManager( HG.client_controller )
         
     
     def test_expand_predicates( self ):
@@ -703,9 +703,9 @@ class TestTagSiblings( unittest.TestCase ):
         tag_siblings[ cls._first_key ] = first_dict
         tag_siblings[ cls._second_key ] = second_dict
         
-        HydrusGlobals.test_controller.SetRead( 'tag_siblings', tag_siblings )
+        HG.test_controller.SetRead( 'tag_siblings', tag_siblings )
         
-        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HydrusGlobals.client_controller )
+        cls._tag_siblings_manager = ClientCaches.TagSiblingsManager( HG.client_controller )
         
     
     def test_autocomplete( self ):

@@ -3,7 +3,7 @@ import ClientData
 import ClientTags
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import re
@@ -103,7 +103,7 @@ def FilterTagsBySearchText( service_key, search_text, tags, search_siblings = Tr
     
     re_predicate = compile_re( search_text )
     
-    sibling_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+    sibling_manager = HG.client_controller.GetManager( 'tag_siblings' )
     
     result = []
     
@@ -165,8 +165,8 @@ class FileQueryResult( object ):
         self._hashes_ordered = [ media_result.GetHash() for media_result in media_results ]
         self._hashes = set( self._hashes_ordered )
         
-        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
-        HydrusGlobals.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
+        HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         
     
     def __iter__( self ):
@@ -296,7 +296,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._file_service_key = file_service_key.decode( 'hex' )
         self._tag_service_key = tag_service_key.decode( 'hex' )
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         if not services_manager.ServiceExists( self._file_service_key ):
             
@@ -424,7 +424,7 @@ class FileSystemPredicates( object ):
         
         self._ratings_predicates = []
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         forced_search_limit = new_options.GetNoneableInteger( 'forced_search_limit' )
         
@@ -1074,7 +1074,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value, service_key ) = self._value
                     
-                    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                    service = HG.client_controller.GetServicesManager().GetService( service_key )
                     
                     service_type = service.GetServiceType()
                     
@@ -1149,7 +1149,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if current_or_pending == HC.CONTENT_STATUS_PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                    service = HG.client_controller.GetServicesManager().GetService( service_key )
                     
                     base += service.GetName()
                     
@@ -1174,7 +1174,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if sibling_service_key is not None:
                 
-                siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+                siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
                 
                 sibling = siblings_manager.GetSibling( sibling_service_key, tag )
                 

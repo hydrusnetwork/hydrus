@@ -5,7 +5,7 @@ import HydrusDaemons
 import HydrusData
 import HydrusDB
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPubSub
 import HydrusThreading
 import os
@@ -21,7 +21,7 @@ class HydrusController( object ):
     
     def __init__( self, db_dir, no_daemons, no_wal ):
         
-        HydrusGlobals.controller = self
+        HG.controller = self
         
         self._name = 'hydrus'
         
@@ -293,7 +293,7 @@ class HydrusController( object ):
     def ShutdownModel( self ):
         
         self._model_shutdown = True
-        HydrusGlobals.model_shutdown = True
+        HG.model_shutdown = True
         
         if self._db is not None:
             
@@ -304,7 +304,7 @@ class HydrusController( object ):
     def ShutdownView( self ):
         
         self._view_shutdown = True
-        HydrusGlobals.view_shutdown = True
+        HG.view_shutdown = True
         
         self._ShutdownDaemons()
         

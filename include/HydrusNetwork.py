@@ -2,7 +2,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetworking
 import HydrusSerialisable
 import threading
@@ -2174,7 +2174,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
         
         if update_due:
             
-            HydrusGlobals.server_busy = True
+            HG.server_busy = True
             
             while update_due:
                 
@@ -2187,7 +2187,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                 
                 end = begin + HC.UPDATE_DURATION
                 
-                update_hashes = HydrusGlobals.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
+                update_hashes = HG.server_controller.WriteSynchronous( 'create_update', service_key, begin, end )
                 
                 next_update_due = end + HC.UPDATE_DURATION + 1
                 
@@ -2199,7 +2199,7 @@ class ServerServiceRepository( ServerServiceRestricted ):
                     
                 
             
-            HydrusGlobals.server_busy = False
+            HG.server_busy = False
             
             with self._lock:
                 

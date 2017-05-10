@@ -15,7 +15,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
 import itertools
@@ -39,7 +39,7 @@ class TestClientDB( unittest.TestCase ):
         cls._delete_db()
         
         # class variable
-        cls._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( HG.test_controller, TestConstants.DB_DIR, 'client' )
         
     
     @classmethod
@@ -67,7 +67,7 @@ class TestClientDB( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ClientDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'client' )
+        cls._db = ClientDB.DB( HG.test_controller, TestConstants.DB_DIR, 'client' )
         
     
     @classmethod
@@ -1216,7 +1216,7 @@ class TestServerDB( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
-        cls._db = ServerDB.DB( HydrusGlobals.test_controller, TestConstants.DB_DIR, 'server' )
+        cls._db = ServerDB.DB( HG.test_controller, TestConstants.DB_DIR, 'server' )
         
     
     @classmethod

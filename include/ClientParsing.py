@@ -3,7 +3,7 @@ import ClientNetworking
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import os
@@ -730,7 +730,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
                 return other_hash
                 
@@ -744,7 +744,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.GetClientFilesManager()
             
             try:
                 

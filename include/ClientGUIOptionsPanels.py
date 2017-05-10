@@ -11,7 +11,7 @@ import HydrusData
 import os
 import wx
 import wx.lib.masked.timectrl
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class OptionsPanel( wx.Panel ):
     
@@ -308,7 +308,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._services_vbox.Clear( True )
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES, randomised = False )
+        services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES, randomised = False )
         
         button_id = 1
         

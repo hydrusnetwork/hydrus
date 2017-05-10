@@ -22,7 +22,7 @@ import wx
 import HydrusData
 import ClientData
 import ClientConstants as CC
-import HydrusGlobals
+import HydrusGlobals as HG
 import collections
 import HydrusTags
 import itertools
@@ -560,7 +560,7 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
         
-        if HydrusGlobals.client_controller.IsFirstStart():
+        if HG.client_controller.IsFirstStart():
             
             try:
                 
@@ -753,7 +753,7 @@ class ClientFilesManager( object ):
                     
                     hash = should_be_a_hex_hash.decode( 'hex' )
                     
-                    is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'file', hash )
+                    is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'file', hash )
                     
                 except:
                     
@@ -794,7 +794,7 @@ class ClientFilesManager( object ):
                     
                     hash = should_be_a_hex_hash.decode( 'hex' )
                     
-                    is_an_orphan = HydrusGlobals.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
+                    is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
                     
                 except:
                     
@@ -1836,7 +1836,7 @@ class ThumbnailCache( object ):
                 
             
         
-        options = HydrusGlobals.client_controller.GetOptions()
+        options = HG.client_controller.GetOptions()
         
         ( media_x, media_y ) = display_media.GetResolution()
         ( actual_x, actual_y ) = hydrus_bitmap.GetSize()
@@ -1984,7 +1984,7 @@ class ThumbnailCache( object ):
         
         last_paused = HydrusData.GetNowPrecise()
         
-        while not HydrusGlobals.view_shutdown:
+        while not HG.view_shutdown:
             
             with self._lock:
                 
@@ -2194,7 +2194,7 @@ class ShortcutsManager( object ):
                 
                 if command is not None:
                     
-                    if HydrusGlobals.gui_report_mode:
+                    if HG.gui_report_mode:
                         
                         HydrusData.ShowText( 'command matched: ' + repr( command ) )
                         
@@ -2211,7 +2211,7 @@ class ShortcutsManager( object ):
         
         self._shortcuts = {}
         
-        all_shortcuts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
+        all_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS )
         
         for shortcuts in all_shortcuts:
             

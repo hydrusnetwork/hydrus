@@ -14,7 +14,7 @@ from twisted.web.server import NOT_DONE_YET
 from twisted.web.resource import Resource
 from twisted.web.static import File as FileResource, NoRangeStaticProducer
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 
 def GenerateEris( service, domain ):
     
@@ -302,7 +302,7 @@ class HydrusResource( Resource ):
     
     def _checkService( self, request ):
         
-        if HydrusGlobals.server_busy:
+        if HG.server_busy:
             
             raise HydrusExceptions.ServerBusyException( 'This server is busy, please try again later.' )
             
@@ -638,7 +638,7 @@ class HydrusResource( Resource ):
         
         self._service.RequestMade( num_bytes )
         
-        HydrusGlobals.controller.RequestMade( num_bytes )
+        HG.controller.RequestMade( num_bytes )
         
     
     def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )

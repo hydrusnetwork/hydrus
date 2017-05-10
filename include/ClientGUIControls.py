@@ -7,7 +7,7 @@ import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetworking
 import os
 import wx
@@ -364,7 +364,7 @@ class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
-        HydrusGlobals.client_controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        HG.client_controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
         
     
     def _AddSeed( self, seed ):
@@ -413,7 +413,7 @@ class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):
             
             text = separator.join( notes )
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            HG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -427,7 +427,7 @@ class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):
             
             text = separator.join( seeds )
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+            HG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -494,7 +494,7 @@ class SeedCacheControl( ClientGUICommon.SaneListCtrlForSingleObject ):
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'set_seed_skipped' ), 'skip' )
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete_seeds' ), 'delete' )
             
-            HydrusGlobals.client_controller.PopupMenu( self, menu )
+            HG.client_controller.PopupMenu( self, menu )
             
         
     

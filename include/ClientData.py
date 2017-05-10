@@ -6,7 +6,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -17,6 +17,7 @@ import sqlite3
 import sys
 import time
 import wx
+import wx.lib.colourutils
 import yaml
 
 def AddPaddingToDimensions( dimensions, padding ):
@@ -77,7 +78,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         HydrusData.DebugPrint( text )
         
-        HydrusGlobals.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_key )
         
     except:
         
@@ -95,6 +96,24 @@ def CatchExceptionClient( etype, value, tb ):
     
     time.sleep( 1 )
     
+def ColourIsBright( colour ):
+    
+    ( r, g, b ) = colour.Get()
+    
+    brightness_estimate = ( r + g + b ) // 3
+    
+    it_is_bright = brightness_estimate > 127
+    
+    return it_is_bright
+    
+def ColourIsGreyish( colour ):
+    
+    ( r, g, b ) = colour.Get()
+    
+    greyish = r // 16 == g // 16 and g // 16 == b // 16
+    
+    return greyish
+    
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
     num_files = 0
@@ -107,7 +126,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         
         if len( content_updates ) > 0:
             
-            name = HydrusGlobals.client_controller.GetServicesManager().GetName( service_key )
+            name = HG.client_controller.GetServicesManager().GetName( service_key )
             
             locations.add( name )
             
@@ -196,9 +215,42 @@ def DeletePath( path ):
         HydrusPaths.DeletePath( path )
         
     
+def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
+    
+    if ColourIsGreyish( colour ):
+        
+        ( r, g, b ) = colour.Get()
+        
+        if ColourIsBright( colour ):
+            
+            colour = wx.Colour( int( g * ( 1 - 0.05 * intensity ) ), b, r )
+            
+        else:
+            
+            colour = wx.Colour( int( g * ( 1 + 0.05 * intensity ) ) / 2, b, r )
+            
+        
+    else:
+        
+        colour = wx.Colour( g, b, r )
+        
+    
+    return GetLighterDarkerColour( colour, intensity )
+    
+def GetLighterDarkerColour( colour, intensity = 3 ):
+    
+    if ColourIsBright( colour ):
+        
+        return wx.lib.colourutils.AdjustColour( colour, -5 * intensity )
+        
+    else:
+        
+        return wx.lib.colourutils.AdjustColour( colour, 5 * intensity )
+        
+    
 def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, collapse_siblings = False ):
     
-    siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+    siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
     
     tags_managers = []
     
@@ -245,7 +297,7 @@ def GetSortChoices( add_namespaces_and_ratings = True ):
         
         sort_choices.extend( HC.options[ 'sort_by' ] )
         
-        ratings_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        ratings_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for ratings_service in ratings_services:
             
@@ -419,7 +471,7 @@ def ShowExceptionClient( e ):
     
     HydrusData.DebugPrint( text )
     
-    HydrusGlobals.client_controller.pub( 'message', job_key )
+    HG.client_controller.pub( 'message', job_key )
     
     time.sleep( 1 )
     
@@ -433,7 +485,7 @@ def ShowTextClient( text ):
     
     HydrusData.Print( text )
     
-    HydrusGlobals.client_controller.pub( 'message', job_key )
+    HG.client_controller.pub( 'message', job_key )
     
 def SortTagsList( tags, sort_type ):
     
@@ -475,14 +527,14 @@ def WaitPolitely( page_key = None ):
     
     if page_key is not None:
         
-        HydrusGlobals.client_controller.pub( 'waiting_politely', page_key, True )
+        HG.client_controller.pub( 'waiting_politely', page_key, True )
         
     
     time.sleep( HC.options[ 'website_download_polite_wait' ] )
     
     if page_key is not None:
         
-        HydrusGlobals.client_controller.pub( 'waiting_politely', page_key, False )
+        HG.client_controller.pub( 'waiting_politely', page_key, False )
         
     
 class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
@@ -577,7 +629,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             components.append( '"' + HydrusData.ToUnicode( value ) + '"' )
             components.append( 'for' )
             
-            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.GetServicesManager()
             
             if services_manager.ServiceExists( service_key ):
                 
@@ -904,7 +956,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    db_dir = HydrusGlobals.controller.GetDBDir()
+                    db_dir = HG.controller.GetDBDir()
                     
                     p = os.path.relpath( a_p, db_dir )
                     
@@ -1464,7 +1516,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         first_hashes = first_media.GetHashes()
         second_hashes = second_media.GetHashes()
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         for ( service_key, action ) in self._service_actions:
             
@@ -1751,8 +1803,22 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() }
-        safe_service_keys_to_explicit_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_explicit_tags.items() }
+        if HG.client_controller.IsBooted():
+            
+            services_manager = HG.client_controller.GetServicesManager()
+            
+            test_func = services_manager.ServiceExists
+            
+        else:
+            
+            def test_func( service_key ):
+                
+                return True
+                
+            
+        
+        safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() if test_func( service_key ) }
+        safe_service_keys_to_explicit_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_explicit_tags.items() if test_func( service_key ) }
         
         return ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
         
@@ -1795,8 +1861,8 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_tags = collections.defaultdict( set )
         
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
-        parents_manager = HydrusGlobals.client_controller.GetManager( 'tag_parents' )
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
         
         for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
             
@@ -2010,7 +2076,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
             
             # this never stored mouse actions, so skip
             
-            services_manager = HydrusGlobals.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.GetServicesManager()
             
             for ( modifier, key, ( serialisable_service_key, data ) ) in serialisable_keyboard_actions:
                 
@@ -2115,7 +2181,7 @@ def ConvertKeyEventToShortcut( event ):
         
         shortcut = Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, key, modifiers )
         
-        if HydrusGlobals.gui_report_mode:
+        if HG.gui_report_mode:
             
             HydrusData.ShowText( 'key event caught: ' + repr( shortcut ) )
             
@@ -2183,7 +2249,7 @@ def ConvertMouseEventToShortcut( event ):
         
         shortcut = Shortcut( CC.SHORTCUT_TYPE_MOUSE, key, modifiers )
         
-        if HydrusGlobals.gui_report_mode:
+        if HG.gui_report_mode:
             
             HydrusData.ShowText( 'mouse event caught: ' + repr( shortcut ) )
             

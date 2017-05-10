@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusThreading
 import os
 import wx
@@ -61,7 +61,7 @@ class JobKey( object ):
                 should_cancel = True
                 
             
-            if self._only_when_idle and not HydrusGlobals.client_controller.CurrentlyIdle():
+            if self._only_when_idle and not HG.client_controller.CurrentlyIdle():
                 
                 should_cancel = True
                 
@@ -113,7 +113,7 @@ class JobKey( object ):
             return False
             
         
-        if self._only_start_if_unbusy and HydrusGlobals.client_controller.SystemBusy():
+        if self._only_start_if_unbusy and HG.client_controller.SystemBusy():
             
             return False
             

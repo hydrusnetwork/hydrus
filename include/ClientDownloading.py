@@ -14,7 +14,7 @@ import urllib
 import urlparse
 import HydrusData
 import ClientConstants as CC
-import HydrusGlobals
+import HydrusGlobals as HG
 
 # This is fairly ugly, but it works for what I need it to do
 
@@ -240,7 +240,7 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         job_key.SetVariable( 'popup_text_1', 'importing' )
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         ( result, hash ) = client_files_manager.ImportFile( temp_path )
         
@@ -331,7 +331,7 @@ def THREADDownloadURLs( job_key, urls, title ):
                 
                 job_key.SetVariable( 'popup_text_2', 'importing' )
                 
-                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.GetClientFilesManager()
                 
                 ( result, hash ) = client_files_manager.ImportFile( temp_path )
                 
@@ -674,7 +674,7 @@ class Gallery( object ):
         
         self._AddSessionCookies( request_headers )
         
-        return HydrusGlobals.client_controller.DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
+        return HG.client_controller.DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def _GetGalleryPageURL( self, query, page_index ):
@@ -722,7 +722,7 @@ class GalleryBooru( Gallery ):
         
         try:
             
-            self._booru = HydrusGlobals.client_controller.Read( 'remote_booru', booru_name )
+            self._booru = HG.client_controller.Read( 'remote_booru', booru_name )
             
         except:
             
@@ -1042,7 +1042,7 @@ class GalleryDeviantArt( Gallery ):
     
     def _AddSessionCookies( self, request_headers ):
         
-        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+        manager = HG.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'deviant art' )
         
@@ -1112,18 +1112,34 @@ class GalleryDeviantArt( Gallery ):
             
             if img is None:
                 
-                # this probably means it is mature
-                # DA hide the url pretty much everywhere except the tumblr share thing
+                # nsfw
                 
-                a_tumblr = soup.find( id = 'gmi-ResourceViewShareTumblr' )
+                # used to fetch this from a tumblr share url, now we grab from some hidden gubbins behind an age gate
                 
-                tumblr_url = a_tumblr[ 'href' ] # http://www.tumblr.com/share/photo?source=http%3A%2F%2Fimg09.deviantart.net%2Ff19a%2Fi%2F2015%2F054%2Fe%2Fd%2Fass_by_gmgkaiser-d8j7ija.png&amp;caption=%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726%22%3Eass%3C%2Fa%3E+by+%3Ca+href%3D%22http%3A%2F%2Fgmgkaiser.deviantart.com%2F%22%3EGMGkaiser%3C%2Fa%3E&amp;clickthru=http%3A%2F%2Fgmgkaiser.deviantart.com%2Fart%2Fass-515992726
+                a_hidden = soup.find( 'a', class_ = 'ismature' )
                 
-                parse_result = urlparse.urlparse( tumblr_url )
+                imgs = a_hidden.find_all( 'img' )
                 
-                query_parse_result = urlparse.parse_qs( parse_result.query )
-                
-                img_url = query_parse_result[ 'source' ][0] # http://img09.deviantart.net/f19a/i/2015/054/e/d/ass_by_gmgkaiser-d8j7ija.png
+                for img in imgs:
+                    
+                    # <img   width="150" height="75" alt="Jelly gals by ArtInCase" src="http://t13.deviantart.net/l1NkrOhjTzsGDu9nsgMQHgsuZNY=/fit-in/150x150/filters:no_upscale():origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg" data-src="http://t13.deviantart.net/l1NkrOhjTzsGDu9nsgMQHgsuZNY=/fit-in/150x150/filters:no_upscale():origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg" srcset="http://t13.deviantart.net/l1NkrOhjTzsGDu9nsgMQHgsuZNY=/fit-in/150x150/filters:no_upscale():origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 150w,http://t00.deviantart.net/ELwFngzSW07znskrO2jToktP2Og=/fit-in/700x350/filters:fixed_height(100,100):origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 698w,http://t04.deviantart.net/53Saq2w0esrTTjZIfHap4ItNNkQ=/fit-in/800x400/filters:fixed_height(100,100):origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 798w,http://pre07.deviantart.net/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 1262w" sizes="150px">
+                    
+                    if img.has_attr( 'srcset' ):
+                        
+                        # http://t13.deviantart.net/l1NkrOhjTzsGDu9nsgMQHgsuZNY=/fit-in/150x150/filters:no_upscale():origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 150w,http://t00.deviantart.net/ELwFngzSW07znskrO2jToktP2Og=/fit-in/700x350/filters:fixed_height(100,100):origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 698w,http://t04.deviantart.net/53Saq2w0esrTTjZIfHap4ItNNkQ=/fit-in/800x400/filters:fixed_height(100,100):origin()/pre07/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 798w,http://pre07.deviantart.net/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg 1262w
+                        # the last url here is what we want
+                        
+                        srcset = img[ 'srcset' ]
+                        
+                        # 798w,http://pre07.deviantart.net/26b2/th/pre/i/2013/187/b/1/jelly_gals_by_artincase-d6caxba.jpg
+                        
+                        gubbins_and_url = srcset.split( ' ' )[ -2 ]
+                        
+                        img_url = gubbins_and_url.split( ',' )[1]
+                        
+                        break
+                        
+                    
                 
             else:
                 
@@ -1240,7 +1256,7 @@ class GalleryHentaiFoundry( Gallery ):
     
     def _AddSessionCookies( self, request_headers ):
         
-        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+        manager = HG.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'hentai foundry' )
         
@@ -1564,7 +1580,7 @@ class GalleryPixiv( Gallery ):
     
     def _AddSessionCookies( self, request_headers ):
         
-        manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+        manager = HG.client_controller.GetManager( 'web_sessions' )
         
         cookies = manager.GetCookies( 'pixiv' )
         

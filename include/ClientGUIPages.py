@@ -15,7 +15,7 @@ import sys
 import time
 import traceback
 import wx
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class Page( wx.SplitterWindow ):
     

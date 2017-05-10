@@ -4,7 +4,7 @@ import ClientData
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import os
 import wx
 
@@ -108,7 +108,7 @@ def GetSafeSize( tlw, min_size, gravity ):
     
 def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    new_options = HG.client_controller.GetNewOptions()
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -132,7 +132,7 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    new_options = HG.client_controller.GetNewOptions()
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -154,7 +154,7 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
 def SetTLWSizeAndPosition( tlw, frame_key ):
     
-    new_options = HydrusGlobals.client_controller.GetNewOptions()
+    new_options = HG.client_controller.GetNewOptions()
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -268,7 +268,7 @@ class NewDialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style )
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -283,7 +283,7 @@ class NewDialog( wx.Dialog ):
         self._menu_stack = []
         self._menu_text_stack = []
         
-        HydrusGlobals.client_controller.ResetIdleTimer()
+        HG.client_controller.ResetIdleTimer()
         
     
     def EventMenuClose( self, event ):
@@ -298,7 +298,7 @@ class NewDialog( wx.Dialog ):
             
             previous_text = self._menu_text_stack.pop()
             
-            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             status_bar.SetStatusText( previous_text )
             
@@ -306,7 +306,7 @@ class NewDialog( wx.Dialog ):
     
     def EventMenuHighlight( self, event ):
         
-        status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+        status_bar = HG.client_controller.GetGUI().GetStatusBar()
         
         if len( self._menu_stack ) > 0:
             
@@ -334,7 +334,7 @@ class NewDialog( wx.Dialog ):
         
         if menu is not None:
             
-            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             previous_text = status_bar.GetStatusText()
             
@@ -554,7 +554,7 @@ class Frame( wx.Frame ):
         
         wx.Frame.__init__( self, parent, title = title, style = style )
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -567,7 +567,7 @@ class Frame( wx.Frame ):
         self._menu_stack = []
         self._menu_text_stack = []
         
-        HydrusGlobals.client_controller.ResetIdleTimer()
+        HG.client_controller.ResetIdleTimer()
         
     
     def EventMenuClose( self, event ):
@@ -582,7 +582,7 @@ class Frame( wx.Frame ):
             
             previous_text = self._menu_text_stack.pop()
             
-            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             status_bar.SetStatusText( previous_text )
             
@@ -590,7 +590,7 @@ class Frame( wx.Frame ):
     
     def EventMenuHighlight( self, event ):
         
-        status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+        status_bar = HG.client_controller.GetGUI().GetStatusBar()
         
         if len( self._menu_stack ) > 0:
             
@@ -618,7 +618,7 @@ class Frame( wx.Frame ):
         
         if menu is not None:
             
-            status_bar = HydrusGlobals.client_controller.GetGUI().GetStatusBar()
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             previous_text = status_bar.GetStatusText()
             

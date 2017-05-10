@@ -4,7 +4,7 @@ import threading
 import time
 import traceback
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import os
 
 THREADS_TO_THREAD_INFO = {}
@@ -33,7 +33,7 @@ def GetThreadInfo( thread = None ):
     
 def IsThreadShuttingDown():
     
-    if HydrusGlobals.view_shutdown:
+    if HG.view_shutdown:
         
         return True
         

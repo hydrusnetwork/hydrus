@@ -10,7 +10,7 @@ import tempfile
 import unittest
 import HydrusData
 import ClientConstants as CC
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPaths
 
 with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
@@ -37,17 +37,17 @@ class TestDaemons( unittest.TestCase ):
             
             import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir )
             
-            HydrusGlobals.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
+            HG.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             
-            ClientDaemons.DAEMONCheckImportFolders( HydrusGlobals.test_controller )
+            ClientDaemons.DAEMONCheckImportFolders( HG.test_controller )
             
-            import_file = HydrusGlobals.test_controller.GetWrite( 'import_file' )
+            import_file = HG.test_controller.GetWrite( 'import_file' )
             
             self.assertEqual( len( import_file ), 3 )
             
             # I need to expand tests here with the new file system
             
-            [ ( ( updated_import_folder, ), empty_dict ) ] = HydrusGlobals.test_controller.GetWrite( 'serialisable' )
+            [ ( ( updated_import_folder, ), empty_dict ) ] = HG.test_controller.GetWrite( 'serialisable' )
             
             self.assertEqual( updated_import_folder, import_folder )
             

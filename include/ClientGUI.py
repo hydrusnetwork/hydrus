@@ -28,7 +28,7 @@ import hashlib
 import HydrusData
 import HydrusExceptions
 import HydrusPaths
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusNetworking
 import HydrusSerialisable
@@ -484,7 +484,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             deletee_service_keys = []
             
-            with HydrusGlobals.dirty_object_lock:
+            with HG.dirty_object_lock:
                 
                 self._controller.WriteSynchronous( 'update_server_services', admin_service_key, serverside_services, service_keys_to_access_keys, deletee_service_keys )
                 
@@ -1419,11 +1419,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HydrusGlobals.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HydrusGlobals.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'gui report mode', 'Have the gui report inside information, where supported.', HydrusGlobals.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HydrusGlobals.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HydrusGlobals.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
@@ -1489,7 +1489,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             try:
                 
                 job_key.SetVariable( 'popup_title', 'importing updates' )
-                HydrusGlobals.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_key )
                 
                 for ( i, update_path ) in enumerate( update_paths ):
                     
@@ -1897,6 +1897,23 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _MovePage( self, page_index, direction ):
+        
+        new_page_index = page_index + direction
+        
+        if 0 <= new_page_index and new_page_index <= self._notebook.GetPageCount() - 1:
+            
+            page_is_selected = self._notebook.GetSelection() == page_index
+            
+            page = self._notebook.GetPage( page_index )
+            name = self._notebook.GetPageText( page_index )
+            
+            self._notebook.RemovePage( page_index )
+            
+            self._notebook.InsertPage( new_page_index, page, name, page_is_selected )
+            
+        
+    
     def _NewPage( self, page_name, management_controller, initial_media_results = None ):
         
         self._controller.ResetIdleTimer()
@@ -2115,7 +2132,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         shortcut_processed = False
         
-        command = HydrusGlobals.client_controller.GetCommandFromShortcut( [ 'main_gui' ], shortcut )
+        command = HG.client_controller.GetCommandFromShortcut( [ 'main_gui' ], shortcut )
         
         if command is not None:
             
@@ -2496,23 +2513,23 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if name == 'db_report_mode':
             
-            HydrusGlobals.db_report_mode = not HydrusGlobals.db_report_mode
+            HG.db_report_mode = not HG.db_report_mode
             
         elif name == 'db_profile_mode':
             
-            HydrusGlobals.db_profile_mode = not HydrusGlobals.db_profile_mode
+            HG.db_profile_mode = not HG.db_profile_mode
             
         elif name == 'gui_report_mode':
             
-            HydrusGlobals.gui_report_mode = not HydrusGlobals.gui_report_mode
+            HG.gui_report_mode = not HG.gui_report_mode
             
         elif name == 'pubsub_profile_mode':
             
-            HydrusGlobals.pubsub_profile_mode = not HydrusGlobals.pubsub_profile_mode
+            HG.pubsub_profile_mode = not HG.pubsub_profile_mode
             
         elif name == 'force_idle_mode':
             
-            HydrusGlobals.force_idle_mode = not HydrusGlobals.force_idle_mode
+            HG.force_idle_mode = not HG.force_idle_mode
             
         
     
@@ -2639,7 +2656,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 job_key.SetVariable( 'popup_text_1', 'matched ' + HydrusData.ConvertValueRangeToPrettyString( len( hydrus_hashes ), total_num_hta_hashes ) + ' files' )
                 
-                HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                HG.client_controller.WaitUntilPubSubsEmpty()
                 
             
             del hta
@@ -2669,7 +2686,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 job_key.SetVariable( 'popup_text_1', 'synced ' + HydrusData.ConvertValueRangeToPrettyString( total_num_processed, len( hydrus_hashes ) ) + ' files' )
                 job_key.SetVariable( 'popup_gauge_1', ( total_num_processed, len( hydrus_hashes ) ) )
                 
-                HydrusGlobals.client_controller.WaitUntilPubSubsEmpty()
+                HG.client_controller.WaitUntilPubSubsEmpty()
                 
             
             job_key.DeleteVariable( 'popup_gauge_1' )
@@ -2888,7 +2905,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if not event.CanVeto():
             
-            HydrusGlobals.emergency_exit = True
+            HG.emergency_exit = True
             
         
         exit_allowed = self.Exit()
@@ -2940,6 +2957,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
+            more_than_one_tab = self._notebook.GetPageCount() > 1
+            
+            if more_than_one_tab:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                can_move_left = tab_index > 0
+                can_move_right = tab_index < self._notebook.GetPageCount() - 1
+                
+                if can_move_left:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._MovePage, tab_index, -1 )
+                    
+                
+                if can_move_right:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._MovePage, tab_index, 1 )
+                    
+                
+            
             self._controller.PopupMenu( self, menu )
             
         
@@ -2974,7 +3011,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def Exit( self, restart = False ):
         
-        if not HydrusGlobals.emergency_exit:
+        if not HG.emergency_exit:
             
             if HC.options[ 'confirm_client_exit' ]:
                 
@@ -3017,7 +3054,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if restart:
             
-            HydrusGlobals.restart = True
+            HG.restart = True
             
         
         try:
@@ -3053,7 +3090,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self.Hide()
         
-        if HydrusGlobals.emergency_exit:
+        if HG.emergency_exit:
             
             self._controller.Exit()
             
@@ -3241,7 +3278,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def RefreshMenu( self ):
         
-        db_going_to_hang_if_we_hit_it = HydrusGlobals.client_controller.DBCurrentlyDoingJob()
+        db_going_to_hang_if_we_hit_it = HG.client_controller.DBCurrentlyDoingJob()
         
         if db_going_to_hang_if_we_hit_it:
             

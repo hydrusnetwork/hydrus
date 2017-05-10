@@ -5,7 +5,7 @@ import Queue
 import threading
 import traceback
 import weakref
-import HydrusGlobals
+import HydrusGlobals as HG
 
 class HydrusPubSub( object ):
     
@@ -105,7 +105,7 @@ class HydrusPubSub( object ):
         
         for callable in callables:
             
-            if HydrusGlobals.pubsub_profile_mode:
+            if HG.pubsub_profile_mode:
                 
                 summary = 'Profiling ' + topic + ': ' + repr( callable )
                 

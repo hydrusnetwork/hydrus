@@ -15,7 +15,7 @@ import wx
 import HydrusData
 import HydrusFileHandling
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import itertools
 
 def FlattenMedia( media_list ):
@@ -91,7 +91,7 @@ class LocationsManager( object ):
         
         if urls is None:
             
-            urls = []
+            urls = set()
             
         
         self._urls = urls
@@ -162,7 +162,7 @@ class LocationsManager( object ):
         pending = self.GetPendingRemote()
         petitioned = self.GetPetitionedRemote()
         
-        remote_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
+        remote_services = HG.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
         
         remote_services = list( remote_services )
         
@@ -236,68 +236,87 @@ class LocationsManager( object ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        if action == HC.CONTENT_UPDATE_ADD:
+        if data_type == HC.CONTENT_TYPE_FILES:
             
-            self._current.add( service_key )
-            
-            self._deleted.discard( service_key )
-            self._pending.discard( service_key )
-            
-            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            if action == HC.CONTENT_UPDATE_ADD:
+                
+                self._current.add( service_key )
+                
+                self._deleted.discard( service_key )
+                self._pending.discard( service_key )
+                
+                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                    
+                    self._current.discard( CC.TRASH_SERVICE_KEY )
+                    self._pending.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
+                        
+                        self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                        
+                        self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
+                        
+                    
+                
+                self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
+                
+            elif action == HC.CONTENT_UPDATE_DELETE:
+                
+                self._deleted.add( service_key )
+                
+                self._current.discard( service_key )
+                self._petitioned.discard( service_key )
+                
+                if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+                    
+                    self._current.add( CC.TRASH_SERVICE_KEY )
+                    
+                    self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = HydrusData.GetNow()
+                    
+                elif service_key == CC.TRASH_SERVICE_KEY:
+                    
+                    self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                
+            elif action == HC.CONTENT_UPDATE_UNDELETE:
                 
                 self._current.discard( CC.TRASH_SERVICE_KEY )
-                self._pending.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
                 
-                if CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current:
-                    
-                    self._current.add( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    self._current_to_timestamps[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = HydrusData.GetNow()
-                    
+                self._deleted.discard( CC.LOCAL_FILE_SERVICE_KEY )
+                self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
                 
-            
-            self._current_to_timestamps[ service_key ] = HydrusData.GetNow()
-            
-        elif action == HC.CONTENT_UPDATE_DELETE:
-            
-            self._deleted.add( service_key )
-            
-            self._current.discard( service_key )
-            self._petitioned.discard( service_key )
-            
-            if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            elif action == HC.CONTENT_UPDATE_PEND:
                 
-                self._current.add( CC.TRASH_SERVICE_KEY )
+                if service_key not in self._current: self._pending.add( service_key )
                 
-                self._current_to_timestamps[ CC.TRASH_SERVICE_KEY ] = HydrusData.GetNow()
+            elif action == HC.CONTENT_UPDATE_PETITION:
                 
-            elif service_key == CC.TRASH_SERVICE_KEY:
+                if service_key not in self._deleted: self._petitioned.add( service_key )
                 
-                self._current.discard( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                
+                self._pending.discard( service_key )
+                
+            elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                
+                self._petitioned.discard( service_key )
                 
             
-        elif action == HC.CONTENT_UPDATE_UNDELETE:
+        elif data_type == HC.CONTENT_TYPE_URLS:
             
-            self._current.discard( CC.TRASH_SERVICE_KEY )
-            
-            self._deleted.discard( CC.LOCAL_FILE_SERVICE_KEY )
-            self._current.add( CC.LOCAL_FILE_SERVICE_KEY )
-            
-        elif action == HC.CONTENT_UPDATE_PEND:
-            
-            if service_key not in self._current: self._pending.add( service_key )
-            
-        elif action == HC.CONTENT_UPDATE_PETITION:
-            
-            if service_key not in self._deleted: self._petitioned.add( service_key )
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PEND:
-            
-            self._pending.discard( service_key )
-            
-        elif action == HC.CONTENT_UPDATE_RESCIND_PETITION:
-            
-            self._petitioned.discard( service_key )
+            if action == HC.CONTENT_UPDATE_ADD:
+                
+                ( hash, urls ) = row
+                
+                self._urls.update( urls )
+                
+            elif action == HC.CONTENT_UPDATE_DELETE:
+                
+                ( hash, urls ) = row
+                
+                self._urls.difference_update( urls )
+                
+                
             
         
     
@@ -360,7 +379,7 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         keys_to_medias = collections.defaultdict( list )
         
@@ -474,7 +493,7 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_OLDEST, CC.SORT_BY_NEWEST ):
                 
-                file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( self._file_service_key )
+                file_service = HG.client_controller.GetServicesManager().GetService( self._file_service_key )
                 
                 file_service_type = file_service.GetServiceType()
                 
@@ -844,7 +863,7 @@ class MediaList( object ):
                 
                 if for_media_viewer:
                     
-                    new_options = HydrusGlobals.client_controller.GetNewOptions()
+                    new_options = HG.client_controller.GetNewOptions()
                     
                     media_show_action = new_options.GetMediaShowAction( media.GetMime() )
                     
@@ -932,7 +951,7 @@ class MediaList( object ):
             
             if action == HC.CONTENT_UPDATE_DELETE:
                 
-                local_file_domains = HydrusGlobals.client_controller.GetServicesManager().GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                local_file_domains = HG.client_controller.GetServicesManager().GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
                 non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
                 
@@ -1042,8 +1061,8 @@ class ListeningMediaList( MediaList ):
         
         self._file_query_result = ClientSearch.FileQueryResult( media_results )
         
-        HydrusGlobals.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
-        HydrusGlobals.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def AddMediaResults( self, media_results, append = True ):
@@ -1433,7 +1452,7 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( service_key )
             
-            service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+            service = HG.client_controller.GetServicesManager().GetService( service_key )
             
             service_type = service.GetServiceType()
             
@@ -1476,7 +1495,7 @@ class MediaSingleton( Media ):
         
         title_string = ''
         
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
         
         namespaces = self._media_result.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
         
@@ -1600,7 +1619,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1655,7 +1674,7 @@ class MediaResult( object ):
         
         ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = self._tuple
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1951,7 +1970,7 @@ class TagsManager( TagsManagerSimple ):
         
         self._combined_is_calculated = False
         
-        HydrusGlobals.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
+        HG.client_controller.sub( self, 'NewSiblings', 'notify_new_siblings_data' )
         
     
     def _RecalcCombinedIfNeeded( self ):
@@ -1960,7 +1979,7 @@ class TagsManager( TagsManagerSimple ):
             
             # Combined tags are pre-collapsed by siblings
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
             
             combined_statuses_to_tags = collections.defaultdict( set )
             

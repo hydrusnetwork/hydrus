@@ -37,7 +37,7 @@ import wx
 import wx.lib.scrolledpanel
 import HydrusData
 import ClientSearch
-import HydrusGlobals
+import HydrusGlobals as HG
 
 CAPTCHA_FETCH_EVENT_TYPE = wx.NewEventType()
 CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
@@ -136,7 +136,7 @@ def CreateManagementControllerImportURLs():
     
 def CreateManagementControllerPetitions( petition_service_key ):
     
-    petition_service = HydrusGlobals.client_controller.GetServicesManager().GetService( petition_service_key )
+    petition_service = HG.client_controller.GetServicesManager().GetService( petition_service_key )
     
     petition_service_type = petition_service.GetServiceType()
     
@@ -562,7 +562,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         if 'file_service' in self._keys:
             
-            if not HydrusGlobals.client_controller.GetServicesManager().ServiceExists( self._keys[ 'file_service' ] ):
+            if not HG.client_controller.GetServicesManager().ServiceExists( self._keys[ 'file_service' ] ):
                 
                 self._keys[ 'file_service' ] = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
                 
@@ -864,12 +864,12 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdateDBJob, id = ID_TIMER_UPDATE )
         self._update_db_job_timer = wx.Timer( self, id = ID_TIMER_UPDATE )
         
-        HydrusGlobals.client_controller.sub( self, 'RefreshAndUpdateStatus', 'refresh_dupe_numbers' )
+        HG.client_controller.sub( self, 'RefreshAndUpdateStatus', 'refresh_dupe_numbers' )
         
     
     def _FileDomainButtonHit( self ):
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         services = []
         
@@ -886,7 +886,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             ClientGUIMenus.AppendMenuItem( self, menu, service.GetName(), 'Set the filtering file domain.', call )
             
         
-        HydrusGlobals.client_controller.PopupMenu( self._file_domain_button, menu )
+        HG.client_controller.PopupMenu( self._file_domain_button, menu )
         
     
     def _LaunchFilter( self ):
@@ -950,7 +950,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._management_controller.SetKey( 'duplicate_filter_file_domain', service_key )
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         service = services_manager.GetService( service_key )
         
@@ -3196,7 +3196,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     job_key.SetVariable( 'popup_title', 'comitting petitions' )
                     
-                    HydrusGlobals.client_controller.pub( 'message', job_key )
+                    HG.client_controller.pub( 'message', job_key )
                     
                 else:
                     
@@ -3223,7 +3223,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
                     
-                    self._controller.Write( 'content_updates', { self._petition_service_key : content_updates } )
+                    self._controller.WriteSynchronous( 'content_updates', { self._petition_service_key : content_updates } )
                     
                     num_done += len( chunk_of_approved_contents )
                     
@@ -3273,7 +3273,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        HydrusGlobals.client_controller.CallToThread( do_it, approved_contents, denied_contents, self._current_petition )
+        HG.client_controller.CallToThread( do_it, approved_contents, denied_contents, self._current_petition )
         
         self._current_petition = None
         

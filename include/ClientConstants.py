@@ -261,7 +261,7 @@ shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_SCROLL_RIGHT ] = 'scroll right'
 SHORTCUT_TYPE_KEYBOARD = 0
 SHORTCUT_TYPE_MOUSE = 1
 
-SHORTCUTS_RESERVED_NAMES = [ 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
+SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media', 'main_gui', 'media_viewer_browser', 'media_viewer' ]
 
 # shortcut commands
 
@@ -270,6 +270,7 @@ SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'move_animation_to_previous_frame', 'move_ani
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous' ]
 SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo' ]
 SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back' ]
+SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back' ]
 
 simple_shortcut_name_to_action_lookup = {}
 
@@ -278,6 +279,7 @@ simple_shortcut_name_to_action_lookup[ 'media_viewer' ] = SHORTCUTS_MEDIA_VIEWER
 simple_shortcut_name_to_action_lookup[ 'media_viewer_browser' ] = SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'main_gui' ] = SHORTCUTS_MAIN_GUI_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'duplicate_filter' ] = SHORTCUTS_DUPLICATE_FILTER_ACTIONS + SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
+simple_shortcut_name_to_action_lookup[ 'archive_delete_filter' ] = SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS
 simple_shortcut_name_to_action_lookup[ 'custom' ] = SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 
 SHUTDOWN_TIMESTAMP_VACUUM = 0

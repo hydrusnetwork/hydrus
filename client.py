@@ -20,7 +20,7 @@ try:
     from include import ClientController
     import threading
     from twisted.internet import reactor
-    from include import HydrusGlobals
+    from include import HydrusGlobals as HG
     from include import HydrusLogger
     import traceback
     
@@ -81,8 +81,8 @@ try:
             
         finally:
             
-            HydrusGlobals.view_shutdown = True
-            HydrusGlobals.model_shutdown = True
+            HG.view_shutdown = True
+            HG.model_shutdown = True
             
             try:
                 
@@ -99,9 +99,9 @@ try:
             
         
     
-    HydrusGlobals.shutdown_complete = True
+    HG.shutdown_complete = True
     
-    if HydrusGlobals.restart:
+    if HG.restart:
         
         HydrusData.RestartProcess()
         

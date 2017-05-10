@@ -1,7 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import HydrusConstants as HC
-import HydrusGlobals
+import HydrusGlobals as HG
 import os
 import wx
 
@@ -161,7 +161,7 @@ def GetDefaultHentaiFoundryInfo():
     
 def GetDefaultImportFileOptions():
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = HG.client_controller.GetOptions()
     
     automatic_archive = False
     exclude_deleted = options[ 'exclude_deleted_files' ]
@@ -192,7 +192,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
             
         else:
             
-            booru = HydrusGlobals.client_controller.Read( 'remote_booru', name )
+            booru = HG.client_controller.Read( 'remote_booru', name )
             
             namespaces = booru.GetNamespaces()
             
@@ -523,6 +523,22 @@ def GetDefaultScriptRows():
 def GetDefaultShortcuts():
     
     shortcuts = []
+    
+    archive_delete_filter = ClientData.Shortcuts( 'archive_delete_filter' )
+    
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_RIGHT, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_MIDDLE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
+    
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_SPACE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_keep' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_DELETE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_DELETE, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_delete' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_BACK, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ) )
+    archive_delete_filter.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_NUMPAD_UP, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ) )
+    
+    shortcuts.append( archive_delete_filter )
     
     duplicate_filter = ClientData.Shortcuts( 'duplicate_filter' )
     

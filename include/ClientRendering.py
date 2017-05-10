@@ -5,7 +5,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusImageHandling
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusThreading
 import HydrusVideoHandling
 import lz4
@@ -60,11 +60,11 @@ class ImageRenderer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
-        HydrusGlobals.client_controller.CallToThread( self._Initialise )
+        HG.client_controller.CallToThread( self._Initialise )
         
     
     def _Initialise( self ):
@@ -158,7 +158,7 @@ class RasterContainer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
@@ -190,7 +190,7 @@ class RasterContainerVideo( RasterContainer ):
         
         ( x, y ) = self._target_resolution
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         video_buffer_size_mb = new_options.GetInteger( 'video_buffer_size_mb' )
         
@@ -233,7 +233,7 @@ class RasterContainerVideo( RasterContainer ):
         self._rendered_first_frame = False
         self._rush_to_index = None
         
-        HydrusGlobals.client_controller.CallToThread( self.THREADRender )
+        HG.client_controller.CallToThread( self.THREADRender )
         
     
     def _IndexOutOfRange( self, index, range_start, range_end ):
@@ -329,7 +329,7 @@ class RasterContainerVideo( RasterContainer ):
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             
@@ -346,7 +346,7 @@ class RasterContainerVideo( RasterContainer ):
         
         while True:
             
-            if self._stop or HydrusGlobals.view_shutdown:
+            if self._stop or HG.view_shutdown:
                 
                 return
                 
@@ -481,7 +481,7 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._buffer_end_index = ideal_buffer_end_index
                 
-                HydrusGlobals.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
+                HG.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
                 
             else:
                 
@@ -497,7 +497,7 @@ class RasterContainerVideo( RasterContainer ):
                     self._buffer_end_index = ideal_buffer_end_index
                     
                 
-                HydrusGlobals.client_controller.CallToThread( self.THREADMoveRenderTo, self._buffer_end_index )
+                HG.client_controller.CallToThread( self.THREADMoveRenderTo, self._buffer_end_index )
                 
             
         else:
@@ -508,13 +508,13 @@ class RasterContainerVideo( RasterContainer ):
                 
                 self._buffer_end_index = num_frames - 1
                 
-                HydrusGlobals.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
+                HG.client_controller.CallToThread( self.THREADMoveRenderer, self._buffer_start_index, next_index_to_expect, self._buffer_end_index )
                 
             else:
                 
                 if not self.HasFrame( next_index_to_expect ):
                     
-                    HydrusGlobals.client_controller.CallToThread( self.THREADRushTo, next_index_to_expect )
+                    HG.client_controller.CallToThread( self.THREADRushTo, next_index_to_expect )
                     
                 
             

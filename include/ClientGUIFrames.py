@@ -3,7 +3,7 @@ import ClientGUICommon
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import os
 import wx
 
@@ -15,7 +15,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         elif key_type == 'access': title = 'Access Keys'
         
         # give it no parent, so this doesn't close when the dialog is closed!
-        ClientGUITopLevelWindows.Frame.__init__( self, None, HydrusGlobals.client_controller.PrepStringForDisplay( title ), float_on_parent = False )
+        ClientGUITopLevelWindows.Frame.__init__( self, None, HG.client_controller.PrepStringForDisplay( title ), float_on_parent = False )
         
         self._key_type = key_type
         self._keys = keys

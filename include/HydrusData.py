@@ -4,7 +4,7 @@ import cProfile
 import cStringIO
 import HydrusConstants as HC
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import locale
 import os
@@ -899,7 +899,7 @@ def Profile( summary, code, g, l ):
     
     output.seek( 0 )
     
-    HydrusGlobals.controller.PrintProfile( summary, output.read() )
+    HG.controller.PrintProfile( summary, output.read() )
     
 def RandomPop( population ):
     
@@ -1508,7 +1508,7 @@ class ContentUpdate( object ):
                 
                 hash = self._row[0]
                 
-                hashes = set( ( hash, ) )
+                hashes = { hash }
                 
             elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                 
@@ -1522,6 +1522,12 @@ class ContentUpdate( object ):
         elif self._data_type == HC.CONTENT_TYPE_DIRECTORIES:
             
             hashes = set()
+            
+        elif self._data_type == HC.CONTENT_TYPE_URLS:
+            
+            ( hash, urls ) = self._row
+            
+            hashes = { hash }
             
         elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -1649,7 +1655,7 @@ class JobDatabase( object ):
                 
                 break
                 
-            elif HydrusGlobals.model_shutdown:
+            elif HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
                 

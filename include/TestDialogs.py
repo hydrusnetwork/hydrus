@@ -9,7 +9,7 @@ import os
 import TestConstants
 import unittest
 import wx
-import HydrusGlobals
+import HydrusGlobals as HG
 
 def HitButton( button ): wx.PostEvent( button, wx.CommandEvent( wx.EVT_BUTTON.typeId, button.GetId() ) )
 
@@ -55,7 +55,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_select_booru( self ):
         
-        HydrusGlobals.test_controller.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
+        HG.test_controller.SetRead( 'remote_boorus', ClientDefaults.GetDefaultBoorus() )
         
         with ClientGUIDialogs.DialogSelectBooru( None ) as dlg:
             
@@ -69,7 +69,7 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_manage_subs( self ):
         
-        HydrusGlobals.test_controller.SetRead( 'serialisable_named', [] )
+        HG.test_controller.SetRead( 'serialisable_named', [] )
         
         title = 'subs test'
         

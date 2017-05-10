@@ -9,7 +9,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusTags
 import os
 import wx
@@ -626,7 +626,7 @@ class ListBoxTags( ListBox ):
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        HydrusGlobals.client_controller.sub( self, 'SiblingsHaveChanged', 'notify_new_siblings_gui' )
+        HG.client_controller.sub( self, 'SiblingsHaveChanged', 'notify_new_siblings_gui' )
         
     
     def _GetNamespaceColours( self ):
@@ -682,11 +682,11 @@ class ListBoxTags( ListBox ):
                 
             
         
-        predicates = HydrusGlobals.client_controller.GetGUI().FlushOutPredicates( predicates )
+        predicates = HG.client_controller.GetGUI().FlushOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
-            HydrusGlobals.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
             
         
     
@@ -741,7 +741,7 @@ class ListBoxTags( ListBox ):
                     text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) )
                     
                 
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+                HG.client_controller.pub( 'clipboard', 'text', text )
                 
             elif command in ( 'add_include_predicates', 'remove_include_predicates', 'add_exclude_predicates', 'remove_exclude_predicates' ):
                 
@@ -919,7 +919,7 @@ class ListBoxTags( ListBox ):
                     
                 
             
-            HydrusGlobals.client_controller.PopupMenu( self, menu )
+            HG.client_controller.PopupMenu( self, menu )
             
         
         event.Skip()
@@ -1131,7 +1131,7 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
             self._DataHasChanged()
             
         
-        HydrusGlobals.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
+        HG.client_controller.sub( self, 'EnterPredicates', 'enter_predicates' )
         
     
     def _Activate( self ):
@@ -1198,7 +1198,7 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
         
         self._DataHasChanged()
         
-        HydrusGlobals.client_controller.pub( 'refresh_query', self._page_key )
+        HG.client_controller.pub( 'refresh_query', self._page_key )
         
     
     def _GetTextFromTerm( self, term ):
@@ -1254,7 +1254,7 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
         
         predicates = [ term for term in self._selected_terms if term.GetType() != HC.PREDICATE_TYPE_PARENT ]
         
-        predicates = HydrusGlobals.client_controller.GetGUI().FlushOutPredicates( predicates )
+        predicates = HG.client_controller.GetGUI().FlushOutPredicates( predicates )
         
         if len( predicates ) > 0:
             
@@ -1566,7 +1566,7 @@ class ListBoxTagsStrings( ListBoxTags ):
     
     def _GetTextFromTerm( self, term ):
         
-        siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
         
         tag = term
         
@@ -1799,7 +1799,7 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if not self._collapse_siblings:
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
             
             sibling = siblings_manager.GetSibling( self._tag_service_key, tag )
             
@@ -2117,7 +2117,7 @@ class ListBoxTagsSelectionHoverFrame( ListBoxTagsSelection ):
     
     def _Activate( self ):
         
-        HydrusGlobals.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
+        HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         
     
 class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
@@ -2129,9 +2129,9 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         self._page_key = page_key
         self._get_current_predicates_callable = predicates_callable
         
-        HydrusGlobals.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
-        HydrusGlobals.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
-        HydrusGlobals.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
+        HG.client_controller.sub( self, 'IncrementTagsByMediaPubsub', 'increment_tags_selection' )
+        HG.client_controller.sub( self, 'SetTagsByMediaPubsub', 'new_tags_selection' )
+        HG.client_controller.sub( self, 'ChangeTagServicePubsub', 'change_tag_service' )
         
     
     def _Activate( self ):
@@ -2140,7 +2140,7 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
         if len( predicates ) > 0:
             
-            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
             
         
     
@@ -2150,19 +2150,19 @@ class ListBoxTagsSelectionManagementPanel( ListBoxTagsSelection ):
         
         if command == 'add_include_predicates':
             
-            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_remove = False )
             
         elif command == 'remove_include_predicates':
             
-            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, include_predicates, permit_add = False )
             
         elif command == 'add_exclude_predicates':
             
-            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_remove = False )
             
         elif command == 'remove_exclude_predicates':
             
-            HydrusGlobals.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
+            HG.client_controller.pub( 'enter_predicates', self._page_key, exclude_predicates, permit_add = False )
             
         
     

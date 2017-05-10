@@ -25,7 +25,7 @@ try:
     from include import ServerController
     import threading
     from twisted.internet import reactor
-    from include import HydrusGlobals
+    from include import HydrusGlobals as HG
     from include import HydrusLogger
     import traceback
     
@@ -108,8 +108,8 @@ try:
             
         finally:
             
-            HydrusGlobals.view_shutdown = True
-            HydrusGlobals.model_shutdown = True
+            HG.view_shutdown = True
+            HG.model_shutdown = True
             
             try: controller.pubimmediate( 'wake_daemons' )
             except: pass

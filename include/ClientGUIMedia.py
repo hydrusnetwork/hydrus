@@ -30,7 +30,7 @@ import traceback
 import wx
 import yaml
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import webbrowser
 
 # Option Enums
@@ -39,7 +39,7 @@ ID_TIMER_ANIMATION = wx.NewId()
 
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
-    services_manager = HydrusGlobals.client_controller.GetServicesManager()
+    services_manager = HG.client_controller.GetServicesManager()
     
     if len( service_keys ) == 1:
         
@@ -67,7 +67,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
 def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, callable ):
     
-    services_manager = HydrusGlobals.client_controller.GetServicesManager()
+    services_manager = HG.client_controller.GetServicesManager()
     
     if len( service_keys ) == 1:
         
@@ -114,14 +114,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._selected_media = set()
         
-        HydrusGlobals.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        HydrusGlobals.client_controller.sub( self, 'SetFocussedMedia', 'set_focus' )
-        HydrusGlobals.client_controller.sub( self, 'PageHidden', 'page_hidden' )
-        HydrusGlobals.client_controller.sub( self, 'PageShown', 'page_shown' )
-        HydrusGlobals.client_controller.sub( self, 'Collect', 'collect_media' )
-        HydrusGlobals.client_controller.sub( self, 'Sort', 'sort_media' )
-        HydrusGlobals.client_controller.sub( self, 'FileDumped', 'file_dumped' )
-        HydrusGlobals.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
+        HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
+        HG.client_controller.sub( self, 'SetFocussedMedia', 'set_focus' )
+        HG.client_controller.sub( self, 'PageHidden', 'page_hidden' )
+        HG.client_controller.sub( self, 'PageShown', 'page_shown' )
+        HG.client_controller.sub( self, 'Collect', 'collect_media' )
+        HG.client_controller.sub( self, 'Sort', 'sort_media' )
+        HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
+        HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         
         self._PublishSelectionChange()
         
@@ -147,7 +147,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
             
         
     
@@ -155,18 +155,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         media = self._focussed_media.GetDisplayMedia()
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'bmp', media )
+        HG.client_controller.pub( 'clipboard', 'bmp', media )
         
     
     def _CopyFilesToClipboard( self ):
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
         
         paths = [ client_files_manager.GetFilePath( hash ) for hash in hashes ]
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'paths', paths )
+        HG.client_controller.pub( 'clipboard', 'paths', paths )
         
     
     def _CopyHashToClipboard( self, hash_type ):
@@ -183,7 +183,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if display_media.GetLocationsManager().IsLocal():
                 
-                ( other_hash, ) = HydrusGlobals.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                ( other_hash, ) = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
                 hex_hash = other_hash.encode( 'hex' )
                 
@@ -195,7 +195,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
             
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', hex_hash )
+        HG.client_controller.pub( 'clipboard', 'text', hex_hash )
         
     
     def _CopyHashesToClipboard( self, hash_type ):
@@ -210,7 +210,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if len( sha256_hashes ) > 0:
                 
-                other_hashes = HydrusGlobals.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
+                other_hashes = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
                 
                 hex_hashes = os.linesep.join( [ other_hash.encode( 'hex' ) for other_hash in other_hashes ] )
                 
@@ -222,25 +222,25 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
             
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', hex_hashes )
+        HG.client_controller.pub( 'clipboard', 'text', hex_hashes )
         
     
     def _CopyPathToClipboard( self ):
         
         display_media = self._focussed_media.GetDisplayMedia()
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', path )
+        HG.client_controller.pub( 'clipboard', 'text', path )
         
     
     def _CopyPathsToClipboard( self ):
         
         media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
         
-        client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.GetClientFilesManager()
         
         paths = []
         
@@ -251,7 +251,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         text = os.linesep.join( paths )
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', text )
+        HG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _CopyServiceFilenameToClipboard( self, service_key ):
@@ -260,9 +260,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         hash = display_media.GetHash()
         
-        ( filename, ) = HydrusGlobals.client_controller.Read( 'service_filenames', service_key, { hash } )
+        ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         if service.GetServiceType() == HC.IPFS:
             
@@ -271,14 +271,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             filename = multihash_prefix + filename
             
         
-        HydrusGlobals.client_controller.pub( 'clipboard', 'text', filename )
+        HG.client_controller.pub( 'clipboard', 'text', filename )
         
     
     def _CopyServiceFilenamesToClipboard( self, service_key ):
         
         prefix = ''
         
-        service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.GetServicesManager().GetService( service_key )
         
         if service.GetServiceType() == HC.IPFS:
             
@@ -289,13 +289,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( hashes ) > 0:
             
-            filenames = [ prefix + filename for filename in HydrusGlobals.client_controller.Read( 'service_filenames', service_key, hashes ) ]
+            filenames = [ prefix + filename for filename in HG.client_controller.Read( 'service_filenames', service_key, hashes ) ]
             
             if len( filenames ) > 0:
                 
                 copy_string = os.linesep.join( filenames )
                 
-                HydrusGlobals.client_controller.pub( 'clipboard', 'text', copy_string )
+                HG.client_controller.pub( 'clipboard', 'text', copy_string )
                 
             else:
                 
@@ -376,7 +376,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     for content_update in content_updates:
                         
-                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
+                        HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
                         
                     
                 
@@ -402,7 +402,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, ( hashes, 'admin' ) ) ]
                     
                 
-                HydrusGlobals.client_controller.CallToThread( process_in_thread, file_service_key, content_updates )
+                HG.client_controller.CallToThread( process_in_thread, file_service_key, content_updates )
                 
             
         
@@ -439,7 +439,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _DownloadHashes( self, hashes ):
         
-        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
+        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
         
     
     def _FullScreen( self, first_media = None ):
@@ -448,7 +448,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             display_media = self._focussed_media.GetDisplayMedia()
             
-            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            new_options = HG.client_controller.GetNewOptions()
             
             media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
             
@@ -457,7 +457,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()
                 
-                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.GetClientFilesManager()
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -644,7 +644,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             hash = self._focussed_media.GetDisplayMedia().GetHash()
             
-            HydrusGlobals.client_controller.pub( 'new_similar_to', CC.COMBINED_LOCAL_FILE_SERVICE_KEY, hash, max_hamming )
+            HG.client_controller.pub( 'new_similar_to', CC.COMBINED_LOCAL_FILE_SERVICE_KEY, hash, max_hamming )
             
         
     
@@ -787,7 +787,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
             
         
     
@@ -795,7 +795,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            if len( HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
+            if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
                 flat_media = []
                 
@@ -863,7 +863,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = self._focussed_media.GetHash()
                 mime = self._focussed_media.GetMime()
                 
-                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.GetClientFilesManager()
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -880,7 +880,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            remote_service = HydrusGlobals.client_controller.GetServicesManager().GetService( remote_service_key )
+            remote_service = HG.client_controller.GetServicesManager().GetService( remote_service_key )
             
             service_type = remote_service.GetServiceType()
             
@@ -903,7 +903,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                         
                         service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
                         
-                        HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                        HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                         
                     
                 
@@ -915,7 +915,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
                 
-                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
             
         
@@ -976,7 +976,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         shortcut_processed = False
         
-        command = HydrusGlobals.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
+        command = HG.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
         
         if command is not None:
             
@@ -999,14 +999,14 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             tags_media = self._selected_media
             
         
-        HydrusGlobals.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
-        HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        HG.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
+        HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
     def _PublishSelectionIncrement( self, medias ):
         
-        HydrusGlobals.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
-        HydrusGlobals.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        HG.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
+        HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
     def _RecalculateVirtualSize( self ): pass
@@ -1026,7 +1026,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL )
         
-        HydrusGlobals.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
+        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
         
     
     def _RescindPetitionFiles( self, file_service_key ):
@@ -1035,7 +1035,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
             
         
     
@@ -1045,7 +1045,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
             
         
     
@@ -1128,7 +1128,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._focussed_media = media
         
-        HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, media )
+        HG.client_controller.pub( 'preview_changed', self._page_key, media )
         
     
     def _ShareOnLocalBooru( self ):
@@ -1155,7 +1155,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     info[ 'timeout' ] = timeout
                     info[ 'hashes' ] = hashes
                     
-                    HydrusGlobals.client_controller.Write( 'local_booru_share', share_key, info )
+                    HG.client_controller.Write( 'local_booru_share', share_key, info )
                     
                 
             
@@ -1169,7 +1169,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            media_results = HydrusGlobals.client_controller.Read( 'media_results', hashes )
+            media_results = HG.client_controller.Read( 'media_results', hashes )
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
@@ -1177,7 +1177,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             sorted_media_results = [ hashes_to_media_results[ media.GetHash() ] for media in sorted_flat_media if media.GetHash() in hashes_to_media_results ]
             
-            HydrusGlobals.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = sorted_media_results )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = sorted_media_results )
             
         
     
@@ -1211,7 +1211,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if do_it:
                 
-                HydrusGlobals.client_controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
+                HG.client_controller.Write( 'content_updates', { CC.TRASH_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] } )
                 
             
         
@@ -1222,7 +1222,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            ipfs_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
+            ipfs_service = HG.client_controller.GetServicesManager().GetService( file_service_key )
             
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a note to describe this directory.' ) as dlg:
@@ -1231,7 +1231,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 note = dlg.GetValue()
                 
-                HydrusGlobals.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
+                HG.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
                 
             
         
@@ -1242,7 +1242,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HydrusGlobals.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
             
         
     
@@ -1315,7 +1315,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key:
             
-            HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, None )
+            HG.client_controller.pub( 'preview_changed', self._page_key, None )
             
         
     
@@ -1323,7 +1323,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key:
             
-            HydrusGlobals.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
+            HG.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
             
             self._PublishSelectionChange()
             
@@ -1398,7 +1398,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key: ClientMedia.ListeningMediaList.Sort( self, sort_by )
         
-        HydrusGlobals.client_controller.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
+        HG.client_controller.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
     
 class MediaPanelLoading( MediaPanel ):
@@ -1410,7 +1410,7 @@ class MediaPanelLoading( MediaPanel ):
         
         MediaPanel.__init__( self, parent, page_key, file_service_key, [] )
         
-        HydrusGlobals.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
+        HG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
     
     def _GetPrettyStatus( self ):
@@ -1480,10 +1480,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.RefreshAcceleratorTable()
         
-        HydrusGlobals.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
-        HydrusGlobals.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
-        HydrusGlobals.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
-        HydrusGlobals.client_controller.sub( self, 'WaterfallThumbnail', 'waterfall_thumbnail' )
+        HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
+        HG.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
+        HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
+        HG.client_controller.sub( self, 'WaterfallThumbnail', 'waterfall_thumbnail' )
         
     
     def _CalculateVisiblePageIndices( self ):
@@ -1535,7 +1535,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails = [ thumbnail for ( thumbnail_index, thumbnail ) in self._GetThumbnailsFromPageIndex( clean_index ) ]
         
-        HydrusGlobals.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+        HG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
         
         self._dirty_canvas_pages.append( bmp )
         
@@ -1560,7 +1560,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails_to_render_later = []
         
-        thumbnail_cache = HydrusGlobals.client_controller.GetCache( 'thumbnail' )
+        thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
         
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
@@ -1586,7 +1586,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        HydrusGlobals.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+        HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
         
     
     def _ExportFiles( self ):
@@ -1614,7 +1614,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._selected_media ) > 0:
             
-            services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
             
             service_keys = [ service.GetServiceKey() for service in services ]
             
@@ -1847,7 +1847,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._ThumbnailIsVisible( thumbnail ) ]
         
-        thumbnail_cache = HydrusGlobals.client_controller.GetCache( 'thumbnail' )
+        thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
         
         thumbnails_to_render_later = []
         
@@ -1865,7 +1865,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( thumbnails_to_render_later ) > 0:
             
-            HydrusGlobals.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -1944,7 +1944,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._PublishSelectionChange()
         
-        HydrusGlobals.client_controller.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
+        HG.client_controller.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
         
     
     def _ScrollEnd( self, shift = False ):
@@ -2092,7 +2092,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     file_data_object = wx.FileDataObject()
                     
-                    client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.GetClientFilesManager()
                     
                     for hash in hashes:
                         
@@ -2326,7 +2326,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventShowMenu( self, event ):
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         thumbnail = self._GetThumbnailUnderMouse( event )
         
@@ -2353,7 +2353,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if thumbnail is None:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
             
             if len( self._sorted_media ) > 0:
                 
@@ -2411,7 +2411,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services_manager = HydrusGlobals.client_controller.GetServicesManager()
+                services_manager = HG.client_controller.GetServicesManager()
                 
                 services = services_manager.GetServices()
                 
@@ -2872,7 +2872,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     for url in urls:
                         
                         ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', webbrowser.open, url )
-                        ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HydrusGlobals.client_controller.pub, 'clipboard', 'text', url )
+                        ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
                         
                     
                     ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
@@ -2982,7 +2982,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HydrusGlobals.client_controller.pub, 'refresh_query', self._page_key )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
@@ -3050,7 +3050,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        HydrusGlobals.client_controller.PopupMenu( self, menu )
+        HG.client_controller.PopupMenu( self, menu )
         
         event.Skip()
         
@@ -3303,7 +3303,7 @@ class Thumbnail( Selectable ):
         
         local = self.GetLocationsManager().IsLocal()
         
-        thumbnail_hydrus_bmp = HydrusGlobals.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
+        thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
@@ -3347,7 +3347,7 @@ class Thumbnail( Selectable ):
         chapters = namespaces[ 'chapter' ]
         pages = namespaces[ 'page' ]
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         if new_options.GetBoolean( 'show_thumbnail_page' ):
             
@@ -3430,7 +3430,7 @@ class Thumbnail( Selectable ):
         
         if new_options.GetBoolean( 'show_thumbnail_title_banner' ):
             
-            siblings_manager = HydrusGlobals.client_controller.GetManager( 'tag_siblings' )
+            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
             
             upper_info_string = ''
             
@@ -3546,7 +3546,7 @@ class Thumbnail( Selectable ):
         
         # repo icons
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         repo_icon_x = 0
         

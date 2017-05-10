@@ -88,12 +88,19 @@ def DAEMONDownloadFiles( controller ):
                 
                 try:
                     
-                    file_repository = controller.GetServicesManager().GetService( service_key )
+                    service = controller.GetServicesManager().GetService( service_key )
                     
                 except:
                     
                     continue
                     
+                
+                if service.GetServiceType() != HC.FILE_REPOSITORY:
+                    
+                    continue
+                    
+                
+                file_repository = service
                 
                 if file_repository.IsFunctional():
                     

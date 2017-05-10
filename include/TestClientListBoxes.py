@@ -9,7 +9,7 @@ import TestConstants
 import time
 import unittest
 import wx
-import HydrusGlobals
+import HydrusGlobals as HG
 
 def DoClick( click, panel ):
     

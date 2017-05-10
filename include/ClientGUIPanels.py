@@ -7,7 +7,7 @@ import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusNetwork
 import HydrusPaths
@@ -92,7 +92,7 @@ class ReviewServicePanel( wx.Panel ):
         
         self._DisplayAccountInfo()
         
-        if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES + [ HC.IPFS ]:
+        if service_type in HC.REPOSITORIES + HC.LOCAL_SERVICES:
             
             service_info = self._controller.Read( 'service_info', self._service_key )
             
@@ -124,18 +124,6 @@ class ReviewServicePanel( wx.Panel ):
                 hashes = info[ 'hashes' ]
                 
                 self._booru_shares.Append( ( name, text, HydrusData.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
-                
-            
-        
-        if service_type == HC.IPFS:
-            
-            ipfs_shares = self._controller.Read( 'service_directories', self._service_key )
-            
-            self._ipfs_shares.DeleteAllItems()
-            
-            for ( multihash, num_files, total_size, note ) in ipfs_shares:
-                
-                self._ipfs_shares.Append( ( multihash, HydrusData.ConvertIntToPrettyString( num_files ), HydrusData.ConvertIntToBytes( total_size ), note ), ( multihash, num_files, total_size, note ) )
                 
             
         
@@ -184,30 +172,6 @@ class ReviewServicePanel( wx.Panel ):
             
             self._controller.Write( 'local_booru_share', share_key, info )
             
-        
-    
-    def EditIPFSNotes( self ):
-        
-        for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
-                    
-                    note = dlg.GetValue()
-                    
-                    content_update_row = ( hashes, multihash, note )
-                    
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
-                    
-                    HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
-                    
-                
-            
-        
-        self._DisplayService()
         
     
     def EventBooruDelete( self, event ):
@@ -290,7 +254,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 service_keys_to_content_updates = { self._service_key : [ content_update ] }
                 
-                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
                 self._DisplayService()
                 
@@ -363,44 +327,6 @@ class ReviewServicePanel( wx.Panel ):
         self._controller.CallToThread( do_it )
         
     
-    def EventIPFSCopyMultihash( self, event ):
-        
-        shares = self._ipfs_shares.GetSelectedClientData()
-        
-        if len( shares ) > 0:
-            
-            ( multihash, num_files, total_size, note ) = shares[0]
-            
-            multihash_prefix = self._service.GetMultihashPrefix()
-            
-            text = multihash_prefix + multihash
-            
-            self._controller.pub( 'clipboard', 'text', text )
-            
-        
-    
-    def EventIPFSOpenSearch( self, event ):
-        
-        for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
-            
-            hashes = self._controller.Read( 'service_directory', self._service_key, multihash )
-            
-            media_results = self._controller.Read( 'media_results', hashes )
-            
-            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
-            
-        
-    
-    def EventIPFSSetNote( self, event ):
-        
-        self.EditIPFSNotes()
-        
-    
-    def EventIPFSUnpin( self, event ):
-        
-        self.UnpinIPFSDirectories()
-        
-    
     def GetServiceKey( self ):
         
         return self._service.GetServiceKey()
@@ -409,22 +335,6 @@ class ReviewServicePanel( wx.Panel ):
     def RefreshLocalBooruShares( self ):
         
         self._DisplayService()
-        
-    
-    def UnpinIPFSDirectories( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
-                    
-                    self._service.UnpinDirectory( multihash )
-                    
-                
-                self._ipfs_shares.RemoveAllSelected()
-                
-            
         
     
     class _ServicePanel( ClientGUICommon.StaticBox ):
@@ -447,7 +357,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _Refresh( self ):
@@ -460,7 +370,7 @@ class ReviewServicePanel( wx.Panel ):
             self._name_and_type.SetLabelText( label )
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -491,12 +401,12 @@ class ReviewServicePanel( wx.Panel ):
             
             self.AddF( self._file_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _Refresh( self ):
             
-            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateFileInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
         def _UpdateFromThread( self, text ):
@@ -511,7 +421,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -521,9 +431,9 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADUpdateFileInfo( self ):
+        def THREADFetchInfo( self ):
             
-            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
@@ -567,7 +477,7 @@ class ReviewServicePanel( wx.Panel ):
             self.AddF( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _Refresh( self ):
@@ -610,7 +520,7 @@ class ReviewServicePanel( wx.Panel ):
             wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -660,7 +570,7 @@ class ReviewServicePanel( wx.Panel ):
             self.AddF( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _CopyAccountKey( self ):
@@ -671,7 +581,7 @@ class ReviewServicePanel( wx.Panel ):
             
             account_key_hex = account_key.encode( 'hex' )
             
-            HydrusGlobals.client_controller.pub( 'clipboard', 'text', account_key_hex )
+            HG.client_controller.pub( 'clipboard', 'text', account_key_hex )
             
         
         def _Refresh( self ):
@@ -779,10 +689,10 @@ class ReviewServicePanel( wx.Panel ):
             self._refresh_account_button.Disable()
             self._refresh_account_button.SetLabelText( u'fetching\u2026' )
             
-            HydrusGlobals.client_controller.CallToThread( do_it )
+            HG.client_controller.CallToThread( do_it )
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -833,7 +743,7 @@ class ReviewServicePanel( wx.Panel ):
             self.AddF( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _ExportUpdates( self ):
@@ -857,9 +767,9 @@ class ReviewServicePanel( wx.Panel ):
                         try:
                             
                             job_key.SetVariable( 'popup_title', 'exporting updates for ' + self._service.GetName() )
-                            HydrusGlobals.client_controller.pub( 'message', job_key )
+                            HG.client_controller.pub( 'message', job_key )
                             
-                            client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                            client_files_manager = HG.client_controller.GetClientFilesManager()
                             
                             for ( i, update_hash ) in enumerate( update_hashes ):
                                 
@@ -917,7 +827,7 @@ class ReviewServicePanel( wx.Panel ):
                     self._export_updates_button.SetLabelText( u'exporting\u2026' )
                     self._export_updates_button.Disable()
                     
-                    HydrusGlobals.client_controller.CallToThread( do_it, path )
+                    HG.client_controller.CallToThread( do_it, path )
                     
                 
             
@@ -931,7 +841,7 @@ class ReviewServicePanel( wx.Panel ):
             
             service_paused = self._service.IsPaused()
             
-            options = HydrusGlobals.client_controller.GetOptions()
+            options = HG.client_controller.GetOptions()
             
             all_repo_sync_paused = options[ 'pause_repo_sync' ]
             
@@ -955,7 +865,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._metadata_st.SetLabelText( self._service.GetNextUpdateDueString() )
             
-            HydrusGlobals.client_controller.CallToThread( self.THREADFetchUpdateProgress )
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
         def _Reset( self ):
@@ -1002,7 +912,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                     self._sync_now_button.Disable()
                     
-                    HydrusGlobals.client_controller.CallToThread( do_it )
+                    HG.client_controller.CallToThread( do_it )
                     
                 
             
@@ -1043,7 +953,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -1053,9 +963,9 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchUpdateProgress( self ):
+        def THREADFetchInfo( self ):
             
-            ( download_value, processing_value, range ) = HydrusGlobals.client_controller.Read( 'repository_progress', self._service.GetServiceKey() )
+            ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', self._service.GetServiceKey() )
             
             download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
             
@@ -1075,7 +985,12 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = ClientGUICommon.BetterStaticText( self )
+            self._ipfs_shares = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'multihash', 120 ), ( 'num files', 80 ), ( 'total size', 80 ), ( 'note', -1 ) ], delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            
+            self._copy_multihash_button = ClientGUICommon.BetterButton( self, 'copy multihashes', self._CopyMultihashes )
+            self._show_selected_button = ClientGUICommon.BetterButton( self, 'show selected in main gui', self._ShowSelectedInNewPages )
+            self._set_notes_button = ClientGUICommon.BetterButton( self, 'set notes', self._SetNotes )
+            self._unpin_button = ClientGUICommon.BetterButton( self, 'unpin selected', self._Unpin )
             
             #
             
@@ -1083,17 +998,165 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            button_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            button_box.AddF( self._copy_multihash_button, CC.FLAGS_VCENTER )
+            button_box.AddF( self._show_selected_button, CC.FLAGS_VCENTER )
+            button_box.AddF( self._set_notes_button, CC.FLAGS_VCENTER )
+            button_box.AddF( self._unpin_button, CC.FLAGS_VCENTER )
+            
+            self.AddF( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
+            
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+            
+        
+        def _CopyMultihashes( self ):
+            
+            multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData() ]
+            
+            if len( multihashes ) == 0:
+                
+                multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetClientData() ]
+                
+            
+            if len( multihashes ) > 0:
+                
+                multihash_prefix = self._service.GetMultihashPrefix()
+                
+                text = os.linesep.join( ( multihash_prefix + multihash for multihash in multihashes ) )
+                
+                HG.client_controller.pub( 'clipboard', 'text', text )
+                
+            
+        
+        def _GetDisplayTuple( self, sort_tuple ):
+            
+            ( multihash, num_files, total_size, note ) = sort_tuple
+            
+            pretty_multihash = multihash
+            pretty_num_files = HydrusData.ConvertIntToPrettyString( num_files )
+            pretty_total_size = HydrusData.ConvertIntToBytes( total_size )
+            pretty_note = note
+            
+            return ( pretty_multihash, pretty_num_files, pretty_total_size, pretty_note )
             
         
         def _Refresh( self ):
             
-            self._name_and_type.SetLabelText( 'This is an IPFS service. This box will regain its old information and controls in a later version.' )
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
-        def Update( self, service ):
+        def _SetNotes( self ):
+            
+            for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Set a note for ' + multihash + '.' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
+                        
+                        note = dlg.GetValue()
+                        
+                        content_update_row = ( hashes, multihash, note )
+                        
+                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        
+                        HG.client_controller.Write( 'content_updates', { self._service.GetServiceKey() : content_updates } )
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            
+            self._my_updater.Update()
+            
+        
+        def _ShowSelectedInNewPages( self ):
+            
+            def do_it( shares ):
+                
+                try:
+                    
+                    for ( multihash, num_files, total_size, note ) in shares:
+                        
+                        hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
+                        
+                        media_results = HG.client_controller.Read( 'media_results', hashes )
+                        
+                        HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+                        
+                    
+                finally:
+                    
+                    wx.CallAfter( self._ipfs_shares.Enable )
+                    
+                
+            
+            shares = self._ipfs_shares.GetSelectedClientData()
+            
+            self._ipfs_shares.Disable()
+            
+            HG.client_controller.CallToThread( do_it, shares )
+            
+        
+        def _Unpin( self ):
+            
+            def do_it( multihashes ):
+                
+                try:
+                    
+                    for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData():
+                        
+                        self._service.UnpinDirectory( multihash )
+                        
+                    
+                    self._ipfs_shares.RemoveAllSelected()
+                    
+                finally:
+                    
+                    wx.CallAfter( self._ipfs_shares.Enable )
+                    
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Unpin (remove) all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    multihashes = [ multihash for ( multihash, num_files, total_size, note ) in self._ipfs_shares.GetSelectedClientData() ]
+                    
+                    self._ipfs_shares.Disable()
+                    
+                    HG.client_controller.CallToThread( do_it, multihashes )
+                    
+                
+            
+        
+        def _UpdateFromThread( self, ipfs_shares ):
+            
+            try:
+                
+                self._ipfs_shares.DeleteAllItems()
+                
+                for ( multihash, num_files, total_size, note ) in ipfs_shares:
+                    
+                    sort_tuple = ( multihash, num_files, total_size, note )
+                    
+                    display_tuple = self._GetDisplayTuple( sort_tuple )
+                    
+                    self._ipfs_shares.Append( display_tuple, sort_tuple )
+                    
+                
+            except wx.PyDeadObjectError:
+                
+                pass
+                
+            
+        
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -1101,6 +1164,13 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._my_updater.Update()
                 
+            
+        
+        def THREADFetchInfo( self ):
+            
+            ipfs_shares = HG.client_controller.Read( 'service_directories', self._service.GetServiceKey() )
+            
+            wx.CallAfter( self._UpdateFromThread, ipfs_shares )
             
         
     
@@ -1124,7 +1194,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _Refresh( self ):
@@ -1132,7 +1202,7 @@ class ReviewServicePanel( wx.Panel ):
             self._name_and_type.SetLabelText( 'This is a Local Booru service. This box will regain its old information and controls in a later version.' )
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -1163,12 +1233,12 @@ class ReviewServicePanel( wx.Panel ):
             
             self.AddF( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _Refresh( self ):
             
-            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateRatingInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
         def _UpdateFromThread( self, text ):
@@ -1183,7 +1253,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -1193,9 +1263,9 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADUpdateRatingInfo( self ):
+        def THREADFetchInfo( self ):
             
-            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
@@ -1228,7 +1298,7 @@ class ReviewServicePanel( wx.Panel ):
             self.AddF( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self.AddF( self._advanced_content_update, CC.FLAGS_LONE_BUTTON )
             
-            HydrusGlobals.client_controller.sub( self, 'Update', 'service_updated' )
+            HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
         
         def _AdvancedContentUpdate( self ):
@@ -1245,7 +1315,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            HydrusGlobals.client_controller.CallToThread( self.THREADUpdateTagInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
         def _UpdateFromThread( self, text ):
@@ -1260,7 +1330,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def Update( self, service ):
+        def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
                 
@@ -1270,9 +1340,9 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADUpdateTagInfo( self ):
+        def THREADFetchInfo( self ):
             
-            service_info = HydrusGlobals.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
@@ -1320,18 +1390,18 @@ class ReviewServicePanel( wx.Panel ):
                     
                     def do_it():
                         
-                        hashes = HydrusGlobals.client_controller.Read( 'trash_hashes' )
+                        hashes = HG.client_controller.Read( 'trash_hashes' )
                         
                         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
                         
                         service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
                         
-                        HydrusGlobals.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                         
-                        HydrusGlobals.client_controller.pub( 'service_updated', self._service )
+                        HG.client_controller.pub( 'service_updated', self._service )
                         
                     
-                    HydrusGlobals.client_controller.CallToThread( do_it )
+                    HG.client_controller.CallToThread( do_it )
                     
                 
             

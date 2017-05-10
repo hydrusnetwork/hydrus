@@ -1,10 +1,10 @@
 import ClientGUICommon
-import HydrusGlobals
+import HydrusGlobals as HG
 import wx
 
 def IShouldCatchCharHook( evt_handler ):
     
-    if HydrusGlobals.client_controller.MenuIsOpen():
+    if HG.client_controller.MenuIsOpen():
         
         return False
         

@@ -2,7 +2,7 @@ import ClientConstants as CC
 import ClientGUIDialogs
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusTagArchive
 import HydrusTags
 import os
@@ -63,7 +63,7 @@ def ExportToHTA( parent, service_key, hashes ):
     
     if hash_type is not None:
         
-        HydrusGlobals.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
+        HG.client_controller.Write( 'export_mappings', path, service_key, hash_type, hashes )
         
     
 def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
@@ -76,7 +76,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
     del hta
     
-    service = HydrusGlobals.client_controller.GetServicesManager().GetService( tag_service_key )
+    service = HG.client_controller.GetServicesManager().GetService( tag_service_key )
     
     service_type = service.GetServiceType()
     
@@ -162,7 +162,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
             text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
             text += os.linesep * 2
             
-            file_service = HydrusGlobals.client_controller.GetServicesManager().GetService( file_service_key )
+            file_service = HG.client_controller.GetServicesManager().GetService( file_service_key )
             
             text += 'For '
             
@@ -186,7 +186,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
                 
                 if dlg_final.ShowModal() == wx.ID_YES:
                     
-                    HydrusGlobals.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
+                    HG.client_controller.pub( 'sync_to_tag_archive', hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
                     
                 
             
@@ -204,7 +204,7 @@ def RenderTag( tag, render_for_user ):
         
         if render_for_user:
             
-            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            new_options = HG.client_controller.GetNewOptions()
             
             if new_options.GetBoolean( 'show_namespaces' ):
                 

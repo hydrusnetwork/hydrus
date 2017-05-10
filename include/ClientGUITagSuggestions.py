@@ -10,7 +10,7 @@ import ClientThreading
 import collections
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusSerialisable
 import wx
 
@@ -22,7 +22,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         self._activate_callable = activate_callable
         
-        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
         if width is not None:
             
@@ -50,7 +50,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         ClientGUIListBoxes.ListBoxTagsStrings.SetTags( self, tags )
         
-        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
         if width is None:
             
@@ -81,7 +81,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         self._activate_callable = activate_callable
         
-        width = HydrusGlobals.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
         
         self.SetMinSize( ( width, -1 ) )
         
@@ -124,7 +124,7 @@ class RecentTagsPanel( wx.Panel ):
         self._service_key = service_key
         self._canvas_key = canvas_key
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -142,13 +142,13 @@ class RecentTagsPanel( wx.Panel ):
         
         if self._canvas_key is not None:
             
-            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
     
     def _RefreshRecentTags( self ):
         
-        recent_tags = HydrusGlobals.client_controller.Read( 'recent_tags', self._service_key )
+        recent_tags = HG.client_controller.Read( 'recent_tags', self._service_key )
         
         self._recent_tags.SetTags( recent_tags )
         
@@ -163,7 +163,7 @@ class RecentTagsPanel( wx.Panel ):
     
     def EventClear( self, event ):
         
-        HydrusGlobals.client_controller.WriteSynchronous( 'push_recent_tags', self._service_key, None )
+        HG.client_controller.WriteSynchronous( 'push_recent_tags', self._service_key, None )
         
         self._RefreshRecentTags()
         
@@ -178,7 +178,7 @@ class RelatedTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -204,7 +204,7 @@ class RelatedTagsPanel( wx.Panel ):
         
         if self._canvas_key is not None:
             
-            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
         self._QuickSuggestedRelatedTags()
@@ -227,7 +227,7 @@ class RelatedTagsPanel( wx.Panel ):
         
         max_results = 100
         
-        predicates = HydrusGlobals.client_controller.Read( 'related_tags', self._service_key, hash, search_tags, max_results, max_time_to_take )
+        predicates = HG.client_controller.Read( 'related_tags', self._service_key, hash, search_tags, max_results, max_time_to_take )
         
         predicates = ClientSearch.SortPredicates( predicates )
         
@@ -275,7 +275,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        scripts = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+        scripts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
         
         script_names_to_scripts = { script.GetName() : script for script in scripts }
         
@@ -286,7 +286,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             self._script_choice.Append( script.GetName(), script )
             
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
         
@@ -321,7 +321,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         if self._canvas_key is not None:
             
-            HydrusGlobals.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
     
@@ -382,7 +382,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         desired_content = 'all'
         
-        HydrusGlobals.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier, desired_content )
+        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier, desired_content )
         
     
     def THREADFetchTags( self, script, job_key, file_identifier, desired_content ):
@@ -404,7 +404,7 @@ class SuggestedTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        self._new_options = HydrusGlobals.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
         layout_mode = self._new_options.GetNoneableString( 'suggested_tags_layout' )
         

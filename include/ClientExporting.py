@@ -3,7 +3,7 @@ import ClientData
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
@@ -95,7 +95,7 @@ def GenerateExportFilename( media, terms ):
     
 def GetExportPath():
     
-    options = HydrusGlobals.client_controller.GetOptions()
+    options = HG.client_controller.GetOptions()
     
     portable_path = options[ 'export_path' ]
     
@@ -205,7 +205,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if phrase is None:
             
-            new_options = HydrusGlobals.client_controller.GetNewOptions()
+            new_options = HG.client_controller.GetNewOptions()
             
             phrase = new_options.GetString( 'export_phrase' )
             
@@ -254,7 +254,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if folder_path != '' and os.path.exists( folder_path ) and os.path.isdir( folder_path ):
                 
-                query_hash_ids = HydrusGlobals.client_controller.Read( 'file_query_ids', self._file_search_context )
+                query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context )
                 
                 media_results = []
                 
@@ -274,7 +274,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     sub_query_hash_ids = query_hash_ids[ last_i : i ]
                     
-                    more_media_results = HydrusGlobals.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
+                    more_media_results = HG.client_controller.Read( 'media_results_from_ids', sub_query_hash_ids )
                     
                     media_results.extend( more_media_results )
                     
@@ -287,7 +287,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 sync_filenames = set()
                 
-                client_files_manager = HydrusGlobals.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.GetClientFilesManager()
                 
                 num_copied = 0
                 
@@ -344,7 +344,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             self._last_checked = HydrusData.GetNow()
             
-            HydrusGlobals.client_controller.WriteSynchronous( 'serialisable', self )
+            HG.client_controller.WriteSynchronous( 'serialisable', self )
             
         
     

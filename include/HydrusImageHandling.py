@@ -11,7 +11,7 @@ import threading
 import time
 import traceback
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusPaths
 
 def ConvertToPngIfBmp( path ):

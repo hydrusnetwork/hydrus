@@ -1,7 +1,7 @@
 import gc
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import os
 import psutil
 import send2trash
@@ -76,7 +76,7 @@ def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
         
         if base_dir_override is None:
             
-            base_dir = HydrusGlobals.controller.GetDBDir()
+            base_dir = HG.controller.GetDBDir()
             
         else:
             
@@ -114,7 +114,7 @@ def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
         
         if base_dir_override is None:
             
-            base_dir = HydrusGlobals.controller.GetDBDir()
+            base_dir = HG.controller.GetDBDir()
             
         else:
             

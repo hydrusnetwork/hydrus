@@ -8,7 +8,7 @@ import traceback
 import HydrusData
 import HydrusExceptions
 import re
-import HydrusGlobals
+import HydrusGlobals as HG
 
 re_newlines = re.compile( '[\r\n]', re.UNICODE )
 re_multiple_spaces = re.compile( '\\s+', re.UNICODE )

@@ -24,7 +24,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusNetwork
 import HydrusPaths
@@ -69,7 +69,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
         
-        result = HydrusGlobals.client_controller.Read( 'serialisable_simple', '4chan_pass' )
+        result = HG.client_controller.Read( 'serialisable_simple', '4chan_pass' )
         
         if result is None:
             
@@ -141,7 +141,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         token = self._token.GetValue()
         pin = self._pin.GetValue()
         
-        HydrusGlobals.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
+        HG.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
         
         self.EndModal( wx.ID_OK )
         
@@ -169,12 +169,12 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
             request_headers = {}
             request_headers[ 'Content-Type' ] = ct
             
-            response = HydrusGlobals.client_controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
+            response = HG.client_controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
             
             self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
             
         
-        HydrusGlobals.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
+        HG.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
         
         self._SetStatus()
         
@@ -209,7 +209,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         #
         
-        boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+        boorus = HG.client_controller.Read( 'remote_boorus' )
         
         for ( name, booru ) in boorus.items():
             
@@ -307,7 +307,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                HydrusGlobals.client_controller.Write( 'delete_remote_booru', name )
+                HG.client_controller.Write( 'delete_remote_booru', name )
                 
             
             for page in self._boorus.GetActivePages():
@@ -318,7 +318,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
                     
                     name = booru.GetName()
                     
-                    HydrusGlobals.client_controller.Write( 'remote_booru', name, booru )
+                    HG.client_controller.Write( 'remote_booru', name, booru )
                     
                 
             
@@ -676,7 +676,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             self._edit_log = []
             
-            ( identities, contacts, deletable_names ) = HydrusGlobals.client_controller.Read( 'identities_and_contacts' )
+            ( identities, contacts, deletable_names ) = HG.client_controller.Read( 'identities_and_contacts' )
             
             self._deletable_names = deletable_names
             
@@ -927,7 +927,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         try:
             
-            if len( self._edit_log ) > 0: HydrusGlobals.client_controller.Write( 'update_contacts', self._edit_log )
+            if len( self._edit_log ) > 0: HG.client_controller.Write( 'update_contacts', self._edit_log )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -1185,7 +1185,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         self._export_folders = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
-        export_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+        export_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         for export_folder in export_folders:
             
@@ -1246,7 +1246,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def _AddFolder( self ):
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         phrase = new_options.GetString( 'export_phrase' )
         
@@ -1356,7 +1356,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
+        existing_db_names = set( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
         
         export_folders = self._export_folders.GetObjects()
         
@@ -1364,7 +1364,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for export_folder in export_folders:
             
-            HydrusGlobals.client_controller.Write( 'serialisable', export_folder )
+            HG.client_controller.Write( 'serialisable', export_folder )
             
             good_names.add( export_folder.GetName() )
             
@@ -1373,10 +1373,10 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         for name in names_to_delete:
             
-            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
+            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
             
         
-        HydrusGlobals.client_controller.pub( 'notify_new_export_folders' )
+        HG.client_controller.pub( 'notify_new_export_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -1592,7 +1592,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             self._names_to_delete = []
             
-            sites = HydrusGlobals.client_controller.Read( 'imageboards' )
+            sites = HG.client_controller.Read( 'imageboards' )
             
             for ( name, imageboards ) in sites.items():
                 
@@ -1694,7 +1694,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             
             for name in self._names_to_delete:
                 
-                HydrusGlobals.client_controller.Write( 'delete_imageboard', name )
+                HG.client_controller.Write( 'delete_imageboard', name )
                 
             
             for page in self._sites.GetActivePages():
@@ -1705,7 +1705,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                     
                     name = 'this is old code'
                     
-                    HydrusGlobals.client_controller.Write( 'imageboard', name, imageboards )
+                    HG.client_controller.Write( 'imageboard', name, imageboards )
                     
                 
             
@@ -2305,7 +2305,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         #
         
-        import_folders = HydrusGlobals.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+        import_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
         for import_folder in import_folders:
             
@@ -2439,7 +2439,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
-        existing_db_names = set( HydrusGlobals.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ) )
+        existing_db_names = set( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ) )
         
         good_names = set()
         
@@ -2449,17 +2449,17 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             
             good_names.add( import_folder.GetName() )
             
-            HydrusGlobals.client_controller.Write( 'serialisable', import_folder )
+            HG.client_controller.Write( 'serialisable', import_folder )
             
         
         names_to_delete = existing_db_names - good_names
         
         for name in names_to_delete:
             
-            HydrusGlobals.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
+            HG.client_controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
             
         
-        HydrusGlobals.client_controller.pub( 'notify_new_import_folders' )
+        HG.client_controller.pub( 'notify_new_import_folders' )
         
         self.EndModal( wx.ID_OK )
         
@@ -2534,7 +2534,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._txt_parse_st = wx.StaticText( self._tag_box, label = '' )
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         self._txt_parse_tag_service_keys = services_manager.FilterValidServiceKeys( txt_parse_tag_service_keys )
         
@@ -2730,7 +2730,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
     def _RefreshTxtParseText( self ):
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         services = [ services_manager.GetService( service_key ) for service_key in self._txt_parse_tag_service_keys ]
         
@@ -2772,7 +2772,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
     def EventEditTxtParsing( self, event ):
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         tag_services = services_manager.GetServices( HC.TAG_SERVICES )
         
@@ -2810,7 +2810,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             return
             
         
-        if HC.BASE_DIR.startswith( path ) or HydrusGlobals.client_controller.GetDBDir().startswith( path ):
+        if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
             
             wx.MessageBox( 'You cannot set an import path that includes your install or database directory!' )
             
@@ -2901,7 +2901,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
             
             dlg.SetPanel( panel )
             
@@ -2935,7 +2935,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         #
         
-        result = HydrusGlobals.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
+        result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
         
         if result is None:
             
@@ -2992,11 +2992,11 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         if pixiv_id == '' and password == '':
             
-            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', None )
+            HG.client_controller.Write( 'serialisable_simple', 'pixiv_account', None )
             
         else:
             
-            HydrusGlobals.client_controller.Write( 'serialisable_simple', 'pixiv_account', ( pixiv_id, password ) )
+            HG.client_controller.Write( 'serialisable_simple', 'pixiv_account', ( pixiv_id, password ) )
             
         
         self.EndModal( wx.ID_OK )
@@ -3009,7 +3009,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         try:
             
-            manager = HydrusGlobals.client_controller.GetManager( 'web_sessions' )
+            manager = HG.client_controller.GetManager( 'web_sessions' )
             
             cookies = manager.GetPixivCookies( pixiv_id, password )
             
@@ -3050,8 +3050,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
-        numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        like_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        numerical_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         self._panels = []
         
@@ -3131,7 +3131,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         shortcut_processed = False
         
-        command = HydrusGlobals.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
+        command = HG.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
         
         if command is not None:
             
@@ -3178,7 +3178,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             if len( service_keys_to_content_updates ) > 0:
                 
-                HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
@@ -3189,7 +3189,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
                 
                 HC.options[ 'rating_dialog_position' ] = ( remember, current_position )
                 
-                HydrusGlobals.client_controller.Write( 'save_options', HC.options )
+                HG.client_controller.Write( 'save_options', HC.options )
                 
             
         finally:
@@ -3484,7 +3484,7 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
             
             HC.options[ 'regex_favourites' ] = self._regexes.GetClientData()
             
-            HydrusGlobals.client_controller.Write( 'save_options', HC.options )
+            HG.client_controller.Write( 'save_options', HC.options )
             
         finally:
             
@@ -3510,7 +3510,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         #
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = HG.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
         for service in services:
             
@@ -3564,7 +3564,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             info = [ page.GetInfo() for page in self._tag_services.GetActivePages() if page.HasInfo() ]
             
-            HydrusGlobals.client_controller.Write( 'tag_censorship', info )
+            HG.client_controller.Write( 'tag_censorship', info )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -3598,7 +3598,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             #
             
-            ( blacklist, tags ) = HydrusGlobals.client_controller.Read( 'tag_censorship', service_key )
+            ( blacklist, tags ) = HG.client_controller.Read( 'tag_censorship', service_key )
             
             if blacklist: self._blacklist.SetSelection( 0 )
             else: self._blacklist.SetSelection( 1 )
@@ -3676,7 +3676,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         #
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -3752,7 +3752,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -3777,10 +3777,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                self._service = HG.client_controller.GetServicesManager().GetService( service_key )
                 
             
-            self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_parents', service_key )
+            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             
@@ -4264,7 +4264,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         self._tag_repositories.AddPage( name, name, page )
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -4334,7 +4334,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 service_keys_to_content_updates[ service_key ] = content_updates
                 
             
-            HydrusGlobals.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         finally: self.EndModal( wx.ID_OK )
         
@@ -4359,10 +4359,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                self._service = HydrusGlobals.client_controller.GetServicesManager().GetService( service_key )
+                self._service = HG.client_controller.GetServicesManager().GetService( service_key )
                 
             
-            self._original_statuses_to_pairs = HydrusGlobals.client_controller.Read( 'tag_siblings', service_key )
+            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
             
             self._current_statuses_to_pairs = collections.defaultdict( set )
             

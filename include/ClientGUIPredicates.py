@@ -6,7 +6,7 @@ import ClientRatings
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import string
 import wx
 
@@ -140,7 +140,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         self._current_pending = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'currently in', HC.CONTENT_STATUS_CURRENT ), ( 'pending to', HC.CONTENT_STATUS_PENDING ) ], style = wx.RA_SPECIFY_ROWS )
         
-        services = HydrusGlobals.client_controller.GetServicesManager().GetServices( HC.FILE_SERVICES )
+        services = HG.client_controller.GetServicesManager().GetServices( HC.FILE_SERVICES )
         
         choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
@@ -447,7 +447,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_like_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        local_like_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         self._like_checkboxes_to_info = {}
         
@@ -479,7 +479,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         #
         
-        local_numerical_services = HydrusGlobals.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        local_numerical_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         self._numerical_checkboxes_to_info = {}
         

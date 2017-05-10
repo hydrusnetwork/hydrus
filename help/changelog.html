@@ -8,6 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 255</h3></li>
+				<ul>
+					<li>the duplicate filter now supports shift+left-click to drag, like the archive/delete filter (this remains hardcoded for now)</li>
+					<li>if a pair in the dupe filter has the same resolution, they will now maintain zoom and pan when switching back and forth (I might increase this to work for same ratio as well, let me know how it works in the real world)</li>
+					<li>the duplicate filter will show a lighter/darker background colour as you scroll the current pair</li>
+					<li>the way lighter/darker and alternate lighter/darker colours are calculated is now centralised and should be more reliable in edge cases</li>
+					<li>improved the dupe filter pair selection algorithm--it now chooses pairs more reliably under edge case conditions and prioritises decision-groups that have high potential decision value. it should also run a little faster</li>
+					<li>increased the dupe filter batch size to 250, let's see if it causes any problems</li>
+					<li>the close button on the dupe filter's top hover window now works</li>
+					<li>fixed the duplicate filter disappearing pairs that were skipped (meaning you could not go back to revisit them)</li>
+					<li>fixed a frequent deadobject error when the dupe filter closes</li>
+					<li>the shutdown 'maintenance due' test is less sensitive to dupe search tree rebalancing, which typically only takes half a second</li>
+					<li>the archive/delete filter now uses the new shortcuts system for both keyboard and mouse input</li>
+					<li>the archive/delete filter now intercepts archive or delete commands from different sources ('media' shortcuts, top hover frame button presses) more reliably and converts them into filter actions (hence moving on to the next file)</li>
+					<li>you can now move pages one to the left or right from their menu!</li>
+					<li>on the top-right hover window (and the background underneath), ratings are now on the top, and hence will always be in the same location as you scroll through your media regardless of known urls, remote location, or inbox status</li>
+					<li>autocomplete searches for tags with apostrophes, quote marks, braces, brackets and paretheses should be more reliable</li>
+					<li>urls are now associated with files through the same 'content' pipeline as tags and ratings and so on</li>
+					<li>gui-level media is now aware of the 'new url content update' event and will update and redraw itself appropriately</li>
+					<li>fixed deviant art nsfw parsing, but it might not hold for long. proper fix here is to wait for the downloader overhaul</li>
+					<li>networking engine now uses the 'requests' module's CA .pem (which the overhaul will be moving to anyway), which should reduce the frequency of ssl verify failures (gelbooru on the relatively new 'Let's Encrypt' CA had this problem for many users)</li>
+					<li>fixed the networking engine redirect parsing for gelbooru's unusual location header. unfortunately, gelbooru is still giving mickey-mouse garbage redirect urls from its main thumbnail pages, for which in this engine there is no immediate fix</li>
+					<li>neighbouring .txt tags will now be properly cleaned and sibling-collapsed in the path tagging dialog</li>
+					<li>neighbouring .txt tags will now be properly sibling-collapsed in the import folder workflow</li>
+					<li>making a media viewer borderless fullscreen and back will now recenter the media (previously, the current drag delta was not reset, so this frequently put media off-screen)</li>
+					<li>fixed a serious issue where the media viewer could lock the client up on opening with a video if its gui options set 'remember size' to false</li>
+					<li>tag import options objects will cleanse themselves of missing services on options save/client shutdown</li>
+					<li>manage tags now defaults to cross-referencing 'my files' on the 'local tags' domain, where 'remote' (i.e. deleted) files' tags are not useful</li>
+					<li>reduced memory use when importing large pngs with transparency</li>
+					<li>improved adminside petition processing gui reporting</li>
+					<li>servers will now cap the size of their mapping petitions so as not to ovewhelm the admin processing them (they now won't be both >20 tags and >1000 total row weight)</li>
+					<li>the media viewer's manage tags frame now listens for content updates from outside, so if you alter an in-view file's tags (such as with a shortcut key), the manage tags dialog will update as it happens</li>
+					<li>moved a number of the buttons on the top hover windows to the new unified internal command engine (which the new shortcut system also uses)</li>
+					<li>disk cache maintenance uses fewer resources but now occurs in the foreground (and should hence more reliably maintain the cache)</li>
+					<li>critical repository service id lookup errors will now automatically reset the repository's processing cache and better inform the user of what has happened. if you see this, please let me know the details and how this error fired in the real world</li>
+					<li>updated and reinstated the ipfs service panel in review services</li>
+					<li>updated some ipfs service code for the new service system</li>
+					<li>misc refactoring and cleanup</li>
+					<li>more cleanup and deletion of redundant old pubsub command code</li>
+					<li>updated ubuntu build machine to 17.04 and opencv 3.2</li>
+				</ul>
 				<li><h3>version 254</h3></li>
 				<ul>
 					<li>the duplicate processing page is now on the new page picker, under the new menu 'special'</li>

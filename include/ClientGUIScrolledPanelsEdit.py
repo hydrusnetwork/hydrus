@@ -11,7 +11,7 @@ import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
-import HydrusGlobals
+import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
 import wx
@@ -155,7 +155,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_actions, delete_second_file ) = duplicate_action_options.ToTuple()
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         for ( service_key, action ) in service_actions:
             
@@ -203,7 +203,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             existing_service_keys.add( service_key )
             
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         choice_tuples = []
         
@@ -327,7 +327,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, action ) = sort_tuple
         
-        services_manager = HydrusGlobals.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.GetServicesManager()
         
         service = services_manager.GetService( service_key )
         
@@ -1158,7 +1158,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        new_options = HydrusGlobals.client_controller.GetNewOptions()
+        new_options = HG.client_controller.GetNewOptions()
         
         import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
         
@@ -1290,7 +1290,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._booru_selector.GetCount() == 0:
                 
-                boorus = HydrusGlobals.client_controller.Read( 'remote_boorus' )
+                boorus = HG.client_controller.Read( 'remote_boorus' )
                 
                 for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
                 
@@ -1317,7 +1317,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
             
-            panel = EditSeedCachePanel( dlg, HydrusGlobals.client_controller, dupe_seed_cache )
+            panel = EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
             
             dlg.SetPanel( panel )
             
