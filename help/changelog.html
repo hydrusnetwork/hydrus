@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 256</h3></li>
+				<ul>
+					<li>the duplicate filter now loads new pairs off the gui thread. it will display 'loading pairs...' during this time</li>
+					<li>media viewers of all kinds are now more comfortable displaying no media (when this occurs, it is usually a frame or two during startup/shutdown)</li>
+					<li>the duplicate filter now responds to any media_viewer_browser navigation commands (like view_next) with a media switch action</li>
+					<li>you can now alter the duplicate filter's background lighten/darken switch intensity from its top hover window's cog icon</li>
+					<li>fixed a bug in the new dupe pair selection algorithm that was preventing pairs from being presented as groups</li>
+					<li>the duplicate filter will now speed up workflow by automatically skipping pairs when you have previously chosen to delete one of the files in the current batch</li>
+					<li>auto-skipped pairs _should_ be auto-reverse-skipped on a 'go back' action</li>
+					<li>added a |< 'go back' index navigation button to the duplicate filter top hover window</li>
+					<li>the duplicate filter now displays several 'this file has larger resolution'-type statements about the currently viewed file. it lists them on the top hover window and in the background details text underneath</li>
+					<li>the duplicate filter _roughly_ attempts to put the better file of the two first. this will always be indexed 'A'</li>
+					<li>the duplicate filter now shows done/total batch progress in its index string--not sure how clear/helpful this ultimately is, so may need to revisit</li>
+					<li>an unusual bug where Linux would spam the 'All pairs have been filtered!' duplicate filter message over and over and then crash _should_ be fixed--the filter no longer waits for that message to be OKed before closing itself</li>
+					<li>drag-and-dropping text onto the client will now a) open a url import page if none already exist and b) put the dropped text into the input box of the first open url import page (and focus it, so you can quickly hit enter)! This works when dragging text links from browsers, as well</li>
+					<li>you can now 'append' gui sessions, which will just append that session's tabs to whatever is already open--say, if you have several 'favourites' pages you want to be able to quickly load up without having to break your existing workflow</li>
+					<li>ipfs services now have a 'check daemon' button on their review services panel which will test the daemon is running and accessible and report its version</li>
+					<li>fixed the 'test address' button for ipfs services on their manage services panel</li>
+					<li>the client can now automatically download files it wants and knows are on an ipfs service</li>
+					<li>middle-click on an 'all known files' domain thumbnail will now correctly start a download (as long as a specific remote file service is known)</li>
+					<li>the multihash prefix option is reinstated on ipfs manage services panels</li>
+					<li>the gelbooru parser now discovers the correct page url to associate with its files</li>
+					<li>wrote some redirect fetching code to fix the gelbooru bad urls issue</li>
+					<li>discovered a quicker fix for the gelbooru issue--the redirect location is the garbage in the original url in base64</li>
+					<li>all downloader/subscription url caches will purge any old gelbooru 'redirect.php' urls on update</li>
+					<li>fixed an issue where 'previously deleted' gallery/thread imports were returning 'fail'</li>
+					<li>fixed a problem that was causing some redundant laggy work in adminside petition processing</li>
+					<li>thread watchers will now remember their file and tag import options through a session save even when no thread url has yet been entered</li>
+					<li>fixed an issue where media 'removed' from a media viewer view of a collection resulted in the entire collection being removed at the thumbnail level</li>
+					<li>fixed an issue where media deleted from a media viewer view of a collection resulted in the media not being correctly removed from selection tags</li>
+					<li>tag, namespace, and wildcard searches on a specific file domain (i.e. other than 'all known files') now take advantage of an optimisation in the autocomplete cache and so run significantly faster</li>
+					<li>fixed a hover window coordinate calculation issue after minimising the media viewer on some platforms</li>
+					<li>removed some 'all files failed to download' spam that could sometimes occur</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 255</h3></li>
 				<ul>
 					<li>the duplicate filter now supports shift+left-click to drag, like the archive/delete filter (this remains hardcoded for now)</li>
