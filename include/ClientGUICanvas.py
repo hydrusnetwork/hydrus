@@ -1189,12 +1189,18 @@ class Canvas( wx.Window ):
     
     def _Archive( self ):
         
-        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+        if self._current_media is not None:
+            
+            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+            
         
     
     def _CopyBMPToClipboard( self ):
         
-        HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
+        if self._current_media is not None:
+            
+            HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
+            
         
     
     def _CopyHashToClipboard( self, hash_type ):
@@ -1226,23 +1232,34 @@ class Canvas( wx.Window ):
     
     def _CopyFileToClipboard( self ):
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
-        
-        paths = [ client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) ]
-        
-        HG.client_controller.pub( 'clipboard', 'paths', paths )
+        if self._current_media is not None:
+            
+            client_files_manager = HG.client_controller.GetClientFilesManager()
+            
+            paths = [ client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) ]
+            
+            HG.client_controller.pub( 'clipboard', 'paths', paths )
+            
         
     
     def _CopyPathToClipboard( self ):
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
-        
-        path = client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
-        
-        HG.client_controller.pub( 'clipboard', 'text', path )
+        if self._current_media is not None:
+            
+            client_files_manager = HG.client_controller.GetClientFilesManager()
+            
+            path = client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
+            
+            HG.client_controller.pub( 'clipboard', 'text', path )
+            
         
     
     def _Delete( self, service_key = None ):
+        
+        if self._current_media is None:
+            
+            return
+            
         
         do_it = False
         
@@ -1301,6 +1318,11 @@ class Canvas( wx.Window ):
     
     def _DoManualPan( self, delta_x_step, delta_y_step ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         ( my_x, my_y ) = self.GetClientSize()
         ( media_x, media_y ) = self._media_container.GetClientSize()
         
@@ -1330,18 +1352,23 @@ class Canvas( wx.Window ):
         self._dirty = False
         
     
-    def _DrawBackgroundDetails( self, dc ): pass
+    def _DrawBackgroundDetails( self, dc ):
+        
+        pass
+        
     
     def _DrawCurrentMedia( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
         
         ( my_width, my_height ) = self.GetClientSize()
         
         if my_width > 0 and my_height > 0:
             
-            if self._current_media is not None:
-                
-                self._SizeAndPositionMediaContainer()
-                
+            self._SizeAndPositionMediaContainer()
             
         
     
@@ -1439,15 +1466,30 @@ class Canvas( wx.Window ):
     
     def _Inbox( self ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
         
     
     def _IsZoomable( self ):
         
+        if self._current_media is None:
+            
+            return False
+            
+        
         return self._GetShowAction( self._current_media ) not in ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW )
         
     
     def _MaintainZoom( self, previous_media ):
+        
+        if self._current_media is None:
+            
+            return
+            
         
         if previous_media.GetResolution() == self._current_media.GetResolution():
             
@@ -1466,7 +1508,12 @@ class Canvas( wx.Window ):
         
     
     def _ManageRatings( self ):
-    
+        
+        if self._current_media is None:
+            
+            return
+            
+        
         if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
             
             if self._current_media is not None:
@@ -1477,6 +1524,11 @@ class Canvas( wx.Window ):
         
     
     def _ManageTags( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
         
         if self._manage_tags_panel:
             
@@ -1502,21 +1554,23 @@ class Canvas( wx.Window ):
     
     def _OpenExternally( self ):
         
-        if self._current_media is not None:
+        if self._current_media is None:
             
-            hash = self._current_media.GetHash()
-            mime = self._current_media.GetMime()
+            return
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+        
+        hash = self._current_media.GetHash()
+        mime = self._current_media.GetMime()
+        
+        client_files_manager = HG.client_controller.GetClientFilesManager()
+        
+        path = client_files_manager.GetFilePath( hash, mime )
+        
+        HydrusPaths.LaunchFile( path )
+        
+        if self._current_media.HasDuration() and mime != HC.APPLICATION_FLASH:
             
-            path = client_files_manager.GetFilePath( hash, mime )
-            
-            HydrusPaths.LaunchFile( path )
-            
-            if self._current_media.HasDuration() and mime != HC.APPLICATION_FLASH:
-                
-                self._media_container.Pause()
-                
+            self._media_container.Pause()
             
         
     
@@ -1598,6 +1652,11 @@ class Canvas( wx.Window ):
                 
             
         elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            if self._current_media is None:
+                
+                return
+                
             
             ( service_key, content_type, action, value ) = data
             
@@ -1752,6 +1811,11 @@ class Canvas( wx.Window ):
     
     def _ReinitZoom( self ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         show_action = self._GetShowAction( self._current_media )
         
         ( self._current_zoom, self._canvas_zoom ) = CalculateCanvasZooms( self, self._current_media, show_action )
@@ -1774,6 +1838,11 @@ class Canvas( wx.Window ):
     
     def _SizeAndPositionMediaContainer( self ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
         
         if new_size != self._media_container.GetSize(): self._media_container.SetSize( new_size )
@@ -1784,7 +1853,12 @@ class Canvas( wx.Window ):
         
     
     def _TryToChangeZoom( self, new_zoom ):
-
+        
+        if self._current_media is None:
+            
+            return
+            
+        
         if self._current_media.GetMime() == HC.APPLICATION_FLASH:
             
             # we want to preserve whitespace around flash
@@ -2446,9 +2520,27 @@ class CanvasWithDetails( Canvas ):
     
     BORDER = wx.NO_BORDER
     
+    def _DrawAdditionalTopMiddleInfo( self, dc, current_y ):
+        
+        pass
+        
+    
     def _DrawBackgroundDetails( self, dc ):
         
-        if self._current_media is not None:
+        if self._current_media is None:
+            
+            text = 'No media to display'
+            
+            ( width, height ) = dc.GetTextExtent( text )
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            x = ( my_width - width ) // 2
+            y = ( my_height - height ) // 2
+            
+            dc.DrawText( text, x, y )
+            
+        else:
             
             ( client_width, client_height ) = self.GetClientSize()
             
@@ -2641,6 +2733,10 @@ class CanvasWithDetails( Canvas ):
             ( x, y ) = dc.GetTextExtent( info_string )
             
             dc.DrawText( info_string, ( client_width - x ) / 2, current_y )
+            
+            current_y += y + 3
+            
+            self._DrawAdditionalTopMiddleInfo( dc, current_y )
             
             # bottom-right index
             
@@ -2836,12 +2932,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._file_service_key = file_service_key
         
+        self._currently_fetching_pairs = False
+        
         self._unprocessed_pairs = []
         self._current_pair = None
         self._processed_pairs = []
+        self._batch_skip_hashes = set()
         
         self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
         
+        self._reserved_shortcut_names.append( 'media_viewer_browser' )
         self._reserved_shortcut_names.append( 'duplicate_filter' )
         
         self._hover_commands.AddCommand( 'this is better', self._CurrentMediaIsBetter )
@@ -2855,13 +2955,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         # add support for 'f' to borderless
         # add support for F4 and other general shortcuts so people can do edits before processing
         
-        wx.CallAfter( self._ShowNewPair ) # don't set this until we have a size > (20, 20)!
-        
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_previous' )
+        
+        wx.CallAfter( self._ShowNewPair )
         
     
     def _Close( self ):
@@ -2901,7 +3001,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _CommitProcessed( self ):
         
-        for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options ) in self._processed_pairs:
+        for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs:
             
             if duplicate_status == HC.DUPLICATE_UNKNOWN:
                 
@@ -2918,10 +3018,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_status, first_hash, second_hash, duplicate_action_options )
+            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_status, first_hash, second_hash )
             
         
         self._processed_pairs = []
+        self._batch_skip_hashes = set()
         
     
     def _CurrentMediaIsBetter( self ):
@@ -2930,6 +3031,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
     
     def _DoCustomAction( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
         
         duplicate_statuses = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
         
@@ -2962,6 +3068,54 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
+    def _DrawAdditionalTopMiddleInfo( self, dc, current_y ):
+        
+        if self._current_media is not None:
+            
+            shown_media = self._current_media
+            comparison_media = self._media_list.GetNext( shown_media )
+            
+            if shown_media != comparison_media:
+                
+                ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( shown_media, comparison_media )
+                
+                ( client_width, client_height ) = self.GetClientSize()
+                
+                for statement in statements:
+                    
+                    ( width, height ) = dc.GetTextExtent( statement )
+                    
+                    dc.DrawText( statement, ( client_width - width ) / 2, current_y )
+                    
+                    current_y += height + 3
+                    
+                
+            
+        
+        return current_y
+        
+    
+    def _DrawBackgroundDetails( self, dc ):
+        
+        if self._currently_fetching_pairs:
+            
+            text = u'Loading pairs\u2026'
+            
+            ( width, height ) = dc.GetTextExtent( text )
+            
+            ( my_width, my_height ) = self.GetClientSize()
+            
+            x = ( my_width - width ) // 2
+            y = ( my_height - height ) // 2
+            
+            dc.DrawText( text, x, y )
+            
+        else:
+            
+            CanvasWithHovers._DrawBackgroundDetails( self, dc )
+            
+        
+    
     def _GenerateHoverTopFrame( self ):
         
         return ClientGUIHoverFrames.FullscreenHoverFrameTopDuplicatesFilter( self, self._canvas_key )
@@ -2983,7 +3137,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                return ClientData.GetLighterDarkerColour( normal_colour )
+                new_options = HG.client_controller.GetNewOptions()
+                
+                duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
+                
+                return ClientData.GetLighterDarkerColour( normal_colour, duplicate_intensity )
                 
             
         
@@ -2996,20 +3154,25 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
+            progress = len( self._processed_pairs ) + 1 # +1 here actually counts for the one currently displayed
+            total = progress + len( self._unprocessed_pairs )
+            
+            index_string = HydrusData.ConvertValueRangeToPrettyString( progress, total )
+            
             if self._current_media == self._media_list.GetFirst():
                 
-                return 'A'
+                return 'A - ' + index_string
                 
             else:
                 
-                return 'B'
+                return 'B - ' + index_string
                 
             
         
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options ) in self._processed_pairs if duplicate_status != HC.DUPLICATE_UNKNOWN ] )
+        return len( [ 1 for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs if duplicate_status != HC.DUPLICATE_UNKNOWN ] )
         
     
     def _GoBack( self ):
@@ -3018,9 +3181,18 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._unprocessed_pairs.append( self._current_pair )
             
-            ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options ) = self._processed_pairs.pop()
+            ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
             
             self._unprocessed_pairs.append( hash_pair )
+            
+            while was_auto_skipped:
+                
+                ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                
+                self._unprocessed_pairs.append( hash_pair )
+                
+            
+            self._batch_skip_hashes.difference_update( hash_pair )
             
             self._ShowNewPair()
             
@@ -3080,6 +3252,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 self._GoBack()
                 
+            elif action in ( 'view_first', 'view_last', 'view_previous', 'view_next' ):
+                
+                self._SwitchMedia()
+                
             else:
                 
                 command_processed = False
@@ -3100,6 +3276,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _ProcessPair( self, duplicate_status, duplicate_action_options = None ):
         
+        if self._current_media is None:
+            
+            return
+            
+        
         if duplicate_action_options is None:
             
             new_options = HG.client_controller.GetNewOptions()
@@ -3109,16 +3290,27 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         other_media = self._media_list.GetNext( self._current_media )
         
-        self._processed_pairs.append( ( self._current_pair, duplicate_status, self._current_media, other_media, duplicate_action_options ) )
+        deleted_hashes = duplicate_action_options.GetDeletedHashes( self._current_media, other_media )
+        
+        self._batch_skip_hashes.update( deleted_hashes )
+        
+        was_auto_skipped = False
+        
+        self._processed_pairs.append( ( self._current_pair, duplicate_status, self._current_media, other_media, duplicate_action_options, was_auto_skipped ) )
         
         self._ShowNewPair()
         
     
     def _ShowNewPair( self ):
         
+        if self._currently_fetching_pairs:
+            
+            return
+            
+        
         num_committable = self._GetNumCommittableDecisions()
         
-        if self._unprocessed_pairs == [] and num_committable > 0:
+        if len( self._unprocessed_pairs ) == 0 and num_committable > 0:
             
             label = 'commit ' + HydrusData.ConvertIntToPrettyString( num_committable ) + ' decisions and continue?'
             
@@ -3132,47 +3324,94 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 else:
                     
-                    ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options ) = self._processed_pairs.pop()
+                    ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
                     
                     self._unprocessed_pairs.append( hash_pair )
                     
+                    while was_auto_skipped:
+                        
+                        ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                        
+                        self._unprocessed_pairs.append( hash_pair )
+                        
+                    
+                    self._batch_skip_hashes.difference_update( hash_pair )
+                    
                 
             
         
-        if self._unprocessed_pairs == []:
+        if len( self._unprocessed_pairs ) == 0:
             
+            self._batch_skip_hashes = set()
             self._processed_pairs = [] # just in case someone 'skip'ed everything in the last batch, so this never got cleared above
             
-            result = HG.client_controller.Read( 'unique_duplicate_pairs', self._file_service_key, HC.DUPLICATE_UNKNOWN )
+            self.SetMedia( None )
+            self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, [] )
             
-            if len( result ) == 0:
+            self._currently_fetching_pairs = True
+            
+            HG.client_controller.CallToThread( self.THREADFetchPairs )
+            
+            self._SetDirty()
+            
+        else:
+            
+            potential_pair = self._unprocessed_pairs.pop()
+            
+            ( first_hash, second_hash ) = potential_pair
+            
+            while first_hash in self._batch_skip_hashes or second_hash in self._batch_skip_hashes:
                 
-                wx.MessageBox( 'All pairs have been filtered!' )
+                was_auto_skipped = True
                 
-                self._Close()
+                self._processed_pairs.append( ( potential_pair, HC.DUPLICATE_UNKNOWN, None, None, None, was_auto_skipped ) )
                 
-                return
+                if len( self._unprocessed_pairs ) == 0:
+                    
+                    self._ShowNewPair() # there are no useful decisions left in the queue, so let's reset
+                    
+                    return
+                    
+                
+                potential_pair = self._unprocessed_pairs.pop()
+                
+                ( first_hash, second_hash ) = potential_pair
+                
+            
+            self._current_pair = potential_pair
+            
+            ( first_media_result, second_media_result ) = HG.client_controller.Read( 'media_results', self._current_pair )
+            
+            first_media = ClientMedia.MediaSingleton( first_media_result )
+            second_media = ClientMedia.MediaSingleton( second_media_result )
+            
+            ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( first_media, second_media )
+            
+            if score > 0:
+                
+                media_results_with_better_first = ( first_media_result, second_media_result )
                 
             else:
                 
-                self._unprocessed_pairs = result
+                media_results_with_better_first = ( second_media_result, first_media_result )
                 
             
-        
-        self._current_pair = self._unprocessed_pairs.pop()
-        
-        media_results = HG.client_controller.Read( 'media_results', self._current_pair )
-        
-        self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, media_results )
-        
-        self.SetMedia( self._media_list.GetFirst() )
+            self._media_list = ClientMedia.ListeningMediaList( self._file_service_key, media_results_with_better_first )
+            
+            self.SetMedia( self._media_list.GetFirst() )
+            
         
     
     def _SkipPair( self ):
         
-        other_media = self._media_list.GetNext( self._current_media )
+        if self._current_media is None:
+            
+            return
+            
         
-        self._processed_pairs.append( ( self._current_pair, HC.DUPLICATE_UNKNOWN, self._current_media, other_media, None ) )
+        was_auto_skipped = False
+        
+        self._processed_pairs.append( ( self._current_pair, HC.DUPLICATE_UNKNOWN, None, None, None, was_auto_skipped ) )
         
         self._ShowNewPair()
         
@@ -3317,6 +3556,22 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         wx.CallLater( 100, catch_up )
         
     
+    def SetMedia( self, media, maintain_pan_and_zoom = False ):
+        
+        CanvasWithHovers.SetMedia( self, media, maintain_pan_and_zoom )
+        
+        if media is not None:
+            
+            shown_media = self._current_media
+            comparison_media = self._media_list.GetNext( shown_media )
+            
+            if shown_media != comparison_media:
+                
+                HG.client_controller.pub( 'canvas_new_duplicate_pair', self._canvas_key, shown_media, comparison_media )
+                
+            
+        
+    
     def SwitchMedia( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -3330,6 +3585,42 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         if canvas_key == self._canvas_key:
             
             self._Undelete()
+            
+        
+    
+    def THREADFetchPairs( self ):
+        
+        def wx_close():
+            
+            if self:
+                
+                wx.CallAfter( wx.MessageBox, 'All pairs have been filtered!' )
+                
+                self._Close()
+                
+            
+        
+        def wx_continue( unprocessed_pairs ):
+            
+            if self:
+                
+                self._unprocessed_pairs = unprocessed_pairs
+                
+                self._currently_fetching_pairs = False
+                
+                self._ShowNewPair()
+                
+            
+        
+        result = HG.client_controller.Read( 'unique_duplicate_pairs', self._file_service_key, HC.DUPLICATE_UNKNOWN )
+        
+        if len( result ) == 0:
+            
+            wx.CallAfter( wx_close )
+            
+        else:
+            
+            wx.CallAfter( wx_continue, result )
             
         
     
@@ -3468,7 +3759,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         singleton_media = { self._current_media }
         
-        ClientMedia.ListeningMediaList._RemoveMedia( self, singleton_media, {} )
+        ClientMedia.ListeningMediaList._RemoveMediaDirectly( self, singleton_media, {} )
         
         if self.HasNoMedia():
             

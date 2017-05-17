@@ -9,7 +9,9 @@ import lxml # to force import for later bs4 stuff
 import os
 import pafy
 import re
+import requests
 import threading
+import time
 import urllib
 import urlparse
 import HydrusData
@@ -848,6 +850,52 @@ class GalleryBooru( Gallery ):
                     
                     urls_set.add( url )
                     urls.append( url )
+                    
+                
+            
+        
+        if 'gelbooru.com' in url_base:
+            
+            # they now use redirect urls for thumbs, wew lad
+            
+            bad_urls = urls
+            
+            urls = []
+            
+            session = requests.Session()
+            
+            for bad_url in bad_urls:
+                
+                # turns out the garbage after the redirect is the redirect in base64, so let's not waste time doing this
+                
+                #url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
+                #
+                #urls.append( url )
+                #
+                #time.sleep( 0.5 )
+                
+                # https://gelbooru.com/redirect.php?s=Ly9nZWxib29ydS5jb20vaW5kZXgucGhwP3BhZ2U9cG9zdCZzPXZpZXcmaWQ9MzY5NDEyMg==
+                
+                try:
+                    
+                    encoded_location = bad_url.split( '?s=' )[1]
+                    
+                    location = encoded_location.decode( 'base64' )
+                    
+                    url = urlparse.urljoin( bad_url, location )
+                    
+                    urls.append( url )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowText( 'gelbooru parsing problem!' )
+                    HydrusData.ShowException( e )
+                    
+                    url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
+                    
+                    urls.append( url )
+                    
+                    time.sleep( 0.5 )
                     
                 
             

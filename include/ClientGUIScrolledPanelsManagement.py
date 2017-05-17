@@ -404,7 +404,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._service_type in HC.REMOTE_SERVICES:
                 
-                remote_panel = self._ServiceRemotePanel( self, self._dictionary )
+                remote_panel = self._ServiceRemotePanel( self, self._service_type, self._dictionary )
                 
                 self._panels.append( remote_panel )
                 
@@ -553,24 +553,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def EventCheckIPFS( self, event ):
-            
-            service = self.GetValue()
-            
-            try:
-                
-                version = service.GetDaemonVersion()
-                
-                wx.MessageBox( 'Everything looks ok! Connected to IPFS Daemon with version: ' + version )
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                wx.MessageBox( 'Could not connect!' )
-                
-            
-        
         def GetValue( self ):
             
             name = self._service_panel.GetValue()
@@ -621,9 +603,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         class _ServiceRemotePanel( ClientGUICommon.StaticBox ):
             
-            def __init__( self, parent, dictionary ):
+            def __init__( self, parent, service_type, dictionary ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'clientside network' )
+                
+                self._service_type = service_type
                 
                 credentials = dictionary[ 'credentials' ]
                 bandwidth_rules = dictionary[ 'bandwidth_rules' ]
@@ -670,11 +654,24 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ( host, port ) = credentials.GetAddress()
                 
-                url = 'https://' + host + ':' + str( port ) + '/'
+                if self._service_type == HC.IPFS:
+                    
+                    scheme = 'http://'
+                    hydrus_network = False
+                    request = 'api/v0/version'
+                    
+                else:
+                    
+                    scheme = 'https://'
+                    hydrus_network = True
+                    request = ''
+                    
+                
+                url = scheme + host + ':' + str( port ) + '/' + request
                 
                 try:
                     
-                    result = HG.client_controller.DoHTTP( HC.GET, url, hydrus_network = True )
+                    result = HG.client_controller.DoHTTP( HC.GET, url, hydrus_network = hydrus_network )
                     
                     wx.MessageBox( 'Got an ok response!' )
                     
@@ -1171,14 +1168,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'ipfs' )
                 
-                # test creds and fetch version
-                # multihash_prefix
-                '''
-            if service_type == HC.IPFS:
-                
-                self._ipfs_panel = ClientGUICommon.StaticBox( self, 'ipfs settings' )
-                
-                self._multihash_prefix = wx.TextCtrl( self._ipfs_panel, value = info[ 'multihash_prefix' ] )
+                self._multihash_prefix = wx.TextCtrl( self )
                 
                 tts = 'When you tell the client to copy the ipfs multihash to your clipboard, it will prefix it with this.'
                 tts += os.linesep * 2
@@ -1190,21 +1180,20 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._multihash_prefix.SetToolTipString( tts )
                 
-            '''
-                self._st = ClientGUICommon.BetterStaticText( self )
+                #
+                
+                self._multihash_prefix.SetValue( dictionary[ 'multihash_prefix' ] )
                 
                 #
                 
-                self._st.SetLabelText( 'This is an IPFS service. This box will get regain IPFS options in a future update.' )
-                
-                #
-                
-                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.AddF( ClientGUICommon.WrapInText( self._multihash_prefix, self, 'multihash prefix: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
                 
                 dictionary_part = {}
+                
+                dictionary_part[ 'multihash_prefix' ] = self._multihash_prefix.GetValue()
                 
                 return dictionary_part
                 

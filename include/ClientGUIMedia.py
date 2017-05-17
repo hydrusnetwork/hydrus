@@ -1019,7 +1019,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         collections = [ media for media in self._selected_media if media.IsCollection() ]
         
-        self._RemoveMedia( singletons, collections )
+        self._RemoveMediaDirectly( singletons, collections )
         
     
     def _RescindDownloadSelected( self ):
@@ -1386,9 +1386,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key:
             
-            media = self._GetMedia( hashes )
-            
-            self._RemoveMedia( media, {} )
+            self._RemoveMediaByHashes( hashes )
             
         
     
@@ -1921,7 +1919,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def _RemoveMedia( self, singleton_media, collected_media ):
+    def _RemoveMediaDirectly( self, singleton_media, collected_media ):
         
         if self._focussed_media is not None:
             
@@ -1931,7 +1929,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        MediaPanel._RemoveMedia( self, singleton_media, collected_media )
+        MediaPanel._RemoveMediaDirectly( self, singleton_media, collected_media )
         
         self._selected_media.difference_update( singleton_media )
         self._selected_media.difference_update( collected_media )
@@ -2216,13 +2214,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             locations_manager = t.GetLocationsManager()
             
-            if locations_manager.IsLocal(): self._FullScreen( t )
-            elif self._file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+            if locations_manager.IsLocal():
                 
-                if len( locations_manager.GetCurrentRemote() ) > 0:
-                    
-                    self._DownloadHashes( t.GetHashes() )
-                    
+                self._FullScreen( t )
+                
+            elif len( locations_manager.GetCurrentRemote() ) > 0:
+                
+                self._DownloadHashes( t.GetHashes() )
                 
             
         
@@ -2580,7 +2578,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if not locations_manager.IsLocal() and not locations_manager.IsDownloading():
                         
-                        downloadable_file_service_keys.update( file_service_keys & locations_manager.GetCurrentRemote() )
+                        downloadable_file_service_keys.update( ipfs_service_keys.union( file_service_keys ) & locations_manager.GetCurrentRemote() )
                         
                     
                     # we can petition when we have permission and a file is current and it is not already petitioned

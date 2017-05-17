@@ -1071,6 +1071,8 @@ class DB( HydrusDB.HydrusDB ):
                 continue
                 
             
+            seen_hash_ids_for_this_master_hash_id = set()
+            
             for pair in master_hash_ids_to_groups[ master_hash_id ]:
                 
                 ( smaller_hash_id, larger_hash_id ) = pair
@@ -1080,8 +1082,8 @@ class DB( HydrusDB.HydrusDB ):
                     continue
                     
                 
-                seen_hash_ids.add( smaller_hash_id )
-                seen_hash_ids.add( larger_hash_id )
+                seen_hash_ids_for_this_master_hash_id.add( smaller_hash_id )
+                seen_hash_ids_for_this_master_hash_id.add( larger_hash_id )
                 
                 pairs_of_hash_ids.append( pair )
                 
@@ -1090,6 +1092,8 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
+            
+            seen_hash_ids.update( seen_hash_ids_for_this_master_hash_id )
             
             if len( pairs_of_hash_ids ) >= MAX_BATCH_SIZE:
                 
@@ -1706,7 +1710,7 @@ class DB( HydrusDB.HydrusDB ):
         return similar_hash_ids
         
     
-    def _CacheSimilarFilesSetDuplicatePairStatus( self, duplicate_status, hash_a, hash_b, merge_options = None ):
+    def _CacheSimilarFilesSetDuplicatePairStatus( self, duplicate_status, hash_a, hash_b ):
         
         if duplicate_status == HC.DUPLICATE_WORSE:
             
@@ -1720,7 +1724,7 @@ class DB( HydrusDB.HydrusDB ):
         hash_id_a = self._GetHashId( hash_a )
         hash_id_b = self._GetHashId( hash_b )
         
-        self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, hash_id_a, hash_id_b, merge_options )
+        self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, hash_id_a, hash_id_b )
         
         if duplicate_status == HC.DUPLICATE_BETTER:
             
@@ -1736,7 +1740,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for better_than_a_hash_id in better_than_a:
                 
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b, merge_options )
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
                 
             
             worse_than_b = set()
@@ -1746,17 +1750,17 @@ class DB( HydrusDB.HydrusDB ):
             
             for worse_than_b_hash_id in worse_than_b:
                 
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id, merge_options )
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
                 
             
         
         # do a sync for better dupes that applies not_dupe and alternate relationships across better-than groups
         
-        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_a, merge_options )
-        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_b, merge_options )
+        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_a )
+        self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_b )
         
     
-    def _CacheSimilarFilesSetDuplicatePairStatusSingleRow( self, duplicate_status, hash_id_a, hash_id_b, merge_options, only_update_given_previous_status = None ):
+    def _CacheSimilarFilesSetDuplicatePairStatusSingleRow( self, duplicate_status, hash_id_a, hash_id_b, only_update_given_previous_status = None ):
         
         smaller_hash_id = min( hash_id_a, hash_id_b )
         larger_hash_id = max( hash_id_a, hash_id_b )
@@ -1784,8 +1788,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        change_occured = False
-        
         if only_update_given_previous_status is None:
             
             result = self._c.execute( 'SELECT 1 FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( smaller_hash_id, larger_hash_id, duplicate_status ) ).fetchone()
@@ -1794,42 +1796,14 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._c.execute( 'REPLACE INTO duplicate_pairs ( smaller_hash_id, larger_hash_id, duplicate_type ) VALUES ( ?, ?, ? );', ( smaller_hash_id, larger_hash_id, duplicate_status ) )
                 
-                change_occured = True
-                
             
         else:
             
             self._c.execute( 'UPDATE duplicate_pairs SET duplicate_type = ? WHERE smaller_hash_id = ? AND larger_hash_id = ? AND duplicate_type = ?;', ( duplicate_status, smaller_hash_id, larger_hash_id, only_update_given_previous_status ) )
             
-            if self._GetRowCount() > 0:
-                
-                change_occured = True
-                
-            
-        
-        if change_occured and merge_options is not None:
-            
-            # follow merge_options
-            
-            # if better:
-            
-            # do tags
-            
-            # do ratings
-            
-            # delete file
-            
-            # if same:
-            
-            # do tags
-            
-            # do ratings
-            
-            pass
-            
         
     
-    def _CacheSimilarFilesSyncSameFileDuplicates( self, hash_id, merge_options ):
+    def _CacheSimilarFilesSyncSameFileDuplicates( self, hash_id ):
         
         # for every known relationship our file has, that should be replicated to all of its 'same file' siblings
         
@@ -1877,7 +1851,7 @@ class DB( HydrusDB.HydrusDB ):
                     continue
                     
                 
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, sibling_hash_id, other_hash_id, merge_options )
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, sibling_hash_id, other_hash_id )
                 
             
         
@@ -3505,17 +3479,19 @@ class DB( HydrusDB.HydrusDB ):
         
         for search_tag_service_id in search_tag_service_ids:
             
-            ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-            
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                 
                 current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
                 pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
                 
             else:
                 
-                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE service_id = ' + str( file_service_id ) + ' AND namespace_id = ' + str( namespace_id ) + ';' )
-                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE service_id = ' + str( file_service_id ) + ' AND namespace_id = ' + str( namespace_id ) + ';' )
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                
+                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
+                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
                 
             
         
@@ -4023,17 +3999,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for search_tag_service_id in search_tag_service_ids:
                     
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                    
                     if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                        
+                        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                         
                         current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
                         pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
                         
                     else:
                         
-                        current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
+                        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                        
+                        current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
+                        pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
                         
                     
                 
@@ -4048,17 +4026,19 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for search_tag_service_id in search_tag_service_ids:
                     
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                    
                     if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                        
+                        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                         
                         current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
                         pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
                         
                     else:
                         
-                        current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
-                        pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
+                        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                        
+                        current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
+                        pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
                         
                     
                 
@@ -4154,17 +4134,19 @@ class DB( HydrusDB.HydrusDB ):
             
             for search_tag_service_id in search_tag_service_ids:
                 
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
                 if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                     
                     current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     
                 else:
                     
-                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                    
+                    current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     
                 
             
@@ -4174,17 +4156,19 @@ class DB( HydrusDB.HydrusDB ):
             
             for search_tag_service_id in search_tag_service_ids:
                 
-                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                
                 if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                    
+                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
                     
                     current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     
                 else:
                     
-                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN current_files NATURAL JOIN tags WHERE current_files.service_id = ' + str( file_service_id ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                    
+                    current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
+                    pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
                     
                 
             
@@ -4355,14 +4339,18 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is not None:
             
-            return ( CC.STATUS_DELETED, None )
+            hash = self._GetHash( hash_id )
+            
+            return ( CC.STATUS_DELETED, hash )
             
         
         result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._trash_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
-            return ( CC.STATUS_DELETED, None )
+            hash = self._GetHash( hash_id )
+            
+            return ( CC.STATUS_DELETED, hash )
             
         
         result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()

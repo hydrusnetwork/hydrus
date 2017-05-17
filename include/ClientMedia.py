@@ -36,6 +36,126 @@ def FlattenMedia( media_list ):
     
     return flat_media
     
+def GetDuplicateComparisonStatements( shown_media, comparison_media ):
+    
+    statements = []
+    score = 0
+    
+    # higher/same res
+    
+    s_resolution = shown_media.GetResolution()
+    c_resolution = comparison_media.GetResolution()
+    
+    if s_resolution is not None and c_resolution is not None:
+        
+        ( s_w, s_h ) = shown_media.GetResolution()
+        ( c_w, c_h ) = comparison_media.GetResolution()
+        
+        resolution_ratio = float( s_w * s_h ) / float( c_w * c_h )
+        
+        if resolution_ratio == 1.0:
+            
+            if s_resolution == c_resolution:
+                
+                statements.append( 'Both have the same resolution.' )
+                
+            else:
+                
+                statements.append( 'Both have the same number of pixels but different resolution.' )
+                
+            
+        elif resolution_ratio > 3.0:
+            
+            statements.append( 'This has much higher resolution.' )
+            
+            score += 2
+            
+        elif resolution_ratio > 1.0:
+            
+            statements.append( 'This has higher resolution.' )
+            
+            score += 1
+            
+        elif resolution_ratio < 0.33:
+            
+            statements.append( 'This has much lower resolution.' )
+            
+            score -= 2
+            
+        elif resolution_ratio < 1.0:
+            
+            statements.append( 'This has lower resolution.' )
+            
+            score -= 1
+            
+        
+    
+    # same/diff mime
+    
+    s_mime = shown_media.GetMime()
+    c_mime = comparison_media.GetMime()
+    
+    if s_mime != c_mime:
+        
+        statements.append( 'This is ' + HC.mime_string_lookup[ s_mime ] + ', the other is ' + HC.mime_string_lookup[ c_mime ] + '.' )
+        
+    
+    # more tags
+    
+    s_num_tags = len( shown_media.GetTagsManager().GetCurrent() )
+    c_num_tags = len( comparison_media.GetTagsManager().GetCurrent() )
+    
+    if s_num_tags == 0 and c_num_tags == 0:
+        
+        statements.append( 'Neither have any tags.' )
+        
+    elif s_num_tags > 0 and c_num_tags > 0:
+        
+        if s_num_tags > c_num_tags:
+            
+            statements.append( 'Both have tags, but this has more.' )
+            
+            score += 1
+            
+        else:
+            
+            statements.append( 'Both files have tags, but this has fewer.' )
+            
+            score += 1
+            
+        
+    elif s_num_tags > 0:
+        
+        statements.append( 'This has tags, the other does not.' )
+        
+    elif c_num_tags > 0:
+        
+        statements.append( 'The other has tags, this does not.' )
+        
+    
+    # older
+    
+    s_ts = shown_media.GetLocationsManager().GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    c_ts = comparison_media.GetLocationsManager().GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    
+    if s_ts is not None and c_ts is not None:
+        
+        if s_ts < c_ts - 86400 * 30:
+            
+            statements.append( 'This is older.' )
+            
+            score += 0.5
+            
+        elif c_ts < s_ts - 86400 * 30:
+            
+            statements.append( 'The other is older.' )
+            
+            score -= 0.5
+            
+        
+    
+    return ( statements, score )
+    
 def MergeTagsManagers( tags_managers ):
     
     def CurrentAndPendingFilter( items ):
@@ -638,7 +758,26 @@ class MediaList( object ):
             
         
     
-    def _RemoveMedia( self, singleton_media, collected_media ):
+    def _RemoveMediaByHashes( self, hashes ):
+        
+        if not isinstance( hashes, set ):
+            
+            hashes = set( hashes )
+            
+        
+        affected_singleton_media = self._GetMedia( hashes, discriminator = 'singletons' )
+        
+        for media in self._collected_media:
+            
+            media._RemoveMediaByHashes( hashes )
+            
+        
+        affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+        
+        self._RemoveMediaDirectly( affected_singleton_media, affected_collected_media )
+        
+    
+    def _RemoveMediaDirectly( self, singleton_media, collected_media ):
         
         if not isinstance( singleton_media, set ):
             
@@ -965,10 +1104,7 @@ class MediaList( object ):
                 
                 if deleted_from_trash_and_local_view or trashed_and_non_trash_local_view or deleted_from_repo_and_repo_view:
                     
-                    affected_singleton_media = self._GetMedia( hashes, 'singletons' )
-                    affected_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
-                    
-                    self._RemoveMedia( affected_singleton_media, affected_collected_media )
+                    self._RemoveMediaByHashes( hashes )
                     
                 
             
@@ -1009,7 +1145,7 @@ class MediaList( object ):
         
         if service_key == self._file_service_key:
             
-            self._RemoveMedia( self._singleton_media, self._collected_media )
+            self._RemoveMediaDirectly( self._singleton_media, self._collected_media )
             
         else:
             

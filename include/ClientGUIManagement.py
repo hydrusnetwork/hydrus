@@ -787,6 +787,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._file_domain_button = ClientGUICommon.BetterButton( self._filtering_panel, 'file domain', self._FileDomainButtonHit )
         self._num_unknown_duplicates = wx.StaticText( self._filtering_panel )
         self._num_better_duplicates = wx.StaticText( self._filtering_panel )
+        self._num_better_duplicates.SetToolTipString( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
         self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
         self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some random pairs', self._ShowSomeDupes )
@@ -1661,7 +1662,10 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
                 
                 self._gallery_import.SetImportTagOptions( import_tag_options )
                 
-            else: event.Skip()
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -2338,18 +2342,18 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_watcher_import.SetDownloadHook( file_download_hook )
         
+        ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
+        
+        self._thread_input.SetValue( thread_url )
+        self._thread_input.SetEditable( False )
+        
+        self._import_file_options.SetOptions( import_file_options )
+        self._import_tag_options.SetOptions( import_tag_options )
+        
+        self._thread_times_to_check.SetValue( times_to_check )
+        self._thread_check_period.SetValue( check_period )
+        
         if self._thread_watcher_import.HasThread():
-            
-            ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
-            
-            self._thread_input.SetValue( thread_url )
-            self._thread_input.SetEditable( False )
-            
-            self._import_file_options.SetOptions( import_file_options )
-            self._import_tag_options.SetOptions( import_tag_options )
-            
-            self._thread_times_to_check.SetValue( times_to_check )
-            self._thread_check_period.SetValue( check_period )
             
             self._thread_watcher_import.Start( self._page_key )
             
@@ -2675,6 +2679,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import.Start( self._page_key )
         
+        HG.client_controller.sub( self, 'SetURLInput', 'set_page_url_input' )
+        
     
     def _SeedCache( self ):
         
@@ -2826,7 +2832,20 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def SetSearchFocus( self, page_key ):
         
-        if page_key == self._page_key: self._url_input.SetFocus()
+        if page_key == self._page_key:
+            
+            self._url_input.SetFocus()
+            
+        
+    
+    def SetURLInput( self, page_key, url ):
+        
+        if page_key == self._page_key:
+            
+            self._url_input.SetValue( url )
+            
+            self._url_input.SetFocus()
+            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URLS ] = ManagementPanelImporterURLs
@@ -2967,9 +2986,11 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             weight += content.GetVirtualWeight()
             
-            if weight > 200:
+            if weight > 50:
                 
                 chunks_of_approved_contents.append( chunk_of_approved_contents )
+                
+                chunk_of_approved_contents = []
                 
                 weight = 0
                 

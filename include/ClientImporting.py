@@ -1766,7 +1766,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self ):
         
@@ -1837,6 +1837,26 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            # gelbooru replaced their thumbnail links with this redirect spam
+            # 'https://gelbooru.com/redirect.php?s=Ly9nZWxib29ydS5jb20vaW5kZXgucGhwP3BhZ2U9cG9zdCZzPXZpZXcmaWQ9MzY4ODA1OA=='
+            
+            new_serialisable_info = []
+            
+            for ( seed, seed_info ) in old_serialisable_info:
+                
+                if seed.startswith( 'https://gelbooru.com/redirect.php' ):
+                    
+                    continue
+                    
+                
+                new_serialisable_info.append( ( seed, seed_info ) )
+                
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -2147,7 +2167,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             self._initial_file_limit = min( 200, HC.options[ 'gallery_file_limit' ] )
             
         
-        self._periodic_file_limit = None
+        self._periodic_file_limit = 50
         self._paused = False
         
         self._import_file_options = ClientDefaults.GetDefaultImportFileOptions()

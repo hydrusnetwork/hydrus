@@ -825,7 +825,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_DELETED, None ) )
+        self.assertEqual( result, ( CC.STATUS_DELETED, hash ) )
         
     
     def test_media_results( self ):

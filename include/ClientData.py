@@ -217,9 +217,9 @@ def DeletePath( path ):
     
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
+    ( r, g, b ) = colour.Get()
+    
     if ColourIsGreyish( colour ):
-        
-        ( r, g, b ) = colour.Get()
         
         if ColourIsBright( colour ):
             
@@ -238,6 +238,11 @@ def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     return GetLighterDarkerColour( colour, intensity )
     
 def GetLighterDarkerColour( colour, intensity = 3 ):
+    
+    if intensity is None or intensity == 0:
+        
+        return colour
+        
     
     if ColourIsBright( colour ):
         
@@ -780,6 +785,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
         
         self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
+        
+        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
         
         #
         
@@ -1495,6 +1502,21 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         ( serialisable_service_actions, self._delete_second_file ) = serialisable_info
         
         self._service_actions = [ ( serialisable_service_key.decode( 'hex' ), action ) for ( serialisable_service_key, action ) in serialisable_service_actions ]
+        
+    
+    def GetDeletedHashes( self, first_media, second_media ):
+        
+        first_hashes = first_media.GetHashes()
+        second_hashes = second_media.GetHashes()
+        
+        if self._delete_second_file:
+            
+            return second_hashes
+            
+        else:
+            
+            return set()
+            
         
     
     def SetTuple( self, service_actions, delete_second_file ):

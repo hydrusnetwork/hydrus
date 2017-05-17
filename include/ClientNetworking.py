@@ -91,6 +91,28 @@ def RequestsGet( url, params = None, stream = False, headers = None ):
     
     return response
     
+def RequestsGetRedirectURL( url, session  = None ):
+    
+    if session is None:
+        
+        session = requests.Session()
+        
+    
+    response = session.get( url, allow_redirects = False )
+    
+    if 'location' in response.headers:
+        
+        location_header = response.headers[ 'location' ]
+        
+        new_url = urlparse.urljoin( url, location_header )
+        
+        return new_url
+        
+    else:
+        
+        return url
+        
+    
 def RequestsPost( url, data = None, files = None, headers = None ):
     
     if headers is None:
@@ -160,6 +182,11 @@ def RequestsCheckResponse( response ):
 def ParseURL( url ):
     
     try:
+        
+        if url.startswith( '//' ):
+            
+            url = url[2:]
+            
         
         starts_http = url.startswith( 'http://' )
         starts_https = url.startswith( 'https://' )

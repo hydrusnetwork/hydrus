@@ -242,6 +242,11 @@ class Controller( object ):
         return write
         
     
+    def IsBooted( self ):
+        
+        return True
+        
+    
     def IsFirstStart( self ):
         
         return True

@@ -7,6 +7,7 @@ import ClientGUIListBoxes
 import ClientGUITopLevelWindows
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
+import ClientMedia
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
@@ -56,6 +57,11 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def _SizeAndPosition( self ):
         
+        if not self.GetParent().IsShown():
+            
+            return
+            
+        
         ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
         
         if should_resize:
@@ -92,7 +98,7 @@ class FullscreenHoverFrame( wx.Frame ):
                     
                 
             
-            if self._current_media is None:
+            if self._current_media is None or not self.GetParent().IsShown():
                 
                 self.Hide()
                 
@@ -175,6 +181,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._top_hbox = wx.BoxSizer( wx.HORIZONTAL )
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title' )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info' )
+        self._additional_info_text = ClientGUICommon.BetterStaticText( self, '', style = wx.ALIGN_CENTER )
         self._button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         self._PopulateLeftButtons()
@@ -188,6 +195,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         vbox.AddF( self._top_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._title_text, CC.FLAGS_CENTER )
         vbox.AddF( self._info_text, CC.FLAGS_CENTER )
+        vbox.AddF( self._additional_info_text, CC.FLAGS_CENTER )
         vbox.AddF( self._button_hbox, CC.FLAGS_CENTER )
         
         self.SetSizer( vbox )
@@ -386,6 +394,15 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
             self._info_text.Show()
             
+            if self._additional_info_text.GetLabelText() == '':
+                
+                self._additional_info_text.Hide()
+                
+            else:
+                
+                self._additional_info_text.Show()
+                
+            
         
     
     def _SetDefaultShortcuts( self ):
@@ -521,6 +538,13 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
     
 class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
+    def __init__( self, parent, canvas_key ):
+        
+        FullscreenHoverFrameTop.__init__( self, parent, canvas_key )
+        
+        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
+        
+    
     def _PopulateCenterButtons( self ):
         
         menu_items = []
@@ -529,12 +553,35 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         menu_items.append( ( 'normal', 'edit duplicate action options for \'exact duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_FILE ) ) )
         menu_items.append( ( 'normal', 'edit duplicate action options for \'alternates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
         menu_items.append( ( 'normal', 'edit duplicate action options for \'not duplicates\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_NOT_DUPLICATE ) ) )
+        menu_items.append( ( 'separator', None, None, None ) )
+        menu_items.append( ( 'normal', 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
         
         cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         
         self._top_hbox.AddF( cog_button, CC.FLAGS_SIZER_VCENTER )
         
         FullscreenHoverFrameTop._PopulateCenterButtons( self )
+        
+    
+    def _EditBackgroundSwitchIntensity( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = 'intensity: ', none_phrase = 'do not change', min = 1, max = 9 )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_value = panel.GetValue()
+                
+                new_options.SetNoneableInteger( 'duplicate_background_switch_intensity', new_value )
+                
+            
         
     
     def _EditMergeOptions( self, duplicate_status ):
@@ -560,12 +607,44 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ) )
+        self._first_button.SetToolTipString( 'go back a pair' )
+        
+        self._top_hbox.AddF( self._first_button, CC.FLAGS_VCENTER )
+        
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
         self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
         self._last_button.SetToolTipString( 'show a different pair' )
         
         self._top_hbox.AddF( self._last_button, CC.FLAGS_VCENTER )
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            if media is None:
+                
+                self._additional_info_text.SetLabelText( '' )
+                
+            
+            FullscreenHoverFrameTop.SetDisplayMedia( self, canvas_key, media )
+            
+        
+    
+    def SetDuplicatePair( self, canvas_key, shown_media, comparison_media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            ( statements, score ) = ClientMedia.GetDuplicateComparisonStatements( shown_media, comparison_media )
+            
+            self._additional_info_text.SetLabelText( os.linesep.join( statements ) )
+            
+            self._ResetText()
+            
+            self._ResetButtons()
+            
         
     
 class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTop ):

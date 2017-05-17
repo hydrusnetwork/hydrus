@@ -790,7 +790,7 @@ class DialogInputLocalFiles( Dialog ):
         
         Dialog.__init__( self, parent, 'importing files' )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddPathsToList ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddPathsToList, None ) )
         
         self._paths_list = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
         

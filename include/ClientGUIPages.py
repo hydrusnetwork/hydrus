@@ -134,6 +134,11 @@ class Page( wx.SplitterWindow ):
         return ( x, y )
         
     
+    def IsURLImportPage( self ):
+        
+        return self._management_controller.GetType() == ClientGUIManagement.MANAGEMENT_TYPE_IMPORT_URLS
+        
+    
     def PageHidden( self ):
         
         self._controller.pub( 'page_hidden', self._page_key )

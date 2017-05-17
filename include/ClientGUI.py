@@ -66,7 +66,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
         
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 4 )
@@ -267,6 +267,89 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 self._controller.Write( 'analyze', force_reanalyze = True )
                 
             
+        
+    
+    def _AppendGUISession( self, name ):
+        
+        def do_it( session ):
+            
+            try:
+                
+                if not HC.PLATFORM_LINUX:
+                    
+                    # on linux, this stops session pages from accepting keyboard input, wew
+                    
+                    wx.CallAfter( self._notebook.Disable )
+                    
+                
+                for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
+                    
+                    try:
+                        
+                        if len( initial_hashes ) > 0:
+                            
+                            initial_media_results = []
+                            
+                            for group_of_inital_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
+                                
+                                more_media_results = self._controller.Read( 'media_results', group_of_inital_hashes )
+                                
+                                initial_media_results.extend( more_media_results )
+                                
+                                self._media_status_override = u'Loading session page \'' + page_name + u'\'\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
+                                
+                                self._controller.pub( 'refresh_status' )
+                                
+                            
+                        else:
+                            
+                            initial_media_results = []
+                            
+                        
+                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
+                    
+                
+            finally:
+                
+                self._loading_session = False
+                self._media_status_override = None
+                
+                if not HC.PLATFORM_LINUX:
+                    
+                    wx.CallAfter( self._notebook.Enable )
+                    
+                
+            
+        
+        if self._loading_session:
+            
+            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
+            
+            return
+            
+        
+        self._loading_session = True
+        
+        try:
+            
+            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
+            
+        except Exception as e:
+            
+            HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
+            HydrusData.ShowException( e )
+            
+            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            
+            return
+            
+        
+        self._controller.CallToThread( do_it, session )
         
     
     def _AutoRepoSetup( self ):
@@ -700,7 +783,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._notebook.RemovePage( selection )
         
-        if self._notebook.GetPageCount() == 0: self._focus_holder.SetFocus()
+        if self._notebook.GetPageCount() == 0:
+            
+            self._focus_holder.SetFocus()
+            
         
         self._controller.pub( 'notify_new_undo' )
         
@@ -1016,6 +1102,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                 
                 ClientGUIMenus.AppendMenu( sessions, load, 'load' )
+                
+                append = wx.Menu()
+                
+                for name in gui_session_names:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, append, name, 'Append this session to whatever pages are already open.', self._AppendGUISession, name )
+                    
+                
+                ClientGUIMenus.AppendMenu( sessions, append, 'append' )
                 
             
             ClientGUIMenus.AppendMenuItem( self, sessions, 'save current', 'Save the existing open pages as a session.', self._SaveGUISession )
@@ -1613,22 +1708,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             return
             
         
-        self._loading_session = True
-        
-        try:
-            
-            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
-            
-        except Exception as e:
-            
-            HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
-            HydrusData.ShowException( e )
-            
-            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            return
-            
-        
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
             try:
@@ -1646,62 +1725,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             self._CloseCurrentPage( polite = False )
             
         
-        def do_it():
-            
-            try:
-                
-                if not HC.PLATFORM_LINUX:
-                    
-                    # on linux, this stops session pages from accepting keyboard input, wew
-                    
-                    wx.CallAfter( self._notebook.Disable )
-                    
-                
-                for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
-                    
-                    try:
-                        
-                        if len( initial_hashes ) > 0:
-                            
-                            initial_media_results = []
-                            
-                            for group_of_inital_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
-                                
-                                more_media_results = self._controller.Read( 'media_results', group_of_inital_hashes )
-                                
-                                initial_media_results.extend( more_media_results )
-                                
-                                self._media_status_override = u'Loading session page \'' + page_name + u'\'\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
-                                
-                                self._controller.pub( 'refresh_status' )
-                                
-                            
-                        else:
-                            
-                            initial_media_results = []
-                            
-                        
-                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results )
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
-                    
-                
-            finally:
-                
-                self._loading_session = False
-                self._media_status_override = None
-                
-                if not HC.PLATFORM_LINUX:
-                    
-                    wx.CallAfter( self._notebook.Enable )
-                    
-                
-            
-        
-        self._controller.CallToThread( do_it )
+        self._AppendGUISession( name )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -3151,6 +3175,31 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         paths = [ HydrusData.ToUnicode( path ) for path in paths ]
         
         self._ImportFiles( paths )
+        
+    
+    def ImportURL( self, url ):
+        
+        if True not in ( page.IsURLImportPage() for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ] ):
+            
+            self._NewPageImportURLs()
+            
+        
+        for ( page, i ) in [ ( self._notebook.GetPage( i ), i ) for i in range( self._notebook.GetPageCount() ) ]:
+            
+            if page.IsURLImportPage():
+                
+                if page != self._notebook.GetCurrentPage():
+                    
+                    self._notebook.SetSelection( i )
+                    
+                
+                page_key = page.GetPageKey()
+                
+                HG.client_controller.pub( 'set_page_url_input', page_key, url )
+                
+                break
+                
+            
         
     
     def NewPageDuplicateFilter( self ):

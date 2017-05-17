@@ -985,6 +985,8 @@ class ReviewServicePanel( wx.Panel ):
             
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
+            self._check_running_button = ClientGUICommon.BetterButton( self, 'check daemon', self._CheckRunning )
+            
             self._ipfs_shares = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'multihash', 120 ), ( 'num files', 80 ), ( 'total size', 80 ), ( 'note', -1 ) ], delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
             
             self._copy_multihash_button = ClientGUICommon.BetterButton( self, 'copy multihashes', self._CopyMultihashes )
@@ -1005,10 +1007,48 @@ class ReviewServicePanel( wx.Panel ):
             button_box.AddF( self._set_notes_button, CC.FLAGS_VCENTER )
             button_box.AddF( self._unpin_button, CC.FLAGS_VCENTER )
             
+            self.AddF( self._check_running_button, CC.FLAGS_LONE_BUTTON )
             self.AddF( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
             self.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+            
+        
+        def _CheckRunning( self ):
+            
+            def wx_clean_up():
+                
+                if self:
+                    
+                    self._check_running_button.Enable()
+                    
+                
+            
+            def do_it():
+                
+                try:
+                    
+                    version = self._service.GetDaemonVersion()
+                    
+                    message = 'Everything looks ok! Daemon reports version: ' + version
+                    
+                    wx.CallAfter( wx.MessageBox, message )
+                    
+                except:
+                    
+                    message = 'There was a problem! Check your popup messages for the error.'
+                    
+                    wx.CallAfter( wx.MessageBox, message )
+                    
+                finally:
+                    
+                    wx.CallAfter( wx_clean_up )
+                    
+                
+            
+            self._check_running_button.Disable()
+            
+            HG.client_controller.CallToThread( do_it )
             
         
         def _CopyMultihashes( self ):

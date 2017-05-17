@@ -234,7 +234,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         self.SetSizer( vbox )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import, None ) )
     
         ( x, y ) = self.GetEffectiveMinSize()
         
@@ -731,7 +731,7 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 980, y ) )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import, None ) )
         
         self.EventContactChanged( None )
         
@@ -1631,7 +1631,7 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( 980, y ) )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.Import, None ) )
         
         wx.CallAfter( self._ok.SetFocus )
         
