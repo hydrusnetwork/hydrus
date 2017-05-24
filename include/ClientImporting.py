@@ -2588,7 +2588,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             new_urls = [ url for url in urls_to_add_ordered if not self._seed_cache.HasSeed( url ) ]
             
-            self._seed_cache.AddSeeds( url )
+            self._seed_cache.AddSeeds( new_urls )
             
         
     

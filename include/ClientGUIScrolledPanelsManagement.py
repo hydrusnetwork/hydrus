@@ -2891,7 +2891,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._estimated_number_thumbnails = wx.StaticText( media_panel, label = '' )
             
-            self._fullscreen_cache_size = wx.SpinCtrl( media_panel, min = 25, max = 3000 )
+            self._fullscreen_cache_size = wx.SpinCtrl( media_panel, min = 25, max = 8192 )
             self._fullscreen_cache_size.Bind( wx.EVT_SPINCTRL, self.EventFullscreensUpdate )
             
             self._estimated_number_fullscreens = wx.StaticText( media_panel, label = '' )

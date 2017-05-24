@@ -2223,12 +2223,15 @@ class PopupMessageManager( wx.Frame ):
                 my_x = ( parent_width - my_width ) - 25
                 my_y = ( parent_height - my_height ) - 5
                 
-                my_position = parent.ClientToScreenXY( my_x, my_y )
-                
-                if my_position != self.GetPosition():
+                if parent.IsShown():
                     
-                    self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+                    my_position = parent.ClientToScreenXY( my_x, my_y )
                     
+                    if my_position != self.GetPosition():
+                        
+                        self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
+                        
+                        
                     
                 
                 # Unhiding tends to raise the main gui tlp, which is annoying if a media viewer window has focus
