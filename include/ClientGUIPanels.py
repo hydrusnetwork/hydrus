@@ -409,18 +409,6 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
-        def _UpdateFromThread( self, text ):
-            
-            try:
-                
-                self._file_info_st.SetLabelText( text )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
         def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -432,6 +420,14 @@ class ReviewServicePanel( wx.Panel ):
             
         
         def THREADFetchInfo( self ):
+            
+            def wx_code( text ):
+                
+                if self:
+                    
+                    self._file_info_st.SetLabelText( text )
+                    
+                
             
             service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
@@ -447,7 +443,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files'
                 
             
-            wx.CallAfter( self._UpdateFromThread, text )
+            wx.CallAfter( wx_code, text )
             
         
     
@@ -517,7 +513,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self.Layout()
             
-            wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
+            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
             
         
         def ServiceUpdated( self, service ):
@@ -665,7 +661,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self.Layout()
             
-            wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
+            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
             
         
         def _RefreshAccount( self ):
@@ -917,42 +913,6 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def _UpdateFromThread( self, download_text, download_value, processing_text, processing_value, range ):
-            
-            try:
-                
-                self._download_progress.SetValue( download_text, download_value, range )
-                self._processing_progress.SetValue( processing_text, processing_value, range )
-                
-                if processing_value == download_value:
-                    
-                    self._sync_now_button.Disable()
-                    
-                
-                if download_value == 0:
-                    
-                    self._export_updates_button.Disable()
-                    
-                else:
-                    
-                    self._export_updates_button.Enable()
-                    
-                
-                if processing_value == 0:
-                    
-                    self._reset_button.Disable()
-                    
-                else:
-                    
-                    self._reset_button.Enable()
-                    
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
         def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -965,13 +925,45 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self ):
             
+            def wx_code( download_text, download_value, processing_text, processing_value, range ):
+                
+                if self:
+                    
+                    self._download_progress.SetValue( download_text, download_value, range )
+                    self._processing_progress.SetValue( processing_text, processing_value, range )
+                    
+                    if processing_value == download_value:
+                        
+                        self._sync_now_button.Disable()
+                        
+                    
+                    if download_value == 0:
+                        
+                        self._export_updates_button.Disable()
+                        
+                    else:
+                        
+                        self._export_updates_button.Enable()
+                        
+                    
+                    if processing_value == 0:
+                        
+                        self._reset_button.Disable()
+                        
+                    else:
+                        
+                        self._reset_button.Enable()
+                        
+                    
+                
+            
             ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', self._service.GetServiceKey() )
             
             download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
             
             processing_text = 'processed ' + HydrusData.ConvertValueRangeToPrettyString( processing_value, range )
             
-            wx.CallAfter( self._UpdateFromThread, download_text, download_value, processing_text, processing_value, range )
+            wx.CallAfter( wx_code, download_text, download_value, processing_text, processing_value, range )
             
         
     
@@ -1175,27 +1167,6 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def _UpdateFromThread( self, ipfs_shares ):
-            
-            try:
-                
-                self._ipfs_shares.DeleteAllItems()
-                
-                for ( multihash, num_files, total_size, note ) in ipfs_shares:
-                    
-                    sort_tuple = ( multihash, num_files, total_size, note )
-                    
-                    display_tuple = self._GetDisplayTuple( sort_tuple )
-                    
-                    self._ipfs_shares.Append( display_tuple, sort_tuple )
-                    
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
         def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -1208,9 +1179,26 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self ):
             
+            def wx_code( ipfs_shares ):
+                
+                if self:
+                    
+                    self._ipfs_shares.DeleteAllItems()
+                    
+                    for ( multihash, num_files, total_size, note ) in ipfs_shares:
+                        
+                        sort_tuple = ( multihash, num_files, total_size, note )
+                        
+                        display_tuple = self._GetDisplayTuple( sort_tuple )
+                        
+                        self._ipfs_shares.Append( display_tuple, sort_tuple )
+                        
+                    
+                
+            
             ipfs_shares = HG.client_controller.Read( 'service_directories', self._service.GetServiceKey() )
             
-            wx.CallAfter( self._UpdateFromThread, ipfs_shares )
+            wx.CallAfter( wx_code, ipfs_shares )
             
         
     
@@ -1281,18 +1269,6 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
-        def _UpdateFromThread( self, text ):
-            
-            try:
-                
-                self._rating_info_st.SetLabelText( text )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
         def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -1305,13 +1281,21 @@ class ReviewServicePanel( wx.Panel ):
         
         def THREADFetchInfo( self ):
             
+            def wx_code( text ):
+                
+                if self:
+                    
+                    self._rating_info_st.SetLabelText( text )
+                    
+                
+            
             service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
             text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files are rated'
             
-            wx.CallAfter( self._UpdateFromThread, text )
+            wx.CallAfter( wx_code, text )
             
         
     
@@ -1358,18 +1342,6 @@ class ReviewServicePanel( wx.Panel ):
             HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
-        def _UpdateFromThread( self, text ):
-            
-            try:
-                
-                self._tag_info_st.SetLabelText( text )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
         def ServiceUpdated( self, service ):
             
             if service.GetServiceKey() == self._service.GetServiceKey():
@@ -1381,6 +1353,14 @@ class ReviewServicePanel( wx.Panel ):
             
         
         def THREADFetchInfo( self ):
+            
+            def wx_code( text ):
+                
+                if self:
+                    
+                    self._tag_info_st.SetLabelText( text )
+                    
+                
             
             service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
             
@@ -1397,7 +1377,7 @@ class ReviewServicePanel( wx.Panel ):
                 text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings'
                 
             
-            wx.CallAfter( self._UpdateFromThread, text )
+            wx.CallAfter( wx_code, text )
             
         
     

@@ -211,7 +211,9 @@ class Controller( HydrusController.HydrusController ):
                         
                         ( ssl_cert_path, ssl_key_path ) = self._db.GetSSLPaths()
                         
-                        context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path )
+                        sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
+                        
+                        context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
                         
                         self._service_keys_to_connected_ports[ service_key ] = reactor.listenSSL( port, http_factory, context_factory )
                         

@@ -41,6 +41,38 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     statements = []
     score = 0
     
+    # size
+    
+    s_size = shown_media.GetSize()
+    c_size = comparison_media.GetSize()
+    
+    size_ratio = float( s_size ) / float( c_size )
+    
+    if size_ratio > 2.0:
+        
+        statements.append( 'This has a much larger filesize.' )
+        
+        score += 2
+        
+    elif size_ratio > 1.0:
+        
+        statements.append( 'This has a larger filesize.' )
+        
+        score += 0.5
+        
+    elif size_ratio < 0.5:
+        
+        statements.append( 'This has a much smaller filesize.' )
+        
+        score -= 2
+        
+    elif size_ratio < 1.0:
+        
+        statements.append( 'This has a smaller filesize.' )
+        
+        score -= 0.5
+        
+    
     # higher/same res
     
     s_resolution = shown_media.GetResolution()
@@ -55,16 +87,12 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if resolution_ratio == 1.0:
             
-            if s_resolution == c_resolution:
+            if s_resolution != c_resolution:
                 
-                statements.append( 'Both have the same resolution.' )
-                
-            else:
-                
-                statements.append( 'Both have the same number of pixels but different resolution.' )
+                statements.append( 'The files have the same number of pixels but different resolution.' )
                 
             
-        elif resolution_ratio > 3.0:
+        elif resolution_ratio > 2.0:
             
             statements.append( 'This has much higher resolution.' )
             
@@ -76,7 +104,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             score += 1
             
-        elif resolution_ratio < 0.33:
+        elif resolution_ratio < 0.5:
             
             statements.append( 'This has much lower resolution.' )
             
@@ -105,21 +133,17 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     s_num_tags = len( shown_media.GetTagsManager().GetCurrent() )
     c_num_tags = len( comparison_media.GetTagsManager().GetCurrent() )
     
-    if s_num_tags == 0 and c_num_tags == 0:
-        
-        statements.append( 'Neither have any tags.' )
-        
-    elif s_num_tags > 0 and c_num_tags > 0:
+    if s_num_tags > 0 and c_num_tags > 0:
         
         if s_num_tags > c_num_tags:
             
-            statements.append( 'Both have tags, but this has more.' )
+            statements.append( 'This has more tags.' )
             
             score += 1
             
-        else:
+        elif s_num_tags < c_num_tags:
             
-            statements.append( 'Both files have tags, but this has fewer.' )
+            statements.append( 'This has fewer tags.' )
             
             score += 1
             
@@ -130,7 +154,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
     elif c_num_tags > 0:
         
-        statements.append( 'The other has tags, this does not.' )
+        statements.append( 'This has no tags, the other does.' )
         
     
     # older
@@ -148,7 +172,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         elif c_ts < s_ts - 86400 * 30:
             
-            statements.append( 'The other is older.' )
+            statements.append( 'This is newer.' )
             
             score -= 0.5
             
@@ -476,7 +500,7 @@ class MediaList( object ):
         self._hashes = set()
         
         self._sort_by = CC.SORT_BY_SMALLEST
-        self._collect_by = None
+        self._collect_by = []
         
         self._collect_map_singletons = {}
         self._collect_map_collected = {}
@@ -495,13 +519,13 @@ class MediaList( object ):
         
     
     def _CalculateCollectionKeysToMedias( self, collect_by, medias ):
-    
+        
+        keys_to_medias = collections.defaultdict( list )
+        
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
         services_manager = HG.client_controller.GetServicesManager()
-        
-        keys_to_medias = collections.defaultdict( list )
         
         for media in medias:
             
@@ -896,20 +920,26 @@ class MediaList( object ):
         return new_media
         
     
-    def Collect( self, collect_by = -1 ):
+    def Collect( self, collect_by = None ):
         
-        if collect_by == -1: collect_by = self._collect_by
+        if collect_by == None:
+            
+            collect_by = self._collect_by
+            
         
         self._collect_by = collect_by
         
-        for media in self._collected_media: self._singleton_media.update( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
+        for media in self._collected_media:
+            
+            self._singleton_media.update( [ self._GenerateMediaSingleton( media_result ) for media_result in media.GenerateMediaResults() ] )
+            
         
         self._collected_media = set()
         
         self._collect_map_singletons = {}
         self._collect_map_collected = {}
         
-        if collect_by is not None:
+        if len( collect_by ) > 0:
             
             keys_to_medias = self._CalculateCollectionKeysToMedias( collect_by, self._singleton_media )
             

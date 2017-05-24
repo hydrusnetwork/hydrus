@@ -947,12 +947,113 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesGetDuplicatePairsTableJoinInfo( self, file_service_key ):
         
-        service_id = self._GetServiceId( file_service_key )
-        
-        table_join = 'duplicate_pairs, current_files AS current_files_smaller, current_files AS current_files_larger ON ( smaller_hash_id = current_files_smaller.hash_id AND larger_hash_id = current_files_larger.hash_id )'
-        predicate_string = 'current_files_smaller.service_id = ' + str( service_id ) + ' AND current_files_larger.service_id = ' + str( service_id )
+        if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+            
+            table_join = 'duplicate_pairs'
+            predicate_string = '1=1'
+            
+        else:
+            
+            service_id = self._GetServiceId( file_service_key )
+            
+            table_join = 'duplicate_pairs, current_files AS current_files_smaller, current_files AS current_files_larger ON ( smaller_hash_id = current_files_smaller.hash_id AND larger_hash_id = current_files_larger.hash_id )'
+            predicate_string = 'current_files_smaller.service_id = ' + str( service_id ) + ' AND current_files_larger.service_id = ' + str( service_id )
+            
         
         return ( table_join, predicate_string )
+        
+    
+    def _CacheSimilarFilesGetHashIdsFromDuplicatePredicate( self, file_service_key, operator, num_relationships, dupe_type ):
+        
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
+        
+        hash_ids_to_counts = collections.Counter()
+        
+        if dupe_type == HC.DUPLICATE_BETTER_OR_WORSE:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type IN ( ' + str( HC.DUPLICATE_SMALLER_BETTER ) + ', ' + str( HC.DUPLICATE_LARGER_BETTER ) + ' )'
+            larger_duplicate_predicate_string = smaller_duplicate_predicate_string
+            
+        elif dupe_type == HC.DUPLICATE_BETTER:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+            
+        elif dupe_type == HC.DUPLICATE_WORSE:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_LARGER_BETTER )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( HC.DUPLICATE_SMALLER_BETTER )
+            
+        else:
+            
+            smaller_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+            larger_duplicate_predicate_string = 'duplicate_type = ' + str( dupe_type )
+            
+        
+        smaller_query = 'SELECT smaller_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + smaller_duplicate_predicate_string + ' GROUP BY smaller_hash_id;'
+        larger_query = 'SELECT larger_hash_id, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' AND ' + larger_duplicate_predicate_string + ' GROUP BY larger_hash_id;'
+        
+        for ( hash_id, count ) in self._c.execute( smaller_query ):
+            
+            hash_ids_to_counts[ hash_id ] += count
+            
+        
+        for ( hash_id, count ) in self._c.execute( larger_query ):
+            
+            hash_ids_to_counts[ hash_id ] += count
+            
+        
+        if operator == u'\u2248':
+            
+            lower_bound = 0.8 * num_relationships
+            upper_bound = 1.2 * num_relationships
+            
+            def filter_func( ( hash_id, count ) ):
+                
+                return lower_bound < count and count < upper_bound
+                
+            
+        elif operator == '<':
+            
+            def filter_func( ( hash_id, count ) ):
+                
+                return count < num_relationships
+                
+            
+        elif operator == '>':
+            
+            def filter_func( ( hash_id, count ) ):
+                
+                return count > num_relationships
+                
+            
+        elif operator == '=':
+            
+            def filter_func( ( hash_id, count ) ):
+                
+                return count == num_relationships
+                
+            
+        
+        hash_ids = { hash_id for ( hash_id, count ) in filter( filter_func, hash_ids_to_counts.items() ) }
+        
+        return hash_ids
+        
+    
+    def _CacheSimilarFilesGetMaintenanceStatus( self, file_service_key ):
+        
+        ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
+        ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
+        
+        searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
+        
+        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
+        
+        duplicate_types_to_count = collections.Counter( dict( self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' GROUP BY duplicate_type;' ) ) )
+        
+        duplicate_types_to_count[ HC.DUPLICATE_BETTER ] = duplicate_types_to_count[ HC.DUPLICATE_SMALLER_BETTER ] + duplicate_types_to_count[ HC.DUPLICATE_LARGER_BETTER ]
+        
+        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count )
         
     
     def _CacheSimilarFilesGetPHashId( self, phash ):
@@ -973,22 +1074,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return phash_id
-        
-    
-    def _CacheSimilarFilesGetMaintenanceStatus( self, file_service_key ):
-        
-        ( num_phashes_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_phash_regen;' ).fetchone()
-        ( num_branches_to_regen, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_maintenance_branch_regen;' ).fetchone()
-        
-        searched_distances_to_count = collections.Counter( dict( self._c.execute( 'SELECT searched_distance, COUNT( * ) FROM shape_search_cache GROUP BY searched_distance;' ) ) )
-        
-        ( table_join, predicate_string ) = self._CacheSimilarFilesGetDuplicatePairsTableJoinInfo( file_service_key )
-        
-        duplicate_types_to_count = collections.Counter( dict( self._c.execute( 'SELECT duplicate_type, COUNT( * ) FROM ' + table_join + ' WHERE ' + predicate_string + ' GROUP BY duplicate_type;' ) ) )
-        
-        duplicate_types_to_count[ HC.DUPLICATE_BETTER ] = duplicate_types_to_count[ HC.DUPLICATE_SMALLER_BETTER ] + duplicate_types_to_count[ HC.DUPLICATE_LARGER_BETTER ]
-        
-        return ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count )
         
     
     def _CacheSimilarFilesGetSomeDupes( self, file_service_key ):
@@ -1714,9 +1799,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if duplicate_status == HC.DUPLICATE_WORSE:
             
-            t = hash_a
-            hash_a = hash_b
-            hash_b = t
+            ( hash_a, hash_b ) = ( hash_b, hash_a )
             
             duplicate_status = HC.DUPLICATE_BETTER
             
@@ -1754,10 +1837,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # do a sync for better dupes that applies not_dupe and alternate relationships across better-than groups
-        
         self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_a )
         self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_b )
+        
+        self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_a )
+        self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_b )
         
     
     def _CacheSimilarFilesSetDuplicatePairStatusSingleRow( self, duplicate_status, hash_id_a, hash_id_b, only_update_given_previous_status = None ):
@@ -1803,9 +1887,46 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _CacheSimilarFilesSyncBetterWorseDuplicates( self, hash_id ):
+        
+        # better/worse files are inherantly 'the same' in some very close way, so 'not dupe' and 'alternate' relationships should apply to them all the same
+        # so, replicate all of our file's 'not dupe' and 'alternate' relationships to all of its 'better/worse' siblings
+        
+        applicable_relationships = set()
+        
+        for ( smaller_hash_id, duplicate_status ) in self._c.execute( 'SELECT smaller_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+            
+            applicable_relationships.add( ( smaller_hash_id, duplicate_status ) )
+            
+        
+        for ( larger_hash_id, duplicate_status ) in self._c.execute( 'SELECT larger_hash_id, duplicate_type FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_ALTERNATE, hash_id ) ):
+            
+            applicable_relationships.add( ( larger_hash_id, duplicate_status ) )
+            
+        
+        all_better_worse_siblings = set()
+        
+        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
+        all_better_worse_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ? ) AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, hash_id ) ) ) )
+        
+        for sibling_hash_id in all_better_worse_siblings:
+            
+            for ( other_hash_id, duplicate_status ) in applicable_relationships:
+                
+                if other_hash_id == sibling_hash_id:
+                    
+                    continue
+                    
+                
+                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_status, sibling_hash_id, other_hash_id )
+                
+            
+        
+    
     def _CacheSimilarFilesSyncSameFileDuplicates( self, hash_id ):
         
-        # for every known relationship our file has, that should be replicated to all of its 'same file' siblings
+        # exactly similar files should have exactly the same relationships with other files
+        # so, replicate all of our file's known relationships to all of its 'same file' siblings
         
         all_relationships = set()
         
@@ -1837,12 +1958,12 @@ class DB( HydrusDB.HydrusDB ):
             all_relationships.add( ( larger_hash_id, duplicate_status ) )
             
         
-        all_siblings = set()
+        all_same_file_siblings = set()
         
-        all_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
-        all_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
+        all_same_file_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
+        all_same_file_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
         
-        for sibling_hash_id in all_siblings:
+        for sibling_hash_id in all_same_file_siblings:
             
             for ( other_hash_id, duplicate_status ) in all_relationships:
                 
@@ -3307,7 +3428,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.TAG_SERVICES:
             
@@ -3317,7 +3438,7 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.FILE_SERVICES:
             
@@ -3368,7 +3489,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         
         return predicates
@@ -3824,6 +3945,35 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ? AND ' + predicate + ';', ( service_id, ) ) ] )
+                
+            
+        
+        for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipsPredicates():
+            
+            only_do_zero = ( operator in ( '=', u'\u2248' ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            include_zero = operator == '<'
+            
+            if only_do_zero:
+                
+                nonzero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
+                
+                query_hash_ids.difference_update( nonzero_hash_ids )
+                
+            elif include_zero:
+                
+                nonzero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, '>', 0, dupe_type )
+                
+                zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
+                
+                accurate_except_zero_hash_ids = self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type )
+                
+                hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
+                
+                query_hash_ids.intersection_update( hash_ids )
+                
+            else:
+                
+                query_hash_ids.intersection_update( self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type ) )
                 
             
         
@@ -4377,7 +4527,16 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_id, session_key, expires ) in results:
             
-            service = self._GetService( service_id )
+            try:
+                
+                service = self._GetService( service_id )
+                
+            except HydrusExceptions.DataMissing:
+                
+                self._c.execute( 'DELETE FROM hydrus_sessions WHERE service_id = ?;', ( service_id, ) )
+                
+                continue
+                
             
             service_key = service.GetServiceKey()
             
@@ -5059,7 +5218,14 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            ( service_key, service_type, name, dictionary_string ) = self._c.execute( 'SELECT service_key, service_type, name, dictionary_string FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            result = self._c.execute( 'SELECT service_key, service_type, name, dictionary_string FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
+            
+            if result is None:
+                
+                raise HydrusExceptions.DataMissing( 'That service does not exist!' )
+                
+            
+            ( service_key, service_type, name, dictionary_string ) = result
             
             dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
             
@@ -5439,7 +5605,17 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
                 
-                service = self._GetService( service_id )
+                try:
+                    
+                    service = self._GetService( service_id )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    self._c.execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
+                    self._c.execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+                    
+                    continue
+                    
                 
                 service_key = service.GetServiceKey()
                 
@@ -5478,7 +5654,17 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( service_id, statuses_and_pair_ids ) in service_ids_to_statuses_and_pair_ids.items():
                 
-                service = self._GetService( service_id )
+                try:
+                    
+                    service = self._GetService( service_id )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    self._c.execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
+                    self._c.execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
+                    
+                    continue
+                    
                 
                 service_key = service.GetServiceKey()
                 

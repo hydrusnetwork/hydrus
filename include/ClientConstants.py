@@ -18,6 +18,9 @@ BLANK_PHASH = '\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything el
 
 CAN_HIDE_MOUSE = True
 
+CENSOR_WHITELIST = 0
+CENSOR_BLACKLIST = 1
+
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_LIGHT_SELECTED = wx.Colour( 235, 248, 255 )
 COLOUR_SELECTED = wx.Colour( 217, 242, 255 )

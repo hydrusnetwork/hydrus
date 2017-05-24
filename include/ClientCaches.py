@@ -1897,7 +1897,10 @@ class ThumbnailCache( object ):
                     
                     thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
                     
-                    with open( temp_path, 'wb' ) as f: f.write( thumbnail )
+                    with open( temp_path, 'wb' ) as f:
+                        
+                        f.write( thumbnail )
+                        
                     
                     hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
                     
@@ -2121,6 +2124,14 @@ class ServicesManager( object ):
         with self._lock:
             
             return self._GetService( service_key )
+            
+        
+    
+    def GetServiceType( self, service_key ):
+        
+        with self._lock:
+            
+            return self._GetService( service_key ).GetServiceType()
             
         
     

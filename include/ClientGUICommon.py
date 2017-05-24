@@ -2,6 +2,7 @@ import ClientCaches
 import ClientData
 import ClientConstants as CC
 import ClientGUIMenus
+import ClientGUITopLevelWindows
 import ClientRatings
 import ClientThreading
 import HydrusConstants as HC
@@ -411,62 +412,37 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         self._page_key = page_key
         
-        sort_by = HC.options[ 'sort_by' ]
-        
-        collect_types = set()
-        
-        for ( sort_by_type, namespaces ) in sort_by: collect_types.update( namespaces )
-        
-        collect_types = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in collect_types ] )
-        collect_types.sort()
-        
-        ratings_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-        
-        for ratings_service in ratings_services: collect_types.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
-        
-        popup = self._Popup( collect_types )
+        popup = self._Popup()
         
         #self.UseAltPopupWindow( True )
         
         self.SetPopupControl( popup )
         
-        ( collect_types, collect_type_strings ) = popup.GetControl().GetValue()
+    
+    def GetChoice( self ):
         
-        self.SetCollectTypes( collect_types, collect_type_strings )
+        return self._collect_by
         
     
-    def GetChoice( self ): return self._collect_by
-    
-    def SetCollectTypes( self, collect_types, collect_type_strings ):
+    def SetCollectTypes( self, collect_by, description ):
         
-        if len( collect_type_strings ) > 0:
-            
-            self.SetValue( 'collect by ' + '-'.join( collect_type_strings ) )
-            
-            self._collect_by = collect_types
-            
-        else:
-            
-            self.SetValue( 'no collections' )
-            
-            self._collect_by = None
-            
+        self._collect_by = collect_by
+        
+        self.SetValue( description )
         
         HG.client_controller.pub( 'collect_media', self._page_key, self._collect_by )
         
     
     class _Popup( wx.combo.ComboPopup ):
         
-        def __init__( self, collect_types ):
+        def __init__( self ):
             
             wx.combo.ComboPopup.__init__( self )
-            
-            self._collect_types = collect_types
             
         
         def Create( self, parent ):
             
-            self._control = self._Control( parent, self.GetCombo(), self._collect_types )
+            self._control = self._Control( parent, self.GetCombo() )
             
             return True
             
@@ -476,36 +452,84 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             return( ( preferred_width, -1 ) )
             
         
-        def GetControl( self ): return self._control
+        def GetControl( self ):
+            
+            return self._control
+            
         
         class _Control( wx.CheckListBox ):
             
-            def __init__( self, parent, special_parent, collect_types ):
+            def __init__( self, parent, special_parent ):
                 
-                texts = [ text for ( text, data ) in collect_types ] # we do this so it sizes its height properly on init
+                text_and_data_tuples = set()
+                
+                sort_by = HC.options[ 'sort_by' ]
+                
+                for ( sort_by_type, namespaces ) in sort_by:
+                    
+                    text_and_data_tuples.update( namespaces )
+                    
+                
+                text_and_data_tuples = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ] )
+                text_and_data_tuples.sort()
+                
+                ratings_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+                
+                for ratings_service in ratings_services:
+                    
+                    text_and_data_tuples.append( ( ratings_service.GetName(), ( 'rating', ratings_service.GetServiceKey() ) ) )
+                    
+                
+                texts = [ text for ( text, data ) in text_and_data_tuples ] # we do this so it sizes its height properly on init
                 
                 wx.CheckListBox.__init__( self, parent, choices = texts )
                 
                 self.Clear()
                 
-                for ( text, data ) in collect_types: self.Append( text, data )
+                for ( text, data ) in text_and_data_tuples:
+                    
+                    self.Append( text, data )
+                    
                 
                 self._special_parent = special_parent
                 
                 default = HC.options[ 'default_collect' ]
                 
-                if default is not None:
-                    
-                    strings_we_added = { text for ( text, data ) in collect_types }
-                    
-                    strings_to_check = [ s for ( namespace_gumpf, s ) in default if s in strings_we_added ]
-                    
-                    self.SetCheckedStrings( strings_to_check )
-                    
+                self.SetValue( default )
                 
                 self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
                 
                 self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+                
+            
+            def _BroadcastCollect( self ):
+                
+                ( collect_by, description ) = self._GetValues()
+                
+                self._special_parent.SetCollectTypes( collect_by, description )
+                
+            
+            def _GetValues( self ):
+                
+                collect_by = []
+                
+                for index in self.GetChecked():
+                    
+                    collect_by.append( self.GetClientData( index ) )
+                    
+                
+                collect_by_strings = self.GetCheckedStrings()
+                
+                if len( collect_by ) > 0:
+                    
+                    description = 'collect by ' + '-'.join( collect_by_strings )
+                    
+                else:
+                    
+                    description = 'no collections'
+                    
+                
+                return ( collect_by, description )
                 
             
             # as inspired by http://trac.wxwidgets.org/attachment/ticket/14413/test_clb_workaround.py
@@ -527,20 +551,32 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             
             def EventChanged( self, event ):
                 
-                ( collect_types, collect_type_strings ) = self.GetValue()
-                
-                self._special_parent.SetCollectTypes( collect_types, collect_type_strings )
+                self._BroadcastCollect()
                 
             
-            def GetValue( self ):
+            def SetValue( self, collect_by ):
                 
-                collect_types = []
+                # an old possible value, now collapsed to []
+                if collect_by is None:
+                    
+                    collect_by = []
+                    
                 
-                for i in self.GetChecked(): collect_types.append( self.GetClientData( i ) )
+                desired_collect_by_rows = set( collect_by )
                 
-                collect_type_strings = self.GetCheckedStrings()
+                indices_to_check = []
                 
-                return ( collect_types, collect_type_strings )
+                for index in range( self.GetCount() ):
+                    
+                    if self.GetClientData( index ) in desired_collect_by_rows:
+                        
+                        indices_to_check.append( index )
+                        
+                    
+                
+                self.SetChecked( indices_to_check )
+                
+                self._BroadcastCollect()
                 
             
         
@@ -553,26 +589,39 @@ class ChoiceSort( BetterChoice ):
         
         self._page_key = page_key
         
+        services_manager = HG.client_controller.GetServicesManager()
+        
         sort_choices = ClientData.GetSortChoices( add_namespaces_and_ratings = add_namespaces_and_ratings )
         
-        for ( sort_by_type, sort_by_data ) in sort_choices:
+        for sort_by in sort_choices:
             
-            if sort_by_type == 'system': string = CC.sort_string_lookup[ sort_by_data ]
-            elif sort_by_type == 'namespaces': string = '-'.join( sort_by_data )
-            elif sort_by_type == 'rating_descend':
+            ( sort_by_type, sort_by_data ) = sort_by
+            
+            if sort_by_type == 'system':
                 
-                string = sort_by_data.GetName() + ' rating highest first'
+                label = CC.sort_string_lookup[ sort_by_data ]
                 
-                sort_by_data = sort_by_data.GetServiceKey()
+            elif sort_by_type == 'namespaces':
                 
-            elif sort_by_type == 'rating_ascend':
+                label = '-'.join( sort_by_data )
                 
-                string = sort_by_data.GetName() + ' rating lowest first'
+            elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
                 
-                sort_by_data = sort_by_data.GetServiceKey()
+                service_key = sort_by_data
+                
+                service = services_manager.GetService( service_key )
+                
+                if sort_by_type == 'rating_descend':
+                    
+                    label = service.GetName() + ' rating highest first'
+                    
+                elif sort_by_type == 'rating_ascend':
+                    
+                    label = service.GetName() + ' rating lowest first'
+                    
                 
             
-            self.Append( 'sort by ' + string, ( sort_by_type, sort_by_data ) )
+            self.Append( 'sort by ' + label, sort_by )
             
         
         self.Bind( wx.EVT_CHOICE, self.EventChoice )
@@ -594,12 +643,23 @@ class ChoiceSort( BetterChoice ):
     
     def ACollectHappened( self, page_key, collect_by ):
         
-        if page_key == self._page_key: self._BroadcastSort()
+        if page_key == self._page_key:
+            
+            self._BroadcastSort()
+            
+        
+    
+    def BroadcastSort( self ):
+        
+        self._BroadcastSort()
         
     
     def EventChoice( self, event ):
         
-        if self._page_key is not None: self._BroadcastSort()
+        if self._page_key is not None:
+            
+            self._BroadcastSort()
+            
         
     
 class ExportPatternButton( wx.Button ):
@@ -859,9 +919,7 @@ class ListBook( wx.Panel ):
         wx.CallAfter( self.ProcessEvent, event )
         
         # now the virtualsize is updated, we now tell any parent resizing frame/dialog that is interested in resizing that now is the time
-        event = CC.SizeChangedEvent( -1 )
-        
-        wx.CallAfter( self.ProcessEvent, event )
+        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
         event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
         

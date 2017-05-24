@@ -130,6 +130,12 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
             SlideOffScreenTLWUpAndLeft( tlw )
         
     
+def PostSizeChangedEvent( window ):
+    
+    event = CC.SizeChangedEvent( -1 )
+    
+    wx.CallAfter( window.ProcessEvent, event )
+    
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
     new_options = HG.client_controller.GetNewOptions()

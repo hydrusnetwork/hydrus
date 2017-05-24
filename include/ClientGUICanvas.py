@@ -429,14 +429,17 @@ class Animation( wx.Window ):
                 
             
         
-        screen_position = self.ClientToScreen( event.GetPosition() )
-        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-        
-        event.SetX( x )
-        event.SetY( y )
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
+        if self.IsShown(): # Can't ClientToScreen if not shown, like in init
+            
+            screen_position = self.ClientToScreen( event.GetPosition() )
+            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+            
+            event.SetX( x )
+            event.SetY( y )
+            
+            event.ResumePropagation( 1 )
+            event.Skip()
+            
         
     
     def EventResize( self, event ):
@@ -1150,6 +1153,8 @@ class Canvas( wx.Window ):
         
         self._canvas_key = HydrusData.GenerateKey()
         
+        self._maintain_pan_and_zoom = False
+        
         self._dirty = True
         self._closing = False
         
@@ -1486,24 +1491,43 @@ class Canvas( wx.Window ):
     
     def _MaintainZoom( self, previous_media ):
         
-        if self._current_media is None:
-            
-            return
-            
-        
-        if previous_media.GetResolution() == self._current_media.GetResolution():
-            
-            previous_zoom = self._current_zoom
+        if previous_media is None:
             
             self._ReinitZoom()
-            
-            self._current_zoom = previous_zoom
-            
-            HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
             
         else:
             
-            self._ReinitZoom()
+            if self._current_media is None:
+                
+                return
+                
+            
+            ( previous_width, previous_height ) = previous_media.GetResolution()
+            ( current_width, current_height ) = self._current_media.GetResolution()
+            
+            previous_ratio = float( previous_width ) / float( previous_height )
+            current_ratio = float( current_width ) / float( current_height )
+            
+            if previous_ratio == current_ratio:
+                
+                # if this new one is half the size, the new zoom needs to be twice as much to be the same size
+                
+                zoom_ratio = float( previous_width ) / float( current_width )
+                
+                ultimate_canvas_zoom = self._current_zoom * zoom_ratio
+                
+                self._ReinitZoom()
+                
+                self._current_zoom = ultimate_canvas_zoom
+                
+                HG.client_controller.pub( 'canvas_new_zoom', self._canvas_key, self._current_zoom )
+                
+            else:
+                
+                self._ResetDragDelta()
+                
+                self._ReinitZoom()
+                
             
         
     
@@ -2216,7 +2240,7 @@ class Canvas( wx.Window ):
         self._ResetDragDelta()
         
     
-    def SetMedia( self, media, maintain_pan_and_zoom = False ):
+    def SetMedia( self, media ):
         
         if media is not None:
             
@@ -2242,7 +2266,7 @@ class Canvas( wx.Window ):
             
             self._current_media = media
             
-            if not maintain_pan_and_zoom:
+            if not self._maintain_pan_and_zoom:
                 
                 self._ResetDragDelta()
                 
@@ -2253,7 +2277,7 @@ class Canvas( wx.Window ):
                 
             else:
                 
-                if maintain_pan_and_zoom:
+                if previous_media is not None and self._maintain_pan_and_zoom:
                     
                     self._MaintainZoom( previous_media )
                     
@@ -2932,6 +2956,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._file_service_key = file_service_key
         
+        self._maintain_pan_and_zoom = True
+        
         self._currently_fetching_pairs = False
         
         self._unprocessed_pairs = []
@@ -2943,12 +2969,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         self._reserved_shortcut_names.append( 'media_viewer_browser' )
         self._reserved_shortcut_names.append( 'duplicate_filter' )
-        
-        self._hover_commands.AddCommand( 'this is better', self._CurrentMediaIsBetter )
-        self._hover_commands.AddCommand( 'exact duplicates', self._MediaAreTheSame )
-        self._hover_commands.AddCommand( 'alternates', self._MediaAreAlternates )
-        self._hover_commands.AddCommand( 'not duplicates', self._MediaAreNotDupes )
-        self._hover_commands.AddCommand( 'custom action', self._DoCustomAction )
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         
@@ -3400,6 +3420,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self.SetMedia( self._media_list.GetFirst() )
             
+            self._ResetDragDelta()
+            
+            self._ReinitZoom()
+            
         
     
     def _SkipPair( self ):
@@ -3420,7 +3444,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._current_media is not None:
             
-            self.SetMedia( self._media_list.GetNext( self._current_media ), maintain_pan_and_zoom = True )
+            self.SetMedia( self._media_list.GetNext( self._current_media ) )
             
         
     
@@ -3556,9 +3580,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         wx.CallLater( 100, catch_up )
         
     
-    def SetMedia( self, media, maintain_pan_and_zoom = False ):
+    def SetMedia( self, media ):
         
-        CanvasWithHovers.SetMedia( self, media, maintain_pan_and_zoom )
+        CanvasWithHovers.SetMedia( self, media )
         
         if media is not None:
             
@@ -4568,27 +4592,20 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._IsZoomable():
                 
-                menu.Append( CC.ID_NULL, 'current zoom: ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) )
+                ClientGUIMenus.AppendMenuLabel( menu, 'current zoom: ' + ClientData.ConvertZoomToPercentage( self._current_zoom ) )
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_in' ), 'zoom in' )
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'zoom_out' ), 'zoom out' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'zoom in', 'Zoom the media in.', self._ZoomIn )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'zoom out', 'Zoom the media out.', self._ZoomOut )
                 
                 if self._current_media.GetMime() != HC.APPLICATION_FLASH:
                     
-                    ( my_width, my_height ) = self.GetClientSize()
-                    
-                    ( media_width, media_height ) = self._current_media.GetResolution()
-                    
-                    if self._current_zoom == 1.0:
+                    if self._current_zoom != 1.0:
                         
-                        if media_width > my_width or media_height > my_height:
-                            
-                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'switch_between_100_percent_and_canvas_zoom' ), 'zoom fit' )
-                            
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'zoom to 100%', 'Set the zoom to 100%.', self._ZoomSwitch )
                         
-                    else:
+                    elif self._current_zoom != self._canvas_zoom:
                         
-                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'switch_between_100_percent_and_canvas_zoom' ), 'zoom full' )
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'zoom fit', 'Set the zoom so the media fits the canvas.', self._ZoomSwitch )
                         
                     
                 
@@ -4599,20 +4616,26 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 manage_menu = wx.Menu()
                 
-                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_file_tags' ), 'tags' )
-                manage_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_file_ratings' ), 'ratings' )
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
-                menu.AppendMenu( CC.ID_NULL, 'manage', manage_menu )
+                ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
                 
             else:
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'manage_file_tags' ), 'manage tags' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'manage tags', 'Manage this file\'s tags.', self._ManageTags )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            if self._current_media.HasInbox(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'archive_file' ), '&archive' )
-            if self._current_media.HasArchive(): menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'inbox_file' ), 'return to &inbox' )
+            if self._current_media.HasInbox():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file, taking it out of the inbox.', self._Archive )
+                
+            elif self._current_media.HasArchive():
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
+                
             
             menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_file_from_view' ), '&remove' )
             
@@ -4928,7 +4951,7 @@ class MediaContainer( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self._media is not None:
+        if self._media is not None and self.IsShown(): # Can't ClientToScreen if not shown, like in init
             
             mime = self._media.GetMime()
             
@@ -5401,14 +5424,17 @@ class StaticImage( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        screen_position = self.ClientToScreen( event.GetPosition() )
-        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-        
-        event.SetX( x )
-        event.SetY( y )
-        
-        event.ResumePropagation( 1 )
-        event.Skip()
+        if self.IsShown(): # Can't ClientToScreen if not shown, like in init
+            
+            screen_position = self.ClientToScreen( event.GetPosition() )
+            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+            
+            event.SetX( x )
+            event.SetY( y )
+            
+            event.ResumePropagation( 1 )
+            event.Skip()
+            
         
     
     def EventResize( self, event ):

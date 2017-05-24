@@ -166,6 +166,8 @@ class HydrusDB( object ):
         self._pubsubs = []
         
         self._currently_doing_job = False
+        self._current_status = ''
+        self._current_job_name = ''
         
         self._db = None
         self._c = None
@@ -510,13 +512,33 @@ class HydrusDB( object ):
             
             if job_type in ( 'read_write', 'write' ):
                 
+                self._current_status = 'db write locked'
+                
+                self._controller.pub( 'refresh_status' )
+                
                 self._BeginImmediate()
                 
+            else:
+                
+                self._current_status = 'db read locked'
+                
             
-            if job_type in ( 'read', 'read_write' ): result = self._Read( action, *args, **kwargs )
-            elif job_type in ( 'write' ): result = self._Write( action, *args, **kwargs )
+            self._controller.pub( 'refresh_status' )
+            
+            if job_type in ( 'read', 'read_write' ):
+                
+                result = self._Read( action, *args, **kwargs )
+                
+            elif job_type in ( 'write' ):
+                
+                result = self._Write( action, *args, **kwargs )
+                
             
             if self._in_transaction:
+                
+                self._current_status = 'db committing'
+                
+                self._controller.pub( 'refresh_status' )
                 
                 self._Commit()
                 
@@ -548,6 +570,12 @@ class HydrusDB( object ):
                 
             
             self._ManageDBError( job, e )
+            
+        finally:
+            
+            self._current_status = ''
+            
+            self._controller.pub( 'refresh_status' )
             
         
     
@@ -659,6 +687,11 @@ class HydrusDB( object ):
         return self._currently_doing_job
         
     
+    def GetStatus( self ):
+        
+        return ( self._current_status, self._current_job_name )
+        
+    
     def IsDBUpdated( self ):
         
         return self._is_db_updated
@@ -709,6 +742,7 @@ class HydrusDB( object ):
                 ( priority, job ) = self._jobs.get( timeout = 0.5 )
                 
                 self._currently_doing_job = True
+                self._current_job_name = job.ToString()
                 
                 self._controller.pub( 'refresh_status' )
                 
@@ -743,6 +777,7 @@ class HydrusDB( object ):
                     
                 
                 self._currently_doing_job = False
+                self._current_job_name = ''
                 
                 self._controller.pub( 'refresh_status' )
                 

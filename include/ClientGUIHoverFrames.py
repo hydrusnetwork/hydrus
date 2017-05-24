@@ -57,21 +57,19 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def _SizeAndPosition( self ):
         
-        if not self.GetParent().IsShown():
+        if self.GetParent().IsShown(): # Can't ClientToScreen if not shown, like in init
             
-            return
+            ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
             
-        
-        ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
-        
-        if should_resize:
+            if should_resize:
+                
+                self.Fit()
+                
+                self.SetSize( my_ideal_size )
+                
             
-            self.Fit()
+            self.SetPosition( my_ideal_position )
             
-            self.SetSize( my_ideal_size )
-            
-        
-        self.SetPosition( my_ideal_position )
         
     
     def SetDisplayMedia( self, canvas_key, media ):
@@ -98,7 +96,7 @@ class FullscreenHoverFrame( wx.Frame ):
                     
                 
             
-            if self._current_media is None or not self.GetParent().IsShown():
+            if self._current_media is None or not self.GetParent().IsShown(): # Can't ClientToScreen if not shown, like in init
                 
                 self.Hide()
                 
@@ -439,13 +437,6 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             
         
     
-    def AddCommand( self, label, func ):
-        
-        command_button = ClientGUICommon.BetterButton( self, label, func )
-        
-        self._button_hbox.AddF( command_button, CC.FLAGS_VCENTER )
-        
-    
     def EventMouseWheel( self, event ):
         
         event.ResumePropagation( 1 )
@@ -561,6 +552,23 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTop ):
         self._top_hbox.AddF( cog_button, CC.FLAGS_SIZER_VCENTER )
         
         FullscreenHoverFrameTop._PopulateCenterButtons( self )
+        
+        dupe_commands = []
+        
+        dupe_commands.append( ( 'this is better', 'Set that the current file you are looking at is better than the other in the pair.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_this_is_better' ) ) )
+        dupe_commands.append( ( 'exact duplicates', 'Set that the two files are, as far as you can tell, exactly the same.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_exactly_the_same' ) ) )
+        dupe_commands.append( ( 'alternates', 'Set that the files are not duplicates, but that one is derived from the other or that they are both descendants of a common ancestor.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_alternates' ) ) )
+        dupe_commands.append( ( 'not duplicates', 'Set that the files are not duplicates or otherwise related--that this pair is a false-positive match.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_not_dupes' ) ) )
+        dupe_commands.append( ( 'custom action', 'Choose one of the other actions but customise the merge and delete options for this specific decision.', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_custom_action' ) ) )
+        
+        for ( label, tooltip, command ) in dupe_commands:
+            
+            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, command )
+            
+            command_button.SetToolTipString( tooltip )
+            
+            self._button_hbox.AddF( command_button, CC.FLAGS_VCENTER )
+            
         
     
     def _EditBackgroundSwitchIntensity( self ):
@@ -731,9 +739,9 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.AddF( self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._urls_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
         

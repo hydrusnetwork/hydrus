@@ -44,35 +44,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         self._activate_callable( self.GetTags(), only_add = True )
         
-    '''
-    # Maybe reinclude this if per-column autoresizing is desired and not completely buggy
-    def SetTags( self, tags ):
-        
-        ClientGUIListBoxes.ListBoxTagsStrings.SetTags( self, tags )
-        
-        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
-        
-        if width is None:
-            
-            if len( self._ordered_strings ) > 0:
-                
-                dc = wx.MemoryDC( self._client_bmp )
-                
-                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-                
-                width = max( ( dc.GetTextExtent( s )[0] for s in self._ordered_strings ) )
-                
-                self.SetMinClientSize( ( width + 2 * self.TEXT_X_PADDING, -1 ) )
-                
-            
-        else:
-            
-            self.SetMinSize( ( width, -1 ) )
-            
-        
-        wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
-        
-    '''
+    
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, activate_callable ):

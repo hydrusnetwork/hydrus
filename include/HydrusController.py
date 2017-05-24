@@ -171,14 +171,19 @@ class HydrusController( object ):
             
         
     
-    def GetCache( self, name ):
-        
-        return self._caches[ name ]
-        
-    
     def GetDBDir( self ):
         
         return self._db_dir
+        
+    
+    def GetDBStatus( self ):
+        
+        return self._db.GetStatus()
+        
+    
+    def GetCache( self, name ):
+        
+        return self._caches[ name ]
         
     
     def GetManager( self, name ):

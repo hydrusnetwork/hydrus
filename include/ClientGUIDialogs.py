@@ -529,21 +529,45 @@ class DialogInputFileSystemPredicates( Dialog ):
         
         pred_classes = []
         
-        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
-        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
+        if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHeight )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemWidth )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRatio )
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumPixels )
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuration )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemFileService )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHash )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemLimit )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemMime )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumTags )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuration )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemFileService )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemHash )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_LIMIT:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemLimit )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_MIME:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemMime )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumTags )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemNumWords )
+            
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
             services_manager = HG.client_controller.GetServicesManager()
@@ -555,8 +579,18 @@ class DialogInputFileSystemPredicates( Dialog ):
                 pred_classes.append( ClientGUIPredicates.PanelPredicateSystemRating )
                 
             
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
-        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE: pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSimilarTo )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIZE:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
+            
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuplicateRelationships )
+            
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3356,7 +3390,7 @@ class DialogSetupExport( Dialog ):
         
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
-        self._export_tag_txts = wx.CheckBox( self, label = 'export tags in .txt files?' )
+        self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
         self._export_tag_txts.SetToolTipString( text )
         self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
         
@@ -3589,6 +3623,11 @@ class DialogSetupExport( Dialog ):
             
             tag_service_names.sort()
             
+            if len( self._tag_txt_tag_services ) == 0:
+                
+                self._tag_txt_tag_services = tag_service_names
+                
+            
             with DialogCheckFromListOfStrings( self, 'select tag services', tag_service_names, self._tag_txt_tag_services ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
@@ -3597,11 +3636,20 @@ class DialogSetupExport( Dialog ):
                     
                     self._tag_txt_tag_services = [ names_to_service_keys[ name ] for name in selected_names ]
                     
+                    if len( self._tag_txt_tag_services ) == 0:
+                        
+                        self._export_tag_txts.SetValue( False )
+                        
+                    
                 else:
                     
                     self._export_tag_txts.SetValue( False )
                     
                 
+            
+        else:
+            
+            self._tag_txt_tag_services = []
             
         
     

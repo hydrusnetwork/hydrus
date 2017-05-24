@@ -644,7 +644,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             hash = self._focussed_media.GetDisplayMedia().GetHash()
             
-            HG.client_controller.pub( 'new_similar_to', CC.COMBINED_LOCAL_FILE_SERVICE_KEY, hash, max_hamming )
+            HG.client_controller.pub( 'new_similar_to', CC.LOCAL_FILE_SERVICE_KEY, hash, max_hamming )
             
         
     

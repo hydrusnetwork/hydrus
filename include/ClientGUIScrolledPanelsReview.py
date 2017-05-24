@@ -4,6 +4,7 @@ import ClientGUIDialogs
 import ClientGUIFrames
 import ClientGUIScrolledPanels
 import ClientGUIPanels
+import ClientGUITopLevelWindows
 import ClientTags
 import ClientThreading
 import HydrusConstants as HC
@@ -398,7 +399,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventPageChanged( self, event ):
         
-        wx.PostEvent( self.GetParent(), CC.SizeChangedEvent( -1 ) )
+        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
     def DoGetBestSize( self ):

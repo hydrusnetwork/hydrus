@@ -79,6 +79,51 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
         return info
         
     
+class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        choices = [ '<', u'\u2248', '=', '>' ]
+        
+        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        
+        self._num = wx.SpinCtrl( self, min = 0, max = 65535 )
+        
+        choices = [ ( HC.duplicate_status_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ) ]
+        
+        self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, style = wx.RA_SPECIFY_ROWS )
+        
+        #
+        
+        self._sign.SetStringSelection( '>' )
+        self._num.SetValue( 0 )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:duplicate relationships' ), CC.FLAGS_VCENTER )
+        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
+        hbox.AddF( self._num, CC.FLAGS_VCENTER )
+        hbox.AddF( self._dupe_type, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        wx.CallAfter( self._num.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._sign.GetStringSelection(), self._num.GetValue(), self._dupe_type.GetChoice() )
+        
+        return info
+        
+    
+    
 class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DURATION

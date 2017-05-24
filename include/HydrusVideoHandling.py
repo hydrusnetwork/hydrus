@@ -2,6 +2,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusImageHandling
+import HydrusPaths
 import HydrusThreading
 import matroska
 import numpy
@@ -218,6 +219,32 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     """
     
     # open the file in a pipe, provoke an error, read output
+    
+    try:
+        
+        filename.encode( 'ascii' ) # throwing unicode at the console is a mess best left for Python 3
+        
+    except UnicodeEncodeError:
+        
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+        
+        with open( filename, 'rb' ) as source:
+            
+            with open( temp_path, 'wb' ) as dest:
+                
+                HydrusPaths.CopyFileLikeToFileLike( source, dest )
+                
+            
+        
+        try:
+            
+            return Hydrusffmpeg_parse_infos( temp_path )
+            
+        finally:
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
     
     cmd = [ FFMPEG_PATH, "-i", filename ]
     

@@ -677,29 +677,6 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = self._management_controller.GetKey( 'page' )
         
-        self._controller.sub( self, 'SetSearchFocus', 'set_search_focus' )
-        
-    
-    def _MakeCollect( self, sizer ):
-        
-        self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
-        
-        sizer.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-    
-    def _MakeCurrentSelectionTagsBox( self, sizer ):
-        
-        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
-        
-        t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
-        
-        tags_box.SetTagsBox( t )
-        
-        sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-    
-    def _MakeSort( self, sizer ):
-        
         self._sort_by = ClientGUICommon.ChoiceSort( self, self._page_key )
         
         try:
@@ -711,7 +688,20 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
             self._sort_by.SetSelection( 0 )
             
         
-        sizer.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
+        
+        self._controller.sub( self, 'SetSearchFocus', 'set_search_focus' )
+        
+    
+    def _MakeCurrentSelectionTagsBox( self, sizer ):
+        
+        tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        
+        t = ClientGUIListBoxes.ListBoxTagsSelectionManagementPanel( tags_box, self._page_key )
+        
+        tags_box.SetTagsBox( t )
+        
+        sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def CleanBeforeDestroy( self ): pass
@@ -804,6 +794,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._SetFileDomain( duplicate_filter_file_domain ) # this spawns a refreshandupdatestatus
         
         #
+        
+        self._sort_by.Hide()
+        self._collect_by.Hide()
         
         gridbox_1 = wx.FlexGridSizer( 0, 3 )
         
@@ -1397,7 +1390,9 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._collect_by.Hide()
         
         vbox.AddF( self._gallery_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1736,7 +1731,9 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._collect_by.Hide()
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -1961,7 +1958,9 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._collect_by.Hide()
         
         vbox.AddF( self._page_of_images_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2311,7 +2310,9 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._collect_by.Hide()
         
         vbox.AddF( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2345,7 +2346,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
         
         self._thread_input.SetValue( thread_url )
-        self._thread_input.SetEditable( False )
         
         self._import_file_options.SetOptions( import_file_options )
         self._import_tag_options.SetOptions( import_tag_options )
@@ -2378,6 +2378,8 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     def _UpdateStatus( self ):
         
         if self._thread_watcher_import.HasThread():
+            
+            self._thread_input.SetEditable( False )
             
             if not self._options_panel.IsShown():
                 
@@ -2642,7 +2644,9 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._collect_by.Hide()
         
         vbox.AddF( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2959,8 +2963,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
-        self._MakeCollect( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -3347,8 +3351,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._MakeSort( vbox )
-        self._MakeCollect( vbox )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if self._search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         

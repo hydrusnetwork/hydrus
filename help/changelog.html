@@ -8,6 +8,49 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 257</h3></li>
+				<ul>
+					<li>?the duplicate filter will now maintain zoom on files with the same ratio</li>
+					<li>split the duplicate merge options into separate tag/rating controls--you may see some duplicate service entries, but these will be cleaned on your next shutdown</li>
+					<li>duplicate merge options now allow syncing 'archive' status</li>
+					<li>duplicate merge options now allow 'delete both files', which you may find use for in custom actions</li>
+					<li>created a tag censorship object to handle and action a rich tag censorship ruleset</li>
+					<li>tag duplicate merge options now have and use this tag censorship object to filter which tags are merged, with an initial value of 'let everything through'</li>
+					<li>wrote a tag censorship edit panel and tied it into the duplicate action edit panel so these new tag censorship objects can be edited</li>
+					<li>added an optimisation to the duplicate status setting code--if two files are better/worse, they are inherantly duplicates and so 'not dupe' and 'alternate' relationships apply to both equally and can be duplicated</li>
+					<li>fixed and culled and normalised the 'this has more tags' dupe filter statements to be more accurate and useful</li>
+					<li>added 'this has a larger filesize' type-statements to the dupe filter</li>
+					<li>created a 'system:duplicate relationships' predicate that can find files based on how many duplicate relationships of a particular type they have</li>
+					<li>cleaned up some misc duplicate filter code and added some tooltips to the top hover window dupe action buttons</li>
+					<li>added 'move to left/right end' to main gui page tab right-click menu</li>
+					<li>added 'new page' and 'new page here' to main gui page tab right-click menu</li>
+					<li>you can now right-click for a menu from empty tab space on the main gui</li>
+					<li>the main gui statusbar now updates more efficiently when under heavy refresh load</li>
+					<li>the main gui statusbar now shows db read/write/commit status and sets the current db job summary as its tooltip--if you experience persistent hangs, please hover over the statusbar and report what you see!</li>
+					<li>export tags to .txts checkbox will now default to 'all services on' when checked</li>
+					<li>fixed the thread watcher, which was accidentally disabling its text input early</li>
+					<li>'similar files' searches launched from the thumbnail menu will now default to 'my files' file domain rather than 'all local files'</li>
+					<li>downloader pages will now correctly sort their files on initialisation</li>
+					<li>refactored and generally cleaned up some collect and sort code</li>
+					<li>fixed some unlikely-but-possible collect/sort bugs</li>
+					<li>fixed some bad layout in the top-right hover window that was making it grow unreasonably tall when many urls were shown</li>
+					<li>on the different download import pages, the progress gauge that shows file download progress will now reset back to 0 as soon as the file download is complete</li>
+					<li>fixed a problem where video imports with unicode characters in their path were failing to mime-parse</li>
+					<li>improved the file import status update pipeline to better deal with large transactions (like skipping/deleting/retrying a thousand rows at once). all these big transactions should lag the gui far less</li>
+					<li>improved some misc import status cache code</li>
+					<li>made first step in a big size rewrite job that will size many elements according to local system font size rather than specific pixel values</li>
+					<li>hydrus servers now explicitly default to TLSv1.2--we'll see if that clears up some of the handshake timeout problems we have recently seen</li>
+					<li>cleaned up a bunch of possible pydeadobjecterrors when the new review services panel is closed</li>
+					<li>improved and rescheduled gelbooru redirect url purge</li>
+					<li>added a catch-and-recovery to hydrus network session initialisation, which may sometimes receive invalid data after a service deletion</li>
+					<li>added similar catches to tag parent/sibling initialisation, which apparently can be vulnerable to a similar invalid data problem</li>
+					<li>I think I cleaned up some more Linux ClientToScreen console errors</li>
+					<li>refactored and cleaned some frame size event responsibility</li>
+					<li>refactored and cleaned the panel and controls that display file import status</li>
+					<li>did a little more menu code cleanup</li>
+					<li>misc cleanup</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 256</h3></li>
 				<ul>
 					<li>the duplicate filter now loads new pairs off the gui thread. it will display 'loading pairs...' during this time</li>

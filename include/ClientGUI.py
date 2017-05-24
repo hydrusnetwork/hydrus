@@ -68,9 +68,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
         
+        idle_width = ClientData.ConvertTextToPixelWidth( self, 4 )
+        system_busy_width = ClientData.ConvertTextToPixelWidth( self, 11 )
+        db_width = ClientData.ConvertTextToPixelWidth( self, 12 )
+        
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 4 )
-        self._statusbar.SetStatusWidths( [ -1, 25, 90, 50 ] )
+        self._statusbar.SetStatusWidths( [ -1, idle_width, system_busy_width, db_width ] )
+        
+        self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
@@ -78,6 +84,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._media_status_override = None
         self._closed_pages = []
         self._deleted_page_keys = set()
+        self._next_new_page_index = None
         self._lock = threading.Lock()
         
         self._notebook = wx.Notebook( self )
@@ -92,6 +99,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventFrameNewPage )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventFrameNewPage )
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventFrameNotebookMenu )
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
@@ -114,7 +122,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
-        self._controller.sub( self, 'RefreshStatusBar', 'refresh_status' )
+        self._controller.sub( self._statusbar_thread_updater, 'Update', 'refresh_status' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
@@ -692,7 +700,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ChooseNewPage( self ):
+    def _ChooseNewPage( self, insertion_index = None ):
+        
+        self._next_new_page_index = insertion_index
         
         with ClientGUIDialogs.DialogPageChooser( self ) as dlg:
             
@@ -759,11 +769,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             return
             
         
+        name = self._notebook.GetPageText( selection )
+        
         page = self._notebook.GetPage( selection )
         
         if polite:
             
-            try: page.TestAbleToClose()
+            try:
+                
+                page.TestAbleToClose()
+                
             except HydrusExceptions.PermissionException:
                 
                 return
@@ -771,10 +786,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         page.PrepareToHide()
-        
-        page.Hide()
-        
-        name = self._notebook.GetPageText( selection )
         
         with self._lock:
             
@@ -1921,9 +1932,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _MovePage( self, page_index, direction ):
+    def _MovePage( self, page_index, delta = None, new_index = None ):
         
-        new_page_index = page_index + direction
+        new_page_index = page_index
+        
+        if delta is not None:
+            
+            new_page_index = page_index + delta
+            
+        
+        if new_index is not None:
+            
+            new_page_index = new_index
+            
+        
+        if new_page_index == page_index:
+            
+            return
+            
         
         if 0 <= new_page_index and new_page_index <= self._notebook.GetPageCount() - 1:
             
@@ -1950,7 +1976,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_media_results )
         
-        self._notebook.AddPage( page, page_name, select = True )
+        if self._next_new_page_index is None:
+            
+            self._notebook.AddPage( page, page_name, select = True )
+            
+        else:
+            
+            self._notebook.InsertPage( self._next_new_page_index, page, page_name, select = True )
+            
+            self._next_new_page_index = None
+            
         
         wx.CallAfter( page.SetSearchFocus )
         
@@ -2234,14 +2269,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             busy_status = ''
             
         
-        if self._controller.DBCurrentlyDoingJob():
-            
-            db_status = 'db locked'
-            
-        else:
-            
-            db_status = ''
-            
+        ( db_status, job_name ) = HG.client_controller.GetDBStatus()
+        
+        self._statusbar.SetToolTipString( job_name )
         
         self._statusbar.SetStatusText( media_status, number = 0 )
         self._statusbar.SetStatusText( idle_status, number = 1 )
@@ -2960,6 +2990,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def EventFrameNotebookMenu( self, event ):
+        
+        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        
+        if flags == wx.NB_HITTEST_NOWHERE:
+            
+            self.EventNotebookMenu( event )
+            
+        
+    
     def EventNotebookLeftDoubleClick( self, event ):
         
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
@@ -2974,25 +3014,50 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
         
+        click_over_tab = tab_index != -1
+        
+        menu = wx.Menu()
+        
         if tab_index != -1:
-            
-            menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
             more_than_one_tab = self._notebook.GetPageCount() > 1
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        
+        if click_over_tab:
+            
             if more_than_one_tab:
+                
+                end_index = self._notebook.GetPageCount() - 1
+                
+                can_home = tab_index > 1
+                can_move_left = tab_index > 0
+                can_move_right = tab_index < end_index
+                can_end = tab_index < end_index - 1
+                
+                can_insert = can_move_right
+                
+                if can_insert:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
+                    
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                can_move_left = tab_index > 0
-                can_move_right = tab_index < self._notebook.GetPageCount() - 1
+                if can_home:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to left end', 'Move this page all the way to the left.', self._MovePage, tab_index, new_index = 0 )
+                    
                 
                 if can_move_left:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._MovePage, tab_index, -1 )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._MovePage, tab_index, delta = -1 )
                     
                 
                 if can_move_right:
@@ -3000,9 +3065,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._MovePage, tab_index, 1 )
                     
                 
+                if can_end:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._MovePage, tab_index, new_index = end_index )
+                    
+                
             
-            self._controller.PopupMenu( self, menu )
-            
+        
+        self._controller.PopupMenu( self, menu )
         
     
     def EventNotebookMiddleClick( self, event ):
@@ -3138,7 +3208,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
                 
                 with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
                     

@@ -886,6 +886,7 @@ class HTTPConnection( object ):
                 # this negotiates decent encryption but won't check hostname or the certificate
                 
                 context = ssl.SSLContext( ssl.PROTOCOL_SSLv23 )
+                
                 context.options |= ssl.OP_NO_SSLv2
                 context.options |= ssl.OP_NO_SSLv3
                 

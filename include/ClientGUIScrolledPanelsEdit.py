@@ -1,3 +1,4 @@
+import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
@@ -7,6 +8,8 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIListBoxes
+import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
@@ -14,6 +17,7 @@ import HydrusData
 import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
+import os
 import wx
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -141,64 +145,122 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._duplicate_action = duplicate_action
         
-        self._service_actions = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        #
         
-        self._service_actions.SetMinSize( ( 320, 120 ) )
+        tag_services_panel = ClientGUICommon.StaticBox( self, 'tag services' )
         
-        add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
-        edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
-        delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        self._tag_service_actions = ClientGUICommon.SaneListCtrl( tag_services_panel, 120, [ ( 'service name', 120 ), ( 'action', 240 ), ( 'tags merged', -1 ) ], delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
-        self._delete_second_file = wx.CheckBox( self, label = 'delete worse file' )
+        self._tag_service_actions.SetMinSize( ( 560, 120 ) )
+        
+        add_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'add', self._AddTag )
+        edit_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'edit', self._EditTag )
+        delete_tag_button = ClientGUICommon.BetterButton( tag_services_panel, 'delete', self._DeleteTag )
         
         #
         
-        ( service_actions, delete_second_file ) = duplicate_action_options.ToTuple()
+        rating_services_panel = ClientGUICommon.StaticBox( self, 'rating services' )
+        
+        self._rating_service_actions = ClientGUICommon.SaneListCtrl( rating_services_panel, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        
+        self._rating_service_actions.SetMinSize( ( 380, 120 ) )
+        
+        add_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'add', self._AddRating )
+        edit_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'edit', self._EditRating )
+        delete_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'delete', self._DeleteRating )
+        
+        #
+        
+        self._delete_second_file = wx.CheckBox( self, label = 'delete worse file' )
+        self._sync_archive = wx.CheckBox( self, label = 'if one file is archived, archive the other as well' )
+        self._delete_both_files = wx.CheckBox( self, label = 'delete both files' )
+        
+        #
+        
+        ( tag_service_options, rating_service_options, delete_second_file, sync_archive, delete_both_files ) = duplicate_action_options.ToTuple()
         
         services_manager = HG.client_controller.GetServicesManager()
         
-        for ( service_key, action ) in service_actions:
+        for ( service_key, action, tag_censor ) in tag_service_options:
+            
+            if services_manager.ServiceExists( service_key ):
+                
+                sort_tuple = ( service_key, action, tag_censor )
+                
+                display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                
+                self._tag_service_actions.Append( display_tuple, sort_tuple )
+                
+            
+        
+        for ( service_key, action ) in rating_service_options:
             
             if services_manager.ServiceExists( service_key ):
                 
                 sort_tuple = ( service_key, action )
                 
-                display_tuple = self._GetDisplayTuple( sort_tuple )
+                display_tuple = self._GetRatingDisplayTuple( sort_tuple )
                 
-                self._service_actions.Append( display_tuple, sort_tuple )
+                self._rating_service_actions.Append( display_tuple, sort_tuple )
                 
             
         
         self._delete_second_file.SetValue( delete_second_file )
+        self._sync_archive.SetValue( sync_archive )
+        self._delete_both_files.SetValue( delete_both_files )
         
         #
         
-        if self._duplicate_action != HC.DUPLICATE_BETTER:
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
+            
+            self._delete_both_files.Hide()
+            
+        else:
             
             self._delete_second_file.Hide()
-            edit_button.Hide()
+            edit_rating_button.Hide() # because there is only one valid action in this case, and no tag censor to edit
             
+        
+        #
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( add_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( edit_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( delete_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( add_tag_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( edit_tag_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( delete_tag_button, CC.FLAGS_VCENTER )
+        
+        tag_services_panel.AddF( self._tag_service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        tag_services_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( add_rating_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( edit_rating_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( delete_rating_button, CC.FLAGS_VCENTER )
+        
+        rating_services_panel.AddF( self._rating_service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        rating_services_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( tag_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( rating_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( self._delete_second_file, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._sync_archive, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._delete_both_files, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
     
-    def _Add( self ):
+    def _AddRating( self ):
         
         existing_service_keys = set()
         
-        for ( service_key, action ) in self._service_actions.GetClientData():
+        for ( service_key, action ) in self._rating_service_actions.GetClientData():
             
             existing_service_keys.add( service_key )
             
@@ -207,7 +269,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         choice_tuples = []
         
-        for service in services_manager.GetServices( [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] ):
+        for service in services_manager.GetServices( [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ] ):
             
             service_key = service.GetServiceKey()
             
@@ -265,32 +327,136 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     sort_tuple = ( service_key, action )
                     
-                    display_tuple = self._GetDisplayTuple( sort_tuple )
+                    display_tuple = self._GetRatingDisplayTuple( sort_tuple )
                     
-                    self._service_actions.Append( display_tuple, sort_tuple )
+                    self._rating_service_actions.Append( display_tuple, sort_tuple )
                     
                 
             
         
     
-    def _Delete( self ):
+    def _AddTag( self ):
+        
+        existing_service_keys = set()
+        
+        for ( service_key, action, tag_censor ) in self._tag_service_actions.GetClientData():
+            
+            existing_service_keys.add( service_key )
+            
+        
+        services_manager = HG.client_controller.GetServicesManager()
+        
+        choice_tuples = []
+        
+        for service in services_manager.GetServices( [ HC.LOCAL_TAG, HC.TAG_REPOSITORY ] ):
+            
+            service_key = service.GetServiceKey()
+            
+            if service_key not in existing_service_keys:
+                
+                name = service.GetName()
+                
+                choice_tuples.append( ( name, service_key ) )
+                
+            
+        
+        if len( choice_tuples ) == 0:
+            
+            wx.MessageBox( 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            
+        else:
+            
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select service', choice_tuples ) as dlg_1:
+                
+                if dlg_1.ShowModal() == wx.ID_OK:
+                    
+                    service_key = dlg_1.GetChoice()
+                    
+                    if self._duplicate_action == HC.DUPLICATE_BETTER:
+                        
+                        service = services_manager.GetService( service_key )
+                        
+                        if service.GetServiceType() == HC.TAG_REPOSITORY:
+                            
+                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                            
+                        else:
+                            
+                            possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                            
+                        
+                        choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                        
+                        with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                            
+                            if dlg_2.ShowModal() == wx.ID_OK:
+                                
+                                action = dlg_2.GetChoice()
+                                
+                            else:
+                                
+                                return
+                                
+                            
+                        
+                    else:
+                        
+                        action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                        
+                    
+                    tag_censor = ClientData.TagCensor()
+                    
+                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+                        
+                        panel = EditTagCensorPanel( dlg_3, tag_censor )
+                        
+                        dlg_3.SetPanel( panel )
+                        
+                        if dlg_3.ShowModal() == wx.ID_OK:
+                            
+                            tag_censor = panel.GetValue()
+                            
+                            sort_tuple = ( service_key, action, tag_censor )
+                            
+                            display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                            
+                            self._tag_service_actions.Append( display_tuple, sort_tuple )
+                            
+                        
+                    
+                
+            
+        
+    
+    def _DeleteRating( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._service_actions.RemoveAllSelected()
+                self._rating_service_actions.RemoveAllSelected()
                 
             
         
     
-    def _Edit( self ):
+    def _DeleteTag( self ):
         
-        all_selected = self._service_actions.GetAllSelected()
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._tag_service_actions.RemoveAllSelected()
+                
+            
+        
+    
+    def _EditRating( self ):
+        
+        all_selected = self._rating_service_actions.GetAllSelected()
         
         for index in all_selected:
             
-            ( service_key, action ) = self._service_actions.GetClientData( index )
+            ( service_key, action ) = self._rating_service_actions.GetClientData( index )
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
@@ -317,13 +483,68 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             sort_tuple = ( service_key, action )
             
-            display_tuple = self._GetDisplayTuple( sort_tuple )
+            display_tuple = self._GetRatingDisplayTuple( sort_tuple )
             
-            self._service_actions.UpdateRow( index, display_tuple, sort_tuple )
+            self._rating_service_actions.UpdateRow( index, display_tuple, sort_tuple )
             
         
     
-    def _GetDisplayTuple( self, sort_tuple ):
+    def _EditTag( self ):
+        
+        all_selected = self._tag_service_actions.GetAllSelected()
+        
+        for index in all_selected:
+            
+            ( service_key, action, tag_censor ) = self._tag_service_actions.GetClientData( index )
+            
+            if self._duplicate_action == HC.DUPLICATE_BETTER:
+                
+                possible_actions = [ HC.CONTENT_MERGE_ACTION_COPY, HC.CONTENT_MERGE_ACTION_MOVE, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ]
+                
+                choice_tuples = [ ( HC.content_merge_string_lookup[ action ], action ) for action in possible_actions ]
+                
+                with ClientGUIDialogs.DialogSelectFromList( self, 'select action', choice_tuples ) as dlg_2:
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        action = dlg_2.GetChoice()
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            else:
+                
+                action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
+                
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
+                
+                panel = EditTagCensorPanel( dlg_3, tag_censor )
+                
+                dlg_3.SetPanel( panel )
+                
+                if dlg_3.ShowModal() == wx.ID_OK:
+                    
+                    tag_censor = panel.GetValue()
+                    
+                    sort_tuple = ( service_key, action, tag_censor )
+                    
+                    display_tuple = self._GetTagDisplayTuple( sort_tuple )
+                    
+                    self._tag_service_actions.UpdateRow( index, display_tuple, sort_tuple )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _GetRatingDisplayTuple( self, sort_tuple ):
         
         ( service_key, action ) = sort_tuple
         
@@ -338,12 +559,32 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( name, pretty_action )
         
     
+    def _GetTagDisplayTuple( self, sort_tuple ):
+        
+        ( service_key, action, tag_censor ) = sort_tuple
+        
+        services_manager = HG.client_controller.GetServicesManager()
+        
+        service = services_manager.GetService( service_key )
+        
+        name = service.GetName()
+        
+        pretty_action = HC.content_merge_string_lookup[ action ]
+        
+        pretty_tag_censor = tag_censor.ToPermittedString()
+        
+        return ( name, pretty_action, pretty_tag_censor )
+        
+    
     def GetValue( self ):
         
-        service_actions = self._service_actions.GetClientData()
+        tag_service_actions = self._tag_service_actions.GetClientData()
+        rating_service_actions = self._rating_service_actions.GetClientData()
         delete_second_file = self._delete_second_file.GetValue()
+        sync_archive = self._sync_archive.GetValue()
+        delete_both_files = self._delete_both_files.GetValue()
         
-        duplicate_action_options = ClientData.DuplicateActionOptions( service_actions, delete_second_file )
+        duplicate_action_options = ClientData.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files )
         
         return duplicate_action_options
         
@@ -658,18 +899,190 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._seed_cache = seed_cache
         
         self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
-        self._seed_cache_control = ClientGUIControls.SeedCacheControl( self, self._seed_cache )
+        
+        # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on seed add/remove
+        
+        height = 300
+        columns = [ ( 'source', -1 ), ( 'status', 90 ), ( 'added', 150 ), ( 'last modified', 150 ), ( 'note', 200 ) ]
+        
+        self._list_ctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, height, columns )
+        
+        #
+        
+        self._AddSeeds( self._seed_cache.GetSeeds() )
+        
+        #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
-        self._controller.sub( self, 'NotifySeedUpdated', 'seed_cache_seed_updated' )
+        self._list_ctrl.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        
+        self._controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
         
         wx.CallAfter( self._UpdateText )
+        
+    
+    def _AddSeeds( self, seeds ):
+        
+        for seed in seeds:
+            
+            sort_tuple = self._seed_cache.GetSeedInfo( seed )
+            
+            ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
+            
+            self._list_ctrl.Append( display_tuple, sort_tuple, seed )
+            
+        
+    
+    def _GetListCtrlTuples( self, seed ):
+        
+        sort_tuple = self._seed_cache.GetSeedInfo( seed )
+        
+        ( seed, status, added_timestamp, last_modified_timestamp, note ) = sort_tuple
+        
+        pretty_seed = HydrusData.ToUnicode( seed )
+        pretty_status = CC.status_string_lookup[ status ]
+        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
+        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
+        pretty_note = note.split( os.linesep )[0]
+        
+        display_tuple = ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _CopySelectedNotes( self ):
+        
+        notes = []
+        
+        for seed in self._list_ctrl.GetObjects( only_selected = True ):
+            
+            ( seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
+            
+            if note != '':
+                
+                notes.append( note )
+                
+            
+        
+        if len( notes ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( notes )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _CopySelectedSeeds( self ):
+        
+        seeds = self._list_ctrl.GetObjects( only_selected = True )
+        
+        if len( seeds ) > 0:
+            
+            separator = os.linesep * 2
+            
+            text = separator.join( seeds )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
+    def _DeleteSelected( self ):
+        
+        seeds_to_delete = self._list_ctrl.GetObjects( only_selected = True )
+        
+        if len( seeds_to_delete ) > 0:
+            
+            message = 'Are you sure you want to delete all the selected entries?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._seed_cache.RemoveSeeds( seeds_to_delete )
+                    
+                
+            
+        
+    
+    def _SetSelected( self, status_to_set ):
+        
+        seeds_to_set = self._list_ctrl.GetObjects( only_selected = True )
+        
+        self._seed_cache.UpdateSeedsStatus( seeds_to_set, status_to_set )
+        
+    
+    def _ShowMenuIfNeeded( self ):
+        
+        if self._list_ctrl.GetSelectedItemCount() > 0:
+            
+            menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeeds )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Remove all the selected imports.', self._DeleteSelected )
+            
+            HG.client_controller.PopupMenu( self, menu )
+            
+        
+    
+    def _UpdateListCtrl( self, seeds ):
+        
+        seeds_to_add = []
+        seeds_to_update = []
+        seeds_to_delete = []
+        
+        for seed in seeds:
+            
+            if self._seed_cache.HasSeed( seed ):
+                
+                if self._list_ctrl.HasObject( seed ):
+                    
+                    seeds_to_update.append( seed )
+                    
+                else:
+                    
+                    seeds_to_add.append( seed )
+                    
+                
+            else:
+                
+                if self._list_ctrl.HasObject( seed ):
+                    
+                    seeds_to_delete.append( seed )
+                    
+                
+            
+        
+        for seed in seeds_to_delete:
+            
+            index = self._list_ctrl.GetIndexFromObject( seed )
+            
+            self._list_ctrl.DeleteItem( index )
+            
+        
+        for seed in seeds_to_update:
+            
+            index = self._list_ctrl.GetIndexFromObject( seed )
+            
+            ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
+            
+            self._list_ctrl.UpdateRow( index, display_tuple, sort_tuple, seed )
+            
+        
+        self._AddSeeds( seeds_to_add )
         
     
     def _UpdateText( self ):
@@ -681,14 +1094,25 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self.Layout()
         
     
+    def EventShowMenu( self, event ):
+        
+        wx.CallAfter( self._ShowMenuIfNeeded )
+        
+        event.Skip() # let the right click event go through before doing menu, in case selection should happen
+        
+    
     def GetValue( self ):
         
         return self._seed_cache
         
     
-    def NotifySeedUpdated( self, seed ):
+    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
         
-        self._UpdateText()
+        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+            
+            self._UpdateText()
+            self._UpdateListCtrl( seeds )
+            
         
     
 class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
@@ -1328,9 +1752,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         wx.CallAfter( self._ConfigureImportTagOptions )
         
-        event = CC.SizeChangedEvent( -1 )
-        
-        wx.CallAfter( self.ProcessEvent, event )
+        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
     def _SeedCache( self ):
@@ -1428,15 +1850,247 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         failed_seeds = self._seed_cache.GetSeeds( CC.STATUS_FAILED )
         
-        for seed in failed_seeds:
-            
-            self._seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
-            
+        self._seed_cache.UpdateSeedsStatus( failed_seeds, CC.STATUS_UNKNOWN )
         
         self._last_error = 0
         
         self._UpdateCommandButtons()
         self._UpdateLastNextCheck()
         self._UpdateSeedInfo()
+        
+    
+
+class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, tag_censor ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        
+        #
+        
+        blacklist_panel = ClientGUICommon.StaticBox( self, 'exclude these' )
+        
+        self._blacklist = ClientGUIListBoxes.ListBoxTagsCensorship( blacklist_panel )
+        
+        self._blacklist_input = wx.TextCtrl( blacklist_panel, style = wx.TE_PROCESS_ENTER )
+        self._blacklist_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownBlacklist )
+        
+        add_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'add', self._AddBlacklist )
+        delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'delete', self._DeleteBlacklist )
+        blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._BlacklistEverything )
+        
+        #
+        
+        whitelist_panel = ClientGUICommon.StaticBox( self, 'except for these' )
+        
+        self._whitelist = ClientGUIListBoxes.ListBoxTagsCensorship( whitelist_panel )
+        
+        self._whitelist_input = wx.TextCtrl( whitelist_panel, style = wx.TE_PROCESS_ENTER )
+        self._whitelist_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownWhitelist )
+        
+        add_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'add', self._AddWhitelist )
+        delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'delete', self._DeleteWhitelist )
+        
+        #
+        
+        self._status_st = ClientGUICommon.BetterStaticText( self, 'current: ' )
+        
+        #
+        
+        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_censor.GetTagSlicesToRules().items() if rule == CC.CENSOR_BLACKLIST ]
+        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_censor.GetTagSlicesToRules().items() if rule == CC.CENSOR_WHITELIST ]
+        
+        self._blacklist.AddTags( blacklist_tag_slices )
+        self._whitelist.AddTags( whitelist_tag_slices )
+        
+        self._UpdateStatus()
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._blacklist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox.AddF( add_blacklist_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( delete_blacklist_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( blacklist_everything_button, CC.FLAGS_VCENTER )
+        
+        blacklist_panel.AddF( self._blacklist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        blacklist_panel.AddF( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._whitelist_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox.AddF( add_whitelist_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( delete_whitelist_button, CC.FLAGS_VCENTER )
+        
+        whitelist_panel.AddF( self._whitelist, CC.FLAGS_EXPAND_BOTH_WAYS )
+        whitelist_panel.AddF( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _AddBlacklist( self ):
+        
+        tag_slice = self._blacklist_input.GetValue()
+        
+        self._blacklist.EnterTags( ( tag_slice, ) )
+        
+        self._whitelist.RemoveTags( ( tag_slice, ) )
+        
+        self._blacklist_input.SetValue( '' )
+        
+        self._UpdateStatus()
+        
+    
+    def _AddWhitelist( self ):
+        
+        tag_slice = self._whitelist_input.GetValue()
+        
+        self._whitelist.EnterTags( ( tag_slice, ) )
+        
+        self._blacklist.RemoveTags( ( tag_slice, ) )
+        
+        self._whitelist_input.SetValue( '' )
+        
+        self._UpdateStatus()
+        
+    
+    def _BlacklistEverything( self ):
+        
+        tag_slices = self._blacklist.GetClientData()
+        
+        self._blacklist.RemoveTags( tag_slices )
+        
+        self._blacklist.AddTags( ( '', ':' ) )
+        
+        self._UpdateStatus()
+        
+    
+    def _DeleteBlacklist( self ):
+        
+        selected_tag_slices = self._blacklist.GetSelectedTags()
+        
+        if len( selected_tag_slices ) > 0:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._blacklist.RemoveTags( selected_tag_slices )
+                    
+                
+            
+        
+        self._UpdateStatus()
+        
+    
+    def _DeleteWhitelist( self ):
+        
+        selected_tag_slices = self._whitelist.GetSelectedTags()
+        
+        if len( selected_tag_slices ) > 0:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._whitelist.RemoveTags( selected_tag_slices )
+                    
+                
+            
+        
+        self._UpdateStatus()
+        
+    
+    def _ShowHelp( self ):
+        
+        help = 'Here you can set rules to filter tags. By default, all tags will be allowed.'
+        help += os.linesep * 2
+        help += 'Add tags or classes of tag to the left to exclude them. Here are the formats accepted:'
+        help += os.linesep * 2
+        help += '"tag" or "namespace:tag" - just a single tag'
+        help += os.linesep
+        help += '"namespace:" - all instances of that namespace'
+        help += os.linesep
+        help += '":" - all namespaced tags'
+        help += os.linesep
+        help += '"" (i.e. an empty string) - all unnamespaced tags'
+        help += os.linesep * 2
+        help += 'If you want to ban all of a class of tag except for some specific cases, add those specifics on the right to create exceptions for them.'
+        help += os.linesep * 2
+        help += 'If you want to make this work like a whitelist, hit \'block everything\' (to block everything on the left) and then add what you do want on the right.'
+        
+        wx.MessageBox( help )
+        
+    
+    def _UpdateStatus( self ):
+        
+        tag_censor = self.GetValue()
+        
+        pretty_tag_censor = tag_censor.ToPermittedString()
+        
+        self._status_st.SetLabelText( 'current: ' + pretty_tag_censor )
+        
+    
+    def EventKeyDownBlacklist( self, event ):
+        
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            self._AddBlacklist()
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def EventKeyDownWhitelist( self, event ):
+        
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            self._AddWhitelist()
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def GetValue( self ):
+        
+        tag_censor = ClientData.TagCensor()
+        
+        for tag_slice in self._blacklist.GetClientData():
+            
+            tag_censor.SetRule( tag_slice, CC.CENSOR_BLACKLIST )
+            
+        
+        for tag_slice in self._whitelist.GetClientData():
+            
+            tag_censor.SetRule( tag_slice, CC.CENSOR_WHITELIST )
+            
+        
+        return tag_censor
         
     

@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIOptionsPanels
+import ClientGUITopLevelWindows
 import wx
 
 class CollapsibleOptions( ClientGUICommon.StaticBox ):
@@ -125,9 +126,7 @@ class CollapsiblePanel( wx.Panel ):
             parent.Layout()
             
         
-        event = CC.SizeChangedEvent( -1 )
-        
-        wx.CallAfter( self.ProcessEvent, event )
+        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
     def IsExpanded( self ):
