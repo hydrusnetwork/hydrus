@@ -676,6 +676,8 @@ class Account( object ):
         
         dictionary[ 'bandwidth_tracker' ] = bandwidth_tracker
         
+        dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
+        
         return ( account_key, account_type, created, expires, dictionary )
         
     
@@ -1742,6 +1744,21 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetUpdateIndicesAndHashes( self ):
+        
+        with self._lock:
+            
+            result = []
+            
+            for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items():
+                
+                result.append( ( update_index, update_hashes ) )
+                
+            
+            return result
+            
+        
+    
     def GetUpdateInfo( self, from_client = False ):
         
         with self._lock:
@@ -1787,17 +1804,6 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return update_hash in self._update_hashes
-            
-        
-    
-    def IterateUpdateIndicesAndHashes( self ):
-        
-        with self._lock:
-            
-            for ( update_index, ( update_hashes, begin, end ) ) in self._metadata.items():
-                
-                yield ( update_index, update_hashes )
-                
             
         
     
@@ -1983,6 +1989,8 @@ class ServerService( object ):
             
             dictionary = self._GetSerialisableDictionary()
             
+            dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
+            
             duplicate = GenerateService( self._service_key, self._service_type, self._name, self._port, dictionary )
             
             return duplicate
@@ -2100,6 +2108,8 @@ class ServerService( object ):
         with self._lock:
             
             dictionary = self._GetSerialisableDictionary()
+            
+            dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
             
             return ( self._service_key, self._service_type, self._name, self._port, dictionary )
             

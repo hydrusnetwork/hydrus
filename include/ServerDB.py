@@ -953,8 +953,6 @@ class DB( HydrusDB.HydrusDB ):
         return service_type
         
     
-    def _GetServiceInfo( self, service_key ): return self._c.execute( 'SELECT type, options FROM services WHERE service_key = ?;', ( sqlite3.Binary( service_key ), ) ).fetchone()
-    
     def _GetServices( self, limited_types = HC.ALL_SERVICES ):
         
         services = []
@@ -2099,7 +2097,54 @@ class DB( HydrusDB.HydrusDB ):
         total_num_petitions = 0
         total_weight = 0
         
-        for ( service_tag_id, service_hash_ids ) in tag_ids_to_hash_ids.items():
+        min_weight_permitted = None
+        max_weight_permitted = None
+        
+        petition_pairs = list( tag_ids_to_hash_ids.items() )
+        
+        random.shuffle( petition_pairs )
+        
+        for ( service_tag_id, service_hash_ids ) in petition_pairs:
+            
+            content_weight = len( service_hash_ids )
+            
+            if min_weight_permitted is None:
+                
+                # group petitions of similar weight together rather than mixing weight 5000 in with a hundred weight 1s
+                
+                if content_weight == 1:
+                    
+                    min_weight_permitted = 1
+                    max_weight_permitted = 1
+                    
+                elif content_weight < 10:
+                    
+                    min_weight_permitted = 2
+                    max_weight_permitted = 9
+                    
+                elif content_weight < 50:
+                    
+                    min_weight_permitted = 10
+                    max_weight_permitted = 49
+                    
+                else:
+                    
+                    min_weight_permitted = 50
+                    max_weight_permitted = None
+                    
+                
+            else:
+                
+                if content_weight < min_weight_permitted:
+                    
+                    continue
+                    
+                
+                if max_weight_permitted is not None and content_weight > max_weight_permitted:
+                    
+                    continue
+                    
+                
             
             master_tag_id = self._RepositoryGetMasterTagId( service_id, service_tag_id )
             master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
@@ -2113,7 +2158,7 @@ class DB( HydrusDB.HydrusDB ):
             contents.append( content )
             
             total_num_petitions += 1
-            total_weight += content.GetVirtualWeight()
+            total_weight += content_weight
             
             if total_num_petitions > 20 and total_weight > 1000:
                 

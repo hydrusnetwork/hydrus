@@ -65,6 +65,7 @@ class HydrusService( Site ):
         
         root.putChild( '', HydrusServerResources.HydrusResourceWelcome( self._service, REMOTE_DOMAIN ) )
         root.putChild( 'favicon.ico', HydrusServerResources.hydrus_favicon )
+        root.putChild( 'robots.txt', HydrusServerResources.HydrusResourceRobotsTXT( self._service, REMOTE_DOMAIN ) )
         
         return root
         

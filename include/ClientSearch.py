@@ -1193,7 +1193,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         o_text = ' '
                         
                     
-                    base += u' - has' + o_text + HydrusData.ConvertIntToPrettyString( num_relationships ) + u' ' + HC.duplicate_status_string_lookup[ dupe_type ]
+                    base += u' - has' + o_text + HydrusData.ConvertIntToPrettyString( num_relationships ) + u' ' + HC.duplicate_type_string_lookup[ dupe_type ]
                     
                 
             

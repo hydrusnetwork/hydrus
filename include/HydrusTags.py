@@ -201,8 +201,14 @@ def CleanTags( tags ):
         
         tag = CleanTag( tag )
         
-        try: CheckTagNotEmpty( tag )
-        except HydrusExceptions.SizeException: continue
+        try:
+            
+            CheckTagNotEmpty( tag )
+            
+        except HydrusExceptions.SizeException:
+            
+            continue
+            
         
         clean_tags.add( tag )
         

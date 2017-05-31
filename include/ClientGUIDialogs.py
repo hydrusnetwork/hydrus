@@ -2511,7 +2511,20 @@ class DialogPathsToTags( Dialog ):
                         
                         result = re.findall( regex, path )
                         
-                        for match in result: tags.append( match )
+                        for match in result:
+                            
+                            if isinstance( match, tuple ):
+                                
+                                for submatch in match:
+                                    
+                                    tags.append( submatch )
+                                    
+                                
+                            else:
+                                
+                                tags.append( match )
+                                
+                            
                         
                     except: pass
                     
@@ -2522,7 +2535,20 @@ class DialogPathsToTags( Dialog ):
                         
                         result = re.findall( regex, path )
                         
-                        for match in result: tags.append( namespace + ':' + match )
+                        for match in result:
+                            
+                            if isinstance( match, tuple ):
+                                
+                                for submatch in match:
+                                    
+                                    tags.append( namespace + ':' + submatch )
+                                    
+                                
+                            else:
+                                
+                                tags.append( namespace + ':' + match )
+                                
+                            
                         
                     except: pass
                     
@@ -3158,26 +3184,25 @@ class DialogSelectImageboard( Dialog ):
     
     def GetImageboard( self ): return self._tree.GetItemData( self._tree.GetSelection() ).GetData()
     
-class DialogCheckFromListOfStrings( Dialog ):
+class DialogCheckFromList( Dialog ):
     
-    def __init__( self, parent, title, list_of_strings, checked_strings = None ):
+    def __init__( self, parent, title, list_of_tuples ):
         
         Dialog.__init__( self, parent, title )
         
-        if checked_strings is None: checked_strings = []
-        
-        self._strings = wx.CheckListBox( self )
+        self._check_list_box = ClientGUICommon.BetterCheckListBox( self )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
         
-        for s in list_of_strings: self._strings.Append( s )
-        
-        for s in checked_strings:
+        for ( index, ( text, data, selected ) ) in enumerate( list_of_tuples ):
             
-            i = self._strings.FindString( s )
+            self._check_list_box.Append( text, data )
             
-            if i != wx.NOT_FOUND: self._strings.Check( i, True )
+            if selected:
+                
+                self._check_list_box.Check( index )
+                
             
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -3187,7 +3212,7 @@ class DialogCheckFromListOfStrings( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._check_list_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -3199,7 +3224,10 @@ class DialogCheckFromListOfStrings( Dialog ):
         self.SetInitialSize( ( x, y ) )
         
     
-    def GetChecked( self ): return self._strings.GetCheckedStrings()
+    def GetChecked( self ):
+        
+        return self._check_list_box.GetChecked()
+        
     
 class DialogSelectFromList( Dialog ):
     
@@ -3357,9 +3385,13 @@ class DialogSetupExport( Dialog ):
         
         Dialog.__init__( self, parent, 'setup export' )
         
+        new_options = HG.client_controller.GetNewOptions()
+        
         self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
-        self._tag_txt_tag_services = []
+        services_manager = HG.client_controller.GetServicesManager()
+        
+        self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
         
         t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
         
@@ -3415,11 +3447,14 @@ class DialogSetupExport( Dialog ):
         
         self._directory_picker.SetPath( export_path )
         
-        new_options = HG.client_controller.GetNewOptions()
-        
         phrase = new_options.GetString( 'export_phrase' )
         
         self._pattern.SetValue( phrase )
+        
+        if len( self._neighbouring_txt_tag_service_keys ) > 0:
+            
+            self._export_tag_txts.SetValue( True )
+            
         
         #
         
@@ -3535,6 +3570,8 @@ class DialogSetupExport( Dialog ):
         
         new_options = HG.client_controller.GetNewOptions()
         
+        new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
+        
         new_options.SetString( 'export_phrase', pattern )
         
         terms = ClientExporting.ParseExportPhrase( pattern )
@@ -3563,7 +3600,7 @@ class DialogSetupExport( Dialog ):
                         
                         tags = set()
                         
-                        for service_key in self._tag_txt_tag_services:
+                        for service_key in self._neighbouring_txt_tag_service_keys:
                             
                             tags.update( tags_manager.GetCurrent( service_key ) )
                             
@@ -3609,47 +3646,33 @@ class DialogSetupExport( Dialog ):
     
     def EventExportTagTxtsChanged( self, event ):
         
-        if self._export_tag_txts.GetValue() == True:
+        services_manager = HG.client_controller.GetServicesManager()
+        
+        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+        
+        list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+        
+        list_of_tuples.sort()
+        
+        with DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
             
-            services_manager = HG.client_controller.GetServicesManager()
-            
-            tag_services = services_manager.GetServices( HC.TAG_SERVICES )
-            
-            names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in tag_services }
-            
-            service_keys_to_names = { service_key : name for ( name, service_key ) in names_to_service_keys.items() }
-            
-            tag_service_names = names_to_service_keys.keys()
-            
-            tag_service_names.sort()
-            
-            if len( self._tag_txt_tag_services ) == 0:
+            if dlg.ShowModal() == wx.ID_OK:
                 
-                self._tag_txt_tag_services = tag_service_names
+                self._neighbouring_txt_tag_service_keys = dlg.GetChecked()
                 
-            
-            with DialogCheckFromListOfStrings( self, 'select tag services', tag_service_names, self._tag_txt_tag_services ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    selected_names = dlg.GetChecked()
-                    
-                    self._tag_txt_tag_services = [ names_to_service_keys[ name ] for name in selected_names ]
-                    
-                    if len( self._tag_txt_tag_services ) == 0:
-                        
-                        self._export_tag_txts.SetValue( False )
-                        
-                    
-                else:
+                if len( self._neighbouring_txt_tag_service_keys ) == 0:
                     
                     self._export_tag_txts.SetValue( False )
                     
+                else:
+                    
+                    self._export_tag_txts.SetValue( True )
+                    
                 
-            
-        else:
-            
-            self._tag_txt_tag_services = []
+            else:
+                
+                self._export_tag_txts.SetValue( False )
+                
             
         
     

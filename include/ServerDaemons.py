@@ -49,31 +49,36 @@ def DAEMONUPnP( controller ):
         return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
         
     
-    services_info = controller.Read( 'services_info' )
+    services = HG.server_controller.GetServices()
     
-    for ( service_key, service_type, options ) in services_info:
+    for service in services:
         
-        internal_port = options[ 'port' ]
-        upnp = options[ 'upnp' ]
+        internal_port = service.GetPort()
+        upnp_port = service.GetUPnPPort()
         
         if ( local_ip, internal_port ) in our_mappings:
             
             current_external_port = our_mappings[ ( local_ip, internal_port ) ]
             
-            if current_external_port != upnp: HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+            if upnp_port is None or upnp_port != current_external_port:
+                
+                HydrusNATPunch.RemoveUPnPMapping( current_external_port, 'TCP' )
+                
             
         
     
-    for ( service_key, service_type, options ) in services_info:
+    for service in services:
         
-        internal_port = options[ 'port' ]
-        upnp = options[ 'upnp' ]
+        internal_port = service.GetPort()
+        upnp_port = service.GetUPnPPort()
         
-        if upnp is not None and ( local_ip, internal_port ) not in our_mappings:
+        if upnp_port is not None and ( local_ip, internal_port ) not in our_mappings:
             
-            external_port = upnp
+            external_port = upnp_port
             
             protocol = 'TCP'
+            
+            service_type = service.GetServiceType()
             
             description = HC.service_string_lookup[ service_type ] + ' at ' + local_ip + ':' + str( internal_port )
             

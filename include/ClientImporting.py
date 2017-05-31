@@ -2677,6 +2677,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._WorkOnFiles( job_key )
                 
+                self._last_error = 0
+                
             except HydrusExceptions.NetworkException as e:
                 
                 HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )

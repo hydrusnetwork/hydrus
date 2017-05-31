@@ -2776,23 +2776,15 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         tag_services = services_manager.GetServices( HC.TAG_SERVICES )
         
-        names_to_service_keys = { service.GetName() : service.GetServiceKey() for service in tag_services }
+        list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._txt_parse_tag_service_keys ) for service in tag_services ]
         
-        service_keys_to_names = { service_key : name for ( name, service_key ) in names_to_service_keys.items() }
+        list_of_tuples.sort()
         
-        tag_service_names = names_to_service_keys.keys()
-        
-        tag_service_names.sort()
-        
-        selected_names = [ service_keys_to_names[ service_key ] for service_key in self._txt_parse_tag_service_keys ]
-        
-        with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'select tag services', tag_service_names, selected_names ) as dlg:
+        with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                selected_names = dlg.GetChecked()
-                
-                self._txt_parse_tag_service_keys = [ names_to_service_keys[ name ] for name in selected_names ]
+                self._txt_parse_tag_service_keys = dlg.GetChecked()
                 
                 self._RefreshTxtParseText()
                 

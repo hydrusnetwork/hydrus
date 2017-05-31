@@ -8,6 +8,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIMenus
+import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
 import ClientGUITopLevelWindows
@@ -142,7 +143,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                         
-                        if dlg.ShowModal() != wx.ID_YES: return
+                        if dlg.ShowModal() != wx.ID_YES:
+                            
+                            return
+                            
                         
                     
                 
@@ -502,7 +506,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _GetNumSelected( self ): return sum( [ media.GetNumFiles() for media in self._selected_media ] )
+    def _GetNumSelected( self ):
+        
+        return sum( [ media.GetNumFiles() for media in self._selected_media ] )
+        
     
     def _GetPrettyStatus( self ):
         
@@ -636,6 +643,25 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
         return result
+        
+    
+    def _GetSelectedFlatMedia( self ):
+        
+        flat_media = []
+        
+        for media in self._selected_media:
+            
+            if media.IsCollection():
+                
+                flat_media.extend( media.GetFlatMedia() )
+                
+            else:
+                
+                flat_media.append( media )
+                
+            
+        
+        return flat_media
         
     
     def _GetSimilarTo( self, max_hamming ):
@@ -797,15 +823,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
-                flat_media = []
+                flat_media = self._GetSelectedFlatMedia()
                 
-                for media in self._selected_media:
+                with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg:
                     
-                    if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
-                    else: flat_media.append( media )
+                    dlg.ShowModal()
                     
-                
-                with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg: dlg.ShowModal()
                 
                 self.SetFocus()
                 
@@ -1097,6 +1120,116 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _SetDuplicates( self, duplicate_type, media_pairs = None, duplicate_action_options = None ):
+        
+        if duplicate_type is None or duplicate_type == HC.DUPLICATE_UNKNOWN:
+            
+            if duplicate_type is None:
+                
+                yes_no_text = 'completely delete all pair duplicate relationships'
+                
+            elif duplicate_type == HC.DUPLICATE_UNKNOWN:
+                
+                yes_no_text = 'set all pair duplicate relationships to unknown/potential'
+                
+            
+            duplicate_action_options = None
+            
+        elif duplicate_action_options is None:
+            
+            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with default duplicate action/merge options)'
+            
+            new_options = HG.client_controller.GetNewOptions()
+            
+            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+            
+        else:
+            
+            yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with custom duplicate action/merge options)'
+            
+        
+        if media_pairs is None:
+            
+            flat_media = self._GetSelectedFlatMedia()
+            
+            media_pairs = list( itertools.combinations( flat_media, 2 ) )
+            
+        
+        message = 'Are you sure you want to ' + yes_no_text + ' for the ' + HydrusData.ConvertIntToPrettyString( len( media_pairs ) ) + ' pairs?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for ( first_media, second_media ) in media_pairs:
+                    
+                    if duplicate_action_options is not None:
+                        
+                        list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+                        
+                        for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                            
+                            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                            
+                        
+                    
+                    first_hash = first_media.GetHash()
+                    second_hash = second_media.GetHash()
+                    
+                    HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_type, first_hash, second_hash )
+                    
+                
+            
+        
+    
+    def _SetDuplicatesCustom( self ):
+        
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        
+        choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select duplicate type', choice_tuples ) as dlg_1:
+            
+            if dlg_1.ShowModal() == wx.ID_OK:
+                
+                duplicate_type = dlg_1.GetChoice()
+                
+                new_options = HG.client_controller.GetNewOptions()
+                
+                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+                    
+                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
+                    
+                    dlg_2.SetPanel( panel )
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        duplicate_action_options = panel.GetValue()
+                        
+                        self._SetDuplicates( duplicate_type, duplicate_action_options = duplicate_action_options )
+                        
+                    
+                
+            
+        
+    
+    def _SetDuplicatesFocusedBetter( self, duplicate_action_options = None ):
+        
+        focused_hash = self._focussed_media.GetDisplayMedia().GetHash()
+        
+        flat_media = self._GetSelectedFlatMedia()
+        
+        ( better_media, ) = [ media for media in flat_media if media.GetHash() == focused_hash ]
+        
+        worse_flat_media = [ media for media in flat_media if media.GetHash() != focused_hash ]
+        
+        media_pairs = [ ( better_media, worse_media ) for worse_media in worse_flat_media ]
+        
+        self._SetDuplicates( HC.DUPLICATE_BETTER, media_pairs = media_pairs )
+        
+    
     def _SetFocussedMedia( self, media ):
         
         if media is None and self._focussed_media is not None:
@@ -1163,7 +1296,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _ShowSelectionInNewQueryPage( self ):
+    def _ShowDuplicatesInNewPage( self, hash, duplicate_type ):
+        
+        hashes = HG.client_controller.Read( 'duplicate_hashes', self._file_service_key, hash, duplicate_type )
+        
+        if hashes is not None and len( hashes ) > 0:
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = media_results )
+            
+        
+    
+    def _ShowSelectionInNewPage( self ):
         
         hashes = self._GetSelectedHashes()
         
@@ -1171,13 +1316,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             media_results = HG.client_controller.Read( 'media_results', hashes )
             
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-            
-            sorted_flat_media = self.GetFlatMedia()
-            
-            sorted_media_results = [ hashes_to_media_results[ media.GetHash() ] for media in sorted_flat_media if media.GetHash() in hashes_to_media_results ]
-            
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = sorted_media_results )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = media_results )
             
         
     
@@ -2190,7 +2329,7 @@ class MediaPanelThumbnails( MediaPanel ):
             elif command == 'shift_scroll_home': self._ScrollHome( True )
             elif command == 'select': self._Select( data )
             elif command == 'share_on_local_booru': self._ShareOnLocalBooru()
-            elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewQueryPage()
+            elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewPage()
             elif command == 'undelete': self._Undelete()
             elif command == 'upload': self._UploadFiles( data )
             elif command == 'upload_directory': self._UploadDirectory( data )
@@ -3030,7 +3169,74 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewQueryPage )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
+                
+                duplicates_menu = menu # this is important to make the menu flexible if not multiple selected
+                
+                focussed_hash = self._focussed_media.GetDisplayMedia().GetHash()
+                
+                if multiple_selected:
+                    
+                    duplicates_menu = wx.Menu()
+                    
+                    duplicates_action_submenu = wx.Menu()
+                    
+                    label = 'set this file as better than the ' + HydrusData.ConvertIntToPrettyString( num_selected - 1 ) + ' other selected'
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self._SetDuplicatesFocusedBetter )
+                    
+                    num_files = self._GetNumSelected()
+                    
+                    num_pairs = num_files * ( num_files - 1 ) / 2 # combinations -- n!/2(n-2)!
+                    
+                    num_pairs_text = HydrusData.ConvertIntToPrettyString( num_pairs ) + ' pairs'
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as exact duplicates', 'Set all the selected files as exact same duplicates.', self._SetDuplicates, HC.DUPLICATE_SAME_FILE )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self._SetDuplicates, HC.DUPLICATE_ALTERNATE )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self._SetDuplicates, HC.DUPLICATE_NOT_DUPLICATE )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self._SetDuplicatesCustom )
+                    
+                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'queue the ' + num_pairs_text + ' in this selection up for the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self._SetDuplicates, HC.DUPLICATE_UNKNOWN )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self._SetDuplicates, None )
+                    
+                    ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'duplicates' )
+                    
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
+                    
+                
+                if HG.client_controller.DBCurrentlyDoingJob():
+                    
+                    ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'Could not fetch duplicates (db currently locked)' )
+                    
+                else:
+                    
+                    duplicate_types_to_counts = HG.client_controller.Read( 'duplicate_types_to_counts', self._file_service_key, focussed_hash )
+                    
+                    if len( duplicate_types_to_counts ) > 0:
+                        
+                        duplicates_view_menu = wx.Menu()
+                        
+                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ):
+                            
+                            if duplicate_type in duplicate_types_to_counts:
+                                
+                                count = duplicate_types_to_counts[ duplicate_type ]
+                                
+                                label = HydrusData.ConvertIntToPrettyString( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
+                                
+                                ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
+                                
+                            
+                        
+                        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s duplicates' )
+                        
+                    
                 
                 if self._focussed_media.HasImages():
                     

@@ -285,6 +285,11 @@ class Controller( HydrusController.HydrusController ):
         return self._server_session_manager
         
     
+    def GetServices( self ):
+        
+        return list( self._services )
+        
+    
     def InitModel( self ):
         
         HydrusController.HydrusController.InitModel( self )

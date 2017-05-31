@@ -168,8 +168,14 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
     
     for ( service_key, tags ) in service_keys_to_tags.items():
         
-        if service_key == CC.LOCAL_TAG_SERVICE_KEY: action = HC.CONTENT_UPDATE_ADD
-        else: action = HC.CONTENT_UPDATE_PEND
+        if service_key == CC.LOCAL_TAG_SERVICE_KEY:
+            
+            action = HC.CONTENT_UPDATE_ADD
+            
+        else:
+            
+            action = HC.CONTENT_UPDATE_PEND
+            
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
         
@@ -806,6 +812,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.encode( 'hex' )
         
+        self._dictionary[ 'key_list' ] = {}
+        
+        self._dictionary[ 'key_list' ][ 'default_neighbouring_txt_tag_service_keys' ] = []
+        
         #
         
         self._dictionary[ 'noneable_integers' ] = {}
@@ -1174,11 +1184,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDuplicateActionOptions( self, duplicate_status ):
+    def GetDuplicateActionOptions( self, duplicate_type ):
         
         with self._lock:
             
-            return self._dictionary[ 'duplicate_action_options' ][ duplicate_status ]
+            return self._dictionary[ 'duplicate_action_options' ][ duplicate_type ]
             
         
     
@@ -1211,6 +1221,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'keys' ][ name ].decode( 'hex' )
+            
+        
+    
+    def GetKeyList( self, name ):
+        
+        with self._lock:
+            
+            return [ key.decode( 'hex' ) for key in self._dictionary[ 'key_list' ][ name ] ]
             
         
     
@@ -1363,11 +1381,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDuplicateActionOptions( self, duplicate_status, duplicate_action_options ):
+    def SetDuplicateActionOptions( self, duplicate_type, duplicate_action_options ):
         
         with self._lock:
             
-            self._dictionary[ 'duplicate_action_options' ][ duplicate_status ] = duplicate_action_options
+            self._dictionary[ 'duplicate_action_options' ][ duplicate_type ] = duplicate_action_options
             
         
     
@@ -1392,6 +1410,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'keys' ][ name ] = value.encode( 'hex' )
+            
+        
+    
+    def SetKeyList( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'key_list' ][ name ] = [ key.encode( 'hex' ) for key in value ]
             
         
     
@@ -1854,25 +1880,7 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     
     def IsOkToPost( self, media_result ):
         
-        ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = media_result.ToTuple()
-        
-        if CC.RESTRICTION_MIN_RESOLUTION in self._restrictions:
-            
-            ( min_width, min_height ) = self._restrictions[ CC.RESTRICTION_MIN_RESOLUTION ]
-            
-            if width < min_width or height < min_height: return False
-            
-        
-        if CC.RESTRICTION_MAX_RESOLUTION in self._restrictions:
-            
-            ( max_width, max_height ) = self._restrictions[ CC.RESTRICTION_MAX_RESOLUTION ]
-            
-            if width > max_width or height > max_height: return False
-            
-        
-        if CC.RESTRICTION_MAX_FILE_SIZE in self._restrictions and size > self._restrictions[ CC.RESTRICTION_MAX_FILE_SIZE ]: return False
-        
-        if CC.RESTRICTION_ALLOWED_MIMES in self._restrictions and mime not in self._restrictions[ CC.RESTRICTION_ALLOWED_MIMES ]: return False
+        # deleted old code due to deprecation
         
         return True
         

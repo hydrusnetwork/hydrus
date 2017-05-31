@@ -1001,7 +1001,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         duplicate_filter_file_domain = self._management_controller.GetKey( 'duplicate_filter_file_domain' )
         
-        hashes = self._controller.Read( 'some_dupes', duplicate_filter_file_domain )
+        hashes = self._controller.Read( 'duplicate_hashes', duplicate_filter_file_domain, None, HC.DUPLICATE_UNKNOWN )
         
         media_results = self._controller.Read( 'media_results', hashes )
         

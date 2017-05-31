@@ -387,10 +387,13 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     
     def GetCurrentMonthSummary( self ):
         
-        num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
-        num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
-        
-        return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ConvertIntToPrettyString( num_requests ) + ' requests this month'
+        with self._lock:
+            
+            num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+            num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
+            
+            return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ConvertIntToPrettyString( num_requests ) + ' requests this month'
+            
         
     
     def GetUsage( self, bandwidth_type, time_delta ):

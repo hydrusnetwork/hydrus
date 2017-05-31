@@ -482,13 +482,17 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     hta = HydrusTagArchive.HydrusTagArchive( hta_path )
                     
-                    archive_namespaces = hta.GetNamespaces()
-                
-                    with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ) ) as dlg:
+                    archive_namespaces = list( hta.GetNamespaces() )
+                    
+                    archive_namespaces.sort()
+                    
+                    list_of_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in archive_namespaces ]
+                    
+                    with ClientGUIDialogs.DialogCheckFromList( self, 'Select namespaces', list_of_tuples ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                            namespaces = dlg.GetChecked()
                             
                         else:
                             
@@ -522,13 +526,17 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hta = HydrusTagArchive.HydrusTagArchive( hta_path )
                 
-                archive_namespaces = hta.GetNamespaces()
+                archive_namespaces = list( hta.GetNamespaces() )
                 
-                with ClientGUIDialogs.DialogCheckFromListOfStrings( self, 'Select namespaces', HydrusData.ConvertUglyNamespacesToPrettyStrings( archive_namespaces ), HydrusData.ConvertUglyNamespacesToPrettyStrings( existing_namespaces ) ) as dlg:
+                archive_namespaces.sort()
+                
+                list_of_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, namespace in existing_namespaces ) for namespace in archive_namespaces ]
+                
+                with ClientGUIDialogs.DialogCheckFromList( self, 'Select namespaces', list_of_tuples ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg.GetChecked() )
+                        namespaces = dlg.GetChecked()
                         
                     else:
                         
@@ -5591,6 +5599,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             return
                             
                         
+                    
+                    # if this above sub-dialog occurs, the 'default focus' reverts to the main gui when the manage tags frame closes, wew lad
+                    
+                    ClientGUICommon.GetTLP( self ).GetParent().SetFocus()
+                    self.SetFocus()
                     
                 else:
                     

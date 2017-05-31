@@ -70,7 +70,9 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
     hta = HydrusTagArchive.HydrusTagArchive( hta_path )
     
-    potential_namespaces = hta.GetNamespaces()
+    potential_namespaces = list( hta.GetNamespaces() )
+    
+    potential_namespaces.sort()
     
     hash_type = hta.GetHashType() # this tests if the hta can produce a hashtype
     
@@ -117,11 +119,13 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     if adding: text += 'add.'
     else: text += 'delete.'
     
-    with ClientGUIDialogs.DialogCheckFromListOfStrings( parent, text, HydrusData.ConvertUglyNamespacesToPrettyStrings( potential_namespaces ) ) as dlg_namespaces:
+    list_of_tuples = [ ( HydrusData.ConvertUglyNamespaceToPrettyString( namespace ), namespace, False ) for namespace in potential_namespaces ]
+    
+    with ClientGUIDialogs.DialogCheckFromList( parent, text, list_of_tuples ) as dlg_namespaces:
         
         if dlg_namespaces.ShowModal() == wx.ID_OK:
             
-            namespaces = HydrusData.ConvertPrettyStringsToUglyNamespaces( dlg_namespaces.GetChecked() )
+            namespaces = dlg_namespaces.GetChecked()
             
             if hash_type == HydrusTagArchive.HASH_TYPE_SHA256:
                 

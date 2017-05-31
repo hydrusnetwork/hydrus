@@ -80,7 +80,10 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_window.SetSize( ( 0, 0 ) )
             
-            self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreenXY( 0, 0 ) )
+            if self._text_ctrl.IsShown():
+                
+                self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreenXY( 0, 0 ) )
+                
             
             self._dropdown_window.Show()
             
@@ -222,13 +225,16 @@ class AutoCompleteDropdown( wx.Panel ):
         
         ( text_width, text_height ) = self._text_ctrl.GetSize()
         
-        desired_dropdown_position = self._text_ctrl.ClientToScreenXY( -2, text_height - 2 )
-        
-        if self._last_attempted_dropdown_position != desired_dropdown_position:
+        if self._text_ctrl.IsShown():
             
-            self._dropdown_window.SetPosition( desired_dropdown_position )
+            desired_dropdown_position = self._text_ctrl.ClientToScreenXY( -2, text_height - 2 )
             
-            self._last_attempted_dropdown_position = desired_dropdown_position
+            if self._last_attempted_dropdown_position != desired_dropdown_position:
+                
+                self._dropdown_window.SetPosition( desired_dropdown_position )
+                
+                self._last_attempted_dropdown_position = desired_dropdown_position
+                
             
         
         #

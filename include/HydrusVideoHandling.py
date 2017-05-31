@@ -205,7 +205,7 @@ def HasVideoStream( path ):
     return info[ 'video_found' ]
     
 # this is cribbed from moviepy
-def Hydrusffmpeg_parse_infos(filename, print_infos=False):
+def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually = False ):
     """Get file infos using ffmpeg.
 
     Returns a dictionnary with the fields:
@@ -250,7 +250,9 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
     
     is_GIF = filename.endswith('.gif')
     
-    if is_GIF:
+    doing_manual_frame_count = is_GIF or count_frames_manually
+    
+    if doing_manual_frame_count:
         if HC.PLATFORM_WINDOWS: cmd += ["-f", "null", "NUL"]
         else: cmd += ["-f", "null", "/dev/null"]
     
@@ -343,6 +345,25 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         pass
         
     
+    if count_frames_manually:
+        
+        frame_lines = [ l for l in lines if l.startswith( 'frame= ' ) ]
+        
+        if len( frame_lines ) > 0:
+            
+            l = frame_lines[0]
+            
+            while '  ' in l:
+                
+                l = l.replace( '  ', ' ' )
+                
+            
+            num_frames = int( l.split( ' ' )[1] )
+            
+            result[ 'video_nframes' ] = num_frames
+            
+        
+    
     # get the output line that speaks about video
     lines_video = [ l for l in lines if ' Video: ' in l and not ( ' Video: png' in l or ' Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
     
@@ -356,21 +377,58 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False):
         match = re.search(" [0-9]*x[0-9]*(,| )", line)
         s = list(map(int, line[match.start():match.end()-1].split('x')))
         result['video_size'] = s
-
-
-        # get the frame rate
-        try:
-            match = re.search("( [0-9]*.| )[0-9]* tbr", line)
-            result['video_fps'] = float(line[match.start():match.end()].split(' ')[1])
-        except:
-            match = re.search("( [0-9]*.| )[0-9]* fps", line)
-            result['video_fps'] = float(line[match.start():match.end()].split(' ')[1])
         
-        num_frames = result['duration'] * result['video_fps']
+        have_to_fetch_manually = False
         
-        if num_frames != int( num_frames ): num_frames += 1 # rounding up
-        
-        result['video_nframes'] = int( num_frames )
+        if 'video_nframes' in result:
+            
+            result[ 'video_fps' ] = result[ 'video_nframes' ] / result[ 'duration' ]
+            
+        else:
+            
+            # get the frame rate
+            try:
+                
+                match = re.search("( [0-9]*.| )[0-9]* tbr", line)
+                
+                fps = line[match.start():match.end()].split(' ')[1]
+                
+                if fps.endswith( 'k' ):
+                    
+                    raise Exception()
+                    
+                
+                result['video_fps'] = float( fps )
+                
+            except:
+                
+                match = re.search("( [0-9]*.| )[0-9]* fps", line)
+                
+                fps = line[match.start():match.end()].split(' ')[1]
+                
+                if fps.endswith( 'k' ):
+                    
+                    if not doing_manual_frame_count:
+                        
+                        return Hydrusffmpeg_parse_infos( filename, count_frames_manually = True )
+                        
+                    else:
+                        
+                        raise Exception( 'Could not determine framerate!' )
+                        
+                    
+                else:
+                    
+                    result['video_fps'] = float( fps )
+                    
+                
+            
+            num_frames = result['duration'] * result['video_fps']
+            
+            if num_frames != int( num_frames ): num_frames += 1 # rounding up
+            
+            result['video_nframes'] = int( num_frames )
+            
         
         result['video_duration'] = result['duration']
         # We could have also recomputed the duration from the number
@@ -472,6 +530,7 @@ class VideoRendererFFMPEG( object ):
             '-f', 'image2pipe',
             "-pix_fmt", self.pix_fmt,
             "-s", str( w ) + 'x' + str( h ),
+            '-vsync', '0',
             '-vcodec', 'rawvideo', '-' ]
             
         

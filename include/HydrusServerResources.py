@@ -567,7 +567,7 @@ class HydrusResource( Resource ):
         
         if failure.type == KeyError:
             
-            response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
+            response_context = ResponseContext( 400, mime = default_mime, body = default_encoding( 'It appears one or more parameters required for that request were missing:' + os.linesep + failure.getTraceback() ) )
             
         elif failure.type == HydrusExceptions.BandwidthException:
             
@@ -641,9 +641,15 @@ class HydrusResource( Resource ):
         HG.controller.RequestMade( num_bytes )
         
     
-    def _threadDoGETJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+    def _threadDoGETJob( self, request ):
+        
+        raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+        
     
-    def _threadDoPOSTJob( self, request ): raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+    def _threadDoPOSTJob( self, request ):
+        
+        raise HydrusExceptions.NotFoundException( 'This service does not support that request!' )
+        
     
     def _CleanUpTempFile( self, request ):
         
@@ -705,6 +711,18 @@ class HydrusResource( Resource ):
         request.notifyFinish().addErrback( self._errbackDisconnected, d )
         
         return NOT_DONE_YET
+        
+    
+class HydrusResourceRobotsTXT( HydrusResource ):
+    
+    def _threadDoGETJob( self, request ):
+        
+        body = '''User-agent: *
+Disallow: /'''
+        
+        response_context = ResponseContext( 200, mime = HC.TEXT_PLAIN, body = body )
+        
+        return response_context
         
     
 class HydrusResourceWelcome( HydrusResource ):

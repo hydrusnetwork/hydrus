@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 257
+SOFTWARE_VERSION = 258
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -174,17 +174,17 @@ DUPLICATE_LARGER_BETTER = 6
 DUPLICATE_WORSE = 7
 DUPLICATE_BETTER_OR_WORSE = 8
 
-duplicate_status_string_lookup = {}
+duplicate_type_string_lookup = {}
 
-duplicate_status_string_lookup[ DUPLICATE_UNKNOWN ] = 'unknown relationship'
-duplicate_status_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
-duplicate_status_string_lookup[ DUPLICATE_SAME_FILE ] = 'exact same files'
-duplicate_status_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
-duplicate_status_string_lookup[ DUPLICATE_BETTER ] = 'this is better'
-duplicate_status_string_lookup[ DUPLICATE_SMALLER_BETTER ] = 'smaller hash_id is better'
-duplicate_status_string_lookup[ DUPLICATE_LARGER_BETTER ] = 'larger hash_id is better'
-duplicate_status_string_lookup[ DUPLICATE_WORSE ] = 'this is worse'
-duplicate_status_string_lookup[ DUPLICATE_BETTER_OR_WORSE ] = 'better or worse'
+duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'unknown relationship'
+duplicate_type_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
+duplicate_type_string_lookup[ DUPLICATE_SAME_FILE ] = 'exact same files'
+duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
+duplicate_type_string_lookup[ DUPLICATE_BETTER ] = 'this is better'
+duplicate_type_string_lookup[ DUPLICATE_SMALLER_BETTER ] = 'smaller hash_id is better'
+duplicate_type_string_lookup[ DUPLICATE_LARGER_BETTER ] = 'larger hash_id is better'
+duplicate_type_string_lookup[ DUPLICATE_WORSE ] = 'this is worse'
+duplicate_type_string_lookup[ DUPLICATE_BETTER_OR_WORSE ] = 'better or worse'
 
 ENCODING_RAW = 0
 ENCODING_HEX = 1
@@ -425,6 +425,7 @@ VIDEO_MOV = 26
 VIDEO_AVI = 27
 APPLICATION_HYDRUS_UPDATE_DEFINITIONS = 28
 APPLICATION_HYDRUS_UPDATE_CONTENT = 29
+TEXT_PLAIN = 30
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -479,6 +480,7 @@ mime_enum_lookup[ 'audio/ogg' ] = AUDIO_OGG
 mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
 mime_enum_lookup[ 'audio/x-ms-wma' ] = AUDIO_WMA
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
+mime_enum_lookup[ 'text/plain' ] = TEXT_PLAIN
 mime_enum_lookup[ 'video/png' ] = VIDEO_APNG
 mime_enum_lookup[ 'video/x-msvideo' ] = VIDEO_AVI
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
@@ -516,6 +518,7 @@ mime_string_lookup[ AUDIO_FLAC ] = 'audio/flac'
 mime_string_lookup[ AUDIO_WMA ] = 'audio/x-ms-wma'
 mime_string_lookup[ AUDIO ] = 'audio'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
+mime_string_lookup[ TEXT_PLAIN ] = 'text/plain'
 mime_string_lookup[ VIDEO_APNG ] = 'video/png'
 mime_string_lookup[ VIDEO_AVI ] = 'video/x-msvideo'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
@@ -551,6 +554,7 @@ mime_ext_lookup[ AUDIO_OGG ] = '.ogg'
 mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
 mime_ext_lookup[ AUDIO_WMA ] = '.wma'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
+mime_ext_lookup[ TEXT_PLAIN ] = '.txt'
 mime_ext_lookup[ VIDEO_APNG ] = '.png'
 mime_ext_lookup[ VIDEO_AVI ] = '.avi'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'

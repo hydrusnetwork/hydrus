@@ -22,7 +22,7 @@ EXTERNAL_IP[ 'time' ] = 0
 
 def GetExternalIP():
     
-    if HC.options[ 'external_host' ] is not None:
+    if 'external_host' in HC.options and HC.options[ 'external_host' ] is not None:
         
         return HC.options[ 'external_host' ]
         

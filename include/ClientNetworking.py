@@ -420,7 +420,10 @@ class HTTPConnectionManager( object ):
                             
                             if connection.IsStale():
                                 
+                                connection.Close()
+                                
                                 del self._connections[ ( location, hydrus_network ) ]
+                                
                             
                         
                     
@@ -428,7 +431,7 @@ class HTTPConnectionManager( object ):
                 last_checked = HydrusData.GetNow()
                 
             
-            time.sleep( 1 )
+            time.sleep( 5 )
             
         
     
@@ -445,6 +448,8 @@ class HTTPConnection( object ):
         self.lock = threading.Lock()
         
         self._last_request_time = HydrusData.GetNow()
+        
+        self._connection = None
         
         self._RefreshConnection()
         
@@ -951,6 +956,14 @@ class HTTPConnection( object ):
             
         
         return size_of_response
+        
+    
+    def Close( self ):
+        
+        if self._connection is not None:
+            
+            self._connection.close()
+            
         
     
     def IsStale( self ):

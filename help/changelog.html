@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 258</h3></li>
+				<ul>
+					<li>added a duplicate entry to the thumbnail right-click menu</li>
+					<li>the new duplicate menu will now attempt to fetch known duplicate counts for the focused file for the current file domain (if the db is locked, it will say so rather than block)</li>
+					<li>the new duplicate menu's counts in the thumbnail menu can be clicked to show those files in a new page</li>
+					<li>the new duplicate menu allows you to set the four main dupe statuses (with default merge options), or a customised verson of the same, or set unknown/potential, or delete dupe status completely, for all the possible pairs in the current selection</li>
+					<li>added tentative support for variable framerate files, manually counting up their frames and displaying them with an averaged constant framerate in the client renderer. this now permits a number of webms that were previously 'mime unsupported'. let me know how it works for you!</li>
+					<li>cleaned some server locking code, hopefully fixing the ssl handshake issue (which is actually a deadlocking issue)</li>
+					<li>export file dialogs will remember the last value of 'export tags to .txt files?', and clicking that checkbox will always launch the dialog for editing (rather than clearing if there are some set)</li>
+					<li>fixed the advanced content update (as used by service-wide update), which was not able to differentiate namespaces since the recent service changes. I apologise to anyone affected by this--I will add some unit tests to make sure it doesn't happen again</li>
+					<li>reworked and cleaned some canvas event handling code</li>
+					<li>the canvas will now accept mouse wheel events even when it does not have focus</li>
+					<li>the canvas frame will no longer accept keyboard events (and hence activate fullscreen_switch) if the mouse is over a flash window</li>
+					<li>hydrus servers now respond to /robots.txt with a 'disallow all'</li>
+					<li>servers will now provide mappings petitions to admins in groups of similar size, rather than mixing petitions of weight 5000 with a hundred of weight 1</li>
+					<li>fixed the back/skip buttons in the archive/delete filter's top hover window</li>
+					<li>the file path tagging dialog's namespace and regular regexes now support parenthesis groups, and in that case will take each of those submatches instead of the wider match</li>
+					<li>hence regexes with groups will now compile in that dialog</li>
+					<li>you can now 'new page here' on the final (rightmost) page tab</li>
+					<li>fixed an issue where media-viewer-launched manage tags frames would yield focus to the main gui if they had opened a sub-dialog while they were open</li>
+					<li>the tag censorship edit panel now has a 'help here -->' label in blue text</li>
+					<li>file imports will fail properly when the final temp_path->client_files file copy operation fails (due, for instance, to the destination being on a removable medium that was recently disconnected)</li>
+					<li>fixed serverside upnp maintenance, which was silently failing early, and also updated it to the new server object code</li>
+					<li>wrote a new checklistbox dialog that handles the underlying data explicitly rather than messing around with external text->data maps</li>
+					<li>replaced all the old string checklistbox dialog instances with the new one</li>
+					<li>subscriptions will now correctly clear their 'recent error' status on a successful sync</li>
+					<li>refactored and cleaned how basic mediaresult objects store and consult simple file information</li>
+					<li>locationsmanager objects now handle inbox status and the related content update events that affect it</li>
+					<li>fixed a bug in HydrusTagArchive when attempting to figure out hash type from an existing hash</li>
+					<li>removed the obsolete servertoclientcontentupdatepackage object</li>
+					<li>misc duplicate code cleanup</li>
+					<li>misc serverside service code improvements</li>
+					<li>misc small fixes</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 257</h3></li>
 				<ul>
 					<li>the duplicate filter will now maintain zoom on files with the same ratio</li>

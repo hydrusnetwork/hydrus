@@ -2827,11 +2827,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             service.Request( HC.POST, 'file', { 'file' : file } )
                             
-                            ( hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager ) = media_result.ToTuple()
+                            file_info_manager = media_result.GetFileInfoManager()
                             
                             timestamp = HydrusData.GetNow()
                             
-                            content_update_row = ( hash, size, mime, timestamp, width, height, duration, num_frames, num_words )
+                            content_update_row = ( file_info_manager, timestamp )
                             
                             content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                             
@@ -3041,12 +3041,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 can_move_right = tab_index < end_index
                 can_end = tab_index < end_index - 1
                 
-                can_insert = can_move_right
-                
-                if can_insert:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
-                    
+                ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 

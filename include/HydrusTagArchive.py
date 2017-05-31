@@ -104,7 +104,10 @@ class HydrusTagArchive( object ):
             
             hash_id = self._c.lastrowid
             
-        else: ( hash_id, ) = result
+        else:
+            
+            ( hash_id, ) = result
+            
         
         return hash_id
         
@@ -131,7 +134,10 @@ class HydrusTagArchive( object ):
             
             tag_id = self._c.lastrowid
             
-        else: ( tag_id, ) = result
+        else:
+            
+            ( tag_id, ) = result
+            
         
         return tag_id
         
@@ -203,11 +209,25 @@ class HydrusTagArchive( object ):
                 raise Exception( 'This archive has no hash type set, and as it has no files, no hash type guess can be made.' )
                 
             
-            if len( hash ) == 16: self.SetHashType( HASH_TYPE_MD5 )
-            elif len( hash ) == 20: self.SetHashType( HASH_TYPE_SHA1 )
-            elif len( hash ) == 32: self.SetHashType( HASH_TYPE_SHA256 )
-            elif len( hash ) == 64: self.SetHashType( HASH_TYPE_SHA512 )
-            else: raise Exception()
+            ( hash, ) = result
+            
+            hash_len = len( hash )
+            
+            len_to_hash_type = {}
+            
+            len_to_hash_type[ 16 ] = HASH_TYPE_MD5
+            len_to_hash_type[ 20 ] = HASH_TYPE_SHA1
+            len_to_hash_type[ 32 ] = HASH_TYPE_SHA256
+            len_to_hash_type[ 64 ] = HASH_TYPE_SHA512
+            
+            if hash_len in len_to_hash_type:
+                
+                self.SetHashType( len_to_hash_type[ hash_len ] )
+                
+            else:
+                
+                raise Exception()
+                
             
             return self.GetHashType()
             

@@ -1,8 +1,23 @@
 import ClientGUICommon
+import HydrusConstants as HC
 import HydrusGlobals as HG
 import wx
 
+if HC.PLATFORM_WINDOWS:
+    
+    import wx.lib.flashwin
+    
 def IShouldCatchCharHook( evt_handler ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        window = wx.FindWindowAtPointer()
+        
+        if window is not None and isinstance( window, wx.lib.flashwin.FlashWindow ):
+            
+            return False
+            
+        
     
     if HG.client_controller.MenuIsOpen():
         

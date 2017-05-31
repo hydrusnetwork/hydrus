@@ -1932,6 +1932,15 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
+        
+        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
+        
+        help_hbox.AddF( st, CC.FLAGS_VCENTER )
+        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1939,7 +1948,7 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         

@@ -3,6 +3,7 @@ import ClientData
 import ClientFiles
 import ClientLocalServer
 import ClientMedia
+import ClientRatings
 import ClientServices
 import hashlib
 import httplib
@@ -263,9 +264,9 @@ class TestServer( unittest.TestCase ):
         info[ 'timeout' ] = 0
         info[ 'hashes' ] = hashes
         
-        # hash, inbox, size, mime, width, height, duration, num_frames, num_words, tags_manager, locations_manager, ratings_manager
+        file_info_manager = ClientMedia.FileInfoManager( hashes[0], 500, HC.IMAGE_JPEG, 640, 480 )
         
-        media_results = [ ClientMedia.MediaResult( ( hash, True, 500, HC.IMAGE_JPEG, 640, 480, None, None, None, None, None, None ) ) for hash in hashes ]
+        media_results = [ ClientMedia.MediaResult( file_info_manager, ClientMedia.TagsManager( {} ), ClientMedia.LocationsManager( set(), set(), set(), set() ), ClientRatings.RatingsManager( {} ) ) for hash in hashes ]
         
         HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
         HG.test_controller.SetRead( 'local_booru_share', info )

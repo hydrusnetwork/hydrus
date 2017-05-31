@@ -28,8 +28,10 @@ import urlparse
 import webbrowser
 import wx
 
-if HC.PLATFORM_WINDOWS: import wx.lib.flashwin
-
+if HC.PLATFORM_WINDOWS:
+    
+    import wx.lib.flashwin
+    
 ID_TIMER_VIDEO = wx.NewId()
 ID_TIMER_RENDER_WAIT = wx.NewId()
 ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
@@ -1095,6 +1097,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                 
             
+        
         event.Skip()
         
     
@@ -1198,6 +1201,21 @@ class Canvas( wx.Window ):
             
             HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
             
+        
+    
+    def _CanProcessInput( self ):
+        
+        if HG.client_controller.MenuIsOpen():
+            
+            return False
+            
+        
+        if self._MouseIsOverFlash():
+            
+            return False
+            
+        
+        return True
         
     
     def _CopyBMPToClipboard( self ):
@@ -1377,6 +1395,21 @@ class Canvas( wx.Window ):
             
         
     
+    def _FocusIsElsewhere( self ):
+        
+        i_have_focus = ClientGUICommon.WindowOrSameTLPChildHasFocus( self )
+        my_hover_window_has_focus = ClientGUICommon.WindowOrAnyTLPChildHasFocus( self ) and isinstance( ClientGUICommon.GetFocusTLP(), ClientGUIHoverFrames.FullscreenHoverFrame )
+        
+        focus_is_elsewhere = not ( i_have_focus or my_hover_window_has_focus )
+        
+        if focus_is_elsewhere:
+            
+            return True
+            
+        
+        return False
+        
+    
     def _GenerateOrderedShortcutNames( self ):
         
         # do custom first, then let the more specialised take priority
@@ -1439,34 +1472,6 @@ class Canvas( wx.Window ):
         new_position = ( x_offset, y_offset )
         
         return ( new_size, new_position )
-        
-    
-    def _HydrusShouldNotProcessInput( self ):
-        
-        if HG.client_controller.MenuIsOpen():
-            
-            return True
-            
-        
-        i_have_focus = ClientGUICommon.WindowOrSameTLPChildHasFocus( self )
-        my_hover_window_has_focus = ClientGUICommon.WindowOrAnyTLPChildHasFocus( self ) and isinstance( ClientGUICommon.GetFocusTLP(), ClientGUIHoverFrames.FullscreenHoverFrame )
-        
-        focus_is_elsewhere = not ( i_have_focus or my_hover_window_has_focus )
-        
-        if focus_is_elsewhere:
-            
-            return True
-            
-        
-        if self._current_media is not None and self._current_media.GetMime() == HC.APPLICATION_FLASH:
-            
-            if self.MouseIsOverMedia():
-                
-                return True
-                
-            
-        
-        return False
         
     
     def _Inbox( self ):
@@ -1574,6 +1579,19 @@ class Canvas( wx.Window ):
             
             self._manage_tags_panel = panel
             
+        
+    
+    def _MouseIsOverFlash( self ):
+        
+        if self._current_media is not None and self._current_media.GetMime() == HC.APPLICATION_FLASH:
+            
+            if self.MouseIsOverMedia():
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _OpenExternally( self ):
@@ -2093,7 +2111,7 @@ class Canvas( wx.Window ):
     
     def EventCharHook( self, event ):
         
-        if not self._HydrusShouldNotProcessInput():
+        if self._CanProcessInput() and not self._FocusIsElsewhere(): # focus is likely on a tag manager frame in this case
             
             shortcut = ClientData.ConvertKeyEventToShortcut( event )
             
@@ -2357,7 +2375,10 @@ class CanvasPanel( Canvas ):
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None and self._HydrusShouldNotProcessInput(): event.Skip()
+        if event.GetEventObject() is None or not self._CanProcessInput():
+            
+            event.Skip()
+            
         else:
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -3021,9 +3042,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _CommitProcessed( self ):
         
-        for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs:
+        for ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs:
             
-            if duplicate_status == HC.DUPLICATE_UNKNOWN:
+            if duplicate_type == HC.DUPLICATE_UNKNOWN:
                 
                 continue # it was a 'skip' decision
                 
@@ -3038,7 +3059,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_status, first_hash, second_hash )
+            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_type, first_hash, second_hash )
             
         
         self._processed_pairs = []
@@ -3057,23 +3078,23 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        duplicate_statuses = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
         
-        choice_tuples = [ ( HC.duplicate_status_string_lookup[ duplicate_status ], duplicate_status ) for duplicate_status in duplicate_statuses ]
+        choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
-        with ClientGUIDialogs.DialogSelectFromList( self, 'select duplicate_status', choice_tuples ) as dlg_1:
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select duplicate type', choice_tuples ) as dlg_1:
             
             if dlg_1.ShowModal() == wx.ID_OK:
                 
-                duplicate_status = dlg_1.GetChoice()
+                duplicate_type = dlg_1.GetChoice()
                 
                 new_options = HG.client_controller.GetNewOptions()
                 
-                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_status )
+                duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_status, duplicate_action_options )
+                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
                     
                     dlg_2.SetPanel( panel )
                     
@@ -3081,7 +3102,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         duplicate_action_options = panel.GetValue()
                         
-                        self._ProcessPair( duplicate_status, duplicate_action_options )
+                        self._ProcessPair( duplicate_type, duplicate_action_options )
                         
                     
                 
@@ -3192,7 +3213,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs if duplicate_status != HC.DUPLICATE_UNKNOWN ] )
+        return len( [ 1 for ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs if duplicate_type != HC.DUPLICATE_UNKNOWN ] )
         
     
     def _GoBack( self ):
@@ -3201,13 +3222,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._unprocessed_pairs.append( self._current_pair )
             
-            ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+            ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
             
             self._unprocessed_pairs.append( hash_pair )
             
             while was_auto_skipped:
                 
-                ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
                 
                 self._unprocessed_pairs.append( hash_pair )
                 
@@ -3294,7 +3315,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         return command_processed
         
     
-    def _ProcessPair( self, duplicate_status, duplicate_action_options = None ):
+    def _ProcessPair( self, duplicate_type, duplicate_action_options = None ):
         
         if self._current_media is None:
             
@@ -3305,7 +3326,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             new_options = HG.client_controller.GetNewOptions()
             
-            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_status )
+            duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
             
         
         other_media = self._media_list.GetNext( self._current_media )
@@ -3316,7 +3337,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         was_auto_skipped = False
         
-        self._processed_pairs.append( ( self._current_pair, duplicate_status, self._current_media, other_media, duplicate_action_options, was_auto_skipped ) )
+        self._processed_pairs.append( ( self._current_pair, duplicate_type, self._current_media, other_media, duplicate_action_options, was_auto_skipped ) )
         
         self._ShowNewPair()
         
@@ -3344,13 +3365,13 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 else:
                     
-                    ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                    ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
                     
                     self._unprocessed_pairs.append( hash_pair )
                     
                     while was_auto_skipped:
                         
-                        ( hash_pair, duplicate_status, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
+                        ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) = self._processed_pairs.pop()
                         
                         self._unprocessed_pairs.append( hash_pair )
                         
@@ -3466,23 +3487,30 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ):
-            
-            self._Close()
-            
-        else:
+        if self._CanProcessInput() and not self._FocusIsElsewhere():
             
             ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
-            if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
-            elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
-            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
+            if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ):
+                
+                self._Close()
+                
             else:
                 
-                CanvasWithHovers.EventCharHook( self, event )
+                ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
                 
+                if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
+                elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
+                elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
+                else:
+                    
+                    CanvasWithHovers.EventCharHook( self, event )
+                    
+                
+            
+        else:
+            
+            event.Skip()
             
         
     
@@ -3493,11 +3521,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def EventMouse( self, event ):
         
-        if self._HydrusShouldNotProcessInput():
-            
-            event.Skip()
-            
-        else:
+        if self._CanProcessInput():
             
             if event.ShiftDown():
                 
@@ -3546,6 +3570,10 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 event.Skip()
                 
+            
+        else:
+            
+            event.Skip()
             
         
     
@@ -3918,9 +3946,12 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Back( self ):
         
-        if not self._HydrusShouldNotProcessInput():
+        if self._CanProcessInput():
             
-            if self._current_media == self._GetFirst(): return
+            if self._current_media == self._GetFirst():
+                
+                return
+                
             else:
                 
                 self._ShowPrevious()
@@ -3933,7 +3964,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Close( self ):
         
-        if not self._HydrusShouldNotProcessInput():
+        if self._CanProcessInput():
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
                 
@@ -4068,10 +4099,13 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def _Skip( self ):
         
-        if not self._HydrusShouldNotProcessInput():
+        if self._current_media == self._GetLast():
             
-            if self._current_media == self._GetLast(): self._Close()
-            else: self._ShowNext()
+            self._Close()
+            
+        else:
+            
+            self._ShowNext()
             
         
     
@@ -4106,12 +4140,8 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventCharHook( self, event ):
         
-        if self._HydrusShouldNotProcessInput():
+        if self._CanProcessInput() and not self._FocusIsElsewhere():
             
-            event.Skip()
-            
-        else:
-        
             ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
             if modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
@@ -4121,21 +4151,27 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 CanvasMediaList.EventCharHook( self, event )
                 
             
+        else:
+            
+            event.Skip()
+            
         
     
     def EventDelete( self, event ):
         
-        if self._HydrusShouldNotProcessInput(): event.Skip()
-        else: self._Delete()
+        if self._CanProcessInput():
+            
+            self._Delete()
+            
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMouse( self, event ):
         
-        if self._HydrusShouldNotProcessInput():
-            
-            event.Skip()
-            
-        else:
+        if self._CanProcessInput():
             
             if event.ShiftDown():
                 
@@ -4176,14 +4212,13 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                 
             
-            event.Skip()
-            
+        
+        event.Skip()
         
     
     def EventMenu( self, event ):
         
-        if self._HydrusShouldNotProcessInput(): event.Skip()
-        else:
+        if self._CanProcessInput():
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
             
@@ -4213,6 +4248,10 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 else: event.Skip()
                 
             
+        else:
+            
+            event.Skip()
+            
         
     
     def EventSkip( self, event ):
@@ -4222,8 +4261,14 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventUndelete( self, event ):
         
-        if self._HydrusShouldNotProcessInput(): event.Skip()
-        else: self._Undelete()
+        if self._CanProcessInput():
+            
+            self._Undelete()
+            
+        else:
+            
+            event.Skip()
+            
         
     
     def Skip( self, canvas_key ):
@@ -4481,11 +4526,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventCharHook( self, event ):
         
-        if self._HydrusShouldNotProcessInput():
-            
-            event.Skip()
-            
-        else:
+        if self._CanProcessInput() and not self._FocusIsElsewhere():
             
             ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
@@ -4499,12 +4540,19 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 CanvasMediaListNavigable.EventCharHook( self, event )
                 
             
+        else:
+            
+            event.Skip()
+            
         
     
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None and self._HydrusShouldNotProcessInput(): event.Skip()
+        if event.GetEventObject() is None or not self._CanProcessInput():
+            
+            event.Skip()
+            
         else:
             
             action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
@@ -4551,8 +4599,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def EventMouseWheel( self, event ):
         
-        if self._HydrusShouldNotProcessInput(): event.Skip()
-        else:
+        if self._CanProcessInput():
             
             if event.CmdDown():
                 
@@ -4564,6 +4611,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 if event.GetWheelRotation() > 0: self._ShowPrevious()
                 else: self._ShowNext()
                 
+            
+        else:
+            
+            event.Skip()
             
         
     

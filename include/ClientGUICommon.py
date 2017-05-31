@@ -262,6 +262,15 @@ class BetterButton( wx.Button ):
         self._func( *self._args,  **self._kwargs )
         
     
+class BetterCheckListBox( wx.CheckListBox ):
+    
+    def GetChecked( self ):
+        
+        result = [ self.GetClientData( index ) for index in wx.CheckListBox.GetChecked( self ) ]
+        
+        return result
+        
+    
 class BetterChoice( wx.Choice ):
     
     def GetChoice( self ):
@@ -2229,8 +2238,7 @@ class PopupMessageManager( wx.Frame ):
                     
                     if my_position != self.GetPosition():
                         
-                        self.SetPosition( parent.ClientToScreenXY( my_x, my_y ) )
-                        
+                        self.SetPosition( my_position )
                         
                     
                 

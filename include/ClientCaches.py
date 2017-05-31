@@ -681,7 +681,12 @@ class ClientFilesManager( object ):
         
         if not os.path.exists( dest_path ):
             
-            HydrusPaths.MirrorFile( source_path, dest_path )
+            successful = HydrusPaths.MirrorFile( source_path, dest_path )
+            
+            if not successful:
+                
+                raise Exception( 'There was a problem copying the file from ' + source_path + ' to ' + dest_path + '!' )
+                
             
         
     
@@ -1403,7 +1408,10 @@ class LocalBooruCache( object ):
         
         info = self._GetInfo( share_key )
         
-        if hash not in info[ 'hashes_set' ]: raise HydrusExceptions.NotFoundException( 'That file was not found in that share.' )
+        if hash not in info[ 'hashes_set' ]:
+            
+            raise HydrusExceptions.NotFoundException( 'That file was not found in that share.' )
+            
         
     
     def _CheckShareAuthorised( self, share_key ):
@@ -1414,7 +1422,10 @@ class LocalBooruCache( object ):
         
         timeout = info[ 'timeout' ]
         
-        if timeout is not None and HydrusData.TimeHasPassed( timeout ): raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+        if timeout is not None and HydrusData.TimeHasPassed( timeout ):
+            
+            raise HydrusExceptions.ForbiddenException( 'This share has expired.' )
+            
         
     
     def _GetInfo( self, share_key ):
