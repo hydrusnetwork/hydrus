@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 259</h3></li>
+				<ul>
+					<li>planned out new networking engine and started the principal objects</li>
+					<li>renamed the 'exact match' duplicate status to 'same quality', to reduce confusion on what is appropriate for this status</li>
+					<li>the duplicate filter, on hitting the delete key, now offers the option of deleting both files</li>
+					<li>the duplicate system now combines duplicate status setting and the consequent batch of content updates into the same database transaction, speeding things up</li>
+					<li>the duplicate system now batches multiple duplicate status setting into a single transaction, massively speeding up large filters or thumbnail status set actions</li>
+					<li>misc duplicate help tweaks</li>
+					<li>you can now edit the default duplicate merge options from the new thumbnail duplicate menu</li>
+					<li>the duplicates page's jobs are less demanding on gui time and take better breaks if something else happens</li>
+					<li>renamed the new dupe system predicate to 'system:num duplicate relationships' to clarify what it searches</li>
+					<li>for normal queries, current and pending mappings are now fetched from a faster mappings cache. you should see faster result building across the board, particularly on fresh boots or otherwise slow-disk-access systems</li>
+					<li>added a prototype 'advanced mode' (defaulting to off, so experienced users will want to turn it on) under the help menu that will enable menu items that are often not helpful to new users. I will add more things to this in future, suggestions welcome</li>
+					<li>the new thumbnail menu dupe relationship set stuff is now considered advanced</li>
+					<li>thumbnail menu find similar files is now considered advanced</li>
+					<li>the thumbnail menu copy hash entries are now considered advanced</li>
+					<li>advanced content update buttons (on manage tags and review services) are now considered advanced</li>
+					<li>added an advanced mode 'open file location' entry to the thumbnail share menu, which will open the file in your OS's file explorer (not available on Linux)</li>
+					<li>added an advanced mode 'correct video frame count' thumbnail menu entry that will force-apply last week's more accurate video frame counter to correct and videos that render too fast and then cut off</li>
+					<li>fixed many entries on the media viewer menus, which were being blocked by an over-eager 'can continue' test and hence silently failing</li>
+					<li>fixed the youtube downloader on Linux and OS X--both now use youtube-dl</li>
+					<li>fixed an issue where the GetLighterDarkerColour function was producing very bright alternates to very dark colours (meaning dark dupe filters were having their bright background text rendered unreadable)</li>
+					<li>improved video frame number parsing accuracy</li>
+					<li>improved the accurate version of video frame number parsing accuracy, particularly for longer videos</li>
+					<li>the network engine now reports 5xx http status codes as ServerException to better contextualise to the user what went wrong</li>
+					<li>adminside mapping petitions are now sub-ordered by tag</li>
+					<li>adminside sibling/parent petitions are now ordered by the 'older' tag and sub-ordered by the 'newer' tag</li>
+					<li>censorship taglists are now roughly sorted</li>
+					<li>reduced default shutdown work max time to five minutes</li>
+					<li>improved how subprocesses are started</li>
+					<li>misc cleanup</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 258</h3></li>
 				<ul>
 					<li>added a duplicate entry to the thumbnail right-click menu</li>
