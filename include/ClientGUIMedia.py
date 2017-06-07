@@ -446,6 +446,28 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
         
     
+    def _EditDuplicateActionOptions( self, duplicate_type ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
+            
+            dlg_2.SetPanel( panel )
+            
+            if dlg_2.ShowModal() == wx.ID_OK:
+                
+                duplicate_action_options = panel.GetValue()
+                
+                new_options.SetDuplicateActionOptions( duplicate_type, duplicate_action_options )
+                
+            
+        
+        
+    
     def _FullScreen( self, first_media = None ):
         
         if self._focussed_media is not None:
@@ -897,6 +919,26 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _OpenFileLocation( self ):
+        
+        if self._focussed_media is not None:
+            
+            if self._focussed_media.GetLocationsManager().IsLocal():
+                
+                hash = self._focussed_media.GetHash()
+                mime = self._focussed_media.GetMime()
+                
+                client_files_manager = HG.client_controller.GetClientFilesManager()
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                self._SetFocussedMedia( None )
+                
+                HydrusPaths.OpenFileLocation( path )
+                
+            
+        
+    
     def _PetitionFiles( self, remote_service_key ):
         
         hashes = self._GetSelectedHashes()
@@ -1034,6 +1076,30 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _RecalculateVirtualSize( self ): pass
     
+    def _RecheckVideoMetadata( self ):
+        
+        flat_media = self._GetSelectedFlatMedia()
+        
+        hashes = { media.GetHash() for media in flat_media if media.GetMime() in HC.VIDEO }
+        
+        if len( hashes ) > 0:
+            
+            text = 'This will reparse the ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' selected videos using a slower but more accurate routine.'
+            text += os.linesep * 2
+            text += 'If you see videos that seem to render too fast or cut short of frames half way through, this may fix it.'
+            text += os.linesep * 2
+            text += 'It may take some time to reparse the files, and you will need to refresh your search to see the updated videos.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    HG.client_controller.Write( 'recheck_video_metadata', hashes )
+                    
+                
+            
+        
+    
     def _RedrawMedia( self, media ): pass
     
     def _Remove( self ):
@@ -1161,22 +1227,28 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
+                pair_info = []
+                
                 for ( first_media, second_media ) in media_pairs:
-                    
-                    if duplicate_action_options is not None:
-                        
-                        list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
-                        
-                        for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
-                            
-                            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                            
-                        
                     
                     first_hash = first_media.GetHash()
                     second_hash = second_media.GetHash()
                     
-                    HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_type, first_hash, second_hash )
+                    if duplicate_action_options is None:
+                        
+                        list_of_service_keys_to_content_updates = []
+                        
+                    else:
+                        
+                        list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+                        
+                    
+                    pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+                    
+                
+                if len( pair_info ) > 0:
+                    
+                    HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
                     
                 
             
@@ -1184,7 +1256,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _SetDuplicatesCustom( self ):
         
-        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
@@ -2463,6 +2535,10 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventShowMenu( self, event ):
         
+        new_options = HG.client_controller.GetNewOptions()
+        
+        advanced_mode = new_options.GetBoolean( 'advanced_mode' )
+        
         services_manager = HG.client_controller.GetServicesManager()
         
         thumbnail = self._GetThumbnailUnderMouse( event )
@@ -2568,7 +2644,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 i_can_post_ratings = len( local_ratings_services ) > 0
                 
-                focussed_is_local = CC.LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
+                focussed_is_local = CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._focussed_media.GetLocationsManager().GetCurrent()
                 
                 file_service_keys = { repository.GetServiceKey() for repository in file_repositories }
                 upload_permission_file_service_keys = { repository.GetServiceKey() for repository in file_repositories if repository.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_CREATE ) }
@@ -2986,7 +3062,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                if selection_has_local:
+                if focussed_is_local:
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Launch this file with your OS\'s default program for it.', self._OpenExternally )
                     
@@ -3024,40 +3100,58 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
+                if advanced_mode:
+                    
+                    if not HC.PLATFORM_LINUX and focussed_is_local:
+                        
+                        open_menu = wx.Menu()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                        
+                        ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
+                        
+                    
+                
                 copy_menu = wx.Menu()
                 
                 if selection_has_local:
                     
                     ClientGUIMenus.AppendMenuItem( self, copy_menu, copy_phrase, 'Copy the selected files to the clipboard.', self._CopyFilesToClipboard )
                     
-                    copy_hash_menu = wx.Menu()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
-                    ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
-                    
-                    ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
-                    
-                    if multiple_selected:
+                    if advanced_mode:
                         
                         copy_hash_menu = wx.Menu()
                         
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
-                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected file\'s MD5 hash to the clipboard.', self._CopyHashToClipboard, 'md5' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
                         
-                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
+                        ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
+                        
+                        if multiple_selected:
+                            
+                            copy_hash_menu = wx.Menu()
+                            
+                            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy the selected files\' SHA256 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
+                            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
+                            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
+                            
+                            ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
+                            
                         
                     
                 else:
                     
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
-                    
-                    if multiple_selected:
+                    if advanced_mode:
                         
-                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                        ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hash', 'Copy the selected file\'s SHA256 hash to the clipboard.', self._CopyHashToClipboard, 'sha256' )
+                        
+                        if multiple_selected:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'sha256 hashes', 'Copy the selected files\' SHA256 hash to the clipboard.', self._CopyHashesToClipboard, 'sha256' )
+                            
                         
                     
                 
@@ -3100,7 +3194,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 export_menu  = wx.Menu()
                 
                 ClientGUIMenus.AppendMenuItem( self, export_menu, export_phrase, 'Export the selected files to an external folder.', self._ExportFiles )
-                ClientGUIMenus.AppendMenuItem( self, export_menu, 'tags', 'Export the selected files\' tags to an external database.', self._ExportTags )
+                
+                if advanced_mode:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, export_menu, 'tags', 'Export the selected files\' tags to an external database.', self._ExportTags )
+                    
                 
                 share_menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
                 
@@ -3171,85 +3269,114 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'open selection in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
                 
-                duplicates_menu = menu # this is important to make the menu flexible if not multiple selected
-                
-                focussed_hash = self._focussed_media.GetDisplayMedia().GetHash()
-                
-                if multiple_selected:
+                if advanced_mode:
                     
-                    duplicates_menu = wx.Menu()
+                    duplicates_menu = menu # this is important to make the menu flexible if not multiple selected
                     
-                    duplicates_action_submenu = wx.Menu()
+                    focussed_hash = self._focussed_media.GetDisplayMedia().GetHash()
                     
-                    label = 'set this file as better than the ' + HydrusData.ConvertIntToPrettyString( num_selected - 1 ) + ' other selected'
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self._SetDuplicatesFocusedBetter )
-                    
-                    num_files = self._GetNumSelected()
-                    
-                    num_pairs = num_files * ( num_files - 1 ) / 2 # combinations -- n!/2(n-2)!
-                    
-                    num_pairs_text = HydrusData.ConvertIntToPrettyString( num_pairs ) + ' pairs'
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as exact duplicates', 'Set all the selected files as exact same duplicates.', self._SetDuplicates, HC.DUPLICATE_SAME_FILE )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self._SetDuplicates, HC.DUPLICATE_ALTERNATE )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self._SetDuplicates, HC.DUPLICATE_NOT_DUPLICATE )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self._SetDuplicatesCustom )
-                    
-                    ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'queue the ' + num_pairs_text + ' in this selection up for the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self._SetDuplicates, HC.DUPLICATE_UNKNOWN )
-                    
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self._SetDuplicates, None )
-                    
-                    ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'duplicates' )
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
-                    
-                
-                if HG.client_controller.DBCurrentlyDoingJob():
-                    
-                    ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'Could not fetch duplicates (db currently locked)' )
-                    
-                else:
-                    
-                    duplicate_types_to_counts = HG.client_controller.Read( 'duplicate_types_to_counts', self._file_service_key, focussed_hash )
-                    
-                    if len( duplicate_types_to_counts ) > 0:
+                    if multiple_selected:
                         
-                        duplicates_view_menu = wx.Menu()
+                        duplicates_menu = wx.Menu()
                         
-                        for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ):
+                        duplicates_action_submenu = wx.Menu()
+                        
+                        label = 'set this file as better than the ' + HydrusData.ConvertIntToPrettyString( num_selected - 1 ) + ' other selected'
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self._SetDuplicatesFocusedBetter )
+                        
+                        num_files = self._GetNumSelected()
+                        
+                        num_pairs = num_files * ( num_files - 1 ) / 2 # combinations -- n!/2(n-2)!
+                        
+                        num_pairs_text = HydrusData.ConvertIntToPrettyString( num_pairs ) + ' pairs'
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as same quality', 'Set all the selected files as same quality duplicates.', self._SetDuplicates, HC.DUPLICATE_SAME_QUALITY )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self._SetDuplicates, HC.DUPLICATE_ALTERNATE )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self._SetDuplicates, HC.DUPLICATE_NOT_DUPLICATE )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self._SetDuplicatesCustom )
+                        
+                        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'send the ' + num_pairs_text + ' in this selection to be compared in the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self._SetDuplicates, HC.DUPLICATE_UNKNOWN )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self._SetDuplicates, None )
+                        
+                        ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
+                        
+                        duplicates_edit_action_submenu = wx.Menu()
+                        
+                        for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ):
                             
-                            if duplicate_type in duplicate_types_to_counts:
-                                
-                                count = duplicate_types_to_counts[ duplicate_type ]
-                                
-                                label = HydrusData.ConvertIntToPrettyString( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
-                                
-                                ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
-                                
+                            ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ duplicate_type ], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
                             
                         
-                        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s duplicates' )
+                        ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default merge options' )
+                        
+                        ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'duplicates' )
+                        
+                        ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
+                        
+                    
+                    if HG.client_controller.DBCurrentlyDoingJob():
+                        
+                        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'Could not fetch duplicates (db currently locked)' )
+                        
+                    else:
+                        
+                        duplicate_types_to_counts = HG.client_controller.Read( 'duplicate_types_to_counts', self._file_service_key, focussed_hash )
+                        
+                        if len( duplicate_types_to_counts ) > 0:
+                            
+                            duplicates_view_menu = wx.Menu()
+                            
+                            for duplicate_type in ( HC.DUPLICATE_BETTER_OR_WORSE, HC.DUPLICATE_BETTER, HC.DUPLICATE_WORSE, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE, HC.DUPLICATE_UNKNOWN ):
+                                
+                                if duplicate_type in duplicate_types_to_counts:
+                                    
+                                    count = duplicate_types_to_counts[ duplicate_type ]
+                                    
+                                    label = HydrusData.ConvertIntToPrettyString( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
+                                    
+                                    ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
+                                    
+                                
+                            
+                            ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_view_menu, 'view this file\'s duplicates' )
+                            
                         
                     
                 
-                if self._focussed_media.HasImages():
+                if advanced_mode:
                     
-                    ClientGUIMenus.AppendSeparator( menu )
+                    if self._focussed_media.HasImages():
+                        
+                        ClientGUIMenus.AppendSeparator( menu )
+                        
+                        similar_menu = wx.Menu()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
+                        ClientGUIMenus.AppendMenuItem( self, similar_menu, 'very similar', 'Search the database for files that look just like this one.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
+                        ClientGUIMenus.AppendMenuItem( self, similar_menu, 'similar', 'Search the database for files that look generally like this one.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
+                        ClientGUIMenus.AppendMenuItem( self, similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
+                        
+                        ClientGUIMenus.AppendMenu( menu, similar_menu, 'find similar files' )
+                        
                     
-                    similar_menu = wx.Menu()
+                
+                if advanced_mode:
                     
-                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'exact match', 'Search the database for files that look precisely like this one.', self._GetSimilarTo, HC.HAMMING_EXACT_MATCH )
-                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'very similar', 'Search the database for files that look just like this one.', self._GetSimilarTo, HC.HAMMING_VERY_SIMILAR )
-                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'similar', 'Search the database for files that look generally like this one.', self._GetSimilarTo, HC.HAMMING_SIMILAR )
-                    ClientGUIMenus.AppendMenuItem( self, similar_menu, 'speculative', 'Search the database for files that probably look like this one. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, HC.HAMMING_SPECULATIVE )
-                    
-                    ClientGUIMenus.AppendMenu( menu, similar_menu, 'find similar files' )
+                    if focussed_is_local and self._focussed_media.GetMime() in HC.VIDEO:
+                        
+                        advanced_menu = wx.Menu()
+                        
+                        ClientGUIMenus.AppendMenuItem( self, advanced_menu, 'attempt to correct video frame count', 'Recalculate this video\'s metadata using a slower but more accurate video parsing routine.', self._RecheckVideoMetadata )
+                        
+                        ClientGUIMenus.AppendMenu( menu, advanced_menu, 'advanced' )
+                        
                     
                 
             

@@ -34,7 +34,7 @@ def GetFFMPEGVersion():
     
     try:
         
-        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
         
     except Exception as e:
         
@@ -78,9 +78,9 @@ def GetFFMPEGVersion():
     
     return 'unknown'
     
-def GetFFMPEGVideoProperties( path ):
+def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
     
-    info = Hydrusffmpeg_parse_infos( path )
+    info = Hydrusffmpeg_parse_infos( path, count_frames_manually = count_frames_manually )
     
     ( w, h ) = info[ 'video_size' ]
     
@@ -258,7 +258,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
     
     try:
         
-        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+        proc = subprocess.Popen( cmd, bufsize=10**5, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
         
     except:
         
@@ -274,7 +274,9 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
     
     infos = proc.stderr.read().decode('utf8')
     
-    proc.terminate()
+    proc.wait()
+    
+    proc.communicate()
     
     del proc
     
@@ -351,7 +353,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
         
         if len( frame_lines ) > 0:
             
-            l = frame_lines[0]
+            l = frame_lines[-1] # there will be several of these, counting up as the file renders. we hence want the final one
             
             while '  ' in l:
                 
@@ -406,7 +408,7 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
                 
                 fps = line[match.start():match.end()].split(' ')[1]
                 
-                if fps.endswith( 'k' ):
+                if fps.endswith( 'k' ) or float( fps ) > 60:
                     
                     if not doing_manual_frame_count:
                         
@@ -536,7 +538,7 @@ class VideoRendererFFMPEG( object ):
         
         try:
             
-            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdout=subprocess.PIPE, stderr=subprocess.PIPE, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
             
         except:
             

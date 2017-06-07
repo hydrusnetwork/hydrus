@@ -361,7 +361,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._lifetime = ClientGUICommon.BetterChoice( self )
         
-        self._ok = wx.Button( self, label = 'Ok' )
+        self._ok = wx.Button( self, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
@@ -627,7 +627,7 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             self._predicate_panel = predicate_class( self )
             
-            self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+            self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
             self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
             self._ok.SetForegroundColour( ( 0, 128, 0 ) )
             
@@ -1241,7 +1241,7 @@ class DialogInputNamespaceRegex( Dialog ):
         self._regex_intro_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
         self._regex_practise_link = wx.HyperlinkCtrl( self, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
@@ -1340,7 +1340,7 @@ class DialogInputNewFormField( Dialog ):
         
         self._editable = wx.CheckBox( self )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )   
@@ -1413,9 +1413,9 @@ class DialogInputTags( Dialog ):
         
         expand_parents = True
         
-        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.Ok )
+        self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key, null_entry_callable = self.OK )
         
-        self._ok = wx.Button( self, id= wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id= wx.ID_OK, label = 'OK' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -1474,7 +1474,7 @@ class DialogInputTags( Dialog ):
         return self._tags.GetTags()
         
     
-    def Ok( self ):
+    def OK( self ):
         
         self.EndModal( wx.ID_OK )
         
@@ -1487,7 +1487,7 @@ class DialogInputTimeDelta( Dialog ):
         
         self._time_delta = ClientGUICommon.TimeDeltaCtrl( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds, monthly_allowed = monthly_allowed )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -1538,7 +1538,7 @@ class DialogInputUPnPMapping( Dialog ):
         self._description = wx.TextCtrl( self )
         self._duration = wx.SpinCtrl( self, min = 0, max = 86400 )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
@@ -1617,7 +1617,7 @@ class DialogModifyAccounts( Dialog ):
         
         self._account_types = wx.Choice( self._account_types_panel )
         
-        self._account_types_ok = wx.Button( self._account_types_panel, label = 'Ok' )
+        self._account_types_ok = wx.Button( self._account_types_panel, label = 'OK' )
         self._account_types_ok.Bind( wx.EVT_BUTTON, self.EventChangeAccountType )
         
         #
@@ -1626,12 +1626,12 @@ class DialogModifyAccounts( Dialog ):
         
         self._add_to_expires = wx.Choice( self._expiration_panel )
         
-        self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+        self._add_to_expires_ok = wx.Button( self._expiration_panel, label = 'OK' )
         self._add_to_expires_ok.Bind( wx.EVT_BUTTON, self.EventAddToExpires )
         
         self._set_expires = wx.Choice( self._expiration_panel )
         
-        self._set_expires_ok = wx.Button( self._expiration_panel, label = 'Ok' )
+        self._set_expires_ok = wx.Button( self._expiration_panel, label = 'OK' )
         self._set_expires_ok.Bind( wx.EVT_BUTTON, self.EventSetExpires )
         
         #
@@ -3874,3 +3874,74 @@ class DialogYesNo( Dialog ):
         wx.CallAfter( self._yes.SetFocus )
         
     
+class DialogYesYesNo( Dialog ):
+    
+    def __init__( self, parent, message, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
+        
+        if yes_tuples is None:
+            
+            yes_tuples = [ ( 'yes', 'yes' ) ]
+            
+        
+        Dialog.__init__( self, parent, title, position = 'center' )
+        
+        self._value = None
+        
+        yes_buttons = []
+        
+        for ( label, data ) in yes_tuples:
+            
+            yes_button = ClientGUICommon.BetterButton( self, label, self._DoYes, data )
+            yes_button.SetForegroundColour( ( 0, 128, 0 ) )
+            
+            yes_buttons.append( yes_button )
+            
+        
+        self._no = wx.Button( self, id = wx.ID_NO )
+        self._no.SetForegroundColour( ( 128, 0, 0 ) )
+        self._no.SetLabelText( no_label )
+        
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        for yes_button in yes_buttons:
+            
+            hbox.AddF( yes_button, CC.FLAGS_SMALL_INDENT )
+            
+        
+        hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        text = ClientGUICommon.BetterStaticText( self, message )
+        
+        text.Wrap( 480 )
+        
+        vbox.AddF( text, CC.FLAGS_BIG_INDENT )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+        ( x, y ) = self.GetEffectiveMinSize()
+        
+        x = max( x, 250 )
+        
+        self.SetInitialSize( ( x, y ) )
+        
+        wx.CallAfter( yes_buttons[0].SetFocus )
+        
+    
+    def _DoYes( self, value ):
+        
+        self._value = value
+        
+        self.EndModal( wx.ID_YES )
+        
+    
+    def GetValue( self ):
+        
+        return self._value
+        

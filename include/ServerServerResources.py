@@ -111,12 +111,12 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
     
     def _checkBandwidth( self, request ):
         
-        if not self._service.BandwidthOk():
+        if not self._service.BandwidthOK():
             
             raise HydrusExceptions.BandwidthException( 'This service has run out of bandwidth. Please try again later.' )
             
         
-        if not HG.server_controller.ServerBandwidthOk():
+        if not HG.server_controller.ServerBandwidthOK():
             
             raise HydrusExceptions.BandwidthException( 'This server has run out of bandwidth. Please try again later.' )
             

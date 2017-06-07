@@ -266,7 +266,7 @@ class ServiceLocalBooru( Service ):
     
     def _GetFunctionalStatus( self ):
         
-        if not self._bandwidth_rules.Ok( self._bandwidth_tracker ):
+        if not self._bandwidth_rules.OK( self._bandwidth_tracker ):
             
             return ( False, 'bandwidth exceeded' )
             
@@ -298,11 +298,11 @@ class ServiceLocalBooru( Service ):
         # this should support the same serverservice interface so we can just toss it at the regular serverengine and all the bandwidth will work ok
         
     
-    def BandwidthOk( self ):
+    def BandwidthOK( self ):
         
         with self._lock:
             
-            return self._bandwidth_rules.Ok( self._bandwidth_tracker )
+            return self._bandwidth_rules.OK( self._bandwidth_tracker )
             
         
     
@@ -464,7 +464,7 @@ class ServiceRemote( Service ):
             return ( False, self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
             
         
-        if not self._bandwidth_rules.Ok( self._bandwidth_tracker ):
+        if not self._bandwidth_rules.OK( self._bandwidth_tracker ):
             
             return ( False, 'bandwidth exceeded' )
             

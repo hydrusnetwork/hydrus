@@ -1269,7 +1269,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'petition': result = self._RepositoryGetPetition( *args, **kwargs )
         elif action == 'registration_keys': result = self._GenerateRegistrationKeysFromAccount( *args, **kwargs )
         elif action == 'service_has_file': result = self._RepositoryHasFile( *args, **kwargs )
-        elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
         elif action == 'service_keys': result = self._GetServiceKeys( *args, **kwargs )
         elif action == 'services': result = self._GetServices( *args, **kwargs )
         elif action == 'services_from_account': result = self._GetServicesFromAccount( *args, **kwargs )

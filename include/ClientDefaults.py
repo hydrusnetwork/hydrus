@@ -33,7 +33,7 @@ def GetClientDefaultOptions():
     options[ 'idle_cpu_max' ] = 50
     options[ 'idle_normal' ] = True
     options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
-    options[ 'idle_shutdown_max_minutes' ] = 30
+    options[ 'idle_shutdown_max_minutes' ] = 5
     options[ 'maintenance_delete_orphans_period' ] = 86400 * 3
     options[ 'trash_max_age' ] = 72
     options[ 'trash_max_size' ] = 512

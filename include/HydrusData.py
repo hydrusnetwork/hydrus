@@ -615,12 +615,6 @@ def GenerateKey():
     
     return os.urandom( HC.HYDRUS_KEY_LENGTH )
     
-def GetEmptyDataDict():
-    
-    data = collections.defaultdict( default_dict_list )
-    
-    return data
-    
 def Get64BitHammingDistance( phash1, phash2 ):
     
     # old way of doing this was:
@@ -643,6 +637,29 @@ def Get64BitHammingDistance( phash1, phash2 ):
     n = ( n & 0x00000000FFFFFFFF ) + ( ( n & 0xFFFFFFFF00000000 ) >> 32 )
     
     return n
+    
+def GetEmptyDataDict():
+    
+    data = collections.defaultdict( default_dict_list )
+    
+    return data
+    
+def GetHideTerminalSubprocessStartupInfo():
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        # This suppresses the terminal window that tends to pop up when calling ffmpeg or whatever
+        
+        startupinfo = subprocess.STARTUPINFO()
+        
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        
+    else:
+        
+        startupinfo = None
+        
+    
+    return startupinfo
     
 def GetNow(): return int( time.time() )
 
@@ -700,23 +717,6 @@ def GetSiblingProcessPorts( db_path, instance ):
         
     
     return None
-    
-def GetSubprocessStartupInfo():
-    
-    if HC.PLATFORM_WINDOWS:
-        
-        # This suppresses the terminal window that tends to pop up when calling ffmpeg or whatever
-        
-        startupinfo = subprocess.STARTUPINFO()
-        
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        
-    else:
-        
-        startupinfo = None
-        
-    
-    return startupinfo
     
 def IntelligentMassIntersect( sets_to_reduce ):
     

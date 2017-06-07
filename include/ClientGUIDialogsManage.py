@@ -88,7 +88,7 @@ class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
         self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
         self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         
@@ -2918,7 +2918,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         self._test = wx.Button( self, label = 'test' )
         self._test.Bind( wx.EVT_BUTTON, self.EventTest )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'Ok' )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
         

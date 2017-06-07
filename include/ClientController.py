@@ -483,6 +483,11 @@ class Controller( HydrusController.HydrusController ):
         return self._app
         
     
+    def GetBandwidthManager( self ):
+        
+        raise NotImplementedError()
+        
+    
     def GetClientFilesManager( self ):
         
         return self._client_files_manager

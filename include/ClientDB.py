@@ -23,6 +23,7 @@ import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
+import HydrusVideoHandling
 import ClientConstants as CC
 import os
 import psutil
@@ -1229,7 +1230,7 @@ class DB( HydrusDB.HydrusDB ):
         existing_node_counter = collections.Counter()
         
         # note this doesn't use the table_join
-        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_FILE ) ).fetchall()
+        result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) ).fetchall()
         
         for ( smaller_hash_id, larger_hash_id ) in result:
             
@@ -1367,12 +1368,12 @@ class DB( HydrusDB.HydrusDB ):
                     return
                     
                 
-                text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( pairs_found ) + ' potential duplicate pairs'
-                
-                job_key.SetVariable( 'popup_text_1', text )
-                job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-                
-                if i % 100 == 0:
+                if i % 25 == 0:
+                    
+                    text = 'searched ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache ) + ' files'
+                    
+                    job_key.SetVariable( 'popup_text_1', text )
+                    job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
                     
                     HG.client_controller.pub( 'splash_set_status_text', text )
                     
@@ -1910,68 +1911,76 @@ class DB( HydrusDB.HydrusDB ):
         return similar_hash_ids
         
     
-    def _CacheSimilarFilesSetDuplicatePairStatus( self, duplicate_type, hash_a, hash_b ):
+    def _CacheSimilarFilesSetDuplicatePairStatus( self, pair_info ):
         
-        if duplicate_type is None:
+        for ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) in pair_info:
+            
+            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                
+                self._ProcessContentUpdates( service_keys_to_content_updates )
+                
+            
+            if duplicate_type is None:
+                
+                hash_id_a = self._GetHashId( hash_a )
+                hash_id_b = self._GetHashId( hash_b )
+                
+                smaller_hash_id = min( hash_id_a, hash_id_b )
+                larger_hash_id = max( hash_id_a, hash_id_b )
+                
+                self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
+                
+                return
+                
+            
+            if duplicate_type == HC.DUPLICATE_WORSE:
+                
+                ( hash_a, hash_b ) = ( hash_b, hash_a )
+                
+                duplicate_type = HC.DUPLICATE_BETTER
+                
             
             hash_id_a = self._GetHashId( hash_a )
             hash_id_b = self._GetHashId( hash_b )
             
-            smaller_hash_id = min( hash_id_a, hash_id_b )
-            larger_hash_id = max( hash_id_a, hash_id_b )
+            self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
             
-            self._c.execute( 'DELETE FROM duplicate_pairs WHERE smaller_hash_id = ? AND larger_hash_id = ?;', ( smaller_hash_id, larger_hash_id ) )
-            
-            return
-            
-        
-        if duplicate_type == HC.DUPLICATE_WORSE:
-            
-            ( hash_a, hash_b ) = ( hash_b, hash_a )
-            
-            duplicate_type = HC.DUPLICATE_BETTER
-            
-        
-        hash_id_a = self._GetHashId( hash_a )
-        hash_id_b = self._GetHashId( hash_b )
-        
-        self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( duplicate_type, hash_id_a, hash_id_b )
-        
-        if duplicate_type == HC.DUPLICATE_BETTER:
-            
-            # anything better than A is now better than B
-            # i.e. for all X for which X > A, set X > B
-            # anything worse than B is now worse than A
-            # i.e. for all X for which B > X, set A > X
-            
-            better_than_a = set()
-            
-            better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
-            better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
-            
-            for better_than_a_hash_id in better_than_a:
+            if duplicate_type == HC.DUPLICATE_BETTER:
                 
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
+                # anything better than A is now better than B
+                # i.e. for all X for which X > A, set X > B
+                # anything worse than B is now worse than A
+                # i.e. for all X for which B > X, set A > X
+                
+                better_than_a = set()
+                
+                better_than_a.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_a ) ) ) )
+                better_than_a.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_a ) ) ) )
+                
+                for better_than_a_hash_id in better_than_a:
+                    
+                    self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, better_than_a_hash_id, hash_id_b )
+                    
+                
+                worse_than_b = set()
+                
+                worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
+                worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
+                
+                for worse_than_b_hash_id in worse_than_b:
+                    
+                    self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
+                    
                 
             
-            worse_than_b = set()
-            
-            worse_than_b.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_LARGER_BETTER, hash_id_b ) ) ) )
-            worse_than_b.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SMALLER_BETTER, hash_id_b ) ) ) )
-            
-            for worse_than_b_hash_id in worse_than_b:
+            if duplicate_type != HC.DUPLICATE_UNKNOWN:
                 
-                self._CacheSimilarFilesSetDuplicatePairStatusSingleRow( HC.DUPLICATE_BETTER, hash_id_a, worse_than_b_hash_id )
+                self._CacheSimilarFilesSyncSameQualityDuplicates( hash_id_a )
+                self._CacheSimilarFilesSyncSameQualityDuplicates( hash_id_b )
                 
-            
-        
-        if duplicate_type != HC.DUPLICATE_UNKNOWN:
-            
-            self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_a )
-            self._CacheSimilarFilesSyncSameFileDuplicates( hash_id_b )
-            
-            self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_a )
-            self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_b )
+                self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_a )
+                self._CacheSimilarFilesSyncBetterWorseDuplicates( hash_id_b )
+                
             
         
     
@@ -2054,7 +2063,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _CacheSimilarFilesSyncSameFileDuplicates( self, hash_id ):
+    def _CacheSimilarFilesSyncSameQualityDuplicates( self, hash_id ):
         
         # exactly similar files should have exactly the same relationships with other files
         # so, replicate all of our file's known relationships to all of its 'same file' siblings
@@ -2089,12 +2098,12 @@ class DB( HydrusDB.HydrusDB ):
             all_relationships.add( ( larger_hash_id, duplicate_type ) )
             
         
-        all_same_file_siblings = set()
+        all_same_quality_siblings = set()
         
-        all_same_file_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
-        all_same_file_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_FILE, hash_id ) ) ) )
+        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT smaller_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND larger_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
+        all_same_quality_siblings.update( self._STI( self._c.execute( 'SELECT larger_hash_id FROM duplicate_pairs WHERE duplicate_type = ? AND smaller_hash_id = ?;', ( HC.DUPLICATE_SAME_QUALITY, hash_id ) ) ) )
         
-        for sibling_hash_id in all_same_file_siblings:
+        for sibling_hash_id in all_same_quality_siblings:
             
             for ( other_hash_id, duplicate_type ) in all_relationships:
                 
@@ -4775,6 +4784,34 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_local_ratings = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, rating ) ) for ( service_id, hash_id, rating ) in self._SelectFromList( 'SELECT service_id, hash_id, rating FROM local_ratings WHERE hash_id IN %s;', hash_ids ) ) )
         
+        #
+        
+        # Let's figure out if there is a common specific file service to this batch
+        
+        file_service_id_counter = collections.Counter()
+        
+        for file_service_ids_and_timestamps in hash_ids_to_current_file_service_ids_and_timestamps.values():
+            
+            for ( file_service_id, timestamp ) in file_service_ids_and_timestamps:
+                
+                file_service_id_counter[ file_service_id ] += 1
+                
+            
+        
+        common_file_service_id = None
+        
+        for ( file_service_id, count ) in file_service_id_counter.items():
+            
+            if count == len( hash_ids ): # i.e. every hash has this file service
+                
+                common_file_service_id = file_service_id
+                
+                break
+                
+            
+        
+        #
+        
         tag_data = []
         
         tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
@@ -4783,9 +4820,20 @@ class DB( HydrusDB.HydrusDB ):
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
             
-            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+            if common_file_service_id is None:
+                
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                
+            else:
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
+                
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                
+            
             tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
-            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
             tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
             
         
@@ -7668,6 +7716,46 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
+    def _RecheckVideoMetadata( self, hashes ):
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.SetVariable( 'popup_title', 'rechecking video metadata' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        client_files_manager = self._controller.GetClientFilesManager()
+        
+        num_to_do = len( hashes )
+        
+        for ( i, hash ) in enumerate( hashes ):
+            
+            job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+            job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+            
+            hash_id = self._GetHashId( hash )
+            
+            try:
+                
+                mime = self._GetMime( hash_id )
+                
+            except HydrusExceptions.FileMissingException:
+                
+                continue
+                
+            
+            path = client_files_manager.LocklessGetFilePath( hash, mime )
+            
+            ( ( w, h ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path, count_frames_manually = True )
+            
+            self._c.execute( 'UPDATE files_info SET width = ?, height = ?, duration = ?, num_frames = ? WHERE hash_id = ?;', ( w, h, duration, num_frames, hash_id ) )
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        
+        job_key.DeleteVariable( 'popup_gauge_1' )
+        
+    
     def _RelocateClientFiles( self, prefix, source, dest ):
         
         full_source = os.path.join( source, prefix )
@@ -9806,6 +9894,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'maintain_similar_files_tree': result = self._CacheSimilarFilesMaintainTree( *args, **kwargs )
         elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
         elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
+        elif action == 'recheck_video_metadata': result = self._RecheckVideoMetadata( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )

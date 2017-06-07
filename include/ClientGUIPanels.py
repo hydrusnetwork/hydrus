@@ -1315,6 +1315,15 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
+            new_options = HG.client_controller.GetNewOptions()
+            
+            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
+            
+            if not advanced_mode:
+                
+                self._advanced_content_update.Hide()
+                
+            
             self._Refresh()
             
             #

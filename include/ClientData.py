@@ -289,6 +289,12 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         
     else:
         
+        ( r, g, b ) = colour.Get()
+        
+        ( r, g, b ) = [ max( value, 32 ) for value in ( r, g, b ) ]
+        
+        colour = wx.Colour( r, g, b )
+        
         return wx.lib.colourutils.AdjustColour( colour, 5 * intensity )
         
     
@@ -753,6 +759,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ] = {}
         
+        self._dictionary[ 'booleans' ][ 'advanced_mode' ] = False
+        
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
@@ -788,7 +796,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, TagCensor() ) ], [], True, True )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_FILE ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, TagCensor() ) ], [], False, True )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, TagCensor() ) ], [], False, True )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = DuplicateActionOptions( [], [], False )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = DuplicateActionOptions( [], [], False )
         
@@ -1878,7 +1886,7 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
         self._restrictions = restrictions
         
     
-    def IsOkToPost( self, media_result ):
+    def IsOKToPost( self, media_result ):
         
         # deleted old code due to deprecation
         
@@ -2497,7 +2505,7 @@ class TagCensor( HydrusSerialisable.SerialisableBase ):
         self._tag_slices_to_rules = dict( serialisable_info )
         
     
-    def _TagOk( self, tag ):
+    def _TagOK( self, tag ):
         
         rules = self._GetRulesForTag( tag )
         
@@ -2519,7 +2527,7 @@ class TagCensor( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return { tag for tag in tags if self._TagOk( tag ) }
+            return { tag for tag in tags if self._TagOK( tag ) }
             
         
     

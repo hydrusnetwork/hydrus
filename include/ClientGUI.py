@@ -36,6 +36,7 @@ import HydrusTagArchive
 import HydrusVideoHandling
 import os
 import PIL
+import shlex
 import sqlite3
 import ssl
 import subprocess
@@ -446,7 +447,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     HydrusData.ShowText( u'Starting server\u2026' )
                     
-                    db_dir = '-d=' + self._controller.GetDBDir()
+                    db_param = '-d="' + self._controller.GetDBDir() + '"'
                     
                     if HC.PLATFORM_WINDOWS:
                         
@@ -458,8 +459,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     
                     if os.path.exists( server_frozen_path ):
-                    
-                        subprocess.Popen( [ server_frozen_path, db_dir ] )
+                        
+                        cmd = '"' + server_frozen_path + '" ' + db_param
                         
                     else:
                         
@@ -475,8 +476,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             python_executable = python_executable.replace( 'pythonw', 'python' )
                             
                         
-                        subprocess.Popen( [ python_executable, os.path.join( HC.BASE_DIR, 'server.py' ), db_dir ] )
+                        server_script_path = os.path.join( HC.BASE_DIR, 'server.py' )
                         
+                        cmd = '"' + python_executable + '" "' + server_script_path + '" ' + db_param
+                        
+                    
+                    subprocess.Popen( shlex.split( cmd ) )
                     
                     time_waited = 0
                     
@@ -1503,6 +1508,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         def help():
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
             
             dont_know = wx.Menu()
             

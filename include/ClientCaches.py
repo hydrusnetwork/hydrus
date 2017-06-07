@@ -1396,7 +1396,7 @@ class LocalBooruCache( object ):
     
     def _CheckDataUsage( self ):
         
-        if not self._local_booru_service.BandwidthOk():
+        if not self._local_booru_service.BandwidthOK():
             
             raise HydrusExceptions.ForbiddenException( 'This booru has used all its monthly data. Please try again next month.' )
             

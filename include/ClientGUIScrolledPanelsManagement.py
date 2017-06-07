@@ -5328,7 +5328,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             expand_parents = True
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.Ok )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, expand_parents, self._file_service_key, self._tag_service_key, null_entry_callable = self.OK )
             
             self._advanced_content_update_button = wx.Button( self, label = 'advanced operation' )
             self._advanced_content_update_button.Bind( wx.EVT_BUTTON, self.EventAdvancedContentUpdate )
@@ -5370,6 +5370,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._modify_mappers.Hide()
                     
+                
+            
+            if not self._new_options.GetBoolean( 'advanced_mode' ):
+                
+                self._advanced_content_update_button.Hide()
                 
             
             copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -5716,9 +5721,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             parent = self.GetTopLevelParent().GetParent()
             
-            self.Ok()
+            self.OK()
             
-            # do this because of the Ok() call, which doesn't want to happen in the dialog event loop
+            # do this because of the OK() call, which doesn't want to happen in the dialog event loop
             def do_it():
                 
                 with ClientGUITopLevelWindows.DialogNullipotent( parent, 'advanced content update' ) as dlg:
@@ -5832,7 +5837,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             return len( self._content_updates ) > 0
             
         
-        def Ok( self ):
+        def OK( self ):
             
             wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
             

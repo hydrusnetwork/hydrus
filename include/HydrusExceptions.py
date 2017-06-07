@@ -30,6 +30,7 @@ class NotModifiedException( NetworkException ): pass
 class PermissionException( NetworkException ): pass
 class RedirectionException( NetworkException ): pass
 class ServerBusyException( NetworkException ): pass
+class ServerException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass
 class ShouldReattemptNetworkException( NetworkException ): pass

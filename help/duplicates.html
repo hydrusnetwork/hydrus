@@ -31,7 +31,7 @@
 					<h3>processing</h3>
 					<p>After you have searched your files, you should have a few dozen to a few ten-thousand 'potential' pairs. The number may be frighteningly high, but you will be able to cut it down quicker than you expect. There are several mathematical optimisations at the database level that can use one of your decisions to resolve multiple unknown relationships.</p>
 					<p>If you like, you can review some of these groups of potential pairs as thumbnails by hitting the 'show some random pairs' button. It is often surprising and interesting to discover what it has found.</p>
-					<p>You can do some manual filtering on these thumbnails--merging tags and deleting bad quality files, or even setting duplicate statuses manually through the right-click menu (PROTIP: This last bit isn't done yet!)--but like archiving and deleting from your inbox, this is much more quickly done through a specialised filter:</p>
+					<p>You can do some manual filtering on these thumbnails--merging tags and deleting bad quality files, or even setting duplicate statuses manually through the right-click menu, if you have <i>help->advanced mode</i> active--but like archiving and deleting from your inbox, most of these operations are done much more quickly through a specialised filter:</p>
 				</li>
 			</ul>
 			<h3>the duplicates filter</h3>
@@ -84,14 +84,14 @@
 					<p>The default action on setting a better/worse pair is to move all <i>local tags</i> from the worse file to the best (i.e. adding them to the better file and then deleting them from the worse) and then sending the worse file to the trash.</p>
 				</li>
 				<li>
-					<h3>exact duplicates</h3>
-					<p>This is the same as better/worse, except that you absolutely cannot discern a better file. This is typically a rare decision.</p>
-					<p>Here are two exact matches:</p>
+					<h3>same quality duplicates</h3>
+					<p>This tells the client that the pairs of files represent the exact same thing and that you cannot tell which is clearly better.</p>
+					<p>Here are two same quality duplicates:</p>
 					<p><a href="dupe_exact_match_1.png"><img src="dupe_exact_match_1.png" /></a></p>
 					<p><a href="dupe_exact_match_2.png"><img src="dupe_exact_match_2.png" /></a></p>
-					<p>I cannot tell any difference, although the filesize is significantly different, so I suspect the smaller is a lossless png optimisation. Many of the big content providers--Facebook, Google, Clouflare--automatically 'optimise' the data that goes through their networks in order to save bandwidth. With pngs it is usually mostly harmless, but jpegs are often a slaughterhouse.</p>
-					<p>Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. Sometimes you just want to keep both without a firm decision on which is best, in which case you can just set this 'exact duplicates' status and move on.</p>
-					<p>The default action on setting an exact duplicates pair is to copy all <i>local tags</i> between the two files in both directions.</p>
+					<p>There is no obvious different between those two. The filesize is significantly different, so I suspect the smaller is a lossless png optimisation. Many of the big content providers--Facebook, Google, Clouflare--automatically 'optimise' the data that goes through their networks in order to save bandwidth. With pngs it is usually mostly harmless, but jpegs are often a slaughterhouse.</p>
+					<p>Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. Sometimes you just want to keep both without a firm decision on which is best, in which case you can just set this 'same quality' status and move on.</p>
+					<p>The default action on setting a same quality pair is to copy all <i>local tags</i> between the two files in both directions.</p>
 				</li>
 				<li>
 					<h3>alternates</h3>

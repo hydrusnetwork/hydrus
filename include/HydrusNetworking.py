@@ -156,7 +156,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def Ok( self, bandwidth_tracker ):
+    def OK( self, bandwidth_tracker ):
         
         with self._lock:
             
@@ -432,3 +432,83 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER ] = BandwidthTracker
+
+class TransferSpeedTracker( object ):
+    
+    CLEAN_PERIOD = 30
+    
+    LONG_DELTA = 15
+    SHORT_DELTA = 3
+    
+    SHORT_WEIGHT = 3
+    
+    def __init__( self ):
+        
+        self._lock = threading.Lock()
+        
+        self._current_speed = 0
+        
+        self._current_speed_timestamp = 0
+        self._current_speed_dirty = False
+        
+        self._timestamps_to_amounts = collections.Counter()
+        
+        self._next_clean_time = HydrusData.GetNow() + self.CLEAN_PERIOD
+        
+    
+    def _CleanHistory( self ):
+        
+        if HydrusData.TimeHasPassed( self._next_clean_time ):
+            
+            now = HydrusData.GetNow()
+            
+            invalid_indices = [ timestamp for timestamp in self._timestamps_to_amounts.keys() if timestamp < now - self.LONG_DELTA ]
+            
+            for timestamp in invalid_indices:
+                
+                del self._timestamps_to_amounts[ timestamp ]
+                
+            
+            self._next_clean_time = HydrusData.GetNow() + self.CLEAN_PERIOD
+            
+        
+    
+    def DataTransferred( self, num_bytes ):
+        
+        with self._lock:
+            
+            self._CleanHistory()
+            
+            now = HydrusData.GetNow()
+            
+            self._timestamps_to_amounts[ now ] += num_bytes
+            
+            self._current_speed_dirty = True
+            
+        
+    
+    def GetCurrentSpeed( self ):
+        
+        with self._lock:
+            
+            self._CleanHistory()
+            
+            now = HydrusData.GetNow()
+            
+            if self._current_speed_dirty or self._current_speed_timestamp != now:
+                
+                total_bytes = ( self._timestamps_to_amounts[ timestamp ] for timestamp in range( now - self.LONG_DELTA, now ) )
+                total_bytes += ( self._timestamps_to_amounts[ timestamp ] * self.SHORT_WEIGHT for timestamp in range( now - self.SHORT_DELTA, now ) )
+                
+                total_weight = self.LONG_DELTA + ( self.SHORT_DELTA * self.SHORT_WEIGHT )
+                
+                self._current_speed = total_bytes // total_weight # since this is in bytes, an int is fine and proper
+                
+                self._current_speed_timestamp = now
+                self._current_speed_dirty = False
+                
+            
+            return self._current_speed
+            
+        
+    

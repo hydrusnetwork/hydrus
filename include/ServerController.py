@@ -428,9 +428,9 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def ServerBandwidthOk( self ):
+    def ServerBandwidthOK( self ):
         
-        return self._admin_service.ServerBandwidthOk()
+        return self._admin_service.ServerBandwidthOK()
         
     
     def SetServices( self, services ):

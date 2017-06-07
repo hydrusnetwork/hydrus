@@ -1170,7 +1170,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
                 
-                base = 'duplicate relationships'
+                base = 'num duplicate relationships'
                 
                 if self._value is not None:
                     

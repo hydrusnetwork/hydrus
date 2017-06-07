@@ -2,6 +2,7 @@ import hexagonitswfheader
 import HydrusConstants as HC
 import HydrusData
 import os
+import shlex
 import subprocess
 import time
 import traceback
@@ -39,11 +40,11 @@ def GetFlashProperties( path ):
     
 def RenderPageToFile( path, temp_path, page_index ):
     
-    cmd = [ SWFRENDER_PATH, path, '-o', temp_path, '-p', str( page_index ) ]
+    cmd = '"' + SWFRENDER_PATH + '" "' + path + '" -o "' + temp_path + '" -p ' + str( page_index )
     
     timeout = HydrusData.GetNow() + 60
     
-    p = subprocess.Popen( cmd, startupinfo = HydrusData.GetSubprocessStartupInfo() )
+    p = subprocess.Popen( shlex.split( cmd ), startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
     
     while p.poll() is None:
         

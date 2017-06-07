@@ -2375,7 +2375,7 @@ class CanvasPanel( Canvas ):
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None or not self._CanProcessInput():
+        if event.GetEventObject() is None:
             
             event.Skip()
             
@@ -3042,6 +3042,8 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _CommitProcessed( self ):
         
+        pair_info = []
+        
         for ( hash_pair, duplicate_type, first_media, second_media, duplicate_action_options, was_auto_skipped ) in self._processed_pairs:
             
             if duplicate_type == HC.DUPLICATE_UNKNOWN:
@@ -3049,17 +3051,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 continue # it was a 'skip' decision
                 
             
-            list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
-            
-            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
-                
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                
-            
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', duplicate_type, first_hash, second_hash )
+            list_of_service_keys_to_content_updates = duplicate_action_options.ProcessPairIntoContentUpdates( first_media, second_media )
+            
+            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+            
+        
+        if len( pair_info ) > 0:
+            
+            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
             
         
         self._processed_pairs = []
@@ -3071,6 +3073,67 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_BETTER )
         
     
+    def _Delete( self, service_key = None ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        if service_key is None:
+            
+            locations_manager = self._current_media.GetLocationsManager()
+            
+            if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                service_key = CC.LOCAL_FILE_SERVICE_KEY
+                
+            elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
+                
+                service_key = CC.TRASH_SERVICE_KEY
+                
+            else:
+                
+                return
+                
+            
+        
+        if service_key == CC.LOCAL_FILE_SERVICE_KEY:
+            
+            text = 'Send this just this file to the trash, or both?'
+            
+        elif service_key == CC.TRASH_SERVICE_KEY:
+            
+            text = 'Permanently delete just this file, or both?'
+            
+        
+        yes_tuples = []
+        
+        yes_tuples.append( ( 'delete just this one', 'current' ) )
+        yes_tuples.append( ( 'delete both', 'both' ) )
+        
+        with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                value = dlg.GetValue()
+                
+                if value == 'current':
+                    
+                    hashes = { self._current_media.GetHash() }
+                    
+                elif value == 'both':
+                    
+                    hashes = { self._current_media.GetHash(), self._media_list.GetNext( self._current_media ).GetHash() }
+                    
+                
+                HG.client_controller.Write( 'content_updates', { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes ) ] } )
+                
+            
+        
+        self.SetFocus() # annoying bug because of the modal dialog
+        
+    
     def _DoCustomAction( self ):
         
         if self._current_media is None:
@@ -3078,7 +3141,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             return
             
         
-        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_FILE, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
+        duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ]
         
         choice_tuples = [ ( HC.duplicate_type_string_lookup[ duplicate_type ], duplicate_type ) for duplicate_type in duplicate_types ]
         
@@ -3251,7 +3314,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _MediaAreTheSame( self ):
         
-        self._ProcessPair( HC.DUPLICATE_SAME_FILE )
+        self._ProcessPair( HC.DUPLICATE_SAME_QUALITY )
         
     
     def _ProcessApplicationCommand( self, command ):
@@ -3603,7 +3666,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 
             
-        
         
         wx.CallLater( 100, catch_up )
         
@@ -4218,39 +4280,32 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     def EventMenu( self, event ):
         
-        if self._CanProcessInput():
+        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        
+        if action is not None:
             
-            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+            ( command, data ) = action
             
-            if action is not None:
+            if command == 'archive_file': self._Keep()
+            elif command == 'back': self._Back()
+            elif command == 'close': self._Close()
+            elif command == 'delete_file': self.EventDelete( event )
+            elif command == 'switch_between_fullscreen_borderless_and_regular_framed_window': self.GetParent().FullscreenSwitch()
+            elif command == 'launch_the_archive_delete_filter': self._Close()
+            elif command == 'move_animation_to_previous_frame': self._media_container.GotoPreviousOrNextFrame( -1 )
+            elif command == 'move_animation_to_next_frame': self._media_container.GotoPreviousOrNextFrame( 1 )
+            elif command == 'manage_file_ratings': self._ManageRatings()
+            elif command == 'manage_file_tags': wx.CallAfter( self._ManageTags )
+            elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
                 
-                ( command, data ) = action
+                if command == 'pan_up': self._DoManualPan( 0, -1 )
+                elif command == 'pan_down': self._DoManualPan( 0, 1 )
+                elif command == 'pan_left': self._DoManualPan( -1, 0 )
+                elif command == 'pan_right': self._DoManualPan( 1, 0 )
                 
-                if command == 'archive_file': self._Keep()
-                elif command == 'back': self._Back()
-                elif command == 'close': self._Close()
-                elif command == 'delete_file': self.EventDelete( event )
-                elif command == 'switch_between_fullscreen_borderless_and_regular_framed_window': self.GetParent().FullscreenSwitch()
-                elif command == 'launch_the_archive_delete_filter': self._Close()
-                elif command == 'move_animation_to_previous_frame': self._media_container.GotoPreviousOrNextFrame( -1 )
-                elif command == 'move_animation_to_next_frame': self._media_container.GotoPreviousOrNextFrame( 1 )
-                elif command == 'manage_file_ratings': self._ManageRatings()
-                elif command == 'manage_file_tags': wx.CallAfter( self._ManageTags )
-                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                    
-                    if command == 'pan_up': self._DoManualPan( 0, -1 )
-                    elif command == 'pan_down': self._DoManualPan( 0, 1 )
-                    elif command == 'pan_left': self._DoManualPan( -1, 0 )
-                    elif command == 'pan_right': self._DoManualPan( 1, 0 )
-                    
-                elif command == 'zoom_in': self._ZoomIn()
-                elif command == 'zoom_out': self._ZoomOut()
-                else: event.Skip()
-                
-            
-        else:
-            
-            event.Skip()
+            elif command == 'zoom_in': self._ZoomIn()
+            elif command == 'zoom_out': self._ZoomOut()
+            else: event.Skip()
             
         
     
@@ -4549,7 +4604,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     def EventMenu( self, event ):
         
         # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None or not self._CanProcessInput():
+        if event.GetEventObject() is None:
             
             event.Skip()
             
@@ -4688,7 +4743,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
                 
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_file_from_view' ), '&remove' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'remove', 'Remove this file from the list you are viewing.', self._Remove )
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 

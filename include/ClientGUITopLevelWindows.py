@@ -418,7 +418,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
             
             if command == 'ok':
                 
-                self.EventOk( None )
+                self.EventOK( None )
                 
             else:
                 
@@ -427,7 +427,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
             
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         raise NotImplementedError()
         
@@ -464,7 +464,7 @@ class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
     def _InitialiseButtons( self ):
         
         self._close = wx.Button( self, id = wx.ID_OK, label = 'close' )
-        self._close.Bind( wx.EVT_BUTTON, self.EventOk )
+        self._close.Bind( wx.EVT_BUTTON, self.EventOK )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL )
         self._cancel.Hide()
@@ -477,7 +477,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
         DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
@@ -499,7 +499,7 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
     def _InitialiseButtons( self ):
         
         self._apply = wx.Button( self, id = wx.ID_OK, label = 'apply' )
-        self._apply.Bind( wx.EVT_BUTTON, self.EventOk )
+        self._apply.Bind( wx.EVT_BUTTON, self.EventOK )
         self._apply.SetForegroundColour( ( 0, 128, 0 ) )
         
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
@@ -513,7 +513,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
         DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title )
         
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try:
             
@@ -531,7 +531,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
 class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     
-    def EventOk( self, event ):
+    def EventOK( self, event ):
         
         try:
             

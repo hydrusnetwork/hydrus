@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 258
+SOFTWARE_VERSION = 259
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -166,7 +166,7 @@ DEFINITIONS_TYPE_TAGS = 1
 
 DUPLICATE_UNKNOWN = 0
 DUPLICATE_NOT_DUPLICATE = 1
-DUPLICATE_SAME_FILE = 2
+DUPLICATE_SAME_QUALITY = 2
 DUPLICATE_ALTERNATE = 3
 DUPLICATE_BETTER = 4
 DUPLICATE_SMALLER_BETTER = 5
@@ -178,7 +178,7 @@ duplicate_type_string_lookup = {}
 
 duplicate_type_string_lookup[ DUPLICATE_UNKNOWN ] = 'unknown relationship'
 duplicate_type_string_lookup[ DUPLICATE_NOT_DUPLICATE ] = 'not duplicates'
-duplicate_type_string_lookup[ DUPLICATE_SAME_FILE ] = 'exact same files'
+duplicate_type_string_lookup[ DUPLICATE_SAME_QUALITY ] = 'same quality'
 duplicate_type_string_lookup[ DUPLICATE_ALTERNATE ] = 'alternates'
 duplicate_type_string_lookup[ DUPLICATE_BETTER ] = 'this is better'
 duplicate_type_string_lookup[ DUPLICATE_SMALLER_BETTER ] = 'smaller hash_id is better'

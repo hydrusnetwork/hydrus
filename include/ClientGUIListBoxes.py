@@ -1345,6 +1345,8 @@ class ListBoxTagsCensorship( ListBoxTags ):
                 self._RemoveTerm( tag )
                 
             
+            self._ordered_terms.sort()
+            
             self._DataHasChanged()
             
         
@@ -1379,6 +1381,8 @@ class ListBoxTagsCensorship( ListBoxTags ):
             self._AppendTerm( tag )
             
         
+        self._ordered_terms.sort()
+        
         self._DataHasChanged()
         
     
@@ -1396,6 +1400,8 @@ class ListBoxTagsCensorship( ListBoxTags ):
                 
             
         
+        self._ordered_terms.sort()
+        
         self._DataHasChanged()
         
     
@@ -1405,6 +1411,8 @@ class ListBoxTagsCensorship( ListBoxTags ):
             
             self._RemoveTerm( tag )
             
+        
+        self._ordered_terms.sort()
         
         self._DataHasChanged()
         

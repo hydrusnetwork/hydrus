@@ -28,7 +28,7 @@ class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
         
         HydrusServerResources.HydrusResource._checkService( self, request )
         
-        if not self._service.BandwidthOk():
+        if not self._service.BandwidthOK():
             
             raise HydrusExceptions.BandwidthException( 'This service has run out of bandwidth. Please try again later.' )
             

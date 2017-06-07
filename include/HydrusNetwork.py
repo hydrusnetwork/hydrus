@@ -391,7 +391,7 @@ class Account( object ):
             return ( False, self._GetExpiresString() )
             
         
-        if not self._account_type.BandwidthOk( self._bandwidth_tracker ):
+        if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
             
             return ( False, 'account has exceeded bandwidth' )
             
@@ -470,7 +470,7 @@ class Account( object ):
                 raise HydrusExceptions.PermissionException( 'This account has expired.' )
                 
             
-            if not self._account_type.BandwidthOk( self._bandwidth_tracker ):
+            if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
                 
                 raise HydrusExceptions.PermissionException( 'This account has no remaining bandwidth.' )
                 
@@ -733,9 +733,9 @@ class AccountType( object ):
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
     
-    def BandwidthOk( self, bandwidth_tracker ):
+    def BandwidthOK( self, bandwidth_tracker ):
         
-        return self._bandwidth_rules.Ok( bandwidth_tracker )
+        return self._bandwidth_rules.OK( bandwidth_tracker )
         
     
     def HasPermission( self, content_type, permission ):
@@ -2045,7 +2045,7 @@ class ServerService( object ):
             
         
     
-    def BandwidthOk( self ):
+    def BandwidthOK( self ):
         
         with self._lock:
             
@@ -2133,11 +2133,11 @@ class ServerServiceRestricted( ServerService ):
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
     
-    def BandwidthOk( self ):
+    def BandwidthOK( self ):
         
         with self._lock:
             
-            return self._bandwidth_rules.Ok( self._bandwidth_tracker )
+            return self._bandwidth_rules.OK( self._bandwidth_tracker )
             
         
     
@@ -2279,11 +2279,11 @@ class ServerServiceAdmin( ServerServiceRestricted ):
         self._server_bandwidth_rules = dictionary[ 'server_bandwidth_rules' ]
         
     
-    def ServerBandwidthOk( self ):
+    def ServerBandwidthOK( self ):
         
         with self._lock:
             
-            return self._server_bandwidth_rules.Ok( self._server_bandwidth_tracker )
+            return self._server_bandwidth_rules.OK( self._server_bandwidth_tracker )
             
         
     

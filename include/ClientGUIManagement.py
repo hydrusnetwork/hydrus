@@ -718,6 +718,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._job = None
         self._job_key = None
+        self._in_break = False
         
         menu_items = []
         
@@ -778,7 +779,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_unknown_duplicates = wx.StaticText( self._filtering_panel )
         self._num_better_duplicates = wx.StaticText( self._filtering_panel )
         self._num_better_duplicates.SetToolTipString( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
-        self._num_same_file_duplicates = wx.StaticText( self._filtering_panel )
+        self._num_same_quality_duplicates = wx.StaticText( self._filtering_panel )
         self._num_alternate_duplicates = wx.StaticText( self._filtering_panel )
         self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some random pairs', self._ShowSomeDupes )
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
@@ -834,7 +835,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._filtering_panel.AddF( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._num_same_file_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.AddF( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.AddF( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -986,11 +987,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         message += os.linesep * 2
         message += 'potential - This is the default state newly discovered pairs are assigned. They will be loaded in the filter for you to look at.'
         message += os.linesep * 2
-        message += 'better/worse - This tells the client that the pair of files are exactly the same--except that the one you are looking at has better image quality or resolution or lacks an annoying watermark and so on.'
+        message += 'better/worse - This tells the client that the pair of files are duplicates--but the one you are looking at has better image quality or resolution or lacks an annoying watermark or so on.'
         message += os.linesep * 2
-        message += 'exact duplicates - This tells the client that the pair of files are exactly the same, and that you cannot discern any quality difference.'
+        message += 'same quality - This tells the client that the pair of files are duplicates, and that you cannot discern an obvious quality difference.'
         message += os.linesep * 2
-        message += 'alternates - This tells the client that the pair of files are not exactly the same but that they are related--perhaps they are a recolour or are an artist\'s different versions of a particular scene. A future version of the client will allow you to further process these alternate groups into family structures and so on.'
+        message += 'alternates - This tells the client that the pair of files are not duplicates but that they are related--perhaps they are a recolour or are an artist\'s different versions of a particular scene. A future version of the client will allow you to further process these alternate groups into family structures and so on.'
         message += os.linesep * 2
         message += 'not duplicates - This tells the client that the discovered pair is a false positive--they are not the same and are not otherwise related. This usually happens when the same part of two files have a similar shape by accident, such as if a hair fringe and a mountain range happen to line up.'
         
@@ -1059,13 +1060,29 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _UpdateJob( self ):
         
-        if self._job_key.TimeRunning() > 30:
+        if self._in_break:
+            
+            if HG.client_controller.DBCurrentlyDoingJob():
+                
+                return
+                
+            else:
+                
+                self._in_break = False
+                
+                self._StartStopDBJob()
+                
+                return
+                
+            
+        
+        if self._job_key.TimeRunning() > 10:
             
             self._job_key.Cancel()
             
             self._job_key = None
             
-            self._StartStopDBJob()
+            self._in_break = True
             
             return
             
@@ -1199,7 +1216,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential pairs.' )
         self._num_better_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs.' )
-        self._num_same_file_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_FILE ] ) + ' exact duplicate pairs.' )
+        self._num_same_quality_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_QUALITY ] ) + ' same quality pairs.' )
         self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs.' )
         
         if num_unknown > 0:
@@ -3056,10 +3073,27 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             def key( c ):
                 
-                return c.GetVirtualWeight()
+                if c.GetContentType() in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
+                    
+                    ( part_two, part_one ) = c.GetContentData()
+                    
+                elif c.GetContentType() == HC.CONTENT_TYPE_MAPPINGS:
+                    
+                    ( tag, hashes ) = c.GetContentData()
+                    
+                    part_one = tag
+                    part_two = None
+                    
+                else:
+                    
+                    part_one = None
+                    part_two = None
+                    
+                
+                return ( -c.GetVirtualWeight(), part_one, part_two )
                 
             
-            contents.sort( key = key, reverse = True )
+            contents.sort( key = key )
             
             self._contents.Clear()
             
