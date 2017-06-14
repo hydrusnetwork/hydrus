@@ -8,6 +8,26 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 260</h3></li>
+				<ul>
+					<li>?fixed video parsing when the video metadata includes random non-utf-friendly garbage</li>
+					<li>fixed video parsing when ffmpeg reports no fps at all</li>
+					<li>improved video frame counting accuracy</li>
+					<li>thumbnail waterfall process now adapts to the current speed of the cache and can hence use significantly less overhead</li>
+					<li>the thumbnail fading process now adapts to the current rendering speed, delivering smooth fade when CPU is available but otherwise skipping frames and more reliably filling in thumbnails within a quarter of a second</li>
+					<li>canvases now draw their thumbnails with slightly less overhead</li>
+					<li>increased database synchronous pragma to FULL to better safeguard against power loss during multiple-db commit--we'll see if it slows things down too much, and maybe add an option about it</li>
+					<li>cleaned up and improved some client gui pubsubs</li>
+					<li>made pubsub profile mode far less popup-spammy</li>
+					<li>if a profile takes less than 20ms, it now won't be fully printed to the log</li>
+					<li>tweaked some more server object maintenance code</li>
+					<li>added 'changelog' link to help menu</li>
+					<li>updated lz4 library and fixed some old deprecated calls</li>
+					<li>misc serverside pubsub cleanup</li>
+					<li>misc fixes</li>
+					<li>misc refactoring</li>
+					<li>misc code cleaning</li>
+				</ul>
 				<li><h3>version 259</h3></li>
 				<ul>
 					<li>planned out new networking engine and started the principal objects</li>

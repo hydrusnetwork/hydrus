@@ -676,7 +676,7 @@ class Account( object ):
         
         dictionary[ 'bandwidth_tracker' ] = bandwidth_tracker
         
-        dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
+        dictionary = dictionary.Duplicate()
         
         return ( account_key, account_type, created, expires, dictionary )
         
@@ -1983,13 +1983,21 @@ class ServerService( object ):
         self._dirty = True
         
     
+    def BandwidthOK( self ):
+        
+        with self._lock:
+            
+            return True
+            
+        
+    
     def Duplicate( self ):
         
         with self._lock:
             
             dictionary = self._GetSerialisableDictionary()
             
-            dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
+            dictionary = dictionary.Duplicate()
             
             duplicate = GenerateService( self._service_key, self._service_type, self._name, self._port, dictionary )
             
@@ -2042,14 +2050,6 @@ class ServerService( object ):
         with self._lock:
             
             return self._dirty
-            
-        
-    
-    def BandwidthOK( self ):
-        
-        with self._lock:
-            
-            return True
             
         
     
@@ -2109,7 +2109,7 @@ class ServerService( object ):
             
             dictionary = self._GetSerialisableDictionary()
             
-            dictionary = HydrusSerialisable.CreateFromSerialisableTuple( dictionary.GetSerialisableTuple() )
+            dictionary = dictionary.Duplicate()
             
             return ( self._service_key, self._service_type, self._name, self._port, dictionary )
             

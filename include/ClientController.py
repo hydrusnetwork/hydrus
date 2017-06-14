@@ -1057,9 +1057,9 @@ class Controller( HydrusController.HydrusController ):
         HydrusController.HydrusController.ShutdownView( self )
         
     
-    def StartFileQuery( self, query_key, search_context ):
+    def StartFileQuery( self, page_key, job_key, search_context ):
         
-        self.CallToThread( self.THREADDoFileQuery, query_key, search_context )
+        self.CallToThread( self.THREADDoFileQuery, page_key, job_key, search_context )
         
     
     def SystemBusy( self ):
@@ -1119,7 +1119,7 @@ class Controller( HydrusController.HydrusController ):
         return False
         
     
-    def THREADDoFileQuery( self, query_key, search_context ):
+    def THREADDoFileQuery( self, page_key, job_key, search_context ):
         
         QUERY_CHUNK_SIZE = 256
         
@@ -1129,20 +1129,23 @@ class Controller( HydrusController.HydrusController ):
         
         for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
             
-            if query_key.IsCancelled(): return
+            if job_key.IsCancelled():
+                
+                return
+                
             
             more_media_results = self.Read( 'media_results_from_ids', sub_query_hash_ids )
             
             media_results.extend( more_media_results )
             
-            self.pub( 'set_num_query_results', len( media_results ), len( query_hash_ids ) )
+            self.pub( 'set_num_query_results', page_key, len( media_results ), len( query_hash_ids ) )
             
             self.WaitUntilPubSubsEmpty()
             
         
         search_context.SetComplete()
         
-        self.pub( 'file_query_done', query_key, media_results )
+        self.pub( 'file_query_done', page_key, job_key, media_results )
         
     
     def THREADBootEverything( self ):

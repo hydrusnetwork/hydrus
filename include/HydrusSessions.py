@@ -12,7 +12,6 @@ import threading
 import time
 import traceback
 import urllib
-from twisted.internet.threads import deferToThread
 import HydrusData
 import HydrusGlobals as HG
 

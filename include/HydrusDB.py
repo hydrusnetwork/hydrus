@@ -76,7 +76,7 @@ def SetupDBCreatePragma( c, no_wal = False ):
         c.execute( 'PRAGMA journal_mode = WAL;' )
         
     
-    c.execute( 'PRAGMA synchronous = 1;' )
+    c.execute( 'PRAGMA synchronous = 2;' )
     
 def VacuumDB( db_path ):
     
@@ -444,7 +444,8 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = WAL;' )
                 
-                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 1;' )
+                # This was 1 previously, but some interrupted commits were rolling back inconsistently across the attached dbs
+                self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
                 
                 try:
                     

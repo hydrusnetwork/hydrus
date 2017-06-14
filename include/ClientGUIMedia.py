@@ -1639,15 +1639,21 @@ class MediaPanelLoading( MediaPanel ):
         return s
         
     
-    def GetSortedMedia( self ): return []
+    def GetSortedMedia( self ):
+        
+        return []
+        
     
-    def SetNumQueryResults( self, current, max ):
+    def SetNumQueryResults( self, page_key, current, max ):
         
-        self._current = current
-        
-        self._max = max
-        
-        self._PublishSelectionChange()
+        if page_key == self._page_key:
+            
+            self._current = current
+            
+            self._max = max
+            
+            self._PublishSelectionChange()
+            
         
     
 class MediaPanelThumbnails( MediaPanel ):
@@ -1692,7 +1698,7 @@ class MediaPanelThumbnails( MediaPanel ):
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HG.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
         HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
-        HG.client_controller.sub( self, 'WaterfallThumbnail', 'waterfall_thumbnail' )
+        HG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
     
     def _CalculateVisiblePageIndices( self ):
@@ -1838,51 +1844,65 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def _FadeThumbnail( self, thumbnail ):
+    def _FadeThumbnails( self, thumbnails ):
         
-        try:
+        now_precise = HydrusData.GetNowPrecise()
+        
+        for thumbnail in thumbnails:
             
-            thumbnail_index = self._sorted_media.index( thumbnail )
+            try:
+                
+                thumbnail_index = self._sorted_media.index( thumbnail )
+                
+            except HydrusExceptions.DataMissing:
+                
+                # probably means a collect happened during an ongoing waterfall or whatever
+                
+                return
+                
             
-        except HydrusExceptions.DataMissing:
+            if self._GetPageIndexFromThumbnailIndex( thumbnail_index ) not in self._clean_canvas_pages:
+                
+                return
+                
             
-            # probably means a collect happened during an ongoing waterfall or whatever
+            hash = thumbnail.GetDisplayMedia().GetHash()
             
-            return
+            self._hashes_faded.add( hash )
+            
+            self._StopFading( hash )
+            
+            bmp = thumbnail.GetBmp()
+            
+            image = bmp.ConvertToImage()
+            
+            try: image.InitAlpha()
+            except: pass
+            
+            image = image.AdjustChannels( 1, 1, 1, 0.20 )
+            
+            alpha_bmp = wx.BitmapFromImage( image, 32 )
+            
+            image.Destroy()
+            
+            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
             
         
-        if self._GetPageIndexFromThumbnailIndex( thumbnail_index ) not in self._clean_canvas_pages:
+        if not self._timer_animation.IsRunning():
             
-            return
+            self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
             
-        
-        hash = thumbnail.GetDisplayMedia().GetHash()
-        
-        self._hashes_faded.add( hash )
-        
-        self._StopFading( hash )
-        
-        bmp = thumbnail.GetBmp()
-        
-        image = bmp.ConvertToImage()
-        
-        try: image.InitAlpha()
-        except: pass
-        
-        image = image.AdjustChannels( 1, 1, 1, 0.25 )
-        
-        alpha_bmp = wx.BitmapFromImage( image, 32 )
-        
-        image.Destroy()
-        
-        self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, 0 )
-        
-        if not self._timer_animation.IsRunning(): self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
         
     
-    def _GenerateMediaCollection( self, media_results ): return ThumbnailMediaCollection( self._file_service_key, media_results )
+    def _GenerateMediaCollection( self, media_results ):
+        
+        return ThumbnailMediaCollection( self._file_service_key, media_results )
+        
     
-    def _GenerateMediaSingleton( self, media_result ): return ThumbnailMediaSingleton( self._file_service_key, media_result )
+    def _GenerateMediaSingleton( self, media_result ):
+        
+        return ThumbnailMediaSingleton( self._file_service_key, media_result )
+        
     
     def _GetMediaCoordinates( self, media ):
         
@@ -2058,18 +2078,24 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
         
+        thumbnails_to_render_now = []
         thumbnails_to_render_later = []
         
         for thumbnail in visible_thumbnails:
             
             if thumbnail_cache.HasThumbnailCached( thumbnail ):
                 
-                self._FadeThumbnail( thumbnail )
+                thumbnails_to_render_now.append( thumbnail )
                 
             else:
                 
                 thumbnails_to_render_later.append( thumbnail )
                 
+            
+        
+        if len( thumbnails_to_render_now ) > 0:
+            
+            self._FadeThumbnails( thumbnails_to_render_now )
             
         
         if len( thumbnails_to_render_later ) > 0:
@@ -2217,7 +2243,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if hash in self._thumbnails_being_faded_in:
             
-            ( bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames ) = self._thumbnails_being_faded_in[ hash ]
+            ( bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames ) = self._thumbnails_being_faded_in[ hash ]
             
             del self._thumbnails_being_faded_in[ hash ]
             
@@ -2255,10 +2281,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._RecalculateVirtualSize()
             
-            for thumbnail in thumbnails:
-                
-                self._FadeThumbnail( thumbnail )
-                
+            self._FadeThumbnails( thumbnails )
             
             if len( self._selected_media ) == 0:
                 
@@ -3489,7 +3512,11 @@ class MediaPanelThumbnails( MediaPanel ):
         
         try:
             
-            started = HydrusData.GetNowPrecise()
+            FRAME_DURATION = 1.0 / 60
+            NUM_FRAMES_TO_FILL_IN = 15
+            
+            loop_started = HydrusData.GetNowPrecise()
+            loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
@@ -3501,71 +3528,91 @@ class MediaPanelThumbnails( MediaPanel ):
             
             for hash in hashes:
                 
-                ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
+                ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
                 
-                num_frames_rendered += 1
+                num_frames_supposed_to_be_rendered = int( ( loop_started - animation_started ) / FRAME_DURATION )
                 
-                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                num_frames_to_render = num_frames_supposed_to_be_rendered - num_frames_rendered
                 
-                delete_entry = False
-                
-                try: expected_thumbnail = self._sorted_media[ thumbnail_index ]
-                except: expected_thumbnail = None
-                
-                if expected_thumbnail != thumbnail:
+                if num_frames_to_render > 0:
                     
-                    delete_entry = True
+                    delete_entry = False
                     
-                elif page_index not in self._clean_canvas_pages:
-                    
-                    delete_entry = True
-                    
-                else:
-                    
-                    if num_frames_rendered >= 9:
+                    try:
                         
-                        bmp_to_use = original_bmp
+                        expected_thumbnail = self._sorted_media[ thumbnail_index ]
+                        
+                    except:
+                        
+                        expected_thumbnail = None
+                        
+                    
+                    page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                    
+                    if expected_thumbnail != thumbnail:
+                        
+                        delete_entry = True
+                        
+                    elif page_index not in self._clean_canvas_pages:
                         
                         delete_entry = True
                         
                     else:
                         
-                        bmp_to_use = alpha_bmp
+                        times_to_draw = 1
                         
-                        self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, num_frames_rendered )
+                        if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
+                            
+                            bmp_to_use = original_bmp
+                            
+                            delete_entry = True
+                            
+                        else:
+                            
+                            times_to_draw = num_frames_to_render
+                            
+                            bmp_to_use = alpha_bmp
+                            
+                            num_frames_rendered += times_to_draw
+                            
+                            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
+                            
+                        
+                        thumbnail_col = thumbnail_index % self._num_columns
+                        
+                        thumbnail_row = thumbnail_index / self._num_columns
+                        
+                        x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                        
+                        y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                        
+                        if page_index not in dcs:
+                            
+                            canvas_bmp = self._clean_canvas_pages[ page_index ]
+                            
+                            dc = wx.MemoryDC( canvas_bmp )
+                            
+                            dcs[ page_index ] = dc
+                            
+                        
+                        dc = dcs[ page_index ]
+                        
+                        for i in range( times_to_draw ):
+                            
+                            dc.DrawBitmap( bmp_to_use, x, y, True )
+                            
                         
                     
-                    thumbnail_col = thumbnail_index % self._num_columns
-                    
-                    thumbnail_row = thumbnail_index / self._num_columns
-                    
-                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                    
-                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
-                    
-                    if page_index not in dcs:
+                    if delete_entry:
                         
-                        canvas_bmp = self._clean_canvas_pages[ page_index ]
+                        del self._thumbnails_being_faded_in[ hash ]
                         
-                        dc = wx.MemoryDC( canvas_bmp )
+                        original_bmp.Destroy()
+                        alpha_bmp.Destroy()
                         
-                        dcs[ page_index ] = dc
-                        
-                    
-                    dc = dcs[ page_index ]
-                    
-                    dc.DrawBitmap( bmp_to_use, x, y, True )
                     
                 
-                if delete_entry:
-                    
-                    del self._thumbnails_being_faded_in[ hash ]
-                    
-                    original_bmp.Destroy()
-                    alpha_bmp.Destroy()
-                    
-                
-                if HydrusData.TimeHasPassedPrecise( started + 0.016 ):
+                if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
                     
                     break
                     
@@ -3573,15 +3620,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._thumbnails_being_faded_in ) > 0:
                 
-                finished = HydrusData.GetNowPrecise()
-                
-                time_this_took_in_ms = ( finished - started ) * 1000
-                
-                ms_to_wait = int( round( 16.7 - time_this_took_in_ms ) )
-                
-                ms_to_wait = max( 1, ms_to_wait )
-                
-                self._timer_animation.Start( ms_to_wait, wx.TIMER_ONE_SHOT )
+                self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
                 
             
             self.Refresh()
@@ -3598,11 +3637,11 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def WaterfallThumbnail( self, page_key, thumbnail ):
+    def WaterfallThumbnails( self, page_key, thumbnails ):
         
         if self._page_key == page_key:
             
-            self._FadeThumbnail( thumbnail )
+            self._FadeThumbnails( thumbnails )
             
         
     

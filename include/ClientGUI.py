@@ -1509,19 +1509,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
             
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
-            
-            current_value = check_manager.GetCurrentValue()
-            func = check_manager.Invert
-            
-            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
-            
-            dont_know = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self._AutoRepoSetup )
-            
-            ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
-            
             links = wx.Menu()
             
             site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalBMPs.file_repository, webbrowser.open, 'https://hydrusnetwork.github.io/hydrus/' )
@@ -1532,6 +1519,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalBMPs.patreon, webbrowser.open, 'https://www.patreon.com/hydrus_dev' )
             
             ClientGUIMenus.AppendMenu( menu, links, 'links' )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/changelog.html' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            dont_know = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, dont_know, 'just set up some repositories for me, please', 'This will add the hydrus dev\'s two repositories to your client.', self._AutoRepoSetup )
+            
+            ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
+            
+            current_value = check_manager.GetCurrentValue()
+            func = check_manager.Invert
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
+            
+            ClientGUIMenus.AppendSeparator( menu )
             
             debug = wx.Menu()
             
@@ -1550,6 +1558,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', wx.MessageBox, CC.SHORTCUT_HELP )
             ClientGUIMenus.AppendMenuItem( self, menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )

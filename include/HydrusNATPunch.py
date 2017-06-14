@@ -7,9 +7,6 @@ import socket
 import subprocess
 import threading
 import traceback
-from twisted.internet import reactor, defer
-from twisted.internet.threads import deferToThread
-from twisted.python import log
 
 # new stuff starts here
 

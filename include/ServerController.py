@@ -346,7 +346,10 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def JustWokeFromSleep( self ): return False
+    def JustWokeFromSleep( self ):
+        
+        return False
+        
     
     def MaintainDB( self, stop_time = None ):
         
@@ -435,6 +438,8 @@ class Controller( HydrusController.HydrusController ):
     
     def SetServices( self, services ):
         
+        # doesn't need the dirty_object_lock because the caller takes it
+        
         self._services = services
         
         [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
@@ -494,7 +499,3 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def UpdateAccounts( self, service_key, accounts ):
-        
-        self._server_session_manager.UpdateAccounts( service_key, accounts )
-        

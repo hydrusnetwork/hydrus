@@ -8,7 +8,7 @@ import HydrusImageHandling
 import HydrusGlobals as HG
 import HydrusThreading
 import HydrusVideoHandling
-import lz4
+import lz4.block
 import os
 import threading
 import time
@@ -560,7 +560,7 @@ class HydrusBitmap( object ):
         
         if self._compressed:
             
-            self._data = lz4.dumps( data )
+            self._data = lz4.block.compress( data )
             
         else:
             
@@ -575,7 +575,7 @@ class HydrusBitmap( object ):
         
         if self._compressed:
             
-            return lz4.loads( self._data )
+            return lz4.block.decompress( self._data )
             
         else:
             

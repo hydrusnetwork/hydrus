@@ -1,5 +1,5 @@
 import json
-import lz4
+import lz4.block
 import zlib
 
 SERIALISABLE_TYPE_BASE = 0
@@ -59,7 +59,7 @@ def CreateFromNetworkString( network_string ):
         
     except zlib.error:
         
-        obj_string = lz4.loads( network_string )
+        obj_string = lz4.block.decompress( network_string )
         
     
     return CreateFromString( obj_string )

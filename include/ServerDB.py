@@ -1136,7 +1136,7 @@ class DB( HydrusDB.HydrusDB ):
         
         subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
         
-        HG.server_controller.pub( 'update_session_accounts', service_key, subject_account_keys )
+        self.pub_after_commit( 'update_session_accounts', service_key, subject_account_keys )
         
     
     def _ModifyAccountTypes( self, service_key, account, account_types, deletee_account_type_keys_to_new_account_type_keys ):
@@ -1193,7 +1193,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RefreshAccountTypeCache( service_id )
         
-        HG.server_controller.pub( 'update_all_session_accounts', service_key )
+        self.pub_after_commit( 'update_all_session_accounts', service_key )
         
     
     def _ModifyServices( self, account, services ):
@@ -3159,177 +3159,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         HydrusData.Print( 'The server is updating to version ' + str( version + 1 ) )
-        
-        if version == 198:
-            
-            HydrusData.Print( 'exporting mappings to external db' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id, hash_id ) );' )
-            
-            self._c.execute( 'INSERT INTO external_mappings.mappings SELECT * FROM main.mappings;' )
-            
-            self._c.execute( 'DROP TABLE main.mappings;' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY ( service_id, account_id, tag_id, hash_id, status ) );' )
-            
-            self._c.execute( 'INSERT INTO external_mappings.mapping_petitions SELECT * FROM main.mapping_petitions;' )
-            
-            self._c.execute( 'DROP TABLE main.mapping_petitions;' )
-            
-        
-        if version == 200:
-            
-            HydrusData.Print( 'exporting hashes to external db' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
-            
-            self._c.execute( 'INSERT INTO external_master.hashes SELECT * FROM main.hashes;' )
-            
-            self._c.execute( 'DROP TABLE main.hashes;' )
-            
-            HydrusData.Print( 'exporting tags to external db' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, tag TEXT UNIQUE );' )
-            
-            self._c.execute( 'INSERT INTO external_master.tags SELECT * FROM main.tags;' )
-            
-            self._c.execute( 'DROP TABLE main.tags;' )
-            
-            #
-            
-            HydrusData.Print( 'compacting mappings tables' )
-            
-            self._c.execute( 'DROP INDEX mapping_petitions_service_id_account_id_reason_id_tag_id_index;' )
-            self._c.execute( 'DROP INDEX mapping_petitions_service_id_tag_id_hash_id_index;' )
-            self._c.execute( 'DROP INDEX mapping_petitions_service_id_status_index;' )
-            self._c.execute( 'DROP INDEX mapping_petitions_service_id_timestamp_index;' )
-            
-            self._c.execute( 'DROP INDEX mappings_account_id_index;' )
-            self._c.execute( 'DROP INDEX mappings_timestamp_index;' )
-            
-            self._c.execute( 'ALTER TABLE mapping_petitions RENAME TO mapping_petitions_old;' )
-            self._c.execute( 'ALTER TABLE mappings RENAME TO mappings_old;' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mapping_petitions ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, status INTEGER, PRIMARY KEY ( service_id, account_id, tag_id, hash_id, status ) ) WITHOUT ROWID;' )
-            
-            self._c.execute( 'INSERT INTO mapping_petitions SELECT * FROM mapping_petitions_old;' )
-            
-            self._c.execute( 'DROP TABLE mapping_petitions_old;' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.mappings ( service_id INTEGER, tag_id INTEGER, hash_id INTEGER, account_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
-            
-            self._c.execute( 'INSERT INTO mappings SELECT * FROM mappings_old;' )
-            
-            self._c.execute( 'DROP TABLE mappings_old;' )
-            
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_account_id_reason_id_tag_id_index ON mapping_petitions ( service_id, account_id, reason_id, tag_id );' )
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_tag_id_hash_id_index ON mapping_petitions ( service_id, tag_id, hash_id );' )
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_status_index ON mapping_petitions ( service_id, status );' )
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mapping_petitions_service_id_timestamp_index ON mapping_petitions ( service_id, timestamp );' )
-            
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_account_id_index ON mappings ( account_id );' )
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.mappings_timestamp_index ON mappings ( timestamp );' )
-            
-            #
-            
-            self._Commit()
-            
-            self._CloseDBCursor()
-            
-            try:
-                
-                for filename in self._db_filenames.values():
-                    
-                    HydrusData.Print( 'vacuuming ' + filename )
-                    
-                    db_path = os.path.join( self._db_dir, filename )
-                    
-                    if HydrusDB.CanVacuum( db_path ):
-                        
-                        HydrusDB.VacuumDB( db_path )
-                        
-                    
-                
-            finally:
-                
-                self._InitDBCursor()
-                
-                self._BeginImmediate()
-                
-            
-        
-        if version == 202:
-            
-            self._c.execute( 'DELETE FROM analyze_timestamps;' )
-            
-        
-        if version == 207:
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.petitioned_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, tag_id, hash_id, account_id ) ) WITHOUT ROWID;' )
-            
-            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_mappings.deleted_mappings ( service_id INTEGER, account_id INTEGER, tag_id INTEGER, hash_id INTEGER, reason_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id, hash_id ) ) WITHOUT ROWID;' )
-            
-            #
-            
-            self._c.execute( 'INSERT INTO petitioned_mappings ( service_id, account_id, tag_id, hash_id, reason_id ) SELECT service_id, account_id, tag_id, hash_id, reason_id FROM mapping_petitions WHERE status = ?;', ( HC.CONTENT_STATUS_PETITIONED, ) )
-            self._c.execute( 'INSERT INTO deleted_mappings ( service_id, account_id, tag_id, hash_id, reason_id, timestamp ) SELECT service_id, account_id, tag_id, hash_id, reason_id, timestamp FROM mapping_petitions WHERE status = ?;', ( HC.CONTENT_STATUS_DELETED, ) )
-            
-            #
-            
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.petitioned_mappings_service_id_account_id_reason_id_tag_id_index ON petitioned_mappings ( service_id, account_id, reason_id, tag_id );' )
-            
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_account_id_index ON deleted_mappings ( service_id, account_id );' )
-            self._c.execute( 'CREATE INDEX IF NOT EXISTS external_mappings.deleted_mappings_service_id_timestamp_index ON deleted_mappings ( service_id, timestamp );' )
-            
-            #
-            
-            self._c.execute( 'DROP TABLE mapping_petitions;' )
-            
-        
-        if version == 208:
-            
-            old_thumbnail_dir = os.path.join( self._db_dir, 'server_thumbnails' )
-            
-            for prefix in HydrusData.IterateHexPrefixes():
-                
-                HydrusData.Print( 'moving thumbnails: ' + prefix )
-                
-                source_dir = os.path.join( old_thumbnail_dir, prefix )
-                dest_dir = os.path.join( self._files_dir, prefix )
-                
-                source_filenames = os.listdir( source_dir )
-                
-                for source_filename in source_filenames:
-                    
-                    source_path = os.path.join( source_dir, source_filename )
-                    
-                    dest_filename = source_filename + '.thumbnail'
-                    
-                    dest_path = os.path.join( dest_dir, dest_filename )
-                    
-                    try:
-                        
-                        HydrusPaths.MergeFile( source_path, dest_path )
-                        
-                    except:
-                        
-                        HydrusData.Print( 'Problem moving thumbnail from ' + source_path + ' to ' + dest_path + '.' )
-                        HydrusData.Print( 'Abandoning thumbnail transfer for ' + source_dir + '.' )
-                        
-                        break
-                        
-                    
-                
-            
-            try:
-                
-                HydrusPaths.DeletePath( old_thumbnail_dir )
-                
-            except:
-                
-                HydrusData.Print( 'Could not delete old thumbnail directory at ' + old_thumbnail_dir )
-                
-            
         
         if version == 212:
             

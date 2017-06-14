@@ -219,11 +219,13 @@ class HydrusResourceRestrictedAccountModification( HydrusResourceRestricted ):
         
         kwargs = request.hydrus_args # for things like expires, title, and so on
         
+        server_session_manager = HG.server_controller.GetServerSessionManager()
+        
         with HG.dirty_object_lock:
             
             HG.server_controller.WriteSynchronous( 'account_modification', self._service_key, request.hydrus_account, action, subject_accounts, **kwargs )
             
-            HG.server_controller.UpdateAccounts( self._service_key, subject_accounts )
+            server_session_manager.UpdateAccounts( self._service_key, subject_accounts )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )

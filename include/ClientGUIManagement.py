@@ -3366,7 +3366,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
-        self._query_key = ClientThreading.JobKey( cancellable = True )
+        self._query_job_key = ClientThreading.JobKey( cancellable = True )
         
         initial_predicates = file_search_context.GetPredicates()
         
@@ -3410,9 +3410,9 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._controller.ResetIdleTimer()
         
-        self._query_key.Cancel()
+        self._query_job_key.Cancel()
         
-        self._query_key = ClientThreading.JobKey()
+        self._query_job_key = ClientThreading.JobKey()
         
         if self._management_controller.GetVariable( 'search_enabled' ) and self._management_controller.GetVariable( 'synchronised' ):
             
@@ -3430,7 +3430,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 if len( current_predicates ) > 0:
                     
-                    self._controller.StartFileQuery( self._query_key, file_search_context )
+                    self._controller.StartFileQuery( self._page_key, self._query_job_key, file_search_context )
                     
                     panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
                     
@@ -3469,9 +3469,12 @@ class ManagementPanelQuery( ManagementPanel ):
         sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
-    def AddMediaResultsFromQuery( self, query_key, media_results ):
+    def AddMediaResultsFromQuery( self, query_job_key, media_results ):
         
-        if query_key == self._query_key: self._controller.pub( 'add_media_results', self._page_key, media_results, append = False )
+        if query_job_key == self._query_job_key:
+            
+            self._controller.pub( 'add_media_results', self._page_key, media_results, append = False )
+            
         
     
     def ChangeFileServicePubsub( self, page_key, service_key ):
@@ -3486,7 +3489,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         ManagementPanel.CleanBeforeDestroy( self )
         
-        self._query_key.Cancel()
+        self._query_job_key.Cancel()
         
     
     def GetPredicates( self ):
@@ -3528,9 +3531,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ShowQuery( self, query_key, media_results ):
+    def ShowQuery( self, page_key, query_job_key, media_results ):
         
-        if query_key == self._query_key:
+        if page_key == self._page_key and query_job_key == self._query_job_key:
             
             current_predicates = self._current_predicates_box.GetPredicates()
             

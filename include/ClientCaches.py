@@ -1013,7 +1013,7 @@ class ClientFilesManager( object ):
                     
                     self._bad_error_occured = True
                     
-                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->maintenance->regenerate thumbnails\'.' )
+                    HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
                     
                 
             
@@ -2014,39 +2014,45 @@ class ThumbnailCache( object ):
                 last_paused = HydrusData.GetNowPrecise()
                 
             
-            with self._lock:
+            start_time = HydrusData.GetNowPrecise()
+            stop_time = start_time + 0.005 # a bit of a typical frame
+            
+            page_keys_to_rendered_medias = collections.defaultdict( list )
+            
+            while not HydrusData.TimeHasPassedPrecise( stop_time ):
                 
-                if len( self._waterfall_queue_random ) == 0:
+                with self._lock:
                     
-                    continue
-                    
-                else:
+                    if len( self._waterfall_queue_random ) == 0:
+                        
+                        break
+                        
                     
                     result = self._waterfall_queue_random.pop( 0 )
                     
                     self._waterfall_queue_quick.discard( result )
                     
-                    ( page_key, media ) = result
+                
+                ( page_key, media ) = result
+                
+                try:
+                    
+                    self.GetThumbnail( media ) # to load it
+                    
+                    page_keys_to_rendered_medias[ page_key ].append( media )
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
                     
                 
             
-            try:
+            for ( page_key, rendered_medias ) in page_keys_to_rendered_medias.items():
                 
-                self.GetThumbnail( media ) # to load it
+                self._controller.pub( 'waterfall_thumbnails', page_key, rendered_medias )
                 
-                self._controller.pub( 'waterfall_thumbnail', page_key, media )
-                
-                if HydrusData.GetNowPrecise() - last_paused > 0.005:
-                    
-                    time.sleep( 0.00001 )
-                    
-                    last_paused = HydrusData.GetNowPrecise()
-                    
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
+            
+            time.sleep( 0.00001 )
             
         
     

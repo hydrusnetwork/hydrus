@@ -661,12 +661,20 @@ def GetHideTerminalSubprocessStartupInfo():
     
     return startupinfo
     
-def GetNow(): return int( time.time() )
-
+def GetNow():
+    
+    return int( time.time() )
+    
 def GetNowPrecise():
     
-    if HC.PLATFORM_WINDOWS: return time.clock()
-    else: return time.time()
+    if HC.PLATFORM_WINDOWS:
+        
+        return time.clock()
+        
+    else:
+        
+        return time.time()
+        
     
 def GetSiblingProcessPorts( db_path, instance ):
     
@@ -884,33 +892,47 @@ def PrintException( e, do_wait = True ):
     
 ShowException = PrintException
 
-def Profile( summary, code, g, l ):
+def Profile( summary, code, g, l, min_duration_ms = 20 ):
     
     profile = cProfile.Profile()
     
+    started = GetNowPrecise()
+    
     profile.runctx( code, g, l )
     
-    output = cStringIO.StringIO()
+    finished = GetNowPrecise()
     
-    stats = pstats.Stats( profile, stream = output )
+    if finished - started > min_duration_ms / 1000.0:
+        
+        output = cStringIO.StringIO()
+        
+        stats = pstats.Stats( profile, stream = output )
+        
+        stats.strip_dirs()
+        
+        stats.sort_stats( 'tottime' )
+        
+        output.write( 'Stats' )
+        output.write( os.linesep * 2 )
+        
+        stats.print_stats()
+        
+        output.write( 'Callers' )
+        output.write( os.linesep * 2 )
+        
+        stats.print_callers()
+        
+        output.seek( 0 )
+        
+        details = output.read()
+        
+    else:
+        
+        details = 'It took less than ' + ConvertIntToPrettyString( min_duration_ms ) + 'ms.' + os.linesep * 2
+        
     
-    stats.strip_dirs()
+    HG.controller.PrintProfile( summary, details )
     
-    stats.sort_stats( 'tottime' )
-    
-    output.write( 'Stats' )
-    output.write( os.linesep * 2 )
-    
-    stats.print_stats()
-    
-    output.write( 'Callers' )
-    output.write( os.linesep * 2 )
-    
-    stats.print_callers()
-    
-    output.seek( 0 )
-    
-    HG.controller.PrintProfile( summary, output.read() )
     
 def RandomPop( population ):
     

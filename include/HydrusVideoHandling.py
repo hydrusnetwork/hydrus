@@ -272,7 +272,16 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
             
         
     
-    infos = proc.stderr.read().decode('utf8')
+    raw_infos = proc.stderr.read()
+    
+    try:
+        
+        infos = raw_infos.decode( 'utf8' )
+        
+    except UnicodeDecodeError:
+        
+        infos = raw_infos
+        
     
     proc.wait()
     
@@ -389,26 +398,24 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
         else:
             
             # get the frame rate
-            try:
-                
-                match = re.search("( [0-9]*.| )[0-9]* tbr", line)
+            
+            match = re.search("( [0-9]*.| )[0-9]* tbr", line)
+            
+            if match is not None:
                 
                 fps = line[match.start():match.end()].split(' ')[1]
                 
-                if fps.endswith( 'k' ):
-                    
-                    raise Exception()
-                    
-                
-                result['video_fps'] = float( fps )
-                
-            except:
+            
+            if match is None or fps.endswith( 'k' ):
                 
                 match = re.search("( [0-9]*.| )[0-9]* fps", line)
                 
-                fps = line[match.start():match.end()].split(' ')[1]
+                if match is not None:
+                    
+                    fps = line[match.start():match.end()].split(' ')[1]
+                    
                 
-                if fps.endswith( 'k' ) or float( fps ) > 60:
+                if match is None or fps.endswith( 'k' ) or float( fps ) > 60:
                     
                     if not doing_manual_frame_count:
                         
@@ -419,15 +426,16 @@ def Hydrusffmpeg_parse_infos(filename, print_infos=False, count_frames_manually 
                         raise Exception( 'Could not determine framerate!' )
                         
                     
-                else:
-                    
-                    result['video_fps'] = float( fps )
-                    
                 
+            
+            result['video_fps'] = float( fps )
             
             num_frames = result['duration'] * result['video_fps']
             
-            if num_frames != int( num_frames ): num_frames += 1 # rounding up
+            if num_frames != int( num_frames ):
+                
+                return Hydrusffmpeg_parse_infos( filename, count_frames_manually = True )
+                
             
             result['video_nframes'] = int( num_frames )
             

@@ -281,8 +281,14 @@ class HydrusController( object ):
         
         self._currently_doing_pubsub = True
         
-        try: self._pubsub.Process()
-        finally: self._currently_doing_pubsub = False
+        try:
+            
+            self._pubsub.Process()
+            
+        finally:
+            
+            self._currently_doing_pubsub = False
+            
         
     
     def Read( self, action, *args, **kwargs ):
