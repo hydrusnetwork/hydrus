@@ -12,16 +12,14 @@ local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.
 
 class HydrusResourceBooru( HydrusServerResources.HydrusResource ):
     
-    def _recordDataUsage( self, request ):
+    def _reportDataUsed( self, request, num_bytes ):
         
-        path = request.path[1:] # /account -> account
+        self._service.ReportDataUsed( num_bytes )
         
-        if request.method == 'GET': method = HC.GET
-        else: method = HC.POST
+    
+    def _reportRequestUsed( self, request ):
         
-        num_bytes = request.hydrus_request_data_usage
-        
-        self._service.RequestMade( num_bytes )
+        self._service.ReportRequestUsed()
         
     
     def _checkService( self, request ):

@@ -1,4 +1,5 @@
 import collections
+import cStringIO
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusNetwork
@@ -8,13 +9,16 @@ import HydrusSerialisable
 import errno
 import httplib
 import os
+import random
 import requests
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
 import socket
 import socks
 import ssl
 import threading
 import time
+import traceback
 import urllib
 import urlparse
 import yaml
@@ -22,7 +26,7 @@ import HydrusData
 import itertools
 import HydrusGlobals as HG
 
-requests.packages.urllib3.disable_warnings( InsecureRequestWarning )
+urllib3.disable_warnings( InsecureRequestWarning )
 
 def AddHydrusCredentialsToHeaders( credentials, request_headers ):
     
@@ -1062,6 +1066,57 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
         return result
         
     
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_global_tracker = self._global_bandwidth_tracker.GetSerialisableTuple()
+        serialisable_global_rules = self._global_bandwidth_rules.GetSerialisableTuple()
+        
+        all_serialisable_trackers = [ ( domain, tracker.GetSerialisableTuple() ) for ( domain, tracker ) in self._domains_to_bandwidth_trackers ]
+        all_serialisable_rules = [ ( domain, rules.GetSerialisableTuple() ) for ( domain, rules ) in self._domains_to_bandwidth_rules ]
+        
+        return ( serialisable_global_tracker, serialisable_global_rules, all_serialisable_trackers, all_serialisable_rules )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_global_tracker, serialisable_global_rules, all_serialisable_trackers, all_serialisable_rules ) = serialisable_info
+        
+        self._global_bandwidth_tracker = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_global_tracker )
+        self._global_bandwidth_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_global_rules )
+        
+        for ( domain, serialisable_tracker ) in all_serialisable_trackers:
+            
+            self._domains_to_bandwidth_trackers[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tracker )
+            
+        
+        for ( domain, serialisable_rules ) in all_serialisable_rules:
+            
+            self._domains_to_bandwidth_rules[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rules )
+            
+        
+    
+    def CanStartGlobally( self ):
+        
+        return self.CanStartURL( None )
+        
+    
+    def CanStartURL( self, url ):
+        
+        with self._lock:
+            
+            for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
+                
+                if not bandwidth_rules.CanStart( bandwidth_tracker ):
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+        
+    
     def GetEstimateInfo( self, domain = None ):
         
         with self._lock:
@@ -1086,29 +1141,34 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def OK( self, url = None ):
+    def ReportDataUsedGlobally( self, num_bytes ):
+        
+        self.ReportDataUsedURL( None, num_bytes )
+        
+    
+    def ReportDataUsedURL( self, url, num_bytes ):
         
         with self._lock:
             
             for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
                 
-                if not bandwidth_rules.OK( bandwidth_tracker ):
-                    
-                    return False
-                    
+                bandwidth_tracker.ReportDataUsed( num_bytes )
                 
-            
-            return True
             
         
     
-    def RequestMade( self, url, num_bytes ):
+    def ReportRequestUsedGlobally( self ):
+        
+        self.ReportRequestUsedURL( None )
+        
+    
+    def ReportRequestUsedURL( self, url ):
         
         with self._lock:
             
             for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
                 
-                bandwidth_tracker.RequestMade( num_bytes )
+                bandwidth_tracker.ReportRequestUsed()
                 
             
         
@@ -1132,6 +1192,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class NetworkEngine( object ):
     
+    MAX_JOBS = 10 # turn this into an option
+    
     def __init__( self, controller ):
         
         self._controller = controller
@@ -1140,19 +1202,22 @@ class NetworkEngine( object ):
         
         self._new_work_to_do = threading.Event()
         
-        self._new_network_jobs = []
-        self._throttled_jobs = []
+        self._jobs_bandwidth_throttled = []
+        self._jobs_login_throttled = []
+        self._current_login_process = None
+        self._jobs_ready_to_start = []
+        self._jobs_downloading = []
         
         self._local_shutdown = False
         
-        # start main loop
+        self._controller.CallToThread( self.MainLoop )
         
     
     def AddJob( self, job ):
         
         with self._lock:
             
-            self._new_network_jobs.append( job )
+            self._jobs_bandwidth_throttled.append( job )
             
         
         self._new_work_to_do.set()
@@ -1162,41 +1227,135 @@ class NetworkEngine( object ):
         
         while not ( self._local_shutdown or self._controller.ModelIsShutdown() ):
             
+            def ProcessBandwidthJob( job ):
+                
+                if job.IsDone():
+                    
+                    return False
+                    
+                elif job.IsAsleep():
+                    
+                    return True
+                    
+                elif not job.BandwidthOK():
+                    
+                    job.SetStatus( u'waiting on bandwidth\u2026' )
+                    
+                    job.Sleep( 5 )
+                    
+                    return True
+                    
+                else:
+                    
+                    self._jobs_login_throttled.append( job )
+                    
+                    return False
+                    
+                
+            
+            def ProcessLoginJob( job ):
+                
+                if job.IsDone():
+                    
+                    return False
+                    
+                elif job.IsAsleep():
+                    
+                    return True
+                    
+                elif job.NeedsLogin():
+                    
+                    if job.CanLogin():
+                        
+                        if self._current_login_process is None:
+                            
+                            login_process = job.GenerateLoginProcess()
+                            
+                            self._controller.CallToThread( login_process.Start )
+                            
+                            self._current_login_process = login_process
+                            
+                            job.SetStatus( u'logging in\u2026' )
+                            
+                        else:
+                            
+                            job.SetStatus( u'waiting on login\u2026' )
+                            
+                            job.Sleep( 5 )
+                            
+                        
+                    else:
+                        
+                        job.SetStatus( 'unable to login!' )
+                        
+                        job.Sleep( 15 )
+                        
+                    
+                    return True
+                    
+                else:
+                    
+                    self._jobs_ready_to_start.append( job )
+                    
+                    return False
+                    
+                
+            
+            def ProcessCurrentLoginJob():
+                
+                if self._current_login_process is not None:
+                    
+                    if self._current_login_process.IsDone():
+                        
+                        self._current_login_process = None
+                        
+                    
+                
+            
+            def ProcessReadyJob( job ):
+                
+                if job.IsDone():
+                    
+                    return False
+                    
+                elif len( self._jobs_downloading ) < self.MAX_JOBS:
+                    
+                    self._controller.CallToThread( job.Start )
+                    
+                    self._jobs_downloading.append( job )
+                    
+                    return False
+                    
+                else:
+                    
+                    return True
+                    
+                
+            
+            def ProcessDownloadingJob( job ):
+                
+                if job.IsDone():
+                    
+                    return False
+                    
+                else:
+                    
+                    return True
+                    
+                
+            
             with self._lock:
                 
-                self._throttled_jobs.extend( self._new_network_jobs )
+                self._jobs_bandwidth_throttled = filter( ProcessBandwidthJob, self._jobs_bandwidth_throttled )
                 
-                self._new_network_jobs = []
+                self._jobs_login_throttled = filter( ProcessLoginJob, self._jobs_login_throttled )
                 
-            
-            #
-            
-            ready_to_start = []
-            throttled_jobs = self._throttled_jobs
-            
-            self._throttled_jobs = []
-            
-            for job in throttled_jobs:
+                ProcessCurrentLoginJob()
                 
-                if job.ReadyToWork():
-                    
-                    ready_to_start.append( job )
-                    
-                elif not job.IsCancelled():
-                    
-                    self._throttled_jobs.append( job )
-                    
+                self._jobs_ready_to_start = filter( ProcessReadyJob, self._jobs_ready_to_start )
                 
-            
-            #
-            
-            for job in ready_to_start:
+                self._jobs_downloading = filter( ProcessDownloadingJob, self._jobs_downloading )
                 
-                self._controller.CallToThread( job.Start )
-                
-            
-            # have this hold on to jobs until they are done, so the user can look at all the current ones in a review panel somewhere
-            # this also lets us max out the num active connections at an optional value
             
             self._new_work_to_do.wait( 1 )
             
@@ -1213,27 +1372,58 @@ class NetworkJob( object ):
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
         
+        self._lock = threading.Lock()
+        
         self._method = method
         self._url = url
         self._body = body
         self._referral_url = referral_url
         self._temp_path = temp_path
         
-        self._response = None
+        self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
-        self._speed_tracker = HydrusNetworking.TransferSpeedTracker()
+        self._wake_time = 0
         
-        self._time_ready_to_work = 0
+        self._stream_io = cStringIO.StringIO()
+        
         self._has_error = False
-        # a way to hold error traceback and a way to fetch it
+        self._error_exception = None
+        self._error_text = None
+        
         self._is_done = False
         self._is_cancelled = False
         self._bandwidth_override = False
         
-        self._text = 'initialising'
-        self._value_range = ( None, None )
+        self._status_code = None
         
-        self._lock = threading.Lock()
+        self._status_text = u'initialising\u2026'
+        self._num_bytes_read = 0
+        self._num_bytes_to_read = None
+        
+    
+    def _BandwidthOK( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _CanLogin( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _GenerateLoginProcess( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _GetSession( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _ImmediateBandwidthOK( self ):
+        
+        raise NotImplementedError()
         
     
     def _IsCancelled( self ):
@@ -1251,185 +1441,497 @@ class NetworkJob( object ):
         return False
         
     
-    def _GetSession( self ):
+    def _NeedsLogin( self ):
         
-        pass # fetch the regular session from the sessionmanager
+        raise NotImplementedError()
         
     
-    def _ReadResponse( self, f = None ):
+    def _ReadResponse( self, response, stream_dest ):
         
-        # get the content-length, if any, to use for range
-        
-        bytes_read = 0
-        
-        for chunk in self._response.iter_content( chunk_size = 8192 ):
+        if 'content-length' in response.headers:
             
-            if self._IsCancelled():
+            self._num_bytes_to_read = int( response.headers[ 'content-length' ] )
+            
+        
+        try:
+            
+            for chunk in response.iter_content( chunk_size = 8192 ):
                 
-                return
+                if self._IsCancelled():
+                    
+                    return
+                    
+                
+                stream_dest.write( chunk )
+                
+                chunk_length = len( chunk )
+                
+                self._num_bytes_read += chunk_length
+                
+                self._ReportDataUsed( chunk_length )
+                self._WaitOnImmediateBandwidth()
                 
             
-            if f is not None:
+        finally:
+            
+            num_bytes_used = self._num_bytes_read
+            
+            if self._body is not None:
                 
-                f.write( chunk )
+                num_bytes_used += len( self._body )
                 
             
-            chunk_length = len( chunk )
-            
-            bytes_read += chunk_length
-            
-            self._speed_tracker.DataTransferred( chunk_length )
-            
-            # update the status
-            
         
-        num_bytes_used = bytes_read
+    
+    def _ReportDataUsed( self, num_bytes ):
         
-        if self._body is not None:
-            
-            num_bytes_used += len( self._body )
-            
+        self._bandwidth_tracker.ReportDataUsed( num_bytes )
         
-        self._ReportBandwidth( num_bytes_used )
+    
+    def _ReportRequestUsed( self ):
+        
+        self._bandwidth_tracker.ReportRequestUsed()
+        
+    
+    def _SetCancelled( self ):
+        
+        self._is_cancelled = True
+        
+        self._SetDone()
+        
+    
+    def _SetError( self, e, error ):
+        
+        self._has_error = True
+        self._error_exception = e
+        self._error_text = error
+        
+        self._SetDone()
+        
+    
+    def _SetDone( self ):
         
         self._is_done = True
         
     
-    def _ReportBandwidth( self, num_bytes ):
+    def _WaitOnImmediateBandwidth( self ):
         
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
-        
-        bandwidth_manager.RequestMade( self._url, num_bytes )
+        while not self._ImmediateBandwidthOK() and not self._IsCancelled():
+            
+            time.sleep( 0.5 )
+            
         
     
-    def BandwidthOverride( self ):
+    def BandwidthOK( self ):
         
-        self._bandwidth_override = True
+        with self._lock:
+            
+            if self._bandwidth_override:
+                
+                return True
+                
+            else:
+                
+                return self._BandwidthOK()
+                
+            
         
     
     def Cancel( self ):
         
-        self._is_cancelled = True
+        with self._lock:
+            
+            self._status_text = 'cancelled!'
+            
+            self._SetCancelled()
+            
+        
+    
+    def GenerateLoginProcess( self ):
+        
+        with self._lock:
+            
+            return self._GenerateLoginProcess()
+            
         
     
     def GetContent( self ):
         
-        return self._response.content
+        with self._lock:
+            
+            self._stream_io.seek( 0 )
+            
+            return self._stream_io.read()
+            
         
     
-    def GetJSON( self ):
+    def GetErrorException( self ):
         
-        return self._response.json
+        with self._lock:
+            
+            return self._error_exception
+            
+        
+    
+    def GetErrorText( self ):
+        
+        with self._lock:
+            
+            return self._error_text
+            
         
     
     def GetStatus( self ):
         
         with self._lock:
             
-            return ( self._text, self._speed_tracker, self._value_range )
+            return ( self._status_text, self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 ), self._num_bytes_read, self._num_bytes_to_read )
             
         
     
     def HasError( self ):
         
-        return self._has_error
+        with self._lock:
+            
+            return self._has_error
+            
+        
+    
+    def IsAsleep( self ):
+        
+        with self._lock:
+            
+            return HydrusData.TimeHasPassed( self._wake_time )
+            
         
     
     def IsCancelled( self ):
         
-        return self._IsCancelled()
+        with self._lock:
+            
+            return self._IsCancelled()
+            
         
     
     def IsDone( self ):
         
-        return self._is_done
+        with self._lock:
+            
+            return self._is_done
+            
         
     
-    def ReadyToWork( self ):
-        
-        if not HydrusData.TimeHasPassed( self._time_ready_to_work ):
-            
-            return False
-            
-        
-        if not self._bandwidth_override:
-            
-            pass
-            
-            # make sure bandwidth domain is ok
-            # report to status if not with how long to expect to wait
-            # set ready to work ahead an appropriate time
-            
-        
-        # try
-        # make sure login domain is ok
-            # this can do the actual login here. a little delay is fine for this job, and it is good it is here where the engine works serially
-        # except
-        # abandon and set status and set ready to work ahead a bit
-        
-        return True
-        
-    
-    def SetStatus( self, text, value, range ):
+    def NeedsLogin( self ):
         
         with self._lock:
             
-            self._text = text
-            self._value_range = ( value, range )
+            self._NeedsLogin()
+            
+        
+    
+    def OverrideBandwidth( self ):
+        
+        with self._lock:
+            
+            self._bandwidth_override = True
+            
+        
+    
+    def SetStatus( self, text ):
+        
+        with self._lock:
+            
+            self._status_text = text
+            
+        
+    
+    def Sleep( self, seconds ):
+        
+        with self._lock:
+            
+            self._wake_time = HydrusData.GetNow() + seconds
             
         
     
     def Start( self ):
         
-        # set status throughout this
-        
-        session = self._GetSession()
-        
-        headers = {}
-        
-        if self._referral_url is not None:
+        try:
             
-            headers = { 'referer' : self._referral_url }
-            
-        
-        self._response = session.request( self._method, self._url, headers = headers, stream = True )
-        
-        # check the response here using requestscheckresponse above
-        
-        # if no error:
-        
-        # deal with reading errors here gracefully, whatever form they occur in
-        
-        if self._temp_path is None:
-            
-            self._ReadResponse()
-            
-        else:
-            
-            with open( self._temp_path, 'rb' ) as f:
+            with self._lock:
                 
-                self._ReadResponse( f )
+                self._ReportRequestUsed()
+                
+                session = self._GetSession()
+                
+                method = self._method
+                url = self._url
+                data = self._body
+                
+                headers = {}
+                
+                if self._referral_url is not None:
+                    
+                    headers = { 'referer' : self._referral_url }
+                    
+                
+                self._status_text = u'sending request\u2026'
                 
             
+            response = session.request( method, url, data = data, headers = headers, stream = True )
+            
+            with self._lock:
+                
+                if self._body is not None:
+                    
+                    self._ReportDataUsed( len( self._body ) )
+                    
+                
+                self._status_code = response.status_code
+                
+            
+            if response.ok:
+                
+                with self._lock:
+                    
+                    self._status_text = u'downloading\u2026'
+                    
+                
+                if self._temp_path is None:
+                    
+                    self._ReadResponse( response, self._stream_io )
+                    
+                else:
+                    
+                    with open( self._temp_path, 'rb' ) as f:
+                        
+                        self._ReadResponse( response, f )
+                        
+                    
+                
+                with self._lock:
+                    
+                    self._status_text = 'done!'
+                    
+                
+            else:
+                
+                with self._lock:
+                    
+                    self._status_text = '404 - Not Found' # ConvertStatusCodeIntoEnglish( response.status_code )
+                    
+                
+                self._ReadResponse( response, self._stream_io )
+                
+                with self._lock:
+                    
+                    self._stream_io.seek( 0 )
+                    
+                    data = self._stream_io.read()
+                    
+                    ( e, error_text ) = ( HydrusExceptions.NotFoundException( 'wew' ), 'Bunch of html that was returned or whatever.' ) # ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data )
+                    
+                    self._SetError( e, error_text )
+                    
+                
+            
+        except Exception as e:
+            
+            with self._lock:
+                
+                self._status_text = 'unexpected error!'
+                
+                trace = traceback.format_exc()
+                
+                self._SetError( e, trace )
+                
+            
+        finally:
+            
+            with self._lock:
+                
+                self._SetDone()
+                
+            
         
-
-class HydrusNetworkJob( NetworkJob ):
     
-    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None ):
+class NetworkJobWeb( NetworkJob ):
+    
+    def _BandwidthOK( self ):
         
-        NetworkJob.__init__( self, method, url, body, referral_url, temp_path )
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        return bandwidth_manager.CanStartURL( self._url )
+        
+    
+    def _CanLogin( self ):
+        
+        # ask login engine if it is possible to login at this time (i.e. if our login details seem to be valid--a bad login will invalidate the form/details until the user can re-verify, hence stopping all bad requests from spamming a changed login form)
+        
+        pass
+        
+    
+    def _GenerateLoginProcess( self ):
+        
+        pass
+        
+        # talk to login engine, figure out an object to handle this that will follow the script and report status back to the network engine
+        
+    
+    def _GetSession( self ):
+        
+        pass # fetch the regular session from the sessionmanager
+        
+    
+    def _ImmediateBandwidthOK( self ):
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        return bandwidth_manager.CanContinueURL( self._url )
+        
+    
+    def _NeedsLogin( self ):
+        
+        # consult login engine, ask if I need login (it will consult its records and the current session)
+        
+        pass
+        
+    
+    def _ReportDataUsed( self, num_bytes ):
+        
+        NetworkJob._ReportDataUsed( self, num_bytes )
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        bandwidth_manager.ReportDataUsedURL( self._url, num_bytes )
+        
+    
+    def _ReportRequestUsed( self ):
+        
+        NetworkJob._ReportRequestUsed( self )
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        bandwidth_manager.ReportRequestUsedURL( self._url )
+        
+    
+class NetworkJobWebLogin( NetworkJobWeb ):
+    
+    def _BandwidthOK( self ):
+        
+        return True
+        
+    
+    def _ImmediateBandwidthOK( self ):
+        
+        return True
+        
+    
+    def _NeedsLogin( self ):
+        
+        return False
+        
+    
+class NetworkJobHydrus( NetworkJob ):
+    
+    def __init__( self, service_key, method, url, body = None, temp_path = None ):
+        
+        NetworkJob.__init__( self, method, url, body, temp_path = temp_path )
         
         self._service_key = service_key
         
     
-    def _ReportBandwidth( self, num_bytes ):
+    def _BandwidthOK( self ):
         
-        pass # fetch my service, report requestmade
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        if not bandwidth_manager.CanStartGlobally():
+            
+            return False
+            
+        else:
+            
+            service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+            
+            return service.BandwidthOK()
+            
+        
+    
+    def _CanLogin( self ):
+        
+        # ask service if account is valid
+        
+        pass
+        
+    
+    def _GenerateLoginProcess( self ):
+        
+        pass
+        
+        # talk to service, figure out a login-process compatible object to handle the session gen
         
     
     def _GetSession( self ):
         
         pass # fetch the hydrus (ssl verify=False) session, which should have the keys as cookies, right?
         # this will ultimately be a job for the login engine step, earlier
+        
+    
+    def _ImmediateBandwidthOK( self ):
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        
+        return bandwidth_manager.CanContinueGlobally() and service.CanContinue()
+        
+    
+    def _NeedsLogin( self ):
+        
+        # consult service, ask if I need a session key
+        
+        pass
+        
+    
+    def _ReportDataUsed( self, num_bytes ):
+        
+        NetworkJob._ReportDataUsed( self, num_bytes )
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        bandwidth_manager.ReportDataUsedGlobally( num_bytes )
+        
+        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        
+        return service.ReportDataUsed( num_bytes )
+        
+    
+    def _ReportRequestUsed( self ):
+        
+        NetworkJob._ReportRequestUsed( self )
+        
+        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        
+        bandwidth_manager.ReportRequestUsedGlobally()
+        
+        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        
+        return service.ReportRequestUsed()
+        
+    
+class NetworkJobHydrusLogin( NetworkJobHydrus ):
+    
+    def _BandwidthOK( self ):
+        
+        return True
+        
+    
+    def _ImmediateBandwidthOK( self ):
+        
+        return True
+        
+    
+    def _NeedsLogin( self ):
+        
+        return False
         
     

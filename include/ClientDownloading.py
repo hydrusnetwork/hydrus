@@ -1779,6 +1779,29 @@ class GalleryTumblr( Gallery ):
     
     def _ParseGalleryPage( self, data, url_base ):
         
+        def ConvertRegularToRawURL( regular_url ):
+            
+            # convert this:
+            # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_500.jpg
+            # to this:
+            # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+            # the 500 part can be a bunch of stuff, including letters
+            
+            url_components = regular_url.split( '_' )
+            
+            last_component = url_components[ -1 ]
+            
+            ( number_gubbins, file_ext ) = last_component.split( '.' )
+            
+            raw_last_component = 'raw.' + file_ext
+            
+            url_components[ -1 ] = raw_last_component
+            
+            raw_url = '_'.join( url_components )
+            
+            return raw_url
+            
+        
         definitely_no_more_pages = False
         
         processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-2] # -1 takes a js ';' off the end
@@ -1790,6 +1813,13 @@ class GalleryTumblr( Gallery ):
         if 'posts' in json_object:
             
             for post in json_object[ 'posts' ]:
+                
+                # 2012-06-20 15:59:00 GMT
+                date = post[ 'date-gmt' ]
+                
+                date_struct = time.strptime( date, '%Y-%m-%d %H:%M:%S %Z' )
+                
+                raw_url_available = date_struct.tm_year > 2012
                 
                 if 'tags' in post: tags = post[ 'tags' ]
                 else: tags = []
@@ -1804,11 +1834,19 @@ class GalleryTumblr( Gallery ):
                             
                             url = post[ 'photo-url-1280' ]
                             
+                            if raw_url_available:
+                                
+                                url = ConvertRegularToRawURL( url )
+                                
+                            
                             SetExtraURLInfo( url, tags )
                             
                             urls.append( url )
                             
-                        except: pass
+                        except:
+                            
+                            pass
+                            
                         
                     else:
                         
@@ -1818,11 +1856,19 @@ class GalleryTumblr( Gallery ):
                                 
                                 url = photo[ 'photo-url-1280' ]
                                 
+                                if raw_url_available:
+                                    
+                                    url = ConvertRegularToRawURL( url )
+                                    
+                                
                                 SetExtraURLInfo( url, tags )
                                 
                                 urls.append( url )
                                 
-                            except: pass
+                            except:
+                                
+                                pass
+                                
                             
                         
                     

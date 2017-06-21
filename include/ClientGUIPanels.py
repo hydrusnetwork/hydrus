@@ -727,6 +727,15 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
+            new_options = HG.client_controller.GetNewOptions()
+            
+            if not new_options.GetBoolean( 'advanced_mode' ):
+                
+                self._sync_now_button.Hide()
+                self._export_updates_button.Hide()
+                self._reset_button.Hide()
+                
+            
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
             hbox.AddF( self._sync_now_button, CC.FLAGS_LONE_BUTTON )

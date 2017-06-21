@@ -123,7 +123,6 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         return info
         
     
-    
 class PanelPredicateSystemDuration( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_DURATION
@@ -787,6 +786,49 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
     def GetInfo( self ):
         
         info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInt( self._unit.GetStringSelection() ) )
+        
+        return info
+        
+    
+class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._namespace = wx.TextCtrl( self )
+        
+        choices = [ '<', u'\u2248', '>' ]
+        
+        self._sign = wx.RadioBox( self, choices = choices, style = wx.RA_SPECIFY_COLS )
+        
+        self._num = wx.SpinCtrl( self, min = -99999999, max = 99999999 )
+        
+        #
+        
+        self._namespace.SetValue( 'page' )
+        self._sign.SetStringSelection( '>' )
+        self._num.SetValue( 0 )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:tag as number' ), CC.FLAGS_VCENTER )
+        hbox.AddF( self._namespace, CC.FLAGS_VCENTER )
+        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
+        hbox.AddF( self._num, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        wx.CallAfter( self._num.SetFocus )
+        
+    
+    def GetInfo( self ):
+        
+        info = ( self._namespace.GetValue(), self._sign.GetStringSelection(), self._num.GetValue() )
         
         return info
         

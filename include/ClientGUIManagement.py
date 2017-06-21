@@ -2267,7 +2267,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
         
-        self._thread_check_period = ClientGUICommon.TimeDeltaButton( self._options_panel, min = 30, hours = True, minutes = True, seconds = True )
+        self._thread_check_period = ClientGUICommon.TimeDeltaButton( self._options_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
         self._thread_check_period.SetValue( check_period )
         self._thread_check_period.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventCheckPeriod )
         

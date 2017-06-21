@@ -7,6 +7,7 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False
 gui_report_mode = False

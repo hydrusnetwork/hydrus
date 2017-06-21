@@ -3809,7 +3809,14 @@ class ThreadToGUIUpdater( object ):
         
         with self._lock:
             
-            self._func( *self._args, **self._kwargs )
+            try:
+                
+                self._func( *self._args, **self._kwargs )
+                
+            except HydrusExceptions.ShutdownException:
+                
+                pass
+                
             
             self._dirty_count = 0
             
@@ -3898,51 +3905,7 @@ class TimeDeltaButton( wx.Button ):
             
         else:
             
-            if self._show_days:
-                
-                days = value / 86400
-                
-                if days > 0:
-                    
-                    text_components.append( HydrusData.ConvertIntToPrettyString( days ) + ' days' )
-                    
-                
-                value %= 86400
-                
-            
-            if self._show_hours:
-                
-                hours = value / 3600
-                
-                if hours > 0:
-                    
-                    text_components.append( HydrusData.ConvertIntToPrettyString( hours ) + ' hours' )
-                    
-                
-                value %= 3600
-                
-            
-            if self._show_minutes:
-                
-                minutes = value / 60
-                
-                if minutes > 0:
-                    
-                    text_components.append( HydrusData.ConvertIntToPrettyString( minutes ) + ' minutes' )
-                    
-                
-                value %= 60
-                
-            
-            if self._show_seconds:
-                
-                if value > 0 or len( text_components ) == 0:
-                    
-                    text_components.append( HydrusData.ConvertIntToPrettyString( value ) + ' seconds' )
-                    
-                
-            
-            text = ' '.join( text_components )
+            text = HydrusData.ConvertTimeDeltaToPrettyString( value )
             
         
         self.SetLabelText( text )

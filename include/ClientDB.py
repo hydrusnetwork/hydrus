@@ -44,6 +44,14 @@ YAML_DUMP_ID_EXPORT_FOLDER = 6
 YAML_DUMP_ID_SUBSCRIPTION = 7
 YAML_DUMP_ID_LOCAL_BOORU = 8
 
+# Sqlite can handle -( 2 ** 63 ) -> ( 2 ** 63 ) - 1, but the user won't be searching that distance, so np
+MIN_CACHED_INTEGER = -99999999
+MAX_CACHED_INTEGER = 99999999
+
+def CanCacheInteger( num ):
+    
+    return MIN_CACHED_INTEGER <= num and num <= MAX_CACHED_INTEGER
+    
 def ConvertWildcardToSQLiteLikeParameter( wildcard ):
     
     like_param = wildcard.replace( '*', '%' )
@@ -2678,6 +2686,9 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE external_caches.duplicate_pairs ( smaller_hash_id INTEGER, larger_hash_id INTEGER, duplicate_type INTEGER, PRIMARY KEY ( smaller_hash_id, larger_hash_id ) );' )
         self._CreateIndex( 'external_caches.duplicate_pairs', [ 'larger_hash_id', 'smaller_hash_id' ], unique = True )
         
+        self._c.execute( 'CREATE TABLE external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
+        self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
+        
         # master
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
@@ -3578,7 +3589,7 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.FILE_SERVICES:
             
@@ -3629,7 +3640,7 @@ class DB( HydrusDB.HydrusDB ):
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         
         return predicates
@@ -3753,6 +3764,61 @@ class DB( HydrusDB.HydrusDB ):
                 
                 current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
                 pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
+                
+            
+        
+        hash_ids = set()
+        
+        if include_current_tags:
+            
+            for current_select in current_selects:
+                
+                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
+                
+            
+        
+        if include_pending_tags:
+            
+            for pending_select in pending_selects:
+                
+                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
+                
+            
+        
+        return hash_ids
+        
+    
+    def _GetHashIdsFromNamespaceIdsSubtagIds( self, file_service_key, tag_service_key, namespace_ids, subtag_ids, include_current_tags, include_pending_tags ):
+        
+        file_service_id = self._GetServiceId( file_service_key )
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            
+        
+        current_selects = []
+        pending_selects = []
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
+                
+                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                
+            else:
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                
+                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
                 
             
         
@@ -4237,6 +4303,26 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
+        if 'min_tag_as_number' in simple_preds:
+            
+            ( namespace, num ) = simple_preds[ 'min_tag_as_number' ]
+            
+            good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '>', include_current_tags, include_pending_tags )
+            
+            query_hash_ids.intersection_update( good_hash_ids )
+            
+        
+        if 'max_tag_as_number' in simple_preds:
+            
+            ( namespace, num ) = simple_preds[ 'max_tag_as_number' ]
+            
+            good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
+            
+            query_hash_ids.intersection_update( good_hash_ids )
+            
+        
+        #
+        
         limit = system_predicates.GetLimit()
         
         if limit is not None and limit <= len( query_hash_ids ):
@@ -4249,6 +4335,61 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return query_hash_ids
+        
+    
+    def _GetHashIdsFromSubtagIds( self, file_service_key, tag_service_key, subtag_ids, include_current_tags, include_pending_tags ):
+        
+        file_service_id = self._GetServiceId( file_service_key )
+        
+        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            
+        else:
+            
+            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
+            
+        
+        current_selects = []
+        pending_selects = []
+        
+        for search_tag_service_id in search_tag_service_ids:
+            
+            if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                
+                ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
+                
+                current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                
+            else:
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                
+                current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
+                
+            
+        
+        hash_ids = set()
+        
+        if include_current_tags:
+            
+            for current_select in current_selects:
+                
+                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
+                
+            
+        
+        if include_pending_tags:
+            
+            for pending_select in pending_selects:
+                
+                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
+                
+            
+        
+        return hash_ids
         
     
     def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ):
@@ -4401,87 +4542,20 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        file_service_id = self._GetServiceId( file_service_key )
-        
-        if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
-            
-            search_tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
-            
-        else:
-            
-            search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
-            
-        
-        current_selects = []
-        pending_selects = []
-        
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )
+        
+        possible_subtag_ids = GetSubtagIdsFromWildcard( subtag_wildcard )
         
         if namespace_wildcard != '':
             
             possible_namespace_ids = GetNamespaceIdsFromWildcard( namespace_wildcard )
-            possible_subtag_ids = GetSubtagIdsFromWildcard( subtag_wildcard )
             
-            for search_tag_service_id in search_tag_service_ids:
-                
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                    
-                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    
-                else:
-                    
-                    ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                    
-                    current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( possible_namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    
-                
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags )
             
         else:
             
-            possible_subtag_ids = GetSubtagIdsFromWildcard( subtag_wildcard )
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags )
             
-            for search_tag_service_id in search_tag_service_ids:
-                
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( search_tag_service_id )
-                    
-                    current_selects.append( 'SELECT hash_id FROM ' + current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    
-                else:
-                    
-                    ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
-                    
-                    current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( possible_subtag_ids ) + ';' )
-                    
-                
-            
-        
-        hash_ids = set()
-        
-        if include_current_tags:
-            
-            for current_select in current_selects:
-                
-                hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
-                
-            
-        
-        if include_pending_tags:
-            
-            for pending_select in pending_selects:
-                
-                hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
-                
-            
-        
-        return hash_ids
         
     
     def _GetHashIdsTagCounts( self, tag_service_key, include_current, include_pending, hash_ids = None ):
@@ -4605,6 +4679,24 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return nonzero_tag_hash_ids
+        
+    
+    def _GetHashIdsThatHaveTagAsNum( self, file_service_key, tag_service_key, namespace, num, operator, include_current_tags, include_pending_tags ):
+        
+        possible_subtag_ids = self._STS( self._c.execute( 'SELECT subtag_id FROM integer_subtags WHERE integer_subtag ' + operator + ' ' + str( num ) + ';' ) )
+        
+        if namespace == '':
+            
+            return self._GetHashIdsFromSubtagIds( file_service_key, tag_service_key, possible_subtag_ids, include_current_tags, include_pending_tags )
+            
+        else:
+            
+            namespace_id = self._GetNamespaceId( namespace )
+            
+            possible_namespace_ids = { namespace_id }
+            
+            return self._GetHashIdsFromNamespaceIdsSubtagIds( file_service_key, tag_service_key, possible_namespace_ids, possible_subtag_ids, include_current_tags, include_pending_tags )
+            
         
     
     def _GetHashIdsToHashes( self, hash_ids ):
@@ -5664,6 +5756,20 @@ class DB( HydrusDB.HydrusDB ):
             subtag_searchable = ClientSearch.ConvertTagToSearchable( subtag )
             
             self._c.execute( 'REPLACE INTO subtags_fts4 ( docid, subtag ) VALUES ( ?, ? );', ( subtag_id, subtag_searchable ) )
+            
+            try:
+                
+                integer_subtag = int( subtag )
+                
+                if CanCacheInteger( integer_subtag ):
+                    
+                    self._c.execute( 'INSERT OR IGNORE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', ( subtag_id, integer_subtag ) )
+                    
+                
+            except ValueError:
+                
+                pass
+                
             
         else:
             
@@ -9290,6 +9396,63 @@ class DB( HydrusDB.HydrusDB ):
             if do_the_message:
                 
                 message = 'Gelbooru changed their thumbnail url format! I have set a limit of 50 new files per check on your gelbooru subs to try to forestall a url cache doubling! Please check the release post for version 255 for more information!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 260:
+            
+            self._controller.pub( 'splash_set_status_text', 'generating some new tag search data' )
+            
+            self._c.execute( 'CREATE TABLE external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
+            
+            existing_subtag_data = self._c.execute( 'SELECT subtag_id, subtag FROM subtags;' ).fetchall()
+            
+            inserts = []
+            
+            for ( subtag_id, subtag ) in existing_subtag_data:
+                
+                try:
+                    
+                    integer_subtag = int( subtag )
+                    
+                    if CanCacheInteger( integer_subtag ):
+                        
+                        inserts.append( ( subtag_id, integer_subtag ) )
+                        
+                    
+                except ValueError:
+                    
+                    pass
+                    
+                
+            
+            self._c.executemany( 'INSERT OR IGNORE INTO integer_subtags ( subtag_id, integer_subtag ) VALUES ( ?, ? );', inserts )
+            
+            self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
+            
+            #
+            
+            do_the_message = False
+            
+            subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+            
+            for subscription in subscriptions:
+                
+                g_i = subscription._gallery_identifier
+                
+                if g_i.GetSiteType() == HC.SITE_TYPE_TUMBLR:
+                    
+                    do_the_message = True
+                    
+                    break
+                    
+                
+            
+            if do_the_message:
+                
+                message = 'The tumblr downloader can now produce \'raw\' urls for images that have >1280px width. It is possible some of your tumblr subscriptions\' urls are resizes, so at some point you may want to reset their url caches. I recommend you not do it yet--wait for the upcoming downloader overhaul, which will provide other benefits such as associating the \'post\' url with the image, rather than the ugly API url.'
                 
                 self.pub_initial_message( message )
                 

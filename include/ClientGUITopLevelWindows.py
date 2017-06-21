@@ -388,6 +388,11 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         raise NotImplementedError()
         
     
+    def DoOK( self ):
+        
+        raise NotImplementedError()
+        
+    
     def EventChildSizeChanged( self, event ):
         
         if self._panel is not None:
@@ -418,7 +423,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
             
             if command == 'ok':
                 
-                self.EventOK( None )
+                self.DoOK()
                 
             else:
                 
@@ -429,7 +434,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
     def EventOK( self, event ):
         
-        raise NotImplementedError()
+        self.DoOK()
         
     
     def SetPanel( self, panel ):
@@ -477,7 +482,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
         DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
         
     
-    def EventOK( self, event ):
+    def DoOK( self ):
         
         SaveTLWSizeAndPosition( self, self._frame_key )
         
@@ -513,7 +518,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
         DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title )
         
     
-    def EventOK( self, event ):
+    def DoOK( self ):
         
         try:
             
@@ -531,7 +536,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
 class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     
-    def EventOK( self, event ):
+    def DoOK( self ):
         
         try:
             

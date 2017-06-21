@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 261</h3></li>
+				<ul>
+					<li>wrote a new manage dialog for urls</li>
+					<li>added 'manage known urls' to media right-click menus!</li>
+					<li>double-left-clicking on any video animation will 'open externally'!</li>
+					<li>added an option to options->gui to set where new pages will appear by default--either far left/right or left/right of current page</li>
+					<li>the tumblr parser now produces '_raw' urls when the post was posted in 2013 or later</li>
+					<li>created a new 'number' subtag cache that will be populated on update</li>
+					<li>created a new 'tag as number' system predicate that can search for, say, all 'page:' tags > 200</li>
+					<li>bandwidth management now tracks requests and num_bytes more sensibly</li>
+					<li>bandwidth tracking objects can now better handle bandwidth usage and rule application in short intervals (i.e. sub-5-second) (however, the current networking engine cannot yet use this information accurately)</li>
+					<li>wrote unit test for bandwidth tracker, including for the new short interval timing</li>
+					<li>fleshed out the new network engine</li>
+					<li>fleshed out the new network job</li>
+					<li>thread watchers can now have a time delta that includes days (giving a max check period of 360 days, wew)</li>
+					<li>adminside mapping petition processing now has adaptive max total petition weight--lower file count range petitions will have much higher max total permitted weight</li>
+					<li>added a new 'callto' debug reporting mode that reports on current thread pool jobs</li>
+					<li>improved calltothread pre-spawning checks to reduce outside chance of deadlock in busy periods</li>
+					<li>the advanced review services repository panel buttons are now hidden unless in advanced mode</li>
+					<li>eliminated some animation buffer looping redundancy</li>
+					<li>fixed a little animation next-frame prediction code</li>
+					<li>fixed up some '1 minutes'-type time_delta->string conversion</li>
+					<li>fixed up label on time delta control button</li>
+					<li>fixed some shutdown thread interactions</li>
+					<li>fixed an issue where sometimes empty tags could be entered into the manage tags panel</li>
+					<li>added some pydeadobject error handling during client shutdown</li>
+					<li>refactored some db multi-tag->file search code, cleaned up wildcard searching</li>
+					<li>misc string cleanup</li>
+					<li>misc dialog cleanup</li>
+				</ul>
 				<li><h3>version 260</h3></li>
 				<ul>
 					<li>?fixed video parsing when the video metadata includes random non-utf-friendly garbage</li>

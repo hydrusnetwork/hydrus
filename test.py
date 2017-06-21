@@ -25,6 +25,7 @@ from include import TestDB
 from include import TestFunctions
 from include import TestClientImageHandling
 from include import TestHydrusNATPunch
+from include import TestHydrusNetworking
 from include import TestHydrusSerialisable
 from include import TestHydrusServer
 from include import TestHydrusSessions
@@ -262,7 +263,12 @@ class Controller( object ):
         return self._reads[ name ]
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
+        
+        pass
+        
+    
+    def ReportRequestUsed( self ):
         
         pass
         
@@ -286,7 +292,10 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
-        if run_all or only_run == 'downloading': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
+        if run_all or only_run == 'downloading':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
         if run_all or only_run == 'gui':
             suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )

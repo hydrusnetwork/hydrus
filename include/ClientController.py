@@ -522,7 +522,14 @@ class Controller( HydrusController.HydrusController ):
     
     def GoodTimeToDoForegroundWork( self ):
         
-        return not self._gui.CurrentlyBusy()
+        if self._gui:
+            
+            return not self._gui.CurrentlyBusy()
+            
+        else:
+            
+            return True
+            
         
     
     def InitClientFilesManager( self ):
@@ -819,11 +826,11 @@ class Controller( HydrusController.HydrusController ):
     
     def PageCompletelyDestroyed( self, page_key ):
         
-        try:
+        if self._gui:
             
             return self._gui.PageCompletelyDestroyed( page_key )
             
-        except wx.PyDeadObjectError:
+        else:
             
             return True
             
@@ -831,7 +838,14 @@ class Controller( HydrusController.HydrusController ):
     
     def PageClosedButNotDestroyed( self, page_key ):
         
-        return self._gui.PageClosedButNotDestroyed( page_key )
+        if self._gui:
+            
+            return self._gui.PageClosedButNotDestroyed( page_key )
+            
+        else:
+            
+            return False
+            
         
     
     def PopupMenu( self, window, menu ):

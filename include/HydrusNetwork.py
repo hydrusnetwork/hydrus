@@ -578,11 +578,21 @@ class Account( object ):
             
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
             
-            self._bandwidth_tracker.RequestMade( num_bytes )
+            self._bandwidth_tracker.ReportDataUsed( num_bytes )
+            
+            self._SetDirty()
+            
+        
+    
+    def ReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            self._bandwidth_tracker.ReportRequestUsed()
             
             self._SetDirty()
             
@@ -735,7 +745,7 @@ class AccountType( object ):
     
     def BandwidthOK( self, bandwidth_tracker ):
         
-        return self._bandwidth_rules.OK( bandwidth_tracker )
+        return self._bandwidth_rules.CanStart( bandwidth_tracker )
         
     
     def HasPermission( self, content_type, permission ):
@@ -2053,11 +2063,21 @@ class ServerService( object ):
             
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
             
-            self._bandwidth_tracker.RequestMade( num_bytes )
+            self._bandwidth_tracker.ReportDataUsed( num_bytes )
+            
+            self._SetDirty()
+            
+        
+    
+    def ReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            self._bandwidth_tracker.ReportRequestUsed()
             
             self._SetDirty()
             
@@ -2137,7 +2157,7 @@ class ServerServiceRestricted( ServerService ):
         
         with self._lock:
             
-            return self._bandwidth_rules.OK( self._bandwidth_tracker )
+            return self._bandwidth_rules.CanStart( self._bandwidth_tracker )
             
         
     
@@ -2283,15 +2303,25 @@ class ServerServiceAdmin( ServerServiceRestricted ):
         
         with self._lock:
             
-            return self._server_bandwidth_rules.OK( self._server_bandwidth_tracker )
+            return self._server_bandwidth_rules.CanStart( self._server_bandwidth_tracker )
             
         
     
-    def ServerRequestMade( self, num_bytes ):
+    def ServerReportDataUsed( self, num_bytes ):
         
         with self._lock:
             
-            self._server_bandwidth_tracker.RequestMade( num_bytes )
+            self._server_bandwidth_tracker.ReportDataUsed( num_bytes )
+            
+            self._SetDirty()
+            
+        
+    
+    def ServerReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            self._server_bandwidth_tracker.ReportRequestUsed()
             
             self._SetDirty()
             

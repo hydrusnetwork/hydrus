@@ -227,31 +227,45 @@ def ConvertTimeDeltaToPrettyString( seconds ):
     
     if seconds is None:
         
-        return 'month'
+        return 'per month'
         
     
     if seconds > 60:
         
         seconds = int( seconds )
         
-        if seconds > 86400:
+        if seconds >= 86400:
             
             days = seconds / 86400
             hours = ( seconds % 86400 ) / 3600
             
-            result = '%d' % days + ' days'
+            if days == 1:
+                
+                result = '1 day'
+                
+            else:
+                
+                result = '%d' % days + ' days'
+                
             
             if hours > 0:
                 
                 result += ' %d' % hours + ' hours'
                 
             
-        elif seconds > 3600:
+        elif seconds >= 3600:
             
             hours = seconds / 3600
             minutes = ( seconds % 3600 ) / 60
             
-            result = '%d' % hours + ' hours'
+            if hours == 1:
+                
+                result = '1 hour'
+                
+            else:
+                
+                result = '%d' % hours + ' hours'
+                
             
             if minutes > 0:
                 
@@ -274,6 +288,10 @@ def ConvertTimeDeltaToPrettyString( seconds ):
     elif seconds > 1:
         
         result = '%.1f' % seconds + ' seconds'
+        
+    elif seconds == 1:
+        
+        result = '1 second'
         
     elif seconds > 0.1:
         
@@ -1324,9 +1342,13 @@ class Account( HydrusYAMLBase ):
     
     def MakeStale( self ): self._info[ 'fresh_timestamp' ] = 0
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
         self._info[ 'used_bytes' ] += num_bytes
+        
+    
+    def ReportRequestUsed( self ):
+        
         self._info[ 'used_requests' ] += 1
         
     

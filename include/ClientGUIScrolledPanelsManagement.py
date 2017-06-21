@@ -34,6 +34,7 @@ import itertools
 import os
 import random
 import traceback
+import urlparse
 import wx
 
 class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -1804,7 +1805,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 65536 )
             self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
             
-            self._thread_check_period = ClientGUICommon.TimeDeltaButton( thread_checker, min = 30, hours = True, minutes = True, seconds = True )
+            self._thread_check_period = ClientGUICommon.TimeDeltaButton( thread_checker, min = 30, days = True, hours = True, minutes = True, seconds = True )
             self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
             
             #
@@ -2351,6 +2352,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gui_session = wx.Choice( self )
             
+            self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
+            
+            for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
+                
+                self._default_new_page_goes.Append( CC.new_page_goes_string_lookup[ value ], value )
+                
+            
             self._confirm_client_exit = wx.CheckBox( self )
             self._confirm_trash = wx.CheckBox( self )
             self._confirm_archive = wx.CheckBox( self )
@@ -2394,6 +2402,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             try: self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
             except: self._default_gui_session.SetSelection( 0 )
             
+            self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
+            
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
             
             self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
@@ -2430,6 +2440,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
+            rows.append( ( 'By default, new pages: ', self._default_new_page_goes ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
@@ -2515,6 +2526,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             title = self._main_gui_title.GetValue()
             
             self._new_options.SetString( 'main_gui_title', title )
+            
+            self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
             
             HG.client_controller.pub( 'main_gui_title', title )
             
@@ -5414,6 +5427,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
             
+            tags = HydrusTags.CleanTags( tags )
+            
             if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_OVERRULE ):
                 
                 forced_reason = 'admin'
@@ -5887,6 +5902,169 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
 
+class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent, media ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._media = media
+        
+        self._urls_listbox = wx.ListBox( self, style = wx.LB_SORT | wx.LB_SINGLE )
+        self._urls_listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventListDoubleClick )
+        
+        ideal_size = ClientData.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
+        
+        self._urls_listbox.SetBestFittingSize( ideal_size )
+        
+        self._url_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._url_input.Bind( wx.EVT_CHAR_HOOK, self.EventInputCharHook )
+        
+        self._urls_to_add = set()
+        self._urls_to_remove = set()
+        
+        #
+        
+        locations_manager = self._media.GetLocationsManager()
+        
+        self._original_urls = set( locations_manager.GetURLs() )
+        
+        for url in self._original_urls:
+            
+            self._urls_listbox.Append( url, url )
+            
+        
+        self._current_urls = set( self._original_urls )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        wx.CallAfter( self._url_input.SetFocus )
+        
+    
+    def _EnterURL( self, url ):
+        
+        if url in self._current_urls:
+            
+            for index in range( self._urls_listbox.GetCount() ):
+                
+                existing_url = self._urls_listbox.GetClientData( index )
+                
+                if existing_url == url:
+                    
+                    self._RemoveURL( index )
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            self._urls_listbox.Append( url, url )
+            
+            self._current_urls.add( url )
+            
+            if url not in self._original_urls:
+                
+                self._urls_to_add.add( url )
+                
+            
+        
+    
+    def _RemoveURL( self, index ):
+        
+        url = self._urls_listbox.GetClientData( index )
+        
+        self._urls_listbox.Delete( index )
+        
+        self._current_urls.discard( url )
+        
+        self._urls_to_add.discard( url )
+        
+        if url in self._original_urls:
+            
+            self._urls_to_remove.add( url )
+            
+        
+    
+    def EventListDoubleClick( self, event ):
+        
+        selection = self._urls_listbox.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            url = self._urls_listbox.GetClientData( selection )
+            
+            self._RemoveURL( selection )
+            
+            self._url_input.SetValue( url )
+            
+        
+    
+    def EventInputCharHook( self, event ):
+        
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            url = self._url_input.GetValue()
+            
+            if url == '':
+                
+                self.GetParent().DoOK()
+                
+            else:
+                
+                parse_result = urlparse.urlparse( url )
+                
+                if parse_result.scheme == '':
+                    
+                    wx.MessageBox( 'Could not parse that URL! Please make sure you include http:// or https://.' )
+                    
+                    return
+                    
+                
+                self._EnterURL( url )
+                
+                self._url_input.SetValue( '' )
+                
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def CommitChanges( self ):
+        
+        hash = self._media.GetHash()
+        
+        content_updates = []
+        
+        if len( self._urls_to_add ) > 0:
+            
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, self._urls_to_add ) ) )
+            
+        
+        if len( self._urls_to_remove ) > 0:
+            
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( hash, self._urls_to_remove ) ) )
+            
+        
+        if len( content_updates ) > 0:
+            
+            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            
+        
+    
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, missing_locations ):

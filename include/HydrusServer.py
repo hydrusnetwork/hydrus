@@ -19,7 +19,6 @@ class HydrusRequest( Request ):
         self.is_hydrus_client = True
         self.hydrus_args = None
         self.hydrus_response_context = None
-        self.hydrus_request_data_usage = 0
         
     
     def finish( self ):

@@ -384,11 +384,13 @@ class HydrusResource( Resource ):
                 raise HydrusExceptions.ForbiddenException( 'Did not recognise Content-Type header!' )
                 
             
+            total_bytes_read = 0
+            
             if mime == HC.APPLICATION_JSON:
                 
                 json_string = request.content.read()
                 
-                request.hydrus_request_data_usage += len( json_string )
+                total_bytes_read += len( json_string )
                 
                 hydrus_args = HydrusNetwork.ParseBodyString( json_string )
                 
@@ -404,12 +406,14 @@ class HydrusResource( Resource ):
                         
                         f.write( block )
                         
-                        request.hydrus_request_data_usage += len( block )
+                        total_bytes_read += len( block )
                         
                     
                 
                 hydrus_args = ParseFileArguments( temp_path )
                 
+            
+            self._reportDataUsed( request, total_bytes_read )
             
         
         request.hydrus_args = hydrus_args
@@ -496,9 +500,8 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Length', str( content_length ) )
             
         
-        request.hydrus_request_data_usage += content_length
-        
-        self._recordDataUsage( request )
+        self._reportDataUsed( request, content_length )
+        self._reportRequestUsed( request )
         
         if do_finish:
             
@@ -632,13 +635,18 @@ class HydrusResource( Resource ):
         return access_key
         
     
-    def _recordDataUsage( self, request ):
+    def _reportDataUsed( self, request, num_bytes ):
         
-        num_bytes = request.hydrus_request_data_usage
+        self._service.ReportDataUsed( num_bytes )
         
-        self._service.RequestMade( num_bytes )
+        HG.controller.ReportDataUsed( num_bytes )
         
-        HG.controller.RequestMade( num_bytes )
+    
+    def _reportRequestUsed( self, request ):
+        
+        self._service.ReportRequestUsed()
+        
+        HG.controller.ReportRequestUsed()
         
     
     def _threadDoGETJob( self, request ):

@@ -266,7 +266,7 @@ class ServiceLocalBooru( Service ):
     
     def _GetFunctionalStatus( self ):
         
-        if not self._bandwidth_rules.OK( self._bandwidth_tracker ):
+        if not self._bandwidth_rules.CanStart( self._bandwidth_tracker ):
             
             return ( False, 'bandwidth exceeded' )
             
@@ -302,7 +302,7 @@ class ServiceLocalBooru( Service ):
         
         with self._lock:
             
-            return self._bandwidth_rules.OK( self._bandwidth_tracker )
+            return self._bandwidth_rules.CanStart( self._bandwidth_tracker )
             
         
     
@@ -322,11 +322,19 @@ class ServiceLocalBooru( Service ):
             
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
             
-            self._bandwidth_tracker.RequestMade( num_bytes )
+            self._bandwidth_tracker.ReportDataUsed( num_bytes )
+            
+        
+    
+    def ReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            self._bandwidth_tracker.ReportRequestUsed()
             
         
     
@@ -464,7 +472,7 @@ class ServiceRemote( Service ):
             return ( False, self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
             
         
-        if not self._bandwidth_rules.OK( self._bandwidth_tracker ):
+        if not self._bandwidth_rules.CanStart( self._bandwidth_tracker ):
             
             return ( False, 'bandwidth exceeded' )
             
@@ -496,11 +504,34 @@ class ServiceRemote( Service ):
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         
     
-    def _RecordBandwidth( self, method, command, num_bytes ):
+    def _ReportDataUsed( self, num_bytes ):
         
-        self._bandwidth_tracker.RequestMade( num_bytes )
+        self._bandwidth_tracker.ReportDataUsed( num_bytes )
         
         self._SetDirty()
+        
+    
+    def _ReportRequestUsed( self ):
+        
+        self._bandwidth_tracker.ReportRequestUsed()
+        
+        self._SetDirty()
+        
+    
+    def BandwidthOK( self ):
+        
+        with self._lock:
+            
+            return self._bandwidth_rules.CanStart( self._bandwidth_tracker )
+            
+        
+    
+    def ImmediateBandwidthOK( self ):
+        
+        with self._lock:
+            
+            return self._bandwidth_rules.CanContinue( self._bandwidth_tracker )
+            
         
     
     def GetBandwidthCurrentMonthSummary( self ):
@@ -610,16 +641,22 @@ class ServiceRestricted( ServiceRemote ):
         self._next_account_sync = dictionary[ 'next_account_sync' ]
         
     
-    def _RecordBandwidth( self, method, command, num_bytes ):
+    def _ReportDataUsed( self, num_bytes ):
         
-        ServiceRemote._RecordBandwidth( self, method, command, num_bytes )
+        ServiceRemote._ReportDataUsed( self, num_bytes )
         
-        if ( method, command ) != ( HC.GET, 'account' ):
-            
-            self._account.RequestMade( num_bytes )
-            
-            self._SetDirty()
-            
+        self._account.ReportDataUsed( num_bytes )
+        
+        self._SetDirty()
+        
+    
+    def _ReportRequestUsed( self ):
+        
+        ServiceRemote._ReportRequestUsed( self )
+        
+        self._account.ReportRequestUsed()
+        
+        self._SetDirty()
         
     
     def GetAccount( self ):
@@ -653,6 +690,22 @@ class ServiceRestricted( ServiceRemote ):
         return self._account.IsDirty()
         
     
+    def ReportDataUsed( self, num_bytes ):
+        
+        with self._lock:
+            
+            self._ReportDataUsed( num_bytes )
+            
+        
+    
+    def ReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            self._ReportRequestUsed()
+            
+        
+    
     def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, temp_path = None, return_cookies = False, return_data_used = False ):
         
         if request_args is None: request_args = {}
@@ -660,6 +713,11 @@ class ServiceRestricted( ServiceRemote ):
         if report_hooks is None: report_hooks = []
         
         try:
+            
+            with self._lock:
+                
+                self._ReportRequestUsed()
+                
             
             credentials = self.GetCredentials()
             
@@ -729,12 +787,12 @@ class ServiceRestricted( ServiceRemote ):
                 
             elif method == HC.POST:
                 
-                data_used = len( body )
+                data_used = len( body ) + size_of_response
                 
             
             with self._lock:
                 
-                self._RecordBandwidth( method, command, data_used )
+                self._ReportDataUsed( data_used )
                 
             
             if return_data_used:
@@ -835,8 +893,9 @@ class ServiceRestricted( ServiceRemote ):
                     
                     self._account = response[ 'account' ]
                     
-                    # because the account is one behind! mostly do this just to sync up nicely with the service bandwidth tracker
-                    self._account.RequestMade( data_used )
+                    # because the account was one behind when it was serialised! mostly do this just to sync up nicely with the service bandwidth tracker
+                    self._account.ReportDataUsed( data_used )
+                    self._account.ReportRequestUsed()
                     
                     if force:
                         
@@ -1522,21 +1581,21 @@ class ServiceIPFS( ServiceRemote ):
         
         def on_wx_select_tree( job_key, url_tree ):
             
-                import ClientGUIDialogs
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogSelectFromURLTree( None, url_tree ) as dlg:
                 
-                with ClientGUIDialogs.DialogSelectFromURLTree( None, url_tree ) as dlg:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    if dlg.ShowModal() == wx.ID_OK:
+                    urls = dlg.GetURLs()
+                    
+                    if len( urls ) > 0:
                         
-                        urls = dlg.GetURLs()
-                        
-                        if len( urls ) > 0:
-                            
-                            HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
-                            
+                        HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
                         
                     
                 
+            
             
         
         def off_wx():

@@ -587,6 +587,10 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemSize )
             
+        elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+            
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemTagAsNumber )
+            
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
             
             pred_classes.append( ClientGUIPredicates.PanelPredicateSystemDuplicateRelationships )

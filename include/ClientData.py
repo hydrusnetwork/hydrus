@@ -814,6 +814,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
         
+        self._dictionary[ 'integers' ][ 'default_new_page_goes' ] = CC.NEW_PAGE_GOES_FAR_RIGHT
+        
         #
         
         self._dictionary[ 'keys' ] = {}

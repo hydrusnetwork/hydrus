@@ -1545,6 +1545,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
@@ -2000,14 +2001,40 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if self._next_new_page_index is None:
             
-            self._notebook.AddPage( page, page_name, select = True )
+            new_page_goes = self._new_options.GetInteger( 'default_new_page_goes' )
+            
+            current_index = self._notebook.GetSelection()
+            
+            if current_index == wx.NOT_FOUND:
+                
+                new_page_goes = CC.NEW_PAGE_GOES_FAR_LEFT
+                
+            
+            if new_page_goes == CC.NEW_PAGE_GOES_FAR_LEFT:
+                
+                insertion_index = 0
+                
+            elif new_page_goes == CC.NEW_PAGE_GOES_LEFT_OF_CURRENT:
+                
+                insertion_index = current_index
+                
+            elif new_page_goes == CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT:
+                
+                insertion_index = current_index + 1
+                
+            elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
+                
+                insertion_index = self._notebook.GetPageCount()
+                
             
         else:
             
-            self._notebook.InsertPage( self._next_new_page_index, page, page_name, select = True )
+            insertion_index = self._next_new_page_index
             
             self._next_new_page_index = None
             
+        
+        self._notebook.InsertPage( insertion_index, page, page_name, select = True )
         
         wx.CallAfter( page.SetSearchFocus )
         
@@ -2587,7 +2614,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SwitchBoolean( self, name ):
         
-        if name == 'db_report_mode':
+        if name == 'callto_report_mode':
+            
+            HG.callto_report_mode = not HG.callto_report_mode
+            
+        elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
             
@@ -3225,7 +3256,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
                 
                 with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
                     

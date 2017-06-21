@@ -13,6 +13,7 @@ The client can do quite a lot! Please check out the help inside the release or [
 * [8chan board](https://8ch.net/hydrus/index.html)
 * [twitter](https://twitter.com/hydrusnetwork)
 * [tumblr](http://hydrus.tumblr.com/)
+* [discord](https://discord.gg/vy8CUB4)
 
 ## Attribution
 

@@ -160,17 +160,27 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
         return request
         
     
-    def _recordDataUsage( self, request ):
+    def _reportDataUsed( self, request, num_bytes ):
         
-        HydrusServerResources.HydrusResource._recordDataUsage( self, request )
-        
-        num_bytes = request.hydrus_request_data_usage
+        HydrusServerResources.HydrusResource._reportDataUsed( self, request, num_bytes )
         
         account = request.hydrus_account
         
         if account is not None:
             
-            account.RequestMade( num_bytes )
+            account.ReportDataUsed( num_bytes )
+            
+        
+    
+    def _reportRequestUsed( self, request ):
+        
+        HydrusServerResources.HydrusResource._reportRequestUsed( self, request )
+        
+        account = request.hydrus_account
+        
+        if account is not None:
+            
+            account.ReportRequestUsed()
             
         
     

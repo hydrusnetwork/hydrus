@@ -105,7 +105,51 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetUsageStringsAndGaugeTuples( self, bandwidth_tracker, threshold = 3600 ):
+    def CanContinue( self, bandwidth_tracker, threshold = 60 ):
+        
+        with self._lock:
+            
+            for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
+                
+                # Do not block an ongoing jpg download because the current month is 100.03% used
+                if time_delta is None or time_delta > threshold:
+                    
+                    continue
+                    
+                
+                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) > max_allowed:
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
+    def CanStart( self, bandwidth_tracker, threshold = 60 ):
+        
+        with self._lock:
+            
+            for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
+                
+                # Do not prohibit a new job from starting just because the current download speed is 210/200KB/s
+                if time_delta is not None and time_delta < threshold:
+                    
+                    continue
+                    
+                
+                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) > max_allowed:
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
+    def GetUsageStringsAndGaugeTuples( self, bandwidth_tracker, threshold = 600 ):
         
         with self._lock:
             
@@ -113,7 +157,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
             for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
                 
-                time_is_less_than_threshold = time_delta is not None and time_delta < threshold
+                time_is_less_than_threshold = time_delta is not None and time_delta <= threshold
                 
                 if time_is_less_than_threshold or max_allowed == 0:
                     
@@ -156,27 +200,6 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def OK( self, bandwidth_tracker ):
-        
-        with self._lock:
-            
-            for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
-                
-                if max_allowed == 0:
-                    
-                    return False
-                    
-                
-                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) > max_allowed:
-                    
-                    return False
-                    
-                
-            
-            return True
-            
-        
-
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES ] = BandwidthRules
 
 class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
@@ -254,28 +277,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         return month_time
         
     
-    def _GetTimes( self, dt ):
-        
-        # collapse each time portion to the latest timestamp it covers
-        
-        ( year, month, day, hour, minute ) = ( dt.year, dt.month, dt.day, dt.hour, dt.minute )
-        
-        month_dt = datetime.datetime( year, month, 1 )
-        day_dt = datetime.datetime( year, month, day )
-        hour_dt = datetime.datetime( year, month, day, hour )
-        minute_dt = datetime.datetime( year, month, day, hour, minute )
-        
-        month_time = calendar.timegm( month_dt.timetuple() )
-        day_time = calendar.timegm( day_dt.timetuple() )
-        hour_time = calendar.timegm( hour_dt.timetuple() )
-        minute_time = calendar.timegm( minute_dt.timetuple() )
-        
-        second_time = calendar.timegm( dt.timetuple() )
-        
-        return ( month_time, day_time, hour_time, minute_time, second_time )
-        
-    
-    def _GetUsage( self, bandwidth_type, time_delta ):
+    def _GetRawUsage( self, bandwidth_type, time_delta ):
         
         if time_delta is None:
             
@@ -340,15 +342,73 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        # we need the 'window' because this tracks backets from the first timestamp and we want to include if since lands anywhere in the bracket
+        # we need the 'window' because this tracks brackets from the first timestamp and we want to include if 'since' lands anywhere in the bracket
+        # e.g. if it is 1200 and we want the past 1,000, we also need the bracket starting at 0, which will include 200-999
         
         time_delta += window
         
         since = HydrusData.GetNow() - time_delta
         
+        return sum( ( value for ( key, value ) in counter.items() if key >= since ) )
+        
+    
+    def _GetTimes( self, dt ):
+        
+        # collapse each time portion to the latest timestamp it covers
+        
+        ( year, month, day, hour, minute ) = ( dt.year, dt.month, dt.day, dt.hour, dt.minute )
+        
+        month_dt = datetime.datetime( year, month, 1 )
+        day_dt = datetime.datetime( year, month, day )
+        hour_dt = datetime.datetime( year, month, day, hour )
+        minute_dt = datetime.datetime( year, month, day, hour, minute )
+        
+        month_time = calendar.timegm( month_dt.timetuple() )
+        day_time = calendar.timegm( day_dt.timetuple() )
+        hour_time = calendar.timegm( hour_dt.timetuple() )
+        minute_time = calendar.timegm( minute_dt.timetuple() )
+        
+        second_time = calendar.timegm( dt.timetuple() )
+        
+        return ( month_time, day_time, hour_time, minute_time, second_time )
+        
+    
+    def _GetUsage( self, bandwidth_type, time_delta ):
+        
+        if time_delta is not None and bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta <= 5:
+            
+            usage = self._GetWeightedApproximateUsage( bandwidth_type, time_delta )
+            
+        else:
+            
+            usage = self._GetRawUsage( bandwidth_type, time_delta )
+            
+        
         self._MaintainCache()
         
-        return sum( ( value for ( key, value ) in counter.items() if key >= since ) )
+        return usage
+        
+    
+    def _GetWeightedApproximateUsage( self, bandwidth_type, time_delta ):
+        
+        LONG_DELTA = time_delta * 15
+        SHORT_DELTA = time_delta * 3
+        
+        SHORT_WEIGHT = 3
+        
+        usage_long = self._GetRawUsage( bandwidth_type, LONG_DELTA )
+        usage_short = self._GetRawUsage( bandwidth_type, SHORT_DELTA )
+        
+        total_weighted_usage = usage_long + ( usage_short * SHORT_WEIGHT )
+        
+        total_weight = LONG_DELTA + ( SHORT_DELTA * SHORT_WEIGHT )
+        
+        # since this is in bytes, an int for the final answer is fine and proper
+        usage = int( total_weighted_usage / total_weight )
+        
+        # usage per sec would be this / time_delta
+        
+        return usage
         
     
     def _MaintainCache( self ):
@@ -400,11 +460,16 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            if time_delta == 0:
+                
+                return 0
+                
+            
             return self._GetUsage( bandwidth_type, time_delta )
             
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
         with self._lock:
             
@@ -413,18 +478,35 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             ( month_time, day_time, hour_time, minute_time, second_time ) = self._GetTimes( dt )
             
             self._months_bytes[ month_time ] += num_bytes
-            self._months_requests[ month_time ] += 1
             
             self._days_bytes[ day_time ] += num_bytes
-            self._days_requests[ day_time ] += 1
             
             self._hours_bytes[ hour_time ] += num_bytes
-            self._hours_requests[ hour_time ] += 1
             
             self._minutes_bytes[ minute_time ] += num_bytes
-            self._minutes_requests[ minute_time ] += 1
             
             self._seconds_bytes[ second_time ] += num_bytes
+            
+            self._MaintainCache()
+            
+        
+    
+    def ReportRequestUsed( self ):
+        
+        with self._lock:
+            
+            dt = datetime.datetime.utcnow()
+            
+            ( month_time, day_time, hour_time, minute_time, second_time ) = self._GetTimes( dt )
+            
+            self._months_requests[ month_time ] += 1
+            
+            self._days_requests[ day_time ] += 1
+            
+            self._hours_requests[ hour_time ] += 1
+            
+            self._minutes_requests[ minute_time ] += 1
+            
             self._seconds_requests[ second_time ] += 1
             
             self._MaintainCache()
@@ -432,83 +514,3 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER ] = BandwidthTracker
-
-class TransferSpeedTracker( object ):
-    
-    CLEAN_PERIOD = 30
-    
-    LONG_DELTA = 15
-    SHORT_DELTA = 3
-    
-    SHORT_WEIGHT = 3
-    
-    def __init__( self ):
-        
-        self._lock = threading.Lock()
-        
-        self._current_speed = 0
-        
-        self._current_speed_timestamp = 0
-        self._current_speed_dirty = False
-        
-        self._timestamps_to_amounts = collections.Counter()
-        
-        self._next_clean_time = HydrusData.GetNow() + self.CLEAN_PERIOD
-        
-    
-    def _CleanHistory( self ):
-        
-        if HydrusData.TimeHasPassed( self._next_clean_time ):
-            
-            now = HydrusData.GetNow()
-            
-            invalid_indices = [ timestamp for timestamp in self._timestamps_to_amounts.keys() if timestamp < now - self.LONG_DELTA ]
-            
-            for timestamp in invalid_indices:
-                
-                del self._timestamps_to_amounts[ timestamp ]
-                
-            
-            self._next_clean_time = HydrusData.GetNow() + self.CLEAN_PERIOD
-            
-        
-    
-    def DataTransferred( self, num_bytes ):
-        
-        with self._lock:
-            
-            self._CleanHistory()
-            
-            now = HydrusData.GetNow()
-            
-            self._timestamps_to_amounts[ now ] += num_bytes
-            
-            self._current_speed_dirty = True
-            
-        
-    
-    def GetCurrentSpeed( self ):
-        
-        with self._lock:
-            
-            self._CleanHistory()
-            
-            now = HydrusData.GetNow()
-            
-            if self._current_speed_dirty or self._current_speed_timestamp != now:
-                
-                total_bytes = ( self._timestamps_to_amounts[ timestamp ] for timestamp in range( now - self.LONG_DELTA, now ) )
-                total_bytes += ( self._timestamps_to_amounts[ timestamp ] * self.SHORT_WEIGHT for timestamp in range( now - self.SHORT_DELTA, now ) )
-                
-                total_weight = self.LONG_DELTA + ( self.SHORT_DELTA * self.SHORT_WEIGHT )
-                
-                self._current_speed = total_bytes // total_weight # since this is in bytes, an int is fine and proper
-                
-                self._current_speed_timestamp = now
-                self._current_speed_dirty = False
-                
-            
-            return self._current_speed
-            
-        
-    

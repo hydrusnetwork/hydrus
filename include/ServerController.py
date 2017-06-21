@@ -363,9 +363,14 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThread( self.ProcessPubSub )
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
         
-        self._admin_service.ServerRequestMade( num_bytes )
+        self._admin_service.ServerReportDataUsed( num_bytes )
+        
+    
+    def ReportRequestUsed( self ):
+        
+        self._admin_service.ServerReportRequestUsed()
         
     
     def Run( self ):

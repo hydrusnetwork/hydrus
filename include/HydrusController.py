@@ -69,7 +69,11 @@ class HydrusController( object ):
                 
             
         
-        if len( self._call_to_threads ) < 10:
+        # all the threads in the pool are currently busy
+        
+        calling_from_the_thread_pool = threading.current_thread() in self._call_to_threads
+        
+        if calling_from_the_thread_pool or len( self._call_to_threads ) < 10:
             
             call_to_thread = HydrusThreading.THREADCallToThread( self )
             
@@ -135,6 +139,23 @@ class HydrusController( object ):
         
     
     def CallToThread( self, callable, *args, **kwargs ):
+        
+        if HG.callto_report_mode:
+            
+            what_to_report = [ callable ]
+            
+            if len( args ) > 0:
+                
+                what_to_report.append( args )
+                
+            
+            if len( kwargs ) > 0:
+                
+                what_to_report.append( kwargs )
+                
+            
+            HydrusData.ShowText( tuple( what_to_report ) )
+            
         
         call_to_thread = self._GetCallToThread()
         
@@ -296,7 +317,12 @@ class HydrusController( object ):
         return self._Read( action, *args, **kwargs )
         
     
-    def RequestMade( self, num_bytes ):
+    def ReportDataUsed( self, num_bytes ):
+        
+        pass
+        
+    
+    def ReportRequestUsed( self ):
         
         pass
         

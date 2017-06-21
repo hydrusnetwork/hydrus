@@ -879,6 +879,27 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _ManageURLs( self ):
+        
+        if self._focussed_media is None:
+            
+            return
+            
+        
+        title = 'manage known urls'
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._focussed_media.GetDisplayMedia() )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+        self.SetFocus()
+        
+    
     def _ModifyUploaders( self, file_service_key ):
         
         wx.MessageBox( 'this does not work yet!' )
@@ -3026,28 +3047,18 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
+                manage_menu = wx.Menu()
+                
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_tags_phrase, 'Manage tags for the selected files.', self._ManageTags )
+                
                 if i_can_post_ratings:
                     
-                    manage_menu = wx.Menu()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_tags_phrase, 'Manage tags for the selected files.', self._ManageTags )
                     ClientGUIMenus.AppendMenuItem( self, manage_menu, manage_ratings_phrase, 'Manage ratings for the selected files.', self._ManageRatings )
                     
-                    ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
-                    
-                else:
-                    
-                    if multiple_selected:
-                        
-                        phrase = 'manage files\' tags'
-                        
-                    else:
-                        
-                        phrase = 'manage file\'s tags'
-                        
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, phrase, 'Manage tags for the selected files.', self._ManageTags )
-                    
+                
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s known urls', 'Manage urls for the focused file.', self._ManageURLs )
+                
+                ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
                 
                 #
                 

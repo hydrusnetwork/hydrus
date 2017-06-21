@@ -550,6 +550,19 @@ class FileSystemPredicates( object ):
                 elif operator == '>': self._common_info[ 'min_num_tags' ] = num_tags
                 
             
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+                
+                ( namespace, operator, num ) = value
+                
+                if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
+                elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
+                elif operator == u'\u2248':
+                    
+                    self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
+                    self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
+                    
+                
+            
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_WIDTH:
                 
                 ( operator, width ) = value
@@ -1166,6 +1179,41 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     service = HG.client_controller.GetServicesManager().GetService( service_key )
                     
                     base += service.GetName()
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
+                
+                if self._value is None:
+                    
+                    base = 'tag as number'
+                    
+                else:
+                    
+                    ( namespace, operator, num ) = self._value
+                    
+                    if namespace == '':
+                        
+                        n_text = 'tag'
+                        
+                    else:
+                        
+                        n_text = namespace
+                        
+                    
+                    if operator == u'\u2248':
+                        
+                        o_text = ' about '
+                        
+                    elif operator == '<':
+                        
+                        o_text = ' less than '
+                        
+                    elif operator == '>':
+                        
+                        o_text = ' more than '
+                        
+                    
+                    base = n_text + o_text + HydrusData.ConvertIntToPrettyString( num )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:

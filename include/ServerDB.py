@@ -2099,6 +2099,8 @@ class DB( HydrusDB.HydrusDB ):
         min_weight_permitted = None
         max_weight_permitted = None
         
+        max_total_weight = None
+        
         petition_pairs = list( tag_ids_to_hash_ids.items() )
         
         random.shuffle( petition_pairs )
@@ -2116,20 +2118,28 @@ class DB( HydrusDB.HydrusDB ):
                     min_weight_permitted = 1
                     max_weight_permitted = 1
                     
+                    max_total_weight = 20000
+                    
                 elif content_weight < 10:
                     
                     min_weight_permitted = 2
                     max_weight_permitted = 9
+                    
+                    max_total_weight = 5000
                     
                 elif content_weight < 50:
                     
                     min_weight_permitted = 10
                     max_weight_permitted = 49
                     
+                    max_total_weight = 2000
+                    
                 else:
                     
                     min_weight_permitted = 50
                     max_weight_permitted = None
+                    
+                    max_total_weight = 500
                     
                 
             else:
@@ -2159,7 +2169,7 @@ class DB( HydrusDB.HydrusDB ):
             total_num_petitions += 1
             total_weight += content_weight
             
-            if total_num_petitions > 20 and total_weight > 1000:
+            if total_num_petitions > 20 and total_weight > 10000:
                 
                 break
                 

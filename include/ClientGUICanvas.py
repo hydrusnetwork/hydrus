@@ -416,11 +416,24 @@ class Animation( wx.Window ):
         
         if self._animation_bar is not None:
             
-            etype = event.GetEventType()
-            
             if not ( event.ShiftDown() or event.CmdDown() or event.AltDown() ):
                 
-                if etype == wx.wxEVT_LEFT_DOWN:
+                if event.LeftDClick():
+                    
+                    hash = self._media.GetHash()
+                    mime = self._media.GetMime()
+                    
+                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    
+                    path = client_files_manager.GetFilePath( hash, mime )
+                    
+                    HydrusPaths.LaunchFile( path )
+                    
+                    self.Pause()
+                    
+                    return
+                    
+                elif event.LeftDown():
                     
                     self.PausePlay()
                     
@@ -1545,9 +1558,9 @@ class Canvas( wx.Window ):
         
         if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
             
-            if self._current_media is not None:
+            with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg:
                 
-                with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg: dlg.ShowModal()
+                dlg.ShowModal()
                 
             
         
@@ -1563,7 +1576,7 @@ class Canvas( wx.Window ):
             
             self._manage_tags_panel.SetFocus()
             
-        elif self._current_media is not None:
+        else:
             
             # take any focus away from hover window, which will mess up window order when it hides due to the new frame
             self.SetFocus()
@@ -1578,6 +1591,25 @@ class Canvas( wx.Window ):
             manage_tags.SetPanel( panel )
             
             self._manage_tags_panel = panel
+            
+        
+    
+    def _ManageURLs( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        title = 'manage known urls'
+        
+        with ClientGUITopLevelWindows.DialogManage( self, title ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._current_media )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
             
         
     
@@ -2426,45 +2458,44 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+            manage_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
+            
             if i_can_post_ratings:
                 
-                manage_menu = wx.Menu()
+                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage tags for the selected files.', self._ManageTags )
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage ratings for the selected files.', self._ManageRatings )
-                
-                ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
-                
-            else:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'manage tags', 'Manage tags for the selected files.', self._ManageTags )
-                
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
+            
+            ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
             if self._current_media.HasInbox():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive the selected files.', self._Archive )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'archive', 'Archive this file.', self._Archive )
                 
             
             if self._current_media.HasArchive():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'inbox', 'Send the selected files back to the inbox.', self._Inbox )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'inbox', 'Send this files back to the inbox.', self._Inbox )
                 
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete the selected files.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Delete this file.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete the selected files from disk.', self._Delete, CC.TRASH_SERVICE_KEY )
-                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take the selected files out of the trash.', self._Undelete )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open the file in your OS\'s default program.', self._OpenExternally )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in your OS\'s default program.', self._OpenExternally )
             
             urls = self._current_media.GetLocationsManager().GetURLs()
             
@@ -2495,23 +2526,23 @@ class CanvasPanel( Canvas ):
             
             copy_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'file', 'Copy the file to your clipboard.', self._CopyFileToClipboard )
+            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
             copy_hash_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Open the file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Open the file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Open the file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
-            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Open the file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Open this file\'s SHA256 hash.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Open this file\'s MD5 hash.', self._CopyHashToClipboard, 'md5' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Open this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Open this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
                 
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy the file to your clipboard as a bmp.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy the file\'s path to your clipboard.', self._CopyPathToClipboard )
+            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
             
             ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
             
@@ -4718,19 +4749,18 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendSeparator( menu )
                 
             
+            manage_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
+            
             if i_can_post_ratings:
                 
-                manage_menu = wx.Menu()
-                
-                ClientGUIMenus.AppendMenuItem( self, manage_menu, 'tags', 'Manage this file\'s tags.', self._ManageTags )
                 ClientGUIMenus.AppendMenuItem( self, manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
-                ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
-                
-            else:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'manage tags', 'Manage this file\'s tags.', self._ManageTags )
-                
+            
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known urls.', self._ManageURLs )
+            
+            ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -5095,13 +5125,25 @@ class MediaContainer( wx.Window ):
                 
                 if direction == 1:
                     
-                    if current_frame_index == num_frames - 1: current_frame_index = 0
-                    else: current_frame_index += 1
+                    if current_frame_index == num_frames - 1:
+                        
+                        current_frame_index = 0
+                        
+                    else:
+                        
+                        current_frame_index += 1
+                        
                     
                 else:
                     
-                    if current_frame_index == 0: current_frame_index = num_frames - 1
-                    else: current_frame_index -= 1
+                    if current_frame_index == 0:
+                        
+                        current_frame_index = num_frames - 1
+                        
+                    else:
+                        
+                        current_frame_index -= 1
+                        
                     
                 
                 self._media_window.GotoFrame( current_frame_index )

@@ -160,7 +160,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             self._bandwidth_type.Bind( wx.EVT_CHOICE, self.EventBandwidth )
             
-            self._time_delta = ClientGUICommon.TimeDeltaButton( self, min = 3600, days = True, hours = True, monthly_allowed = True )
+            self._time_delta = ClientGUICommon.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
             
             self._max_allowed = wx.SpinCtrl( self, min = 1, max = 1024 * 1024 * 1024 )
             

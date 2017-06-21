@@ -232,6 +232,18 @@ media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_100 ] = 'show at 100%'
 media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_MAX_REGULAR ] = 'scale to the largest regular zoom that fits'
 media_viewer_scale_string_lookup[ MEDIA_VIEWER_SCALE_TO_CANVAS ] = 'scale to the canvas size'
 
+NEW_PAGE_GOES_FAR_LEFT = 0
+NEW_PAGE_GOES_LEFT_OF_CURRENT = 1
+NEW_PAGE_GOES_RIGHT_OF_CURRENT = 2
+NEW_PAGE_GOES_FAR_RIGHT = 3
+
+new_page_goes_string_lookup = {}
+
+new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_LEFT ] = 'go far left'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'go left of current page'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'go right of current page'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_RIGHT ] = 'go far right'
+
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1
 SHORTCUT_MODIFIER_SHIFT = 2

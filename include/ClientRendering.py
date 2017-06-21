@@ -452,7 +452,18 @@ class RasterContainerVideo( RasterContainer ):
             frame = self._frames[ index ]
             
         
-        self.GetReadyForFrame( index + 1 )
+        num_frames = self.GetNumFrames()
+        
+        if index == num_frames - 1:
+            
+            next_index = 0
+            
+        else:
+            
+            next_index = index + 1
+            
+        
+        self.GetReadyForFrame( next_index )
         
         return frame
         
@@ -466,6 +477,13 @@ class RasterContainerVideo( RasterContainer ):
     def GetReadyForFrame( self, next_index_to_expect ):
         
         num_frames = self.GetNumFrames()
+        
+        frame_exists = 0 <= next_index_to_expect and next_index_to_expect <= ( num_frames - 1 )
+        
+        if not frame_exists:
+            
+            return
+            
         
         if num_frames > self._num_frames_backwards + 1 + self._num_frames_forwards:
             
