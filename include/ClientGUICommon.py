@@ -482,7 +482,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 text_and_data_tuples = list( [ ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ] )
                 text_and_data_tuples.sort()
                 
-                ratings_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+                ratings_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
                 
                 for ratings_service in ratings_services:
                     
@@ -598,7 +598,7 @@ class ChoiceSort( BetterChoice ):
         
         self._page_key = page_key
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         sort_choices = ClientData.GetSortChoices( add_namespaces_and_ratings = add_namespaces_and_ratings )
         
@@ -2539,7 +2539,7 @@ class RatingLikeCanvas( RatingLike ):
         self._current_media = None
         self._rating_state = None
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         name = service.GetName()
         
@@ -2648,7 +2648,7 @@ class RatingNumerical( wx.Window ):
         
         self._service_key = service_key
         
-        self._service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        self._service = HG.client_controller.services_manager.GetService( self._service_key )
         
         self._num_stars = self._service.GetNumStars()
         self._allow_zero = self._service.AllowZero()

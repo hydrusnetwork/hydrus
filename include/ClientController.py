@@ -57,6 +57,9 @@ class Controller( HydrusController.HydrusController ):
         self._previously_idle = False
         self._idle_started = None
         
+        self.client_files_manager = None
+        self.services_manager = None
+        
     
     def _InitDB( self ):
         
@@ -391,13 +394,13 @@ class Controller( HydrusController.HydrusController ):
         
         stop_time = HydrusData.GetNow() + ( self._options[ 'idle_shutdown_max_minutes' ] * 60 )
         
-        self._client_files_manager.Rebalance( partial = False, stop_time = stop_time )
+        self.client_files_manager.Rebalance( partial = False, stop_time = stop_time )
         
         self.MaintainDB( stop_time = stop_time )
         
         if not self._options[ 'pause_repo_sync' ]:
             
-            services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
+            services = self.services_manager.GetServices( HC.REPOSITORIES )
             
             for service in services:
                 
@@ -488,11 +491,6 @@ class Controller( HydrusController.HydrusController ):
         raise NotImplementedError()
         
     
-    def GetClientFilesManager( self ):
-        
-        return self._client_files_manager
-        
-    
     def GetClientSessionManager( self ):
         
         return self._client_session_manager
@@ -503,7 +501,10 @@ class Controller( HydrusController.HydrusController ):
         return self._shortcuts_manager.GetCommand( shortcut_names, shortcut )
         
     
-    def GetGUI( self ): return self._gui
+    def GetGUI( self ):
+        
+        return self._gui
+        
     
     def GetOptions( self ):
         
@@ -513,11 +514,6 @@ class Controller( HydrusController.HydrusController ):
     def GetNewOptions( self ):
         
         return self._new_options
-        
-    
-    def GetServicesManager( self ):
-        
-        return self._services_manager
         
     
     def GoodTimeToDoForegroundWork( self ):
@@ -534,9 +530,9 @@ class Controller( HydrusController.HydrusController ):
     
     def InitClientFilesManager( self ):
         
-        self._client_files_manager = ClientCaches.ClientFilesManager( self )
+        self.client_files_manager = ClientCaches.ClientFilesManager( self )
         
-        missing_locations = self._client_files_manager.GetMissing()
+        missing_locations = self.client_files_manager.GetMissing()
         
         while len( missing_locations ) > 0:
             
@@ -548,9 +544,9 @@ class Controller( HydrusController.HydrusController ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    self._client_files_manager = ClientCaches.ClientFilesManager( self )
+                    self.client_files_manager = ClientCaches.ClientFilesManager( self )
                     
-                    missing_locations = self._client_files_manager.GetMissing()
+                    missing_locations = self.client_files_manager.GetMissing()
                     
                 else:
                     
@@ -568,7 +564,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
-        self._services_manager = ClientCaches.ServicesManager( self )
+        self.services_manager = ClientCaches.ServicesManager( self )
         
         self._options = self.Read( 'options' )
         self._new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
@@ -769,7 +765,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 self.pub( 'splash_set_status_text', 'fattening service info' )
                 
-                services = self.GetServicesManager().GetServices()
+                services = self.services_manager.GetServices()
                 
                 for service in services:
                     
@@ -870,7 +866,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RefreshServices( self ):
         
-        self._services_manager.RefreshServices()
+        self.services_manager.RefreshServices()
         
     
     def ResetIdleTimer( self ):
@@ -885,7 +881,7 @@ class Controller( HydrusController.HydrusController ):
     
     def RestartBooru( self ):
         
-        service = self.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        service = self.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         port = service.GetPort()
         
@@ -1028,7 +1024,7 @@ class Controller( HydrusController.HydrusController ):
         
         with HG.dirty_object_lock:
             
-            dirty_services = [ service for service in self._services_manager.GetServices() if service.IsDirty() ]
+            dirty_services = [ service for service in self.services_manager.GetServices() if service.IsDirty() ]
             
             if len( dirty_services ) > 0:
                 
@@ -1043,7 +1039,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.WriteSynchronous( 'update_services', services )
             
-            self._services_manager.RefreshServices()
+            self.services_manager.RefreshServices()
             
         
     
@@ -1120,7 +1116,7 @@ class Controller( HydrusController.HydrusController ):
             return True
             
         
-        services = self.GetServicesManager().GetServices( HC.REPOSITORIES )
+        services = self.services_manager.GetServices( HC.REPOSITORIES )
         
         for service in services:
             

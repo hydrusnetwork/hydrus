@@ -1423,7 +1423,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
         
@@ -2470,7 +2470,7 @@ class DB( HydrusDB.HydrusDB ):
         missing_count = 0
         deletee_hash_ids = []
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         for ( i, ( hash_id, mime ) ) in enumerate( info ):
             
@@ -2933,7 +2933,7 @@ class DB( HydrusDB.HydrusDB ):
         
         deletable_file_hash_ids = hash_ids.difference( potentially_pending_upload_hash_ids )
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         if len( deletable_file_hash_ids ) > 0:
             
@@ -5438,7 +5438,7 @@ class DB( HydrusDB.HydrusDB ):
         
         needed_hashes = []
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         for hash_id in needed_hash_ids:
             
@@ -6060,18 +6060,30 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetURLStatus( self, url ):
         
-        result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
+        search_urls = [ url ]
         
-        if result is None:
+        if url.startswith( 'http://' ):
             
-            return ( CC.STATUS_NEW, None )
+            search_urls.append( 'https://' + url[7:] )
             
-        else:
+        elif url.startswith( 'https://' ):
             
-            ( hash_id, ) = result
+            search_urls.append( 'http://' + url[8:] )
             
-            return self._GetHashIdStatus( hash_id )
+        
+        for search_url in search_urls:
             
+            result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( search_url, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( hash_id, ) = result
+                
+                return self._GetHashIdStatus( hash_id )
+                
+            
+        
+        return ( CC.STATUS_NEW, None )
         
     
     def _GetWebSessions( self ):
@@ -6217,7 +6229,7 @@ class DB( HydrusDB.HydrusDB ):
             
             timestamp = HydrusData.GetNow()
             
-            client_files_manager = self._controller.GetClientFilesManager()
+            client_files_manager = self._controller.client_files_manager
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
@@ -6314,7 +6326,7 @@ class DB( HydrusDB.HydrusDB ):
         num_frames = None
         num_words = None
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         # lockless because this db call is made by the locked client files manager
         client_files_manager.LocklessAddFileFromString( update_hash, mime, update_network_string )
@@ -7610,7 +7622,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 num_updates_done = 0
                 
-                client_files_manager = self._controller.GetClientFilesManager()
+                client_files_manager = self._controller.client_files_manager
                 
                 select_statement = 'SELECT hash_id FROM files_info WHERE mime = ' + str( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ) + ' AND hash_id IN %s;'
                 
@@ -7830,7 +7842,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.pub( 'message', job_key )
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         num_to_do = len( hashes )
         

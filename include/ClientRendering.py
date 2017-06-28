@@ -60,7 +60,7 @@ class ImageRenderer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
@@ -158,7 +158,7 @@ class RasterContainer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
@@ -329,7 +329,7 @@ class RasterContainerVideo( RasterContainer ):
         duration = self._media.GetDuration()
         num_frames = self._media.GetNumFrames()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         if self._media.GetMime() == HC.IMAGE_GIF:
             
@@ -441,8 +441,14 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetDuration( self, index ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF: return self._durations[ index ]
-        else: return self._average_frame_duration
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            return self._durations[ index ]
+            
+        else:
+            
+            return self._average_frame_duration
+            
         
     
     def GetFrame( self, index ):
@@ -546,8 +552,14 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTotalDuration( self ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF: return sum( self._durations )
-        else: return self._average_frame_duration * self.GetNumFrames()
+        if self._media.GetMime() == HC.IMAGE_GIF:
+            
+            return sum( self._durations )
+            
+        else:
+            
+            return self._average_frame_duration * self.GetNumFrames()
+            
         
     
     def HasFrame( self, index ):

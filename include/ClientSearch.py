@@ -296,7 +296,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._file_service_key = file_service_key.decode( 'hex' )
         self._tag_service_key = tag_service_key.decode( 'hex' )
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         if not services_manager.ServiceExists( self._file_service_key ):
             
@@ -1101,7 +1101,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value, service_key ) = self._value
                     
-                    service = HG.client_controller.GetServicesManager().GetService( service_key )
+                    service = HG.client_controller.services_manager.GetService( service_key )
                     
                     service_type = service.GetServiceType()
                     
@@ -1176,7 +1176,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if current_or_pending == HC.CONTENT_STATUS_PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    service = HG.client_controller.GetServicesManager().GetService( service_key )
+                    service = HG.client_controller.services_manager.GetService( service_key )
                     
                     base += service.GetName()
                     

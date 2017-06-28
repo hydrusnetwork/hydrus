@@ -306,7 +306,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions )
             
         except:
             
@@ -321,7 +321,7 @@ class ClientFilesManager( object ):
             
             self._GenerateFullSizeThumbnail( hash )
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnail( full_size_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions )
             
         
         resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
@@ -1457,7 +1457,7 @@ class LocalBooruCache( object ):
     
     def _RefreshShares( self ):
         
-        self._local_booru_service = self._controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._local_booru_service = self._controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         self._keys_to_infos = {}
         
@@ -1572,7 +1572,7 @@ class HydrusSessionManager( object ):
             
             # session key expired or not found
             
-            service = self._controller.GetServicesManager().GetService( service_key )
+            service = self._controller.services_manager.GetService( service_key )
             
             ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
             
@@ -1740,7 +1740,6 @@ class ThumbnailCache( object ):
         cache_size = options[ 'thumbnail_cache_size' ]
         
         self._data_cache = DataCache( self._controller, cache_size )
-        self._client_files_manager = self._controller.GetClientFilesManager()
         
         self._lock = threading.Lock()
         
@@ -1783,11 +1782,11 @@ class ThumbnailCache( object ):
                 
                 if full_size:
                     
-                    path = self._client_files_manager.GetFullSizeThumbnailPath( hash )
+                    path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
                     
                 else:
                     
-                    path = self._client_files_manager.GetResizedThumbnailPath( hash )
+                    path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
                     
                 
             except HydrusExceptions.FileMissingException as e:
@@ -1803,11 +1802,11 @@ class ThumbnailCache( object ):
                 
                 if full_size:
                     
-                    path = self._client_files_manager.GetFullSizeThumbnailPath( hash )
+                    path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
                     
                 else:
                     
-                    path = self._client_files_manager.GetResizedThumbnailPath( hash )
+                    path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
                     
                 
             except HydrusExceptions.FileMissingException:
@@ -1826,7 +1825,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                self._client_files_manager.RegenerateResizedThumbnail( hash )
+                self._controller.client_files_manager.RegenerateResizedThumbnail( hash )
                 
                 try:
                     
@@ -1861,7 +1860,7 @@ class ThumbnailCache( object ):
         
         if too_large or ( too_small and not small_original_image ):
             
-            self._client_files_manager.RegenerateResizedThumbnail( hash )
+            self._controller.client_files_manager.RegenerateResizedThumbnail( hash )
             
             hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
             
@@ -1906,7 +1905,7 @@ class ThumbnailCache( object ):
                     
                     options = self._controller.GetOptions()
                     
-                    thumbnail = HydrusFileHandling.GenerateThumbnail( path, options[ 'thumbnail_dimensions' ] )
+                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, options[ 'thumbnail_dimensions' ] )
                     
                     with open( temp_path, 'wb' ) as f:
                         
@@ -3260,7 +3259,7 @@ class WebSessionManagerClient( object ):
         form_fields[ 'password' ] = password
         form_fields[ 'captcha' ] = ''
         form_fields[ 'g_recaptcha_response' ] = ''
-        form_fields[ 'return_to' ] = 'http://www.pixiv.net'
+        form_fields[ 'return_to' ] = 'https://www.pixiv.net'
         form_fields[ 'lang' ] = 'en'
         form_fields[ 'post_key' ] = post_key
         form_fields[ 'source' ] = 'pc'

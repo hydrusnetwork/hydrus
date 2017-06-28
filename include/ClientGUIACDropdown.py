@@ -521,9 +521,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._current_matches = []
         
-        file_service = HG.client_controller.GetServicesManager().GetService( self._file_service_key )
+        file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
         
-        tag_service = HG.client_controller.GetServicesManager().GetService( self._tag_service_key )
+        tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
         self._file_repo_button = ClientGUICommon.BetterButton( self._dropdown_window, file_service.GetName(), self.FileButtonHit )
         self._file_repo_button.SetMinSize( ( 20, -1 ) )
@@ -541,7 +541,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._file_service_key = file_service_key
         
-        file_service = HG.client_controller.GetServicesManager().GetService( self._file_service_key )
+        file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
         
         name = file_service.GetName()
         
@@ -561,7 +561,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._dropdown_list.SetTagService( self._tag_service_key )
         
-        tag_service = tag_service = HG.client_controller.GetServicesManager().GetService( self._tag_service_key )
+        tag_service = tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
         name = tag_service.GetName()
         
@@ -594,7 +594,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def FileButtonHit( self ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         services = []
         
@@ -626,7 +626,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def TagButtonHit( self ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         services = []
         

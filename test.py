@@ -19,6 +19,7 @@ from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientDownloading
 from include import TestClientListBoxes
+from include import TestClientNetworking
 from include import TestConstants
 from include import TestDialogs
 from include import TestDB
@@ -125,8 +126,8 @@ class Controller( object ):
         
         self._managers = {}
         
-        self._services_manager = ClientCaches.ServicesManager( self )
-        self._client_files_manager = ClientCaches.ClientFilesManager( self )
+        self.services_manager = ClientCaches.ServicesManager( self )
+        self.client_files_manager = ClientCaches.ClientFilesManager( self )
         self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
@@ -195,11 +196,6 @@ class Controller( object ):
     
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
-    def GetClientFilesManager( self ):
-        
-        return self._client_files_manager
-        
-    
     def GetClientSessionManager( self ):
         
         return self._client_session_manager
@@ -222,11 +218,9 @@ class Controller( object ):
         return HC.options
         
     
-    def GetManager( self, manager_type ): return self._managers[ manager_type ]
-    
-    def GetServicesManager( self ):
+    def GetManager( self, manager_type ):
         
-        return self._services_manager
+        return self._managers[ manager_type ]
         
     
     def GetServerSessionManager( self ):
@@ -293,8 +287,9 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
         if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
         if run_all or only_run == 'downloading':
-            
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
+        if run_all or only_run == 'networking':
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientNetworking ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
         if run_all or only_run == 'gui':
             suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )

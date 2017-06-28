@@ -287,7 +287,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 sync_filenames = set()
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 num_copied = 0
                 

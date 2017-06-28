@@ -91,7 +91,7 @@ class TestDownloaders( unittest.TestCase ):
         with open( os.path.join( HC.STATIC_DIR, 'testing', 'pixiv_gallery.html' ) ) as f: pixiv_gallery = f.read()
         with open( os.path.join( HC.STATIC_DIR, 'testing', 'pixiv_image_page.html' ) ) as f: pixiv_page = f.read()
         
-        HG.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
+        HG.test_controller.GetHTTP().SetResponse( HC.GET, 'https://www.pixiv.net/search.php?word=naruto&s_mode=s_tag_full&order=date_d&p=1', pixiv_gallery )
         HG.test_controller.GetHTTP().SetResponse( HC.GET, 'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', pixiv_page )
         
         HG.test_controller.GetHTTP().SetResponse( HC.GET, 'http://i3.pixiv.net/img-original/img/2014/01/25/19/21/56/41171994_p0.jpg', 'image file' )
@@ -106,7 +106,7 @@ class TestDownloaders( unittest.TestCase ):
         
         # a manga one, http://www.pixiv.net/member_illust.php?mode=medium&illust_id=51078392, is currently filtered
         
-        expected_gallery_urls = [ u'http://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', 'a bunch of others' ]
+        expected_gallery_urls = [ u'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=50926312', 'a bunch of others' ]
         
         self.assertEqual( page_of_urls[0], expected_gallery_urls[0] )
         

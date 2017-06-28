@@ -41,7 +41,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, service_key ):
         
-        self._admin_service = HG.client_controller.GetServicesManager().GetService( service_key )
+        self._admin_service = HG.client_controller.services_manager.GetService( service_key )
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
@@ -260,7 +260,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_services = HG.client_controller.GetServicesManager().GetServices()
+        all_services = HG.client_controller.services_manager.GetServices()
         
         for service in all_services:
             
@@ -2440,7 +2440,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
-            rows.append( ( 'By default, new pages: ', self._default_new_page_goes ) )
+            rows.append( ( 'By default, new page tabs: ', self._default_new_page_goes ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
@@ -2586,7 +2586,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_zooms.SetValue( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 
@@ -3219,7 +3219,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_services.Append( CC.LOCAL_TAG_SERVICE_KEY, CC.LOCAL_TAG_SERVICE_KEY )
             
-            tag_services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+            tag_services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
             
             for tag_service in tag_services:
                 
@@ -3280,7 +3280,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.Append( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             
-            services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
+            services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
             
             for service in services:
                 
@@ -3528,7 +3528,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, service_key ):
         
-        self._clientside_admin_service = HG.client_controller.GetServicesManager().GetService( service_key )
+        self._clientside_admin_service = HG.client_controller.services_manager.GetService( service_key )
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
@@ -4211,7 +4211,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+                services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
                 
                 for service in services:
                     
@@ -4245,7 +4245,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     ( service_key, content_type, action, value ) = data
                     
-                    self._service = HG.client_controller.GetServicesManager().GetService( service_key )
+                    self._service = HG.client_controller.services_manager.GetService( service_key )
                     
                     service_name = self._service.GetName()
                     service_type = self._service.GetServiceType()
@@ -4528,7 +4528,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         service_key = self._ratings_like_service_keys.GetClientData( selection )
                         
-                        service = HG.client_controller.GetServicesManager().GetService( service_key )
+                        service = HG.client_controller.services_manager.GetService( service_key )
                         
                         self._current_ratings_like_service = service
                         
@@ -4542,7 +4542,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         service_key = self._ratings_numerical_service_keys.GetClientData( selection )
                         
-                        service = HG.client_controller.GetServicesManager().GetService( service_key )
+                        service = HG.client_controller.services_manager.GetService( service_key )
                         
                         self._current_ratings_numerical_service = service
                         
@@ -5104,7 +5104,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES )
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
         
         for service in services:
             
@@ -5313,7 +5313,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if not self._i_am_local_tag_service:
                 
-                self._service = HG.client_controller.GetServicesManager().GetService( tag_service_key )
+                self._service = HG.client_controller.services_manager.GetService( tag_service_key )
                 
             
             self._tags_box_sorter = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'tags' )

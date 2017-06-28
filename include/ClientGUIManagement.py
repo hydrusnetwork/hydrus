@@ -136,7 +136,7 @@ def CreateManagementControllerImportURLs():
     
 def CreateManagementControllerPetitions( petition_service_key ):
     
-    petition_service = HG.client_controller.GetServicesManager().GetService( petition_service_key )
+    petition_service = HG.client_controller.services_manager.GetService( petition_service_key )
     
     petition_service_type = petition_service.GetServiceType()
     
@@ -394,13 +394,13 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     def EventRefreshCaptcha( self, event ):
         
-        javascript_string = self._controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
+        javascript_string = self._controller.DoHTTP( HC.GET, 'https://www.google.com/recaptcha/api/challenge?k=' + self._captcha_key )
         
         ( trash, rest ) = javascript_string.split( 'challenge : \'', 1 )
         
         ( self._captcha_challenge, trash ) = rest.split( '\'', 1 )
         
-        jpeg = self._controller.DoHTTP( HC.GET, 'http://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
+        jpeg = self._controller.DoHTTP( HC.GET, 'https://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
         ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
         
@@ -562,7 +562,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         if 'file_service' in self._keys:
             
-            if not HG.client_controller.GetServicesManager().ServiceExists( self._keys[ 'file_service' ] ):
+            if not HG.client_controller.services_manager.ServiceExists( self._keys[ 'file_service' ] ):
                 
                 self._keys[ 'file_service' ] = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
                 
@@ -864,7 +864,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _FileDomainButtonHit( self ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         services = []
         
@@ -945,7 +945,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._management_controller.SetKey( 'duplicate_filter_file_domain', service_key )
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         service = services_manager.GetService( service_key )
         
@@ -2879,7 +2879,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        self._service = self._controller.GetServicesManager().GetService( self._petition_service_key )
+        self._service = self._controller.services_manager.GetService( self._petition_service_key )
         self._can_ban = self._service.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE )
         
         service_type = self._service.GetServiceType()

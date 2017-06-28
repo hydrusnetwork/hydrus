@@ -1,12 +1,14 @@
 import collections
 import ClientConstants as CC
 import HydrusConstants as HC
+import HydrusGlobals as HG
 import HydrusTags
 import os
 import random
 import threading
 import weakref
 import HydrusData
+import HydrusThreading
 import wx
 
 DB_DIR = None
@@ -26,6 +28,23 @@ def ConvertServiceKeysToContentUpdatesToComparable( service_keys_to_content_upda
         
     
     return comparable_dict
+    
+class MockController( object ):
+    
+    def __init__( self ):
+        
+        self.model_is_shutdown = False
+        
+    
+    def CallToThread( self, callable, *args, **kwargs ):
+        
+        return HG.test_controller.CallToThread( callable, *args, **kwargs )
+        
+    
+    def ModelIsShutdown( self ):
+        
+        return self.model_is_shutdown
+        
     
 class FakeHTTPConnectionManager():
     

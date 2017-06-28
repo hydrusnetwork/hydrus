@@ -137,7 +137,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
     
     if is_4chan:
         
-        return 'http://i.4cdn.org/' + board + '/' + filename + ext
+        return 'https://i.4cdn.org/' + board + '/' + filename + ext
         
     elif is_8chan:
         
@@ -151,7 +151,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
                 
                 try:
                     
-                    html_url = 'http://8ch.net/' + board + '/res/' + thread_id + '.html'
+                    html_url = 'https://8ch.net/' + board + '/res/' + thread_id + '.html'
                     
                     response = ClientNetworking.RequestsGet( html_url )
                     
@@ -182,7 +182,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
             
             media_host = _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ]
         
-            return 'http://' + media_host + '/' + board + '/src/' + filename + ext
+            return 'https://' + media_host + '/' + board + '/src/' + filename + ext
             
         
     
@@ -194,18 +194,18 @@ def GetImageboardThreadJSONURL( thread_url ):
     is_8chan = '8ch.net' in host
     
     # 4chan
-    # http://a.4cdn.org/asp/thread/382059.json
+    # https://a.4cdn.org/asp/thread/382059.json
     
     # 8chan
-    # http://8ch.net/v/res/406061.json
+    # https://8ch.net/v/res/406061.json
     
     if is_4chan:
         
-        return 'http://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
+        return 'https://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
         
     elif is_8chan:
         
-        return 'http://8ch.net/' + board + '/res/' + thread_id + '.json'
+        return 'https://8ch.net/' + board + '/res/' + thread_id + '.json'
         
     
 def GetSoup( html ):
@@ -245,7 +245,7 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         job_key.SetVariable( 'popup_text_1', 'importing' )
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         ( result, hash ) = client_files_manager.ImportFile( temp_path )
         
@@ -336,7 +336,7 @@ def THREADDownloadURLs( job_key, urls, title ):
                 
                 job_key.SetVariable( 'popup_text_2', 'importing' )
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 ( result, hash ) = client_files_manager.ImportFile( temp_path )
                 
@@ -879,26 +879,33 @@ class GalleryBooru( Gallery ):
                 
                 # https://gelbooru.com/redirect.php?s=Ly9nZWxib29ydS5jb20vaW5kZXgucGhwP3BhZ2U9cG9zdCZzPXZpZXcmaWQ9MzY5NDEyMg==
                 
-                try:
+                if 'redirect.php' in bad_url:
                     
-                    encoded_location = bad_url.split( '?s=' )[1]
+                    try:
+                        
+                        encoded_location = bad_url.split( '?s=' )[1]
+                        
+                        location = encoded_location.decode( 'base64' )
+                        
+                        url = urlparse.urljoin( bad_url, location )
+                        
+                        urls.append( url )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'gelbooru parsing problem!' )
+                        HydrusData.ShowException( e )
+                        
+                        url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
+                        
+                        urls.append( url )
+                        
+                        time.sleep( 0.5 )
+                        
                     
-                    location = encoded_location.decode( 'base64' )
-                    
-                    url = urlparse.urljoin( bad_url, location )
+                else:
                     
                     urls.append( url )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowText( 'gelbooru parsing problem!' )
-                    HydrusData.ShowException( e )
-                    
-                    url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
-                    
-                    urls.append( url )
-                    
-                    time.sleep( 0.5 )
                     
                 
             
@@ -1752,7 +1759,7 @@ class GalleryPixivArtistID( GalleryPixiv ):
         
         artist_id = query
         
-        gallery_url = 'http://www.pixiv.net/member_illust.php?type=illust&id=' + str( artist_id )
+        gallery_url = 'https://www.pixiv.net/member_illust.php?type=illust&id=' + str( artist_id )
         
         return gallery_url + '&p=' + str( page_index + 1 )
         
@@ -1763,7 +1770,7 @@ class GalleryPixivTag( GalleryPixiv ):
         
         tag = query
         
-        gallery_url = 'http://www.pixiv.net/search.php?word=' + urllib.quote( HydrusData.ToByteString( tag ), '' ) + '&s_mode=s_tag_full&order=date_d'
+        gallery_url = 'https://www.pixiv.net/search.php?word=' + urllib.quote( HydrusData.ToByteString( tag ), '' ) + '&s_mode=s_tag_full&order=date_d'
         
         return gallery_url + '&p=' + str( page_index + 1 )
         

@@ -70,60 +70,77 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     mime = GetMime( path )
     
-    f = cStringIO.StringIO()
-    
-    if mime in HC.IMAGES:
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
-        pil_image = HydrusImageHandling.GeneratePILImage( path )
-        
-        SaveThumbnailToStream( pil_image, dimensions, f )
-        
-    elif mime == HC.APPLICATION_FLASH:
-        
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-        
-        try:
-            
-            HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
-            
-            pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
-            
-            SaveThumbnailToStream( pil_image, dimensions, f )
-            
-        except:
-            
-            flash_default_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
-            
-            pil_image = HydrusImageHandling.GeneratePILImage( flash_default_path )
-            
-            SaveThumbnailToStream( pil_image, dimensions, f )
-            
-        finally:
-            
-            del pil_image
-            
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-            
+        thumbnail = GenerateThumbnailFromStaticImage( path, dimensions )
         
     else:
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = GetFileInfo( path )
+        f = cStringIO.StringIO()
         
-        cropped_dimensions = HydrusImageHandling.GetThumbnailResolution( ( width, height ), dimensions )
-        
-        renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
-        
-        numpy_image = renderer.read_frame()
-        
-        if numpy_image is None:
+        if mime == HC.APPLICATION_FLASH:
             
-            raise Exception( 'Could not create a thumbnail from that video!' )
+            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            
+            try:
+                
+                HydrusFlashHandling.RenderPageToFile( path, temp_path, 1 )
+                
+                pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
+                
+                SaveThumbnailToStream( pil_image, dimensions, f )
+                
+            except:
+                
+                flash_default_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
+                
+                pil_image = HydrusImageHandling.GeneratePILImage( flash_default_path )
+                
+                SaveThumbnailToStream( pil_image, dimensions, f )
+                
+            finally:
+                
+                del pil_image
+                
+                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
+            
+        else:
+            
+            ( size, mime, width, height, duration, num_frames, num_words ) = GetFileInfo( path )
+            
+            cropped_dimensions = HydrusImageHandling.GetThumbnailResolution( ( width, height ), dimensions )
+            
+            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
+            
+            numpy_image = renderer.read_frame()
+            
+            if numpy_image is None:
+                
+                raise Exception( 'Could not create a thumbnail from that video!' )
+                
+            
+            pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
+            
+            SaveThumbnailToStream( pil_image, dimensions, f )
             
         
-        pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
+        f.seek( 0 )
         
-        SaveThumbnailToStream( pil_image, dimensions, f )
+        thumbnail = f.read()
         
+        f.close()
+        
+    
+    return thumbnail
+    
+def GenerateThumbnailFromStaticImage( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+    
+    f = cStringIO.StringIO()
+    
+    pil_image = HydrusImageHandling.GeneratePILImage( path )
+    
+    SaveThumbnailToStream( pil_image, dimensions, f )
     
     f.seek( 0 )
     
@@ -174,7 +191,7 @@ def GetFileInfo( path ):
     num_frames = None
     num_words = None
     
-    if mime in HC.IMAGES:
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path )
         
@@ -182,15 +199,30 @@ def GetFileInfo( path ):
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime in ( HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
+    elif mime in ( HC.IMAGE_APNG, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_WMV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_WEBM, HC.VIDEO_MPEG ):
         
         ( ( width, height ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
-    elif mime == HC.APPLICATION_PDF: num_words = HydrusDocumentHandling.GetPDFNumWords( path )
-    elif mime == HC.AUDIO_MP3: duration = HydrusAudioHandling.GetMP3Duration( path )
-    elif mime == HC.AUDIO_OGG: duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
-    elif mime == HC.AUDIO_FLAC: duration = HydrusAudioHandling.GetFLACDuration( path )
-    elif mime == HC.AUDIO_WMA: duration = HydrusAudioHandling.GetWMADuration( path )
+    elif mime == HC.APPLICATION_PDF:
+        
+        num_words = HydrusDocumentHandling.GetPDFNumWords( path )
+        
+    elif mime == HC.AUDIO_MP3:
+        
+        duration = HydrusAudioHandling.GetMP3Duration( path )
+        
+    elif mime == HC.AUDIO_OGG:
+        
+        duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
+        
+    elif mime == HC.AUDIO_FLAC:
+        
+        duration = HydrusAudioHandling.GetFLACDuration( path )
+        
+    elif mime == HC.AUDIO_WMA:
+        
+        duration = HydrusAudioHandling.GetWMADuration( path )
+        
     
     return ( size, mime, width, height, duration, num_frames, num_words )
     
@@ -231,18 +263,14 @@ def GetMime( path ):
                 
             elif mime == HC.UNDETERMINED_PNG:
                 
-                return HC.IMAGE_PNG
-                
-                # atm (Feb 2016), ffmpeg doesn't report duration for apngs, so can't do this just yet.
-                #
-                #if HydrusVideoHandling.HasVideoStream( path ):
-                #    
-                #    return HC.VIDEO_APNG
-                #    
-                #else:
-                #    
-                #    return HC.IMAGE_PNG
-                #    
+                if HydrusVideoHandling.HasVideoStream( path ):
+                    
+                    return HC.IMAGE_APNG
+                    
+                else:
+                    
+                    return HC.IMAGE_PNG
+                    
                 
             else:
                 
@@ -253,7 +281,7 @@ def GetMime( path ):
     
     try:
         
-        mime = HydrusVideoHandling.GetMimeFromFFMPEG( path )
+        mime = HydrusVideoHandling.GetMime( path )
         
         if mime != HC.APPLICATION_UNKNOWN:
             

@@ -242,7 +242,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 subject_account_key = dlg.GetValue().decode( 'hex' )
                 
-                service = self._controller.GetServicesManager().GetService( service_key )
+                service = self._controller.services_manager.GetService( service_key )
                 
                 response = service.Request( HC.GET, 'account_info', { 'subject_account_key' : subject_account_key } )
                 
@@ -280,7 +280,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _AppendGUISession( self, name ):
         
-        def do_it( session ):
+        def do_it( session, starting_index ):
             
             try:
                 
@@ -290,6 +290,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     wx.CallAfter( self._notebook.Disable )
                     
+                
+                forced_insertion_index = starting_index
                 
                 for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
                     
@@ -315,7 +317,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             initial_media_results = []
                             
                         
-                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results )
+                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results, forced_insertion_index = forced_insertion_index )
+                        
+                        forced_insertion_index += 1
                         
                     except Exception as e:
                         
@@ -358,7 +362,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             return
             
         
-        self._controller.CallToThread( do_it, session )
+        starting_index = self._GetDefaultPageInsertionIndex()
+        
+        self._controller.CallToThread( do_it, session, starting_index )
         
     
     def _AutoRepoSetup( self ):
@@ -395,7 +401,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             file_repo.SetCredentials( credentials )
             
-            all_services = self._controller.GetServicesManager().GetServices()
+            all_services = self._controller.services_manager.GetServices()
             
             all_services.append( tag_repo )
             all_services.append( file_repo )
@@ -540,13 +546,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            all_services = list( self._controller.GetServicesManager().GetServices() )
+            all_services = list( self._controller.services_manager.GetServices() )
             
             all_services.append( admin_service )
             
             self._controller.SetServices( all_services )
             
-            admin_service = self._controller.GetServicesManager().GetService( admin_service_key ) # let's refresh it
+            admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
@@ -607,7 +613,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             started = HydrusData.GetNow()
             
-            service = self._controller.GetServicesManager().GetService( service_key )
+            service = self._controller.services_manager.GetService( service_key )
             
             service.Request( HC.POST, 'backup' )
             
@@ -660,7 +666,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _CheckFileIntegrity( self ):
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         message = 'This will go through all the files the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
         message += os.linesep * 2
@@ -727,7 +733,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
                 
-                client_files_manager = self._controller.GetClientFilesManager()
+                client_files_manager = self._controller.client_files_manager
                 
                 with ClientGUIDialogs.DialogYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them' ) as dlg_2:
                     
@@ -928,7 +934,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _DeletePending( self, service_key ):
         
-        service = self._controller.GetServicesManager().GetService( service_key )
+        service = self._controller.services_manager.GetService( service_key )
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete the pending data for ' + service.GetName() + '?' ) as dlg:
             
@@ -972,7 +978,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 hash = dlg.GetValue().decode( 'hex' )
                 
-                service = self._controller.GetServicesManager().GetService( service_key )
+                service = self._controller.services_manager.GetService( service_key )
                 
                 with wx.BusyCursor(): response = service.Request( HC.GET, 'ip', { 'hash' : hash } )
                 
@@ -1156,7 +1162,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             search_menu = wx.Menu()
             
-            services = self._controller.GetServicesManager().GetServices()
+            services = self._controller.services_manager.GetServices()
             
             petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
             
@@ -1303,7 +1309,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             for ( service_key, info ) in nums_pending.items():
                 
-                service = self._controller.GetServicesManager().GetService( service_key )
+                service = self._controller.services_manager.GetService( service_key )
                 
                 service_type = service.GetServiceType()
                 name = service.GetName()
@@ -1369,8 +1375,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def services():
             
-            tag_services = self._controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
-            file_services = self._controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, ) )
+            tag_services = self._controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+            file_services = self._controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) )
             
             submenu = wx.Menu()
             
@@ -1388,10 +1394,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_OVERRULE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_OVERRULE ) ]
             
-            repositories = self._controller.GetServicesManager().GetServices( HC.REPOSITORIES )
+            repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
             admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
             
-            servers_admin = self._controller.GetServicesManager().GetServices( ( HC.SERVER_ADMIN, ) )
+            servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ) ]
             
             if len( admin_repositories ) > 0 or len( server_admins ) > 0:
@@ -1580,6 +1586,37 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _GenerateNewAccounts( self, service_key ):
         
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.ShowModal()
+        
+    
+    def _GetDefaultPageInsertionIndex( self ):
+        
+        new_page_goes = self._new_options.GetInteger( 'default_new_page_goes' )
+        
+        current_index = self._notebook.GetSelection()
+        
+        if current_index == wx.NOT_FOUND:
+            
+            new_page_goes = CC.NEW_PAGE_GOES_FAR_LEFT
+            
+        
+        if new_page_goes == CC.NEW_PAGE_GOES_FAR_LEFT:
+            
+            insertion_index = 0
+            
+        elif new_page_goes == CC.NEW_PAGE_GOES_LEFT_OF_CURRENT:
+            
+            insertion_index = current_index
+            
+        elif new_page_goes == CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT:
+            
+            insertion_index = current_index + 1
+            
+        elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
+            
+            insertion_index = self._notebook.GetPageCount()
+            
+        
+        return insertion_index
         
     
     def _ImportFiles( self, paths = None ):
@@ -1931,7 +1968,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         return
         
-        service = self._controller.GetServicesManager().GetService( service_key )
+        service = self._controller.services_manager.GetService( service_key )
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the account key for the account to be modified.' ) as dlg:
             
@@ -1987,7 +2024,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _NewPage( self, page_name, management_controller, initial_media_results = None ):
+    def _NewPage( self, page_name, management_controller, initial_media_results = None, forced_insertion_index = None ):
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
@@ -1999,39 +2036,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_media_results )
         
-        if self._next_new_page_index is None:
+        if forced_insertion_index is None:
             
-            new_page_goes = self._new_options.GetInteger( 'default_new_page_goes' )
-            
-            current_index = self._notebook.GetSelection()
-            
-            if current_index == wx.NOT_FOUND:
+            if self._next_new_page_index is None:
                 
-                new_page_goes = CC.NEW_PAGE_GOES_FAR_LEFT
+                insertion_index = self._GetDefaultPageInsertionIndex()
                 
-            
-            if new_page_goes == CC.NEW_PAGE_GOES_FAR_LEFT:
+            else:
                 
-                insertion_index = 0
+                insertion_index = self._next_new_page_index
                 
-            elif new_page_goes == CC.NEW_PAGE_GOES_LEFT_OF_CURRENT:
-                
-                insertion_index = current_index
-                
-            elif new_page_goes == CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT:
-                
-                insertion_index = current_index + 1
-                
-            elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
-                
-                insertion_index = self._notebook.GetPageCount()
+                self._next_new_page_index = None
                 
             
         else:
             
-            insertion_index = self._next_new_page_index
-            
-            self._next_new_page_index = None
+            insertion_index = forced_insertion_index
             
         
         self._notebook.InsertPage( insertion_index, page, page_name, select = True )
@@ -2095,7 +2115,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
         
-        service = self._controller.GetServicesManager().GetService( service_key )
+        service = self._controller.services_manager.GetService( service_key )
         
         page_name = service.GetName() + ' petitions'
         
@@ -2113,7 +2133,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
         
-        if not self._controller.GetServicesManager().ServiceExists( tag_service_key ):
+        if not self._controller.services_manager.ServiceExists( tag_service_key ):
             
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2265,7 +2285,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._controller.CallToThread( self._controller.GetClientFilesManager().Rebalance, partial = False )
+                self._controller.CallToThread( self._controller.client_files_manager.Rebalance, partial = False )
                 
             
         
@@ -2368,7 +2388,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _RegenerateThumbnails( self ):
         
-        client_files_manager = self._controller.GetClientFilesManager()
+        client_files_manager = self._controller.client_files_manager
         
         text = 'This will rebuild all your thumbnails from the original files. You probably only want to do this if you experience thumbnail errors. If you have a lot of files, it will take some time. A popup message will show its progress.'
         text += os.linesep * 2
@@ -2556,7 +2576,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _StartIPFSDownload( self ):
         
-        ipfs_services = self._controller.GetServicesManager().GetServices( ( HC.IPFS, ) )
+        ipfs_services = self._controller.services_manager.GetServices( ( HC.IPFS, ) )
         
         if len( ipfs_services ) > 0:
             
@@ -2811,7 +2831,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _THREADUploadPending( self, service_key ):
         
-        service = self._controller.GetServicesManager().GetService( service_key )
+        service = self._controller.services_manager.GetService( service_key )
         
         service_name = service.GetName()
         service_type = service.GetServiceType()
@@ -2869,7 +2889,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             media_result = result
                             
-                            client_files_manager = self._controller.GetClientFilesManager()
+                            client_files_manager = self._controller.client_files_manager
                             
                             hash = media_result.GetHash()
                             mime = media_result.GetMime()

@@ -1,4 +1,6 @@
+import ClientConstants as CC
 import collections
+import cPickle
 import cStringIO
 import HydrusConstants as HC
 import HydrusExceptions
@@ -82,13 +84,9 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
         raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
         
     
-def ConvertURLIntoDomains( url ):
+def ConvertDomainIntoAllApplicableDomains( domain ):
     
     domains = []
-    
-    parser_result = urlparse.urlparse( url )
-    
-    domain = parser_result.netloc
     
     while domain.count( '.' ) > 0:
         
@@ -98,6 +96,14 @@ def ConvertURLIntoDomains( url ):
         
     
     return domains
+    
+def ConvertURLIntoDomain( url ):
+    
+    parser_result = urlparse.urlparse( url )
+    
+    domain = HydrusData.ToByteString( parser_result.netloc )
+    
+    return domain
     
 def RequestsGet( url, params = None, stream = False, headers = None ):
     
@@ -1022,7 +1028,7 @@ class HTTPConnection( object ):
         return self._DealWithResponse( method, response, parsed_response, size_of_response )
         
     
-class BandwidthManager( HydrusSerialisable.SerialisableBase ):
+class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_MANAGER
     SERIALISABLE_VERSION = 1
@@ -1031,39 +1037,27 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
+        self.engine = None
+        
         self._lock = threading.Lock()
         
-        self._global_bandwidth_tracker = HydrusNetworking.BandwidthTracker()
-        self._global_bandwidth_rules = HydrusNetworking.BandwidthRules()
+        self._network_contexts_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
+        self._network_contexts_to_bandwidth_rules = {}
         
-        self._domains_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
-        self._domains_to_bandwidth_rules = {}
+        for context_type in [ CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_SUBSCRIPTION ]:
+            
+            self._network_contexts_to_bandwidth_rules[ NetworkContext( context_type ) ] = HydrusNetworking.BandwidthRules()
+            
         
     
-    def _GetApplicableTrackersAndRules( self, url = None ):
+    def _GetRules( self, network_context ):
         
-        result = []
-        
-        if url is not None:
+        if network_context not in self._network_contexts_to_bandwidth_rules:
             
-            domains = ConvertURLIntoDomains( url )
-            
-            for domain in domains:
-                
-                if domain in self._domains_to_bandwidth_rules:
-                    
-                    bandwidth_tracker = self._domains_to_bandwidth_trackers[ domain ]
-                    
-                    bandwidth_rules = self._domains_to_bandwidth_rules[ domain ]
-                    
-                    result.append( ( bandwidth_tracker, bandwidth_rules ) )
-                    
-                
+            network_context = NetworkContext( network_context.context_type ) # i.e. the default
             
         
-        result.append( ( self._global_bandwidth_tracker, self._global_bandwidth_rules ) )
-        
-        return result
+        return self._network_contexts_to_bandwidth_rules[ network_context ]
         
     
     def _GetSerialisableInfo( self ):
@@ -1071,8 +1065,8 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
         serialisable_global_tracker = self._global_bandwidth_tracker.GetSerialisableTuple()
         serialisable_global_rules = self._global_bandwidth_rules.GetSerialisableTuple()
         
-        all_serialisable_trackers = [ ( domain, tracker.GetSerialisableTuple() ) for ( domain, tracker ) in self._domains_to_bandwidth_trackers ]
-        all_serialisable_rules = [ ( domain, rules.GetSerialisableTuple() ) for ( domain, rules ) in self._domains_to_bandwidth_rules ]
+        all_serialisable_trackers = [ ( domain, tracker.GetSerialisableTuple() ) for ( domain, tracker ) in self._network_contexts_to_bandwidth_trackers ]
+        all_serialisable_rules = [ ( domain, rules.GetSerialisableTuple() ) for ( domain, rules ) in self._network_contexts_to_bandwidth_rules ]
         
         return ( serialisable_global_tracker, serialisable_global_rules, all_serialisable_trackers, all_serialisable_rules )
         
@@ -1086,25 +1080,44 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         for ( domain, serialisable_tracker ) in all_serialisable_trackers:
             
-            self._domains_to_bandwidth_trackers[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tracker )
+            self._network_contexts_to_bandwidth_trackers[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tracker )
             
         
         for ( domain, serialisable_rules ) in all_serialisable_rules:
             
-            self._domains_to_bandwidth_rules[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rules )
+            self._network_contexts_to_bandwidth_rules[ domain ] = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rules )
             
         
     
-    def CanStartGlobally( self ):
-        
-        return self.CanStartURL( None )
-        
-    
-    def CanStartURL( self, url ):
+    def CanContinue( self, network_contexts ):
         
         with self._lock:
             
-            for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
+            for network_context in network_contexts:
+                
+                bandwidth_rules = self._GetRules( network_context )
+                
+                bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
+                
+                if not bandwidth_rules.CanContinue( bandwidth_tracker ):
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
+    def CanStart( self, network_contexts ):
+        
+        with self._lock:
+            
+            for network_context in network_contexts:
+                
+                bandwidth_rules = self._GetRules( network_context )
+                
+                bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
                 if not bandwidth_rules.CanStart( bandwidth_tracker ):
                     
@@ -1115,88 +1128,174 @@ class BandwidthManager( HydrusSerialisable.SerialisableBase ):
             return True
             
         
+    
+    def DeleteRules( self, network_context ):
+        
+        with self._lock:
+            
+            if network_context.content_data is None:
+                
+                return # can't delete 'default' network contexts
+                
+            else:
+                
+                if network_context in self._network_contexts_to_bandwidth_rules:
+                    
+                    del self._network_contexts_to_bandwidth_rules[ network_context ]
+                    
+                
+            
         
     
-    def GetEstimateInfo( self, domain = None ):
+    def GetDomains( self, history_time_delta_threshold = 86400 * 30 ):
+        
+        with self._lock:
+            
+            domains = []
+            
+            for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
+                
+                if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN and bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, history_time_delta_threshold ) > 0:
+                    
+                    domains.append( network_context.content_data )
+                    
+                
+            
+            return domains
+            
+        
+    
+    def GetEstimateInfo( self, network_contexts ):
         
         with self._lock:
             
             # something that returns ( 'about a minute until you can request again', 60 )
             
+            # figure out the longest estimate from the rules and trackers
+            
+            # make some pretty text out of that
+            
+            # return ( text, seconds )
+            
             pass
             
         
     
-    def GetDomainsAndTrackers( self ):
+    def GetTracker( self, network_context ):
         
         with self._lock:
             
-            result = list( self._domains_to_bandwidth_trackers.items() )
-            
-            result.sort()
-            
-            result.insert( 0, ( 'global', self._global_bandwidth_tracker ) )
-            
-            return result
+            return self._network_contexts_to_bandwidth_trackers[ network_context ]
             
         
     
-    def ReportDataUsedGlobally( self, num_bytes ):
-        
-        self.ReportDataUsedURL( None, num_bytes )
-        
-    
-    def ReportDataUsedURL( self, url, num_bytes ):
+    def ReportDataUsed( self, network_contexts, num_bytes ):
         
         with self._lock:
             
-            for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
+            for network_context in network_contexts:
                 
-                bandwidth_tracker.ReportDataUsed( num_bytes )
+                self._network_contexts_to_bandwidth_trackers[ network_context ].ReportDataUsed( num_bytes )
                 
             
         
     
-    def ReportRequestUsedGlobally( self ):
-        
-        self.ReportRequestUsedURL( None )
-        
-    
-    def ReportRequestUsedURL( self, url ):
+    def ReportRequestUsed( self, network_contexts ):
         
         with self._lock:
             
-            for ( bandwidth_tracker, bandwidth_rules ) in self._GetApplicableTrackersAndRules( url ):
+            for network_context in network_contexts:
                 
-                bandwidth_tracker.ReportRequestUsed()
+                self._network_contexts_to_bandwidth_trackers[ network_context ].ReportRequestUsed()
                 
             
         
     
-    def SetRules( self, domain, bandwidth_rules ):
+    def SetRules( self, network_context, bandwidth_rules ):
         
         with self._lock:
             
-            if domain is None:
-                
-                self._global_bandwidth_rules = bandwidth_rules
-                
-            else:
-                
-                self._domains_to_bandwidth_rules[ domain ] = bandwidth_rules
-                
+            self._network_contexts_to_bandwidth_rules[ network_context ] = bandwidth_rules
             
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_MANAGER ] = BandwidthManager
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_MANAGER ] = NetworkBandwidthManager
+
+class NetworkContext( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, context_type = None, context_data = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.context_type = context_type
+        self.context_data = context_data
+        
+    
+    def __eq__( self, other ):
+        
+        return self.__hash__() == other.__hash__()
+        
+    
+    def __hash__( self ):
+        
+        return ( self.context_type, self.context_data ).__hash__()
+        
+    
+    def __ne__( self, other ):
+        
+        return self.__hash__() != other.__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self.context_data is None:
+            
+            serialisable_context_data = self.context_data.encode( 'hex' )
+            
+        else:
+            
+            serialisable_context_data = self.context_data
+            
+        
+        return ( self.context_type, self.context_data )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.context_type, serialisable_context_data ) = serialisable_info
+        
+        if serialisable_context_data is None:
+            
+            self.context_data = serialisable_context_data
+            
+        else:
+            
+            self.context_data = serialisable_context_data.decode( 'hex' )
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT ] = NetworkContext
+
+GLOBAL_NETWORK_CONTEXT = NetworkContext( CC.NETWORK_CONTEXT_GLOBAL )
 
 class NetworkEngine( object ):
     
     MAX_JOBS = 10 # turn this into an option
     
-    def __init__( self, controller ):
+    def __init__( self, controller, bandwidth_manager, session_manager, login_manager ):
         
-        self._controller = controller
+        self.controller = controller
+        
+        self.bandwidth_manager = bandwidth_manager
+        self.session_manager = session_manager
+        self.login_manager = login_manager
+        
+        self.bandwidth_manager.engine = self
+        self.session_manager.engine = self
+        self.login_manager.engine = self
         
         self._lock = threading.Lock()
         
@@ -1208,14 +1307,16 @@ class NetworkEngine( object ):
         self._jobs_ready_to_start = []
         self._jobs_downloading = []
         
+        self._is_running = False
+        self._is_shutdown = False
         self._local_shutdown = False
-        
-        self._controller.CallToThread( self.MainLoop )
         
     
     def AddJob( self, job ):
         
         with self._lock:
+            
+            job.engine = self
             
             self._jobs_bandwidth_throttled.append( job )
             
@@ -1223,9 +1324,27 @@ class NetworkEngine( object ):
         self._new_work_to_do.set()
         
     
+    def IsRunning( self ):
+        
+        with self._lock:
+            
+            return self._is_running
+            
+        
+    
+    def IsShutdown( self ):
+        
+        with self._lock:
+            
+            return self._is_shutdown
+            
+        
+    
     def MainLoop( self ):
         
-        while not ( self._local_shutdown or self._controller.ModelIsShutdown() ):
+        self._is_running = True
+        
+        while not ( self._local_shutdown or self.controller.ModelIsShutdown() ):
             
             def ProcessBandwidthJob( job ):
                 
@@ -1271,7 +1390,7 @@ class NetworkEngine( object ):
                             
                             login_process = job.GenerateLoginProcess()
                             
-                            self._controller.CallToThread( login_process.Start )
+                            self.controller.CallToThread( login_process.Start )
                             
                             self._current_login_process = login_process
                             
@@ -1320,7 +1439,7 @@ class NetworkEngine( object ):
                     
                 elif len( self._jobs_downloading ) < self.MAX_JOBS:
                     
-                    self._controller.CallToThread( job.Start )
+                    self.controller.CallToThread( job.Start )
                     
                     self._jobs_downloading.append( job )
                     
@@ -1362,15 +1481,28 @@ class NetworkEngine( object ):
             self._new_work_to_do.clear()
             
         
+        self._is_running = False
+        
+        self._is_shutdown = True
+        
+    
+    def Start( self ):
+        
+        self.controller.CallToThread( self.MainLoop )
+        
     
     def Shutdown( self ):
         
         self._local_shutdown = True
         
+        self._new_work_to_do.set()
+        
     
 class NetworkJob( object ):
     
-    def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
+    def __init__( self, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+        
+        self.engine = None
         
         self._lock = threading.Lock()
         
@@ -1379,6 +1511,7 @@ class NetworkJob( object ):
         self._body = body
         self._referral_url = referral_url
         self._temp_path = temp_path
+        self._for_login = for_login
         
         self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
@@ -1392,7 +1525,7 @@ class NetworkJob( object ):
         
         self._is_done = False
         self._is_cancelled = False
-        self._bandwidth_override = False
+        self._bandwidth_manual_override = False
         
         self._status_code = None
         
@@ -1400,30 +1533,33 @@ class NetworkJob( object ):
         self._num_bytes_read = 0
         self._num_bytes_to_read = None
         
-    
-    def _BandwidthOK( self ):
-        
-        raise NotImplementedError()
+        self._network_contexts = self._GenerateNetworkContexts()
         
     
-    def _CanLogin( self ):
+    def _GenerateNetworkContexts( self ):
         
-        raise NotImplementedError()
+        network_contexts = []
         
-    
-    def _GenerateLoginProcess( self ):
+        network_contexts.append( GLOBAL_NETWORK_CONTEXT )
         
-        raise NotImplementedError()
+        domain = ConvertURLIntoDomain( self._url )
+        domains = ConvertDomainIntoAllApplicableDomains( domain )
+        
+        network_contexts.extend( ( NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
+        
+        return network_contexts
         
     
     def _GetSession( self ):
         
-        raise NotImplementedError()
+        session_network_context = self._GetSessionNetworkContext()
+        
+        return self.engine.session_manager.GetSession( session_network_context )
         
     
-    def _ImmediateBandwidthOK( self ):
+    def _GetSessionNetworkContext( self ):
         
-        raise NotImplementedError()
+        return self._network_contexts[-1]
         
     
     def _IsCancelled( self ):
@@ -1433,7 +1569,7 @@ class NetworkJob( object ):
             return True
             
         
-        if HG.client_controller.ModelIsShutdown():
+        if self.engine.controller.ModelIsShutdown():
             
             return True
             
@@ -1441,9 +1577,36 @@ class NetworkJob( object ):
         return False
         
     
-    def _NeedsLogin( self ):
+    def _IsDone( self ):
         
-        raise NotImplementedError()
+        if self._is_done:
+            
+            return True
+            
+        
+        if self.engine.controller.ModelIsShutdown():
+            
+            return True
+            
+        
+        return False
+        
+    
+    def _ObeysBandwidth( self ):
+        
+        return self._bandwidth_manual_override or self._for_login
+        
+    
+    def _OngoingBandwidthOK( self ):
+        
+        if self._ObeysBandwidth():
+            
+            return self.engine.bandwidth_manager.CanContinue( self._network_contexts )
+            
+        else:
+            
+            return True
+            
         
     
     def _ReadResponse( self, response, stream_dest ):
@@ -1455,7 +1618,7 @@ class NetworkJob( object ):
         
         try:
             
-            for chunk in response.iter_content( chunk_size = 8192 ):
+            for chunk in response.iter_content( chunk_size = 65536 ):
                 
                 if self._IsCancelled():
                     
@@ -1469,7 +1632,7 @@ class NetworkJob( object ):
                 self._num_bytes_read += chunk_length
                 
                 self._ReportDataUsed( chunk_length )
-                self._WaitOnImmediateBandwidth()
+                self._WaitOnOngoingBandwidth()
                 
             
         finally:
@@ -1487,10 +1650,14 @@ class NetworkJob( object ):
         
         self._bandwidth_tracker.ReportDataUsed( num_bytes )
         
+        self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
+        
     
     def _ReportRequestUsed( self ):
         
         self._bandwidth_tracker.ReportRequestUsed()
+        
+        self.engine.bandwidth_manager.ReportRequestUsed( self._network_contexts )
         
     
     def _SetCancelled( self ):
@@ -1514,9 +1681,9 @@ class NetworkJob( object ):
         self._is_done = True
         
     
-    def _WaitOnImmediateBandwidth( self ):
+    def _WaitOnOngoingBandwidth( self ):
         
-        while not self._ImmediateBandwidthOK() and not self._IsCancelled():
+        while not self._OngoingBandwidthOK() and not self._IsCancelled():
             
             time.sleep( 0.5 )
             
@@ -1526,13 +1693,13 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            if self._bandwidth_override:
+            if self._ObeysBandwidth:
                 
-                return True
+                return self.engine.bandwidth_manager.CanStart( self._network_contexts )
                 
             else:
                 
-                return self._BandwidthOK()
+                return True
                 
             
         
@@ -1547,11 +1714,33 @@ class NetworkJob( object ):
             
         
     
+    def CanLogin( self ):
+        
+        with self._lock:
+            
+            if self._for_login:
+                
+                raise Exception( 'Login jobs should not be asked if they can login!' )
+                
+            else:
+                
+                return self.engine.login_manager.CanLogin( self._network_contexts )
+                
+            
+        
+    
     def GenerateLoginProcess( self ):
         
         with self._lock:
             
-            return self._GenerateLoginProcess()
+            if self._for_login:
+                
+                raise Exception( 'Login jobs should not be asked to generate login processes!' )
+                
+            else:
+                
+                return self.engine.login_manager.GenerateLoginProcess( self._network_contexts )
+                
             
         
     
@@ -1601,7 +1790,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            return HydrusData.TimeHasPassed( self._wake_time )
+            return not HydrusData.TimeHasPassed( self._wake_time )
             
         
     
@@ -1617,7 +1806,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            return self._is_done
+            return self._IsDone()
             
         
     
@@ -1625,7 +1814,14 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            self._NeedsLogin()
+            if self._for_login:
+                
+                return False
+                
+            else:
+                
+                return self.engine.login_manager.NeedsLogin( self._network_contexts )
+                
             
         
     
@@ -1633,7 +1829,7 @@ class NetworkJob( object ):
         
         with self._lock:
             
-            self._bandwidth_override = True
+            self._bandwidth_manual_override = True
             
         
     
@@ -1754,184 +1950,227 @@ class NetworkJob( object ):
             
         
     
-class NetworkJobWeb( NetworkJob ):
+class NetworkJobDownloader( NetworkJob ):
     
-    def _BandwidthOK( self ):
+    def __init__( self, downloader_key, method, url, body = None, temp_path = None ):
         
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        self._downloader_key = downloader_key
         
-        return bandwidth_manager.CanStartURL( self._url )
-        
-    
-    def _CanLogin( self ):
-        
-        # ask login engine if it is possible to login at this time (i.e. if our login details seem to be valid--a bad login will invalidate the form/details until the user can re-verify, hence stopping all bad requests from spamming a changed login form)
-        
-        pass
+        NetworkJob.__init__( self, method, url, body, temp_path = temp_path )
         
     
-    def _GenerateLoginProcess( self ):
+    def _GenerateNetworkContexts( self ):
         
-        pass
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
         
-        # talk to login engine, figure out an object to handle this that will follow the script and report status back to the network engine
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER, self._downloader_key ) )
         
-    
-    def _GetSession( self ):
-        
-        pass # fetch the regular session from the sessionmanager
+        return network_contexts
         
     
-    def _ImmediateBandwidthOK( self ):
+class NetworkJobSubscription( NetworkJobDownloader ):
+    
+    def __init__( self, subscription_key, downloader_key, method, url, body = None, temp_path = None ):
         
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        self._subscription_key = subscription_key
         
-        return bandwidth_manager.CanContinueURL( self._url )
+        NetworkJobDownloader.__init__( self, downloader_key, method, url, body, temp_path = temp_path )
         
     
-    def _NeedsLogin( self ):
+    def _GenerateNetworkContexts( self ):
         
-        # consult login engine, ask if I need login (it will consult its records and the current session)
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
         
-        pass
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, self._subscription_key ) )
         
-    
-    def _ReportDataUsed( self, num_bytes ):
-        
-        NetworkJob._ReportDataUsed( self, num_bytes )
-        
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
-        
-        bandwidth_manager.ReportDataUsedURL( self._url, num_bytes )
+        return network_contexts
         
     
-    def _ReportRequestUsed( self ):
+    def _GetSessionNetworkContext( self ):
         
-        NetworkJob._ReportRequestUsed( self )
-        
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
-        
-        bandwidth_manager.ReportRequestUsedURL( self._url )
-        
-    
-class NetworkJobWebLogin( NetworkJobWeb ):
-    
-    def _BandwidthOK( self ):
-        
-        return True
-        
-    
-    def _ImmediateBandwidthOK( self ):
-        
-        return True
-        
-    
-    def _NeedsLogin( self ):
-        
-        return False
+        return self._network_contexts[-2] # the downloader one
         
     
 class NetworkJobHydrus( NetworkJob ):
     
     def __init__( self, service_key, method, url, body = None, temp_path = None ):
         
-        NetworkJob.__init__( self, method, url, body, temp_path = temp_path )
-        
         self._service_key = service_key
         
+        NetworkJob.__init__( self, method, url, body, temp_path = temp_path )
+        
     
-    def _BandwidthOK( self ):
+    def _GenerateNetworkContexts( self ):
         
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
         
-        if not bandwidth_manager.CanStartGlobally():
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key ) )
+        
+        return network_contexts
+        
+    
+class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.engine = None
+        
+        self._lock = threading.Lock()
+        
+        # for every loginnable network_context, we need
+        # a login script
+            # hydrus script is different, obvs
+              # start with this
+            # domain login scripts are complicated
+              # say this is notimplemented yet, then convert hf and pixiv over
+        # current login status
+        # current login expiry
+        
+        # essentially, we need to answer:
+          # needslogin
+          # canlogin
+          # dologin
+        
+        self._network_contexts_to_sessions = {}
+        
+    
+    def _GenerateSession( self, network_context ):
+        
+        session = requests.Session()
+        
+        session.headers.update( { 'User-Agent', 'hydrus/' + str( HC.NETWORK_VERSION ) } )
+        
+        if network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
             
-            return False
-            
-        else:
-            
-            service = HG.client_controller.GetServicesManager().GetService( self._service_key )
-            
-            return service.BandwidthOK()
+            session.verify = False
             
         
-    
-    def _CanLogin( self ):
-        
-        # ask service if account is valid
-        
-        pass
+        return session
         
     
-    def _GenerateLoginProcess( self ):
+    def _GetSerialisableInfo( self ):
         
-        pass
+        serialisable_network_contexts_to_sessions = [ ( network_context.GetSerialisableTuple(), cPickle.dumps( session ) ) for ( network_context, session ) in self._network_contexts_to_sessions.items() ]
         
-        # talk to service, figure out a login-process compatible object to handle the session gen
-        
-    
-    def _GetSession( self ):
-        
-        pass # fetch the hydrus (ssl verify=False) session, which should have the keys as cookies, right?
-        # this will ultimately be a job for the login engine step, earlier
+        return serialisable_network_contexts_to_sessions
         
     
-    def _ImmediateBandwidthOK( self ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
+        serialisable_network_contexts_to_sessions = serialisable_info
         
-        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
-        
-        return bandwidth_manager.CanContinueGlobally() and service.CanContinue()
-        
-    
-    def _NeedsLogin( self ):
-        
-        # consult service, ask if I need a session key
-        
-        pass
+        for ( serialisable_network_context, pickled_session ) in serialisable_network_contexts_to_sessions:
+            
+            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
+            session = cPickle.loads( pickled_session )
+            
+            self._network_contexts_to_sessions[ network_context ] = session
+            
         
     
-    def _ReportDataUsed( self, num_bytes ):
+    def ClearSession( self, network_context ):
         
-        NetworkJob._ReportDataUsed( self, num_bytes )
-        
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
-        
-        bandwidth_manager.ReportDataUsedGlobally( num_bytes )
-        
-        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
-        
-        return service.ReportDataUsed( num_bytes )
+        with self._lock:
+            
+            if network_context in self._network_contexts_to_sessions:
+                
+                del self._network_contexts_to_sessions[ network_context ]
+                
+            
         
     
-    def _ReportRequestUsed( self ):
+    def GetSession( self, network_context ):
         
-        NetworkJob._ReportRequestUsed( self )
-        
-        bandwidth_manager = HG.client_controller.GetBandwidthManager()
-        
-        bandwidth_manager.ReportRequestUsedGlobally()
-        
-        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
-        
-        return service.ReportRequestUsed()
-        
-    
-class NetworkJobHydrusLogin( NetworkJobHydrus ):
-    
-    def _BandwidthOK( self ):
-        
-        return True
+        with self._lock:
+            
+            if network_context not in self._network_contexts_to_sessions:
+                
+                self._network_contexts_to_sessions[ network_context ] = self._GenerateSession( network_context )
+                
+            
+            return self._network_contexts_to_sessions[ network_context ]
+            
         
     
-    def _ImmediateBandwidthOK( self ):
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
+
+class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
         
-        return True
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.engine = None
+        
+        self._lock = threading.Lock()
+        
+        self._network_contexts_to_sessions = {}
         
     
-    def _NeedsLogin( self ):
+    def _GenerateSession( self, network_context ):
         
-        return False
+        session = requests.Session()
+        
+        session.headers.update( { 'User-Agent', 'hydrus/' + str( HC.NETWORK_VERSION ) } )
+        
+        if network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+            
+            session.verify = False
+            
+        
+        return session
         
     
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_network_contexts_to_sessions = [ ( network_context.GetSerialisableTuple(), cPickle.dumps( session ) ) for ( network_context, session ) in self._network_contexts_to_sessions.items() ]
+        
+        return serialisable_network_contexts_to_sessions
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_network_contexts_to_sessions = serialisable_info
+        
+        for ( serialisable_network_context, pickled_session ) in serialisable_network_contexts_to_sessions:
+            
+            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
+            session = cPickle.loads( pickled_session )
+            
+            self._network_contexts_to_sessions[ network_context ] = session
+            
+        
+    
+    def ClearSession( self, network_context ):
+        
+        with self._lock:
+            
+            if network_context in self._network_contexts_to_sessions:
+                
+                del self._network_contexts_to_sessions[ network_context ]
+                
+            
+        
+    
+    def GetSession( self, network_context ):
+        
+        with self._lock:
+            
+            if network_context not in self._network_contexts_to_sessions:
+                
+                self._network_contexts_to_sessions[ network_context ] = self._GenerateSession( network_context )
+                
+            
+            return self._network_contexts_to_sessions[ network_context ]
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER ] = NetworkSessionManager

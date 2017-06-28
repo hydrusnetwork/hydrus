@@ -62,7 +62,7 @@ class TestServer( unittest.TestCase ):
         
         cls._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
         
-        services_manager = HG.test_controller.GetServicesManager()
+        services_manager = HG.test_controller.services_manager
         
         services_manager._keys_to_services[ cls._clientside_file_service.GetServiceKey() ] = cls._clientside_file_service
         services_manager._keys_to_services[ cls._clientside_tag_service.GetServiceKey() ] = cls._clientside_tag_service

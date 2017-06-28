@@ -195,6 +195,7 @@ media_viewer_capabilities = {}
 
 media_viewer_capabilities[ HC.IMAGE_JPEG ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_PNG ] = static_full_support
+media_viewer_capabilities[ HC.IMAGE_APNG ] = animated_full_support
 media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
 
 if HC.PLATFORM_WINDOWS:
@@ -240,9 +241,15 @@ NEW_PAGE_GOES_FAR_RIGHT = 3
 new_page_goes_string_lookup = {}
 
 new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_LEFT ] = 'go far left'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'go left of current page'
-new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'go right of current page'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_LEFT_OF_CURRENT ] = 'go left of current page tab'
+new_page_goes_string_lookup[ NEW_PAGE_GOES_RIGHT_OF_CURRENT ] = 'go right of current page tab'
 new_page_goes_string_lookup[ NEW_PAGE_GOES_FAR_RIGHT ] = 'go far right'
+
+NETWORK_CONTEXT_GLOBAL = 0
+NETWORK_CONTEXT_HYDRUS = 1
+NETWORK_CONTEXT_DOMAIN = 1
+NETWORK_CONTEXT_DOWNLOADER = 1
+NETWORK_CONTEXT_SUBSCRIPTION = 1
 
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1

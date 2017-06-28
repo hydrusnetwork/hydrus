@@ -126,7 +126,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         
         if len( content_updates ) > 0:
             
-            name = HG.client_controller.GetServicesManager().GetName( service_key )
+            name = HG.client_controller.services_manager.GetName( service_key )
             
             locations.add( name )
             
@@ -347,7 +347,7 @@ def GetSortChoices( add_namespaces_and_ratings = True ):
         
         sort_choices.extend( HC.options[ 'sort_by' ] )
         
-        service_keys = HG.client_controller.GetServicesManager().GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+        service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
         
         for service_key in service_keys:
             
@@ -679,7 +679,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             components.append( '"' + HydrusData.ToUnicode( value ) + '"' )
             components.append( 'for' )
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             if services_manager.ServiceExists( service_key ):
                 
@@ -899,6 +899,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'media_view' ][ HC.IMAGE_JPEG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
         self._dictionary[ 'media_view' ][ HC.IMAGE_PNG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_APNG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, gif_zoom_info )
         self._dictionary[ 'media_view' ][ HC.IMAGE_GIF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, gif_zoom_info )
         
         if HC.PLATFORM_WINDOWS:
@@ -1566,7 +1567,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         if HG.client_controller.IsBooted():
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             self._tag_service_actions = [ ( service_key, action, tag_censor ) for ( service_key, action, tag_censor ) in self._tag_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ]
             self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
@@ -1664,7 +1665,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_content_updates = {}
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         for ( service_key, action, tag_censor ) in self._tag_service_actions:
             
@@ -1992,7 +1993,7 @@ class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
         
         if HG.client_controller.IsBooted():
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             test_func = services_manager.ServiceExists
             
@@ -2263,7 +2264,7 @@ class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
             
             # this never stored mouse actions, so skip
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             for ( modifier, key, ( serialisable_service_key, data ) ) in serialisable_keyboard_actions:
                 

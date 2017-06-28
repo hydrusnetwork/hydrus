@@ -744,7 +744,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.client_files_manager
             
             try:
                 

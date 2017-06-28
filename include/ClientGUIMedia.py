@@ -40,7 +40,7 @@ ID_TIMER_ANIMATION = wx.NewId()
 
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
-    services_manager = HG.client_controller.GetServicesManager()
+    services_manager = HG.client_controller.services_manager
     
     if len( service_keys ) == 1:
         
@@ -68,7 +68,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
 def AddServiceKeysToMenu( event_handler, menu, service_keys, phrase, description, callable ):
     
-    services_manager = HG.client_controller.GetServicesManager()
+    services_manager = HG.client_controller.services_manager
     
     if len( service_keys ) == 1:
         
@@ -164,7 +164,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _CopyFilesToClipboard( self ):
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
         
@@ -233,7 +233,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         display_media = self._focussed_media.GetDisplayMedia()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( display_media.GetHash(), display_media.GetMime() )
         
@@ -244,7 +244,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         paths = []
         
@@ -266,7 +266,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         ( filename, ) = HG.client_controller.Read( 'service_filenames', service_key, { hash } )
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         if service.GetServiceType() == HC.IPFS:
             
@@ -282,7 +282,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         prefix = ''
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         if service.GetServiceType() == HC.IPFS:
             
@@ -483,7 +483,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = display_media.GetHash()
                 mime = display_media.GetMime()
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -843,7 +843,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( self._selected_media ) > 0:
             
-            if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
+            if len( HG.client_controller.services_manager.GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
                 flat_media = self._GetSelectedFlatMedia()
                 
@@ -929,7 +929,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = self._focussed_media.GetHash()
                 mime = self._focussed_media.GetMime()
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -949,7 +949,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 hash = self._focussed_media.GetHash()
                 mime = self._focussed_media.GetMime()
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -966,7 +966,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            remote_service = HG.client_controller.GetServicesManager().GetService( remote_service_key )
+            remote_service = HG.client_controller.services_manager.GetService( remote_service_key )
             
             service_type = remote_service.GetServiceType()
             
@@ -1454,7 +1454,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            ipfs_service = HG.client_controller.GetServicesManager().GetService( file_service_key )
+            ipfs_service = HG.client_controller.services_manager.GetService( file_service_key )
             
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a note to describe this directory.' ) as dlg:
@@ -1850,7 +1850,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._selected_media ) > 0:
             
-            services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
             
             service_keys = [ service.GetServiceKey() for service in services ]
             
@@ -2345,7 +2345,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     file_data_object = wx.FileDataObject()
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     for hash in hashes:
                         
@@ -2583,7 +2583,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         advanced_mode = new_options.GetBoolean( 'advanced_mode' )
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         thumbnail = self._GetThumbnailUnderMouse( event )
         
@@ -2668,7 +2668,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 multiple_selected = num_selected > 1
                 
-                services_manager = HG.client_controller.GetServicesManager()
+                services_manager = HG.client_controller.services_manager
                 
                 services = services_manager.GetServices()
                 
@@ -3927,7 +3927,7 @@ class Thumbnail( Selectable ):
         
         # repo icons
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         repo_icon_x = 0
         

@@ -105,14 +105,21 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanContinue( self, bandwidth_tracker, threshold = 60 ):
+    def CanContinue( self, bandwidth_tracker, threshold = 15 ):
         
         with self._lock:
             
             for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
                 
+                # Do not stop ongoing just because starts are throttled
+                requests_rule = bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS
+                
                 # Do not block an ongoing jpg download because the current month is 100.03% used
-                if time_delta is None or time_delta > threshold:
+                wait_is_too_long = time_delta is None or time_delta > threshold
+                
+                ignore_rule = requests_rule or wait_is_too_long
+                
+                if ignore_rule:
                     
                     continue
                     
@@ -127,19 +134,21 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanStart( self, bandwidth_tracker, threshold = 60 ):
+    def CanStart( self, bandwidth_tracker, threshold = 5 ):
         
         with self._lock:
             
             for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
                 
                 # Do not prohibit a new job from starting just because the current download speed is 210/200KB/s
-                if time_delta is not None and time_delta < threshold:
+                ignore_rule_for_starting = bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta is not None and time_delta <= threshold
+                
+                if ignore_rule_for_starting:
                     
                     continue
                     
                 
-                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) > max_allowed:
+                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) >= max_allowed:
                     
                     return False
                     
@@ -266,6 +275,11 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         self._seconds_requests = counters[ 9 ]
         
     
+    def _GetCurrentDateTime( self ):
+        
+        return datetime.datetime.utcfromtimestamp( HydrusData.GetNow() )
+        
+    
     def _GetMonthTime( self, dt ):
         
         ( year, month ) = ( dt.year, dt.month )
@@ -281,7 +295,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         if time_delta is None:
             
-            dt = datetime.datetime.utcnow()
+            dt = self._GetCurrentDateTime()
             
             month_time = self._GetMonthTime( dt )
             
@@ -473,7 +487,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            dt = datetime.datetime.utcnow()
+            dt = self._GetCurrentDateTime()
             
             ( month_time, day_time, hour_time, minute_time, second_time ) = self._GetTimes( dt )
             
@@ -495,7 +509,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            dt = datetime.datetime.utcnow()
+            dt = self._GetCurrentDateTime()
             
             ( month_time, day_time, hour_time, minute_time, second_time ) = self._GetTimes( dt )
             

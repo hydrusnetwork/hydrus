@@ -43,7 +43,7 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash )
         
@@ -244,7 +244,7 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.client_files_manager
             
             path = client_files_manager.GetFullSizeThumbnailPath( hash )
             
@@ -265,7 +265,7 @@ class HydrusResourceLocalFile( HydrusServerResources.HydrusResource ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash )
         
@@ -280,7 +280,7 @@ class HydrusResourceLocalThumbnail( HydrusServerResources.HydrusResource ):
         
         hash = request.hydrus_args[ 'hash' ]
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFullSizeThumbnailPath( hash )
         

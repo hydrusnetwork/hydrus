@@ -2534,7 +2534,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._txt_parse_st = wx.StaticText( self._tag_box, label = '' )
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         self._txt_parse_tag_service_keys = services_manager.FilterValidServiceKeys( txt_parse_tag_service_keys )
         
@@ -2730,7 +2730,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
     def _RefreshTxtParseText( self ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         services = [ services_manager.GetService( service_key ) for service_key in self._txt_parse_tag_service_keys ]
         
@@ -2772,7 +2772,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
     
     def EventEditTxtParsing( self, event ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         tag_services = services_manager.GetServices( HC.TAG_SERVICES )
         
@@ -3042,8 +3042,8 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        like_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
-        numerical_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         self._panels = []
         
@@ -3502,7 +3502,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         #
         
-        services = HG.client_controller.GetServicesManager().GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
+        services = HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.TAG_REPOSITORY, HC.LOCAL_TAG ) )
         
         for service in services:
             
@@ -3668,7 +3668,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         #
         
-        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -3769,14 +3769,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                self._service = HG.client_controller.GetServicesManager().GetService( service_key )
+                self._service = HG.client_controller.services_manager.GetService( service_key )
                 
-            
-            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
-            
-            self._current_statuses_to_pairs = collections.defaultdict( set )
-            
-            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
             
             self._pairs_to_reasons = {}
             
@@ -3791,7 +3785,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             expand_parents = True
             
             self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._child_input.Disable()
+            
             self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._parent_input.Disable()
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -3799,36 +3796,9 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             #
             
-            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-            
-            for ( status, pairs ) in self._original_statuses_to_pairs.items():
-                
-                if status != HC.CONTENT_STATUS_DELETED:
-                    
-                    sign = HydrusData.ConvertStatusToPrefix( status )
-                    
-                    for ( child, parent ) in pairs:
-                        
-                        if status == HC.CONTENT_STATUS_CURRENT and ( child, parent ) in petitioned_pairs:
-                            
-                            continue
-                            
-                        
-                        self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
-                        
-                    
-                
-            
-            self._tag_parents.SortListItems( 2 )
-            
-            if tags is not None:
-                
-                self.EnterChildren( tags )
-                
-            
             #
             
-            intro = 'Files with a tag on the left will also be given the tag on the right.'
+            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
             
             tags_box = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -3842,13 +3812,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
+            
+            #
+            
+            HG.client_controller.CallToThread( self.THREADInitialise, tags )
             
         
         def _AddPairs( self, children, parent ):
@@ -4231,6 +4205,57 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             else: self._parent_input.SetFocus()
             
         
+        def THREADInitialise( self, tags ):
+            
+            def wx_code():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' )
+                
+                self._child_input.Enable()
+                self._parent_input.Enable()
+                
+                petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                
+                for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                    
+                    if status != HC.CONTENT_STATUS_DELETED:
+                        
+                        sign = HydrusData.ConvertStatusToPrefix( status )
+                        
+                        for ( child, parent ) in pairs:
+                            
+                            if status == HC.CONTENT_STATUS_CURRENT and ( child, parent ) in petitioned_pairs:
+                                
+                                continue
+                                
+                            
+                            self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
+                            
+                        
+                    
+                
+                self._tag_parents.SortListItems( 2 )
+                
+                if tags is not None:
+                    
+                    self.EnterChildren( tags )
+                    
+                
+            
+            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', self._service_key )
+            
+            self._current_statuses_to_pairs = collections.defaultdict( set )
+            
+            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
+            
+            wx.CallAfter( wx_code )
+            
+        
     
 class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
     
@@ -4256,7 +4281,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         self._tag_repositories.AddPage( name, name, page )
         
-        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -4351,14 +4376,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._service_key != CC.LOCAL_TAG_SERVICE_KEY:
                 
-                self._service = HG.client_controller.GetServicesManager().GetService( service_key )
+                self._service = HG.client_controller.services_manager.GetService( service_key )
                 
-            
-            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
-            
-            self._current_statuses_to_pairs = collections.defaultdict( set )
-            
-            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
             
             self._pairs_to_reasons = {}
             
@@ -4375,7 +4394,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             expand_parents = False
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._old_input.Disable()
+            
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
+            self._new_input.Disable()
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAddButton )
@@ -4383,36 +4405,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             #
             
-            petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-            
-            for ( status, pairs ) in self._original_statuses_to_pairs.items():
-                
-                if status != HC.CONTENT_STATUS_DELETED:
-                    
-                    sign = HydrusData.ConvertStatusToPrefix( status )
-                    
-                    for ( old, new ) in pairs:
-                        
-                        if status == HC.CONTENT_STATUS_CURRENT and ( old, new ) in petitioned_pairs:
-                            
-                            continue
-                            
-                        
-                        self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
-                        
-                    
-                
-            
-            self._tag_siblings.SortListItems( 2 )
-            
-            if tags is not None:
-                
-                self.EnterOlds( tags )
-                
-            
-            #
-            
-            intro = 'Tags on the left will be replaced by those on the right.'
+            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
             
             new_sibling_box = wx.BoxSizer( wx.VERTICAL )
             
@@ -4432,7 +4425,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.AddF( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4440,6 +4433,9 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self.SetSizer( vbox )
             
+            #
+            
+            HG.client_controller.CallToThread( self.THREADInitialise, tags )
             
         
         def _AddPairs( self, olds, new ):
@@ -4891,6 +4887,57 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if len( self._old_siblings.GetTags() ) == 0: self._old_input.SetFocus()
             else: self._new_input.SetFocus()
+            
+        
+        def THREADInitialise( self, tags ):
+            
+            def wx_code():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
+                
+                self._old_input.Enable()
+                self._new_input.Enable()
+                
+                petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                
+                for ( status, pairs ) in self._original_statuses_to_pairs.items():
+                    
+                    if status != HC.CONTENT_STATUS_DELETED:
+                        
+                        sign = HydrusData.ConvertStatusToPrefix( status )
+                        
+                        for ( old, new ) in pairs:
+                            
+                            if status == HC.CONTENT_STATUS_CURRENT and ( old, new ) in petitioned_pairs:
+                                
+                                continue
+                                
+                            
+                            self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
+                            
+                        
+                    
+                
+                self._tag_siblings.SortListItems( 2 )
+                
+                if tags is not None:
+                    
+                    self.EnterOlds( tags )
+                    
+                
+            
+            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', self._service_key )
+            
+            self._current_statuses_to_pairs = collections.defaultdict( set )
+            
+            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
+            
+            wx.CallAfter( wx_code )
             
         
     

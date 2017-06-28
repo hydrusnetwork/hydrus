@@ -62,7 +62,7 @@ def DAEMONDownloadFiles( controller ):
     
     if num_downloads > 0:
         
-        client_files_manager = controller.GetClientFilesManager()
+        client_files_manager = controller.client_files_manager
         
         successful_hashes = set()
         
@@ -89,7 +89,7 @@ def DAEMONDownloadFiles( controller ):
                 
                 try:
                     
-                    service = controller.GetServicesManager().GetService( service_key )
+                    service = controller.services_manager.GetService( service_key )
                     
                 except:
                     
@@ -233,7 +233,7 @@ def DAEMONMaintainTrash( controller ):
     
 def DAEMONRebalanceClientFiles( controller ):
     
-    controller.GetClientFilesManager().Rebalance()
+    controller.client_files_manager.Rebalance()
     
 def DAEMONSaveDirtyObjects( controller ):
     
@@ -241,7 +241,7 @@ def DAEMONSaveDirtyObjects( controller ):
     
 def DAEMONSynchroniseAccounts( controller ):
     
-    services = controller.GetServicesManager().GetServices( HC.RESTRICTED_SERVICES )
+    services = controller.services_manager.GetServices( HC.RESTRICTED_SERVICES )
     
     for service in services:
         
@@ -254,7 +254,7 @@ def DAEMONSynchroniseRepositories( controller ):
     
     if not options[ 'pause_repo_sync' ]:
         
-        services = controller.GetServicesManager().GetServices( HC.REPOSITORIES )
+        services = controller.services_manager.GetServices( HC.REPOSITORIES )
         
         for service in services:
             
@@ -306,7 +306,7 @@ def DAEMONUPnP( controller ):
         return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
         
     
-    services = controller.GetServicesManager().GetServices( ( HC.LOCAL_BOORU, ) )
+    services = controller.services_manager.GetServices( ( HC.LOCAL_BOORU, ) )
     
     for service in services:
         

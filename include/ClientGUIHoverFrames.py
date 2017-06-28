@@ -724,7 +724,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         like_hbox.AddF( ( 16, 16 ), CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        like_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
+        like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
         
         for service in like_services:
             
@@ -739,7 +739,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         
         vbox.AddF( like_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        numerical_services = HG.client_controller.GetServicesManager().GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
+        numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ), randomised = False )
         
         for service in numerical_services:
             

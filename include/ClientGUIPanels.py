@@ -774,7 +774,7 @@ class ReviewServicePanel( wx.Panel ):
                             job_key.SetVariable( 'popup_title', 'exporting updates for ' + self._service.GetName() )
                             HG.client_controller.pub( 'message', job_key )
                             
-                            client_files_manager = HG.client_controller.GetClientFilesManager()
+                            client_files_manager = HG.client_controller.client_files_manager
                             
                             for ( i, update_hash ) in enumerate( update_hashes ):
                                 

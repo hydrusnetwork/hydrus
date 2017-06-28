@@ -213,7 +213,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         gallery.GetFile( temp_path, url, report_hooks = [ self._file_download_hook ] )
                         
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                     
@@ -723,7 +723,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     raise Exception( 'File failed to copy--see log for error.' )
                     
                 
-                client_files_manager = HG.client_controller.GetClientFilesManager()
+                client_files_manager = HG.client_controller.client_files_manager
                 
                 ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                 
@@ -1168,7 +1168,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                     raise Exception( 'File failed to copy--see log for error.' )
                                     
                                 
-                                client_files_manager = HG.client_controller.GetClientFilesManager()
+                                client_files_manager = HG.client_controller.client_files_manager
                                 
                                 ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                                 
@@ -1434,7 +1434,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     HG.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                     
@@ -2364,7 +2364,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                         
-                        client_files_manager = HG.client_controller.GetClientFilesManager()
+                        client_files_manager = HG.client_controller.client_files_manager
                         
                         ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                         
@@ -2858,7 +2858,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     HG.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                     
@@ -3299,7 +3299,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     
                     HG.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
                     

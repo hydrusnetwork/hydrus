@@ -423,7 +423,7 @@ class Animation( wx.Window ):
                     hash = self._media.GetHash()
                     mime = self._media.GetMime()
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     path = client_files_manager.GetFilePath( hash, mime )
                     
@@ -1270,7 +1270,7 @@ class Canvas( wx.Window ):
         
         if self._current_media is not None:
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.client_files_manager
             
             paths = [ client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() ) ]
             
@@ -1282,7 +1282,7 @@ class Canvas( wx.Window ):
         
         if self._current_media is not None:
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.client_files_manager
             
             path = client_files_manager.GetFilePath( self._current_media.GetHash(), self._current_media.GetMime() )
             
@@ -1556,7 +1556,7 @@ class Canvas( wx.Window ):
             return
             
         
-        if len( HG.client_controller.GetServicesManager().GetServices( HC.RATINGS_SERVICES ) ) > 0:
+        if len( HG.client_controller.services_manager.GetServices( HC.RATINGS_SERVICES ) ) > 0:
             
             with ClientGUIDialogsManage.DialogManageRatings( self, ( self._current_media, ) ) as dlg:
                 
@@ -1636,7 +1636,7 @@ class Canvas( wx.Window ):
         hash = self._current_media.GetHash()
         mime = self._current_media.GetMime()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash, mime )
         
@@ -1736,7 +1736,7 @@ class Canvas( wx.Window ):
             
             try:
                 
-                service = HG.client_controller.GetServicesManager().GetService( service_key )
+                service = HG.client_controller.services_manager.GetService( service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -2439,7 +2439,7 @@ class CanvasPanel( Canvas ):
         
         if self._current_media is not None:
             
-            services = HG.client_controller.GetServicesManager().GetServices()
+            services = HG.client_controller.services_manager.GetServices()
             
             locations_manager = self._current_media.GetLocationsManager()
             
@@ -2686,7 +2686,7 @@ class CanvasWithDetails( Canvas ):
             
             # ratings
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             like_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ), randomised = False )
             
@@ -2847,7 +2847,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         self._hover_commands = self._GenerateHoverTopFrame()
         self._hover_tags = ClientGUIHoverFrames.FullscreenHoverFrameTags( self, self._canvas_key )
         
-        ratings_services = HG.client_controller.GetServicesManager().GetServices( ( HC.RATINGS_SERVICES ) )
+        ratings_services = HG.client_controller.services_manager.GetServices( ( HC.RATINGS_SERVICES ) )
         
         if len( ratings_services ) > 0:
             
@@ -4708,7 +4708,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if self._current_media is not None:
             
-            services = HG.client_controller.GetServicesManager().GetServices()
+            services = HG.client_controller.services_manager.GetServices()
             
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
@@ -4983,7 +4983,7 @@ class MediaContainer( wx.Window ):
                         raise Exception( 'Failed to initialise the flash window' )
                         
                     
-                    client_files_manager = HG.client_controller.GetClientFilesManager()
+                    client_files_manager = HG.client_controller.client_files_manager
                     
                     self._media_window.movie = client_files_manager.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
                     
@@ -5422,7 +5422,7 @@ class EmbedButton( wx.Window ):
             
             hash = self._media.GetHash()
             
-            thumbnail_path = HG.client_controller.GetClientFilesManager().GetFullSizeThumbnailPath( hash )
+            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
             
             self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
             
@@ -5450,7 +5450,7 @@ class OpenExternallyPanel( wx.Panel ):
             
             hash = self._media.GetHash()
             
-            thumbnail_path = HG.client_controller.GetClientFilesManager().GetFullSizeThumbnailPath( hash )
+            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
             
             bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
             
@@ -5480,7 +5480,7 @@ class OpenExternallyPanel( wx.Panel ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash, mime )
         

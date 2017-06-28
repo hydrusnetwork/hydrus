@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 262</h3></li>
+				<ul>
+					<li>added apng support!</li>
+					<li>sessions will now append from the default insertion index (e.g. right of current page)</li>
+					<li>sessions will now load in the correct order if the default insertion index is to the left of the current page!</li>
+					<li>fixed an issue with custom 'favorites' gelbooru parsers</li>
+					<li>manage parents/siblings dialogs now load their larger datasets on a thread, after initialising</li>
+					<li>sped up how some default thumbnails are generated on client boot</li>
+					<li>sped up how resized thumbnails are generated</li>
+					<li>refactored ffmpeg video parsing to be simpler and easier to maintain</li>
+					<li>improved some ffmpeg parsing to be much faster</li>
+					<li>ffmpeg can now parse video that reports no duration</li>
+					<li>fixed some more bad video framerate parsing</li>
+					<li>the 4chan/8chan thread watcher will now always generate https urls (even if you enter an http thread url)</li>
+					<li>pixiv will now produce https urls</li>
+					<li>the known url file status system will now check both http and https versions of an url it is given</li>
+					<li>refactored some core elements to simplify common controller requests</li>
+					<li>started on some database migration help and ui--should be finished next week</li>
+					<li>flushed out network engine a little</li>
+					<li>more refactoring and simplification of new network engine object coupling</li>
+					<li>flushed out bandwidth manager</li>
+					<li>misc logic tweaks in bandwidth management</li>
+					<li>wrote a network session manager</li>
+					<li>wrote a new class for identifying all future 'network contexts'</li>
+					<li>employed NetworkContext everywhere in the new engine, massively simplifying several things</li>
+					<li>wrote the first batch of tests for my new network engine and its network jobs</li>
+					<li>wrote tests for the bandwidth rules object, including covering the new short time delta support</li>
+					<li>improved reliability and speed of bandwidth unit tests</li>
+					<li>wrote tests for the new domain-based bandwidth manager</li>
+					<li>misc improvements</li>
+					<li>more misc improvements</li>
+				</ul>
 				<li><h3>version 261</h3></li>
 				<ul>
 					<li>wrote a new manage dialog for urls</li>

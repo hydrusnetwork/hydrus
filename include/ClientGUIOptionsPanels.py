@@ -308,7 +308,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._services_vbox.Clear( True )
         
-        services = HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES, randomised = False )
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         
         button_id = 1
         

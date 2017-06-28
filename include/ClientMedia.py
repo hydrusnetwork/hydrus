@@ -54,7 +54,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         score += 2
         
-    elif size_ratio > 1.0:
+    elif size_ratio > 1.05:
         
         statements.append( 'This has a larger filesize.' )
         
@@ -66,7 +66,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         score -= 2
         
-    elif size_ratio < 1.0:
+    elif size_ratio < 0.95:
         
         statements.append( 'This has a smaller filesize.' )
         
@@ -396,7 +396,7 @@ class LocationsManager( object ):
         pending = self.GetPendingRemote()
         petitioned = self.GetPetitionedRemote()
         
-        remote_services = HG.client_controller.GetServicesManager().GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
+        remote_services = HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) )
         
         remote_services = list( remote_services )
         
@@ -627,7 +627,7 @@ class MediaList( object ):
         namespaces_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'namespace' ]
         ratings_to_collect_by = [ data for ( collect_by_type, data ) in collect_by if collect_by_type == 'rating' ]
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         for media in medias:
             
@@ -739,7 +739,7 @@ class MediaList( object ):
                 
             elif sort_by_data in ( CC.SORT_BY_OLDEST, CC.SORT_BY_NEWEST ):
                 
-                file_service = HG.client_controller.GetServicesManager().GetService( self._file_service_key )
+                file_service = HG.client_controller.services_manager.GetService( self._file_service_key )
                 
                 file_service_type = file_service.GetServiceType()
                 
@@ -1228,7 +1228,7 @@ class MediaList( object ):
             
             if action == HC.CONTENT_UPDATE_DELETE:
                 
-                local_file_domains = HG.client_controller.GetServicesManager().GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
                 non_trash_local_file_services = list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ]
                 
@@ -1729,7 +1729,7 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( service_key )
             
-            service = HG.client_controller.GetServicesManager().GetService( service_key )
+            service = HG.client_controller.services_manager.GetService( service_key )
             
             service_type = service.GetServiceType()
             
@@ -1895,7 +1895,7 @@ class MediaResult( object ):
     
     def DeletePending( self, service_key ):
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1983,7 +1983,7 @@ class MediaResult( object ):
         
         ( data_type, action, row ) = content_update.ToTuple()
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         service_type = service.GetServiceType()
         

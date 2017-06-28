@@ -35,7 +35,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._service_key = service_key
         self._hashes = hashes
         
-        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        service = HG.client_controller.services_manager.GetService( self._service_key )
         
         self._service_name = service.GetName()
         
@@ -58,7 +58,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        services = [ service for service in HG.client_controller.GetServicesManager().GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
+        services = [ service for service in HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES ) if service.GetServiceKey() != self._service_key ]
         
         if len( services ) > 0:
             
@@ -323,7 +323,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listbook_dict = {}
         
-        services = self._controller.GetServicesManager().GetServices( randomised = False )
+        services = self._controller.services_manager.GetServices( randomised = False )
         
         lb_to_select = None
         service_type_name_to_select = None
@@ -436,3 +436,32 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._InitialiseServices()
         
     
+class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller ):
+        
+        self._controller = controller
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        # a help button, well labelled, that points to the help page
+        
+        # current install dir
+        # current db dir
+        
+        # current file dir stuff, listctrl
+        # location | portable | current percents: ftr | ideal percents: ftr
+        
+        # move the db and all portable client_files locations (provides warning about the shortcut and lets you copy the new location)
+            # this will require a shutdown
+        
+        # rebalance files, listctrl
+        # location | portable yes/no | weight | ideal percent
+        # every change here, if valid, is saved immediately
+        
+        # store all resized thumbs in sep location
+        # store all full_size thumbs in sep location
+        
+        # do rebalance now button, only enabled if there is work to do
+            # should report to a stoppable job_key panel or something. text, gauge, stop button
+        

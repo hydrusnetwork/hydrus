@@ -61,7 +61,7 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
     
     if service_keys is None:
         
-        services = HG.client_controller.GetServicesManager().GetServices( service_types )
+        services = HG.client_controller.services_manager.GetServices( service_types )
         
         service_keys = [ service.GetServiceKey() for service in services ]
         
@@ -83,7 +83,7 @@ def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unal
         
     else:
         
-        services = { HG.client_controller.GetServicesManager().GetService( service_key ) for service_key in service_keys }
+        services = { HG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
         
         list_of_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
@@ -372,7 +372,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._num.SetValue( 1 )
         
-        service = HG.client_controller.GetServicesManager().GetService( service_key )
+        service = HG.client_controller.services_manager.GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -439,7 +439,7 @@ class DialogGenerateNewAccounts( Dialog ):
             expires = HydrusData.GetNow() + lifetime
             
         
-        service = HG.client_controller.GetServicesManager().GetService( self._service_key )
+        service = HG.client_controller.services_manager.GetService( self._service_key )
         
         try:
             
@@ -570,7 +570,7 @@ class DialogInputFileSystemPredicates( Dialog ):
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_RATING:
             
-            services_manager = HG.client_controller.GetServicesManager()
+            services_manager = HG.client_controller.services_manager
             
             ratings_services = services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
             
@@ -778,7 +778,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyExternalShareURL( self, event ):
         
-        self._service = HG.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
         
@@ -796,7 +796,7 @@ class DialogInputLocalBooruShare( Dialog ):
     
     def EventCopyInternalShareURL( self, event ):
         
-        self._service = HG.client_controller.GetServicesManager().GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         internal_ip = '127.0.0.1'
         
@@ -1606,7 +1606,7 @@ class DialogModifyAccounts( Dialog ):
         
         Dialog.__init__( self, parent, 'modify account' )
         
-        self._service = HG.client_controller.GetServicesManager().GetService( service_key )
+        self._service = HG.client_controller.services_manager.GetService( service_key )
         self._subject_identifiers = list( subject_identifiers )
         
         #
@@ -1828,7 +1828,7 @@ class DialogPageChooser( Dialog ):
         
         self.SetInitialSize( ( 420, 210 ) )
         
-        self._services = HG.client_controller.GetServicesManager().GetServices()
+        self._services = HG.client_controller.services_manager.GetServices()
         
         repository_petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_OVERRULE ) for content_type in HC.REPOSITORY_CONTENT_TYPES ]
         
@@ -1862,7 +1862,7 @@ class DialogPageChooser( Dialog ):
             
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = HG.client_controller.GetServicesManager().GetService( obj ).GetName()
+            name = HG.client_controller.services_manager.GetService( obj ).GetName()
             
             button.SetLabelText( name )
             
@@ -2119,7 +2119,7 @@ class DialogPathsToTags( Dialog ):
         
         #
         
-        services = HG.client_controller.GetServicesManager().GetServices( ( HC.TAG_REPOSITORY, ) )
+        services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
         
         for service in services:
             
@@ -3393,7 +3393,7 @@ class DialogSetupExport( Dialog ):
         
         self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
         
@@ -3580,7 +3580,7 @@ class DialogSetupExport( Dialog ):
         
         terms = ClientExporting.ParseExportPhrase( pattern )
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         self._export.Disable()
         
@@ -3650,7 +3650,7 @@ class DialogSetupExport( Dialog ):
     
     def EventExportTagTxtsChanged( self, event ):
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         tag_services = services_manager.GetServices( HC.TAG_SERVICES )
         

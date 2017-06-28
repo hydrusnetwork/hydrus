@@ -179,7 +179,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( tag_service_options, rating_service_options, delete_second_file, sync_archive, delete_both_files ) = duplicate_action_options.ToTuple()
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         for ( service_key, action, tag_censor ) in tag_service_options:
             
@@ -265,7 +265,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             existing_service_keys.add( service_key )
             
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         choice_tuples = []
         
@@ -344,7 +344,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             existing_service_keys.add( service_key )
             
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         choice_tuples = []
         
@@ -548,7 +548,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, action ) = sort_tuple
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         service = services_manager.GetService( service_key )
         
@@ -563,7 +563,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, action, tag_censor ) = sort_tuple
         
-        services_manager = HG.client_controller.GetServicesManager()
+        services_manager = HG.client_controller.services_manager
         
         service = services_manager.GetService( service_key )
         

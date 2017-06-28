@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 261
+SOFTWARE_VERSION = 262
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -418,7 +418,7 @@ UNDETERMINED_WM = 19
 VIDEO_MKV = 20
 VIDEO_WEBM = 21
 APPLICATION_JSON = 22
-VIDEO_APNG = 23
+IMAGE_APNG = 23
 UNDETERMINED_PNG = 24
 VIDEO_MPEG = 25
 VIDEO_MOV = 26
@@ -429,16 +429,16 @@ TEXT_PLAIN = 30
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV, APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
-SEARCHABLE_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
+ALLOWED_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_BMP, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV, APPLICATION_HYDRUS_UPDATE_CONTENT, APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+SEARCHABLE_MIMES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, APPLICATION_FLASH, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG, APPLICATION_PDF, AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA, VIDEO_WMV )
 
-IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP )
+IMAGES = ( IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_BMP )
 
 AUDIO = ( AUDIO_MP3, AUDIO_OGG, AUDIO_FLAC, AUDIO_WMA )
 
 VIDEO = ( VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
 
-NATIVE_VIDEO = ( VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
+NATIVE_VIDEO = ( IMAGE_APNG, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
 
 APPLICATIONS = ( APPLICATION_FLASH, APPLICATION_PDF, APPLICATION_ZIP )
 
@@ -446,7 +446,7 @@ NOISY_MIMES = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) + list( VIDEO ) )
 
 ARCHIVES = ( APPLICATION_ZIP, APPLICATION_HYDRUS_ENCRYPTED_ZIP )
 
-MIMES_WITH_THUMBNAILS = ( APPLICATION_FLASH, IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_BMP, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
+MIMES_WITH_THUMBNAILS = ( APPLICATION_FLASH, IMAGE_JPEG, IMAGE_PNG, IMAGE_APNG, IMAGE_GIF, IMAGE_BMP, VIDEO_AVI, VIDEO_FLV, VIDEO_MOV, VIDEO_MP4, VIDEO_WMV, VIDEO_MKV, VIDEO_WEBM, VIDEO_MPEG )
 
 MIMES_WE_CAN_PHASH = ( IMAGE_JPEG, IMAGE_PNG )
 
@@ -460,6 +460,7 @@ mime_enum_lookup[ 'image/jpeg' ] = IMAGE_JPEG
 mime_enum_lookup[ 'image/jpg' ] = IMAGE_JPEG
 mime_enum_lookup[ 'image/x-png' ] = IMAGE_PNG
 mime_enum_lookup[ 'image/png' ] = IMAGE_PNG
+mime_enum_lookup[ 'image/apng' ] = IMAGE_APNG
 mime_enum_lookup[ 'image/gif' ] = IMAGE_GIF
 mime_enum_lookup[ 'image/bmp' ] = IMAGE_BMP
 mime_enum_lookup[ 'image' ] = IMAGES
@@ -481,7 +482,6 @@ mime_enum_lookup[ 'audio/flac' ] = AUDIO_FLAC
 mime_enum_lookup[ 'audio/x-ms-wma' ] = AUDIO_WMA
 mime_enum_lookup[ 'text/html' ] = TEXT_HTML
 mime_enum_lookup[ 'text/plain' ] = TEXT_PLAIN
-mime_enum_lookup[ 'video/png' ] = VIDEO_APNG
 mime_enum_lookup[ 'video/x-msvideo' ] = VIDEO_AVI
 mime_enum_lookup[ 'video/x-flv' ] = VIDEO_FLV
 mime_enum_lookup[ 'video/quicktime' ] = VIDEO_MOV
@@ -498,6 +498,7 @@ mime_string_lookup = {}
 mime_string_lookup[ APPLICATION_HYDRUS_CLIENT_COLLECTION ] = 'collection'
 mime_string_lookup[ IMAGE_JPEG ] = 'image/jpg'
 mime_string_lookup[ IMAGE_PNG ] = 'image/png'
+mime_string_lookup[ IMAGE_APNG ] = 'image/apng'
 mime_string_lookup[ IMAGE_GIF ] = 'image/gif'
 mime_string_lookup[ IMAGE_BMP ] = 'image/bmp'
 mime_string_lookup[ IMAGES ] = 'image'
@@ -519,7 +520,6 @@ mime_string_lookup[ AUDIO_WMA ] = 'audio/x-ms-wma'
 mime_string_lookup[ AUDIO ] = 'audio'
 mime_string_lookup[ TEXT_HTML ] = 'text/html'
 mime_string_lookup[ TEXT_PLAIN ] = 'text/plain'
-mime_string_lookup[ VIDEO_APNG ] = 'video/png'
 mime_string_lookup[ VIDEO_AVI ] = 'video/x-msvideo'
 mime_string_lookup[ VIDEO_FLV ] = 'video/x-flv'
 mime_string_lookup[ VIDEO_MOV ] = 'video/quicktime'
@@ -537,6 +537,7 @@ mime_ext_lookup = {}
 mime_ext_lookup[ APPLICATION_HYDRUS_CLIENT_COLLECTION ] = '.collection'
 mime_ext_lookup[ IMAGE_JPEG ] = '.jpg'
 mime_ext_lookup[ IMAGE_PNG ] = '.png'
+mime_ext_lookup[ IMAGE_APNG ] = '.png'
 mime_ext_lookup[ IMAGE_GIF ] = '.gif'
 mime_ext_lookup[ IMAGE_BMP ] = '.bmp'
 mime_ext_lookup[ IMAGE_ICON ] = '.ico'
@@ -555,7 +556,6 @@ mime_ext_lookup[ AUDIO_FLAC ] = '.flac'
 mime_ext_lookup[ AUDIO_WMA ] = '.wma'
 mime_ext_lookup[ TEXT_HTML ] = '.html'
 mime_ext_lookup[ TEXT_PLAIN ] = '.txt'
-mime_ext_lookup[ VIDEO_APNG ] = '.png'
 mime_ext_lookup[ VIDEO_AVI ] = '.avi'
 mime_ext_lookup[ VIDEO_FLV ] = '.flv'
 mime_ext_lookup[ VIDEO_MOV ] = '.mov'

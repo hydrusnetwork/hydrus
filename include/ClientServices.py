@@ -1408,7 +1408,7 @@ class ServiceRepository( ServiceRestricted ):
         
         if num_to_do > 0:
             
-            client_files_manager = HG.client_controller.GetClientFilesManager()
+            client_files_manager = HG.client_controller.client_files_manager
             
             job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
             
@@ -1752,7 +1752,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'add'
         
-        client_files_manager = HG.client_controller.GetClientFilesManager()
+        client_files_manager = HG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash, mime )
         

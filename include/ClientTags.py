@@ -78,7 +78,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
     del hta
     
-    service = HG.client_controller.GetServicesManager().GetService( tag_service_key )
+    service = HG.client_controller.services_manager.GetService( tag_service_key )
     
     service_type = service.GetServiceType()
     
@@ -166,7 +166,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
             text += os.linesep.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) )
             text += os.linesep * 2
             
-            file_service = HG.client_controller.GetServicesManager().GetService( file_service_key )
+            file_service = HG.client_controller.services_manager.GetService( file_service_key )
             
             text += 'For '
             
