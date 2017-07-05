@@ -2,6 +2,7 @@ import ClientData
 import ClientDefaults
 import ClientImageHandling
 import ClientMedia
+import ClientNetworking
 import ClientRatings
 import ClientSearch
 import ClientServices
@@ -99,11 +100,13 @@ def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
     
     cache_current_mappings_table_name = 'external_caches.specific_current_mappings_cache_' + suffix
     
+    cache_deleted_mappings_table_name = 'external_caches.specific_deleted_mappings_cache_' + suffix
+    
     cache_pending_mappings_table_name = 'external_caches.specific_pending_mappings_cache_' + suffix
     
     ac_cache_table_name = 'external_caches.specific_ac_cache_' + suffix
     
-    return ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name )
+    return ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name )
     
 def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_timestamp, num_rows, row_name ):
     
@@ -1419,99 +1422,104 @@ class DB( HydrusDB.HydrusDB ):
             pub_job_key = True
             
         
-        ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
-        
-        hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
-        
-        client_files_manager = self._controller.client_files_manager
-        
-        total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
-        
-        for ( i, hash_id ) in enumerate( hash_ids ):
+        try:
             
-            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
+            ( total_num_hash_ids_in_cache, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache;' ).fetchone()
             
-            if pub_job_key and not job_key_pubbed:
-                
-                self._controller.pub( 'message', job_key )
-                
-                job_key_pubbed = True
-                
+            hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM shape_maintenance_phash_regen;' ) ]
             
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+            client_files_manager = self._controller.client_files_manager
             
-            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+            total_done_previously = total_num_hash_ids_in_cache - len( hash_ids )
             
-            if should_quit or should_stop:
+            for ( i, hash_id ) in enumerate( hash_ids ):
                 
-                return
+                job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
                 
-            
-            if i % 50 == 0:
-                
-                gc.collect()
-                
-            
-            text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
-            
-            HG.client_controller.pub( 'splash_set_status_text', text )
-            job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
-            
-            try:
-                
-                hash = self._GetHash( hash_id )
-                mime = self._GetMime( hash_id )
-                
-                if mime in HC.MIMES_WE_CAN_PHASH:
+                if pub_job_key and not job_key_pubbed:
                     
-                    path = client_files_manager.GetFilePath( hash, mime )
+                    self._controller.pub( 'message', job_key )
                     
-                    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                if i % 50 == 0:
+                    
+                    gc.collect()
+                    
+                
+                text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
+                
+                HG.client_controller.pub( 'splash_set_status_text', text )
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
+                
+                try:
+                    
+                    hash = self._GetHash( hash_id )
+                    mime = self._GetMime( hash_id )
+                    
+                    if mime in HC.MIMES_WE_CAN_PHASH:
                         
-                        try:
+                        path = client_files_manager.GetFilePath( hash, mime )
+                        
+                        if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
                             
-                            phashes = ClientImageHandling.GenerateShapePerceptualHashes( path )
-                            
-                        except Exception as e:
-                            
-                            HydrusData.Print( 'Could not generate phashes for ' + path )
-                            
-                            HydrusData.PrintException( e )
-                            
-                            phashes = []
+                            try:
+                                
+                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path )
+                                
+                            except Exception as e:
+                                
+                                HydrusData.Print( 'Could not generate phashes for ' + path )
+                                
+                                HydrusData.PrintException( e )
+                                
+                                phashes = []
+                                
                             
                         
+                    else:
+                        
+                        phashes = []
+                        
                     
-                else:
+                except HydrusExceptions.FileMissingException:
                     
                     phashes = []
                     
                 
-            except HydrusExceptions.FileMissingException:
+                existing_phash_ids = { phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) }
                 
-                phashes = []
+                correct_phash_ids = self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
                 
-            
-            existing_phash_ids = { phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE hash_id = ?;', ( hash_id, ) ) }
-            
-            correct_phash_ids = self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
-            
-            incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
-            
-            if len( incorrect_phash_ids ) > 0:
+                incorrect_phash_ids = existing_phash_ids.difference( correct_phash_ids )
                 
-                self._CacheSimilarFilesDisassociatePHashes( hash_id, incorrect_phash_ids )
+                if len( incorrect_phash_ids ) > 0:
+                    
+                    self._CacheSimilarFilesDisassociatePHashes( hash_id, incorrect_phash_ids )
+                    
+                
+                self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
                 
             
-            self._c.execute( 'DELETE FROM shape_maintenance_phash_regen WHERE hash_id = ?;', ( hash_id, ) )
+        finally:
             
-        
-        job_key.SetVariable( 'popup_text_1', 'done!' )
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        
-        job_key.Finish()
-        job_key.Delete( 30 )
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            job_key.Delete( 5 )
+            
         
     
     def _CacheSimilarFilesMaintainTree( self, job_key = None, stop_time = None, abandon_if_other_work_to_do = False ):
@@ -1536,56 +1544,61 @@ class DB( HydrusDB.HydrusDB ):
             pub_job_key = True
             
         
-        job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
-        
-        rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
-        
-        num_to_do = len( rebalance_phash_ids )
-        
-        while len( rebalance_phash_ids ) > 0:
+        try:
             
-            if pub_job_key and not job_key_pubbed:
-                
-                self._controller.pub( 'message', job_key )
-                
-                job_key_pubbed = True
-                
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
-            
-            if should_quit or should_stop:
-                
-                return
-                
-            
-            num_done = num_to_do - len( rebalance_phash_ids )
-            
-            text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
-            
-            HG.client_controller.pub( 'splash_set_status_text', text )
-            job_key.SetVariable( 'popup_text_1', text )
-            job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
-            
-            with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
-                
-                # can't turn this into selectfromlist due to the order clause. we need to do this all at once
-                
-                ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree NATURAL JOIN ' + temp_table_name + ' ORDER BY inner_population + outer_population DESC;' ).fetchone()
-                
-            
-            self._CacheSimilarFilesRegenerateBranch( job_key, biggest_phash_id )
+            job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
             
             rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
             
-        
-        job_key.SetVariable( 'popup_text_1', 'done!' )
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.DeleteVariable( 'popup_text_2' ) # used in the regenbranch call
-        
-        job_key.Finish()
-        job_key.Delete( 30 )
+            num_to_do = len( rebalance_phash_ids )
+            
+            while len( rebalance_phash_ids ) > 0:
+                
+                if pub_job_key and not job_key_pubbed:
+                    
+                    self._controller.pub( 'message', job_key )
+                    
+                    job_key_pubbed = True
+                    
+                
+                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                
+                should_stop = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
+                
+                if should_quit or should_stop:
+                    
+                    return
+                    
+                
+                num_done = num_to_do - len( rebalance_phash_ids )
+                
+                text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                
+                HG.client_controller.pub( 'splash_set_status_text', text )
+                job_key.SetVariable( 'popup_text_1', text )
+                job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                
+                with HydrusDB.TemporaryIntegerTable( self._c, rebalance_phash_ids, 'phash_id' ) as temp_table_name:
+                    
+                    # can't turn this into selectfromlist due to the order clause. we need to do this all at once
+                    
+                    ( biggest_phash_id, ) = self._c.execute( 'SELECT phash_id FROM shape_vptree NATURAL JOIN ' + temp_table_name + ' ORDER BY inner_population + outer_population DESC;' ).fetchone()
+                    
+                
+                self._CacheSimilarFilesRegenerateBranch( job_key, biggest_phash_id )
+                
+                rebalance_phash_ids = [ phash_id for ( phash_id, ) in self._c.execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) ]
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_key.DeleteVariable( 'popup_text_2' ) # used in the regenbranch call
+            
+            job_key.Finish()
+            job_key.Delete( 5 )
+            
         
     
     def _CacheSimilarFilesMaintenanceDue( self ):
@@ -2127,7 +2140,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsAddFiles( self, file_service_id, tag_service_id, hash_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_files_table_name + ' VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
         
@@ -2143,11 +2156,16 @@ class DB( HydrusDB.HydrusDB ):
             
             current_mapping_ids_dict = HydrusData.BuildKeyToSetDict( current_mapping_ids_raw )
             
+            deleted_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
+            
+            deleted_mapping_ids_dict = HydrusData.BuildKeyToSetDict( deleted_mapping_ids_raw )
+            
             pending_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
             
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
+            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
             all_ids_seen.update( pending_mapping_ids_dict.keys() )
             
             for tag_id in all_ids_seen:
@@ -2160,6 +2178,19 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_current_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in current_hash_ids ) )
                     
+                
+                #
+                
+                deleted_hash_ids = deleted_mapping_ids_dict[ tag_id ]
+                
+                num_deleted = len( deleted_hash_ids )
+                
+                if num_deleted > 0:
+                    
+                    self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_deleted_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in deleted_hash_ids ) )
+                    
+                
+                #
                 
                 pending_hash_ids = pending_mapping_ids_dict[ tag_id ]
                 
@@ -2187,7 +2218,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsAddMappings( self, file_service_id, tag_service_id, mappings_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         for ( tag_id, hash_ids ) in mappings_ids:
             
@@ -2216,16 +2247,22 @@ class DB( HydrusDB.HydrusDB ):
                     self._c.execute( 'UPDATE ' + ac_cache_table_name + ' SET current_count = current_count + ? WHERE tag_id = ?;', ( num_added, tag_id ) )
                     
                 
+                #
+                
+                self._c.executemany( 'DELETE FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
+                
             
         
     
     def _CacheSpecificMappingsDrop( self, file_service_id, tag_service_id ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         self._c.execute( 'DROP TABLE IF EXISTS ' + cache_files_table_name + ';' )
         
         self._c.execute( 'DROP TABLE IF EXISTS ' + cache_current_mappings_table_name + ';' )
+        
+        self._c.execute( 'DROP TABLE IF EXISTS ' + cache_deleted_mappings_table_name + ';' )
         
         self._c.execute( 'DROP TABLE IF EXISTS ' + cache_pending_mappings_table_name + ';' )
         
@@ -2234,7 +2271,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsDeleteFiles( self, file_service_id, tag_service_id, hash_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         self._c.executemany( 'DELETE FROM ' + cache_files_table_name + ' WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
@@ -2248,11 +2285,16 @@ class DB( HydrusDB.HydrusDB ):
             
             current_mapping_ids_dict = HydrusData.BuildKeyToSetDict( current_mapping_ids_raw )
             
+            deleted_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
+            
+            deleted_mapping_ids_dict = HydrusData.BuildKeyToSetDict( deleted_mapping_ids_raw )
+            
             pending_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
             
             pending_mapping_ids_dict = HydrusData.BuildKeyToSetDict( pending_mapping_ids_raw )
             
             all_ids_seen = set( current_mapping_ids_dict.keys() )
+            all_ids_seen.update( deleted_mapping_ids_dict.keys() )
             all_ids_seen.update( pending_mapping_ids_dict.keys() )
             
             for tag_id in all_ids_seen:
@@ -2265,6 +2307,19 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.executemany( 'DELETE FROM ' + cache_current_mappings_table_name + ' WHERE tag_id = ? AND hash_id = ?;', ( ( tag_id, hash_id ) for hash_id in current_hash_ids ) )
                     
+                
+                #
+                
+                deleted_hash_ids = deleted_mapping_ids_dict[ tag_id ]
+                
+                num_deleted = len( deleted_hash_ids )
+                
+                if num_deleted > 0:
+                    
+                    self._c.executemany( 'DELETE FROM ' + cache_deleted_mappings_table_name + ' WHERE tag_id = ? AND hash_id = ?;', ( ( tag_id, hash_id ) for hash_id in deleted_hash_ids ) )
+                    
+                
+                #
                 
                 pending_hash_ids = pending_mapping_ids_dict[ tag_id ]
                 
@@ -2289,7 +2344,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsDeleteMappings( self, file_service_id, tag_service_id, mappings_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         for ( tag_id, hash_ids ) in mappings_ids:
             
@@ -2308,12 +2363,16 @@ class DB( HydrusDB.HydrusDB ):
                     self._c.execute( 'DELETE FROM ' + ac_cache_table_name + ' WHERE tag_id = ? AND current_count = ? AND pending_count = ?;', ( tag_id, 0, 0 ) )
                     
                 
+                #
+                
+                self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_deleted_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in hash_ids ) )
+                
             
         
     
     def _CacheSpecificMappingsFilterHashIds( self, file_service_id, tag_service_id, hash_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         select_statement = 'SELECT hash_id FROM ' + cache_files_table_name + ' WHERE hash_id IN %s;'
         
@@ -2322,11 +2381,13 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsGenerate( self, file_service_id, tag_service_id ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         self._c.execute( 'CREATE TABLE ' + cache_files_table_name + ' ( hash_id INTEGER PRIMARY KEY );' )
         
         self._c.execute( 'CREATE TABLE ' + cache_current_mappings_table_name + ' ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;' )
+        
+        self._c.execute( 'CREATE TABLE ' + cache_deleted_mappings_table_name + ' ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;' )
         
         self._c.execute( 'CREATE TABLE ' + cache_pending_mappings_table_name + ' ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;' )
         
@@ -2344,7 +2405,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsGetAutocompleteCounts( self, file_service_id, tag_service_id, tag_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         select_statement = 'SELECT tag_id, current_count, pending_count FROM ' + ac_cache_table_name + ' WHERE tag_id IN %s;'
         
@@ -2353,7 +2414,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsPendMappings( self, file_service_id, tag_service_id, mappings_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         for ( tag_id, hash_ids ) in mappings_ids:
             
@@ -2378,7 +2439,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSpecificMappingsRescindPendingMappings( self, file_service_id, tag_service_id, mappings_ids ):
         
-        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
         for ( tag_id, hash_ids ) in mappings_ids:
             
@@ -2619,11 +2680,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE json_dumps ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );' )
         self._c.execute( 'CREATE TABLE json_dumps_named ( dump_type INTEGER, dump_name TEXT, version INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name ) );' )
         
-        self._c.execute( 'CREATE TABLE local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
-        self._CreateIndex( 'local_hashes', [ 'md5' ] )
-        self._CreateIndex( 'local_hashes', [ 'sha1' ] )
-        self._CreateIndex( 'local_hashes', [ 'sha512' ] )
-        
         self._c.execute( 'CREATE TABLE local_ratings ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, rating REAL, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'local_ratings', [ 'hash_id' ] )
         self._CreateIndex( 'local_ratings', [ 'rating' ] )
@@ -2693,6 +2749,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
         
+        self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+        self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
+        self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
+        self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
+        
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.namespaces ( namespace_id INTEGER PRIMARY KEY, namespace TEXT UNIQUE );' )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.subtags ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );' )
@@ -2749,6 +2810,14 @@ class DB( HydrusDB.HydrusDB ):
             
             self._SetJSONDump( shortcuts )
             
+        
+        bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+        
+        self._SetJSONDump( bandwidth_manager )
+        
+        session_manager = ClientNetworking.NetworkSessionManager()
+        
+        self._SetJSONDump( session_manager )
         
         self._c.execute( 'INSERT INTO namespaces ( namespace_id, namespace ) VALUES ( ?, ? );', ( 1, '' ) )
         
@@ -3760,7 +3829,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
                 
                 current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
                 pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ';' )
@@ -3815,7 +3884,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
                 
                 current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
                 pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id IN ' + HydrusData.SplayListForDB( namespace_ids ) + ' AND subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
@@ -4364,7 +4433,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
                 
                 current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
                 pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id IN ' + HydrusData.SplayListForDB( subtag_ids ) + ';' )
@@ -4439,7 +4508,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     else:
                         
-                        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
                         
                         current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
                         pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE namespace_id = ' + str( namespace_id ) + ' AND subtag_id = ' + str( subtag_id ) + ';' )
@@ -4466,7 +4535,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     else:
                         
-                        ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
+                        ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, search_tag_service_id )
                         
                         current_selects.append( 'SELECT hash_id FROM ' + cache_current_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
                         pending_selects.append( 'SELECT hash_id FROM ' + cache_pending_mappings_table_name + ' NATURAL JOIN tags WHERE subtag_id = ' + str( subtag_id ) + ';' )
@@ -4915,17 +4984,18 @@ class DB( HydrusDB.HydrusDB ):
             if common_file_service_id is None:
                 
                 tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
                 tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
                 
             else:
                 
-                ( cache_files_table_name, cache_current_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( common_file_service_id, tag_service_id )
                 
                 tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_CURRENT, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_current_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
+                tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
                 tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PENDING, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
                 
             
-            tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_DELETED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
             tag_data.extend( ( hash_id, ( tag_service_id, HC.CONTENT_STATUS_PETITIONED, tag_id ) ) for ( hash_id, tag_id ) in self._SelectFromList( 'SELECT hash_id, tag_id FROM ' + petitioned_mappings_table_name + ' WHERE hash_id IN %s;', hash_ids ) )
             
         
@@ -6060,16 +6130,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetURLStatus( self, url ):
         
-        search_urls = [ url ]
-        
-        if url.startswith( 'http://' ):
-            
-            search_urls.append( 'https://' + url[7:] )
-            
-        elif url.startswith( 'https://' ):
-            
-            search_urls.append( 'http://' + url[8:] )
-            
+        search_urls = ClientData.GetSearchURLs( url )
         
         for search_url in search_urls:
             
@@ -9470,6 +9531,105 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 262:
+            
+            self._controller.pub( 'splash_set_status_text', 'moving some hash data' )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
+            
+            self._c.execute( 'CREATE TABLE external_master.local_hashes ( hash_id INTEGER PRIMARY KEY, md5 BLOB_BYTES, sha1 BLOB_BYTES, sha512 BLOB_BYTES );' )
+            self._CreateIndex( 'external_master.local_hashes', [ 'md5' ] )
+            self._CreateIndex( 'external_master.local_hashes', [ 'sha1' ] )
+            self._CreateIndex( 'external_master.local_hashes', [ 'sha512' ] )
+            
+            self._c.execute( 'INSERT INTO external_master.local_hashes SELECT * FROM main.local_hashes;' )
+            
+            self._c.execute( 'DROP TABLE main.local_hashes;' )
+            
+            self._c.execute( 'ANALYZE external_master.local_hashes;' )
+            
+            self._Commit()
+            
+            self._CloseDBCursor()
+            
+            self._controller.pub( 'splash_set_status_text', 'vacuuming main db ' )
+            
+            db_path = os.path.join( self._db_dir, 'client.db' )
+            
+            try:
+                
+                if HydrusDB.CanVacuum( db_path ):
+                    
+                    HydrusDB.VacuumDB( db_path )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'Vacuum failed!' )
+                HydrusData.PrintException( e )
+                
+            
+            self._InitDBCursor()
+            
+            self._BeginImmediate()
+            
+            #
+            
+            bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+            
+            self._SetJSONDump( bandwidth_manager )
+            
+            session_manager = ClientNetworking.NetworkSessionManager()
+            
+            self._SetJSONDump( session_manager )
+            
+            #
+            
+            self._controller.pub( 'splash_set_status_text', 'generating deleted tag cache' )
+            
+            tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
+            file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
+            
+            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                
+                ( cache_files_table_name, cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name, ac_cache_table_name ) = GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+                
+                self._c.execute( 'CREATE TABLE IF NOT EXISTS ' + cache_deleted_mappings_table_name + ' ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;' )
+                
+                hash_ids = [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( file_service_id, ) ) ]
+                
+                if len( hash_ids ) > 0:
+                    
+                    ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( tag_service_id )
+                    
+                    for group_of_hash_ids in HydrusData.SplitListIntoChunks( hash_ids, 100 ):
+                        
+                        splayed_group_of_hash_ids = HydrusData.SplayListForDB( group_of_hash_ids )
+                        
+                        deleted_mapping_ids_raw = self._c.execute( 'SELECT tag_id, hash_id FROM ' + deleted_mappings_table_name + ' WHERE hash_id IN ' + splayed_group_of_hash_ids + ';' ).fetchall()
+                        
+                        deleted_mapping_ids_dict = HydrusData.BuildKeyToSetDict( deleted_mapping_ids_raw )
+                        
+                        all_ids_seen = set( deleted_mapping_ids_dict.keys() )
+                        
+                        for tag_id in all_ids_seen:
+                            
+                            deleted_hash_ids = deleted_mapping_ids_dict[ tag_id ]
+                            
+                            num_deleted = len( deleted_hash_ids )
+                            
+                            if num_deleted > 0:
+                                
+                                self._c.executemany( 'INSERT OR IGNORE INTO ' + cache_deleted_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, tag_id ) for hash_id in deleted_hash_ids ) )
+                                
+                            
+                        
+                    
+                
+                self._c.execute( 'ANALYZE ' + cache_deleted_mappings_table_name + ';' )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10107,6 +10267,11 @@ class DB( HydrusDB.HydrusDB ):
         
         self.pub_after_commit( 'service_updates_data', service_keys_to_service_updates )
         self.pub_after_commit( 'service_updates_gui', service_keys_to_service_updates )
+        
+    
+    def publish_status_update( self ):
+        
+        self._controller.pubimmediate( 'refresh_status' )
         
     
     def GetInitialMessages( self ):

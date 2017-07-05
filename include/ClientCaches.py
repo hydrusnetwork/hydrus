@@ -1238,18 +1238,18 @@ class DataCache( object ):
         self._cache_size = cache_size
         
         self._keys_to_data = {}
-        self._keys_fifo = []
+        self._keys_fifo = collections.OrderedDict()
         
         self._total_estimated_memory_footprint = 0
         
         self._lock = threading.Lock()
         
-        wx.CallLater( 60 * 1000, self.MaintainCache )
+        self._controller.sub( self, 'MaintainCache', 'memory_maintenance_pulse' )
         
     
     def _DeleteItem( self ):
         
-        ( deletee_key, last_access_time ) = self._keys_fifo.pop( 0 )
+        ( deletee_key, last_access_time ) = self._keys_fifo.popitem( last = False )
         
         deletee_data = self._keys_to_data[ deletee_key ]
         
@@ -1264,18 +1264,14 @@ class DataCache( object ):
         
     
     def _TouchKey( self, key ):
-    
-        for ( i, ( fifo_key, last_access_time ) ) in enumerate( self._keys_fifo ):
+        
+        # have to delete first, rather than overwriting, so the ordereddict updates its internal order
+        if key in self._keys_fifo:
             
-            if fifo_key == key:
-                
-                del self._keys_fifo[ i ]
-                
-                break
-                
+            del self._keys_fifo[ key ]
             
         
-        self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
+        self._keys_fifo[ key ] = HydrusData.GetNow()
         
     
     def Clear( self ):
@@ -1283,7 +1279,7 @@ class DataCache( object ):
         with self._lock:
             
             self._keys_to_data = {}
-            self._keys_fifo = []
+            self._keys_fifo = collections.OrderedDict()
             
             self._total_estimated_memory_footprint = 0
             
@@ -1304,7 +1300,7 @@ class DataCache( object ):
                 
                 self._keys_to_data[ key ] = data
                 
-                self._keys_fifo.append( ( key, HydrusData.GetNow() ) )
+                self._TouchKey( key )
                 
                 self._RecalcMemoryUsage()
                 
@@ -1363,7 +1359,7 @@ class DataCache( object ):
                     
                 else:
                     
-                    ( key, last_access_time ) = self._keys_fifo[ 0 ]
+                    ( key, last_access_time ) = next( self._keys_fifo.iteritems() )
                     
                     if HydrusData.TimeHasPassed( last_access_time + 1200 ):
                         
@@ -1376,8 +1372,6 @@ class DataCache( object ):
                     
                 
             
-        
-        wx.CallLater( 60 * 1000, self.MaintainCache )
         
     
 class LocalBooruCache( object ):

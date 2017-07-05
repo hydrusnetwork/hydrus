@@ -579,7 +579,7 @@ def OpenFileLocation( path ):
         
         if HC.PLATFORM_WINDOWS:
             
-            cmd = 'explorer /select,"' + path + '"'
+            cmd = 'explorer /select, "' + path + '"'
             
         elif HC.PLATFORM_OSX:
             

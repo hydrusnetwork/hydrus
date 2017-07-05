@@ -103,18 +103,13 @@ class HydrusPubSub( object ):
         
         # do this _outside_ the lock, lol
         
-        if HG.pubsub_profile_mode:
+        pubsub_profilable = topic != 'message'
+        
+        if HG.pubsub_profile_mode and pubsub_profilable:
             
             summary = 'Profiling ' + HydrusData.ConvertIntToPrettyString( len( callables ) ) + ' x ' + topic
             
-            if topic == 'message':
-                
-                HydrusData.Print( summary )
-                
-            else:
-                
-                HydrusData.ShowText( summary )
-                
+            HydrusData.ShowText( summary )
             
             for callable in callables:
                 

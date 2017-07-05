@@ -81,7 +81,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
-        self._loading_session = False
         self._media_status_override = None
         self._closed_pages = []
         self._deleted_page_keys = set()
@@ -145,44 +144,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._RefreshStatusBar()
         
-        default_gui_session = HC.options[ 'default_gui_session' ]
-        
-        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-        
-        cannot_load_from_db = default_gui_session not in existing_session_names
-        
-        load_a_blank_page = HC.options[ 'default_gui_session' ] == 'just a blank page' or cannot_load_from_db
-        
-        if not load_a_blank_page:
-            
-            if self._controller.LastShutdownWasBad():
-                
-                # this can be upgraded to a nicer checkboxlist dialog to select pages or w/e
-                
-                message = 'It looks like the last instance of the client did not shut down cleanly.'
-                message += os.linesep * 2
-                message += 'Would you like to try loading your default session \'' + default_gui_session + '\', or just a blank page?'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load the default session', no_label = 'just load a blank page' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_NO:
-                        
-                        load_a_blank_page = True
-                        
-                    
-                
-            
-        
-        if load_a_blank_page:
-            
-            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
-            
-        else:
-            
-            self._LoadGUISession( default_gui_session )
-            
-        
-        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        wx.CallAfter( self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
     
     def _AboutWindow( self ):
@@ -280,74 +242,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _AppendGUISession( self, name ):
         
-        def do_it( session, starting_index ):
-            
-            try:
-                
-                if not HC.PLATFORM_LINUX:
-                    
-                    # on linux, this stops session pages from accepting keyboard input, wew
-                    
-                    wx.CallAfter( self._notebook.Disable )
-                    
-                
-                forced_insertion_index = starting_index
-                
-                for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
-                    
-                    try:
-                        
-                        if len( initial_hashes ) > 0:
-                            
-                            initial_media_results = []
-                            
-                            for group_of_inital_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
-                                
-                                more_media_results = self._controller.Read( 'media_results', group_of_inital_hashes )
-                                
-                                initial_media_results.extend( more_media_results )
-                                
-                                self._media_status_override = u'Loading session page \'' + page_name + u'\'\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
-                                
-                                self._controller.pub( 'refresh_status' )
-                                
-                            
-                        else:
-                            
-                            initial_media_results = []
-                            
-                        
-                        wx.CallAfter( self._NewPage, page_name, management_controller, initial_media_results = initial_media_results, forced_insertion_index = forced_insertion_index )
-                        
-                        forced_insertion_index += 1
-                        
-                    except Exception as e:
-                        
-                        HydrusData.ShowException( e )
-                        
-                    
-                
-            finally:
-                
-                self._loading_session = False
-                self._media_status_override = None
-                
-                if not HC.PLATFORM_LINUX:
-                    
-                    wx.CallAfter( self._notebook.Enable )
-                    
-                
-            
-        
-        if self._loading_session:
-            
-            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
-            
-            return
-            
-        
-        self._loading_session = True
-        
         try:
             
             session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
@@ -364,7 +258,28 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         starting_index = self._GetDefaultPageInsertionIndex()
         
-        self._controller.CallToThread( do_it, session, starting_index )
+        try:
+            
+            forced_insertion_index = starting_index
+            
+            for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
+                
+                try:
+                    
+                    self._NewPage( page_name, management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index )
+                    
+                    forced_insertion_index += 1
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                
+            
+        finally:
+            
+            self._media_status_override = None
+            
         
     
     def _AutoRepoSetup( self ):
@@ -1770,14 +1685,49 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _LoadGUISession( self, name ):
+    def _InitialiseSession( self ):
         
-        if self._loading_session:
+        default_gui_session = HC.options[ 'default_gui_session' ]
+        
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
+        
+        cannot_load_from_db = default_gui_session not in existing_session_names
+        
+        load_a_blank_page = HC.options[ 'default_gui_session' ] == 'just a blank page' or cannot_load_from_db
+        
+        if not load_a_blank_page:
             
-            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
+            if self._controller.LastShutdownWasBad():
+                
+                # this can be upgraded to a nicer checkboxlist dialog to select pages or w/e
+                
+                message = 'It looks like the last instance of the client did not shut down cleanly.'
+                message += os.linesep * 2
+                message += 'Would you like to try loading your default session \'' + default_gui_session + '\', or just a blank page?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load the default session', no_label = 'just load a blank page' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_NO:
+                        
+                        load_a_blank_page = True
+                        
+                    
+                
             
-            return
+        
+        if load_a_blank_page:
             
+            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            
+        else:
+            
+            self._LoadGUISession( default_gui_session )
+            
+        
+        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        
+    
+    def _LoadGUISession( self, name ):
         
         for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
             
@@ -1843,7 +1793,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.pub( 'wake_daemons' )
-        self._controller.pub( 'refresh_status' )
+        self._controller.pubimmediate( 'refresh_status' )
         
     
     def _ManageParsingScripts( self ):
@@ -2024,17 +1974,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _NewPage( self, page_name, management_controller, initial_media_results = None, forced_insertion_index = None ):
+    def _NewPage( self, page_name, management_controller, initial_hashes = None, forced_insertion_index = None ):
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
         
-        if initial_media_results is None:
+        if initial_hashes is None:
             
-            initial_media_results = []
+            initial_hashes = []
             
         
-        page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_media_results )
+        page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_hashes )
         
         if forced_insertion_index is None:
             
@@ -2122,12 +2072,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._NewPage( page_name, management_controller )
         
     
-    def _NewPageQuery( self, file_service_key, initial_media_results = None, initial_predicates = None ):
+    def _NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None ):
         
-        if initial_media_results is None: initial_media_results = []
-        if initial_predicates is None: initial_predicates = []
+        if initial_hashes is None:
+            
+            initial_hashes = []
+            
         
-        search_enabled = len( initial_media_results ) == 0
+        if initial_predicates is None:
+            
+            initial_predicates = []
+            
+        
+        search_enabled = len( initial_hashes ) == 0
         
         new_options = self._controller.GetNewOptions()
         
@@ -2142,7 +2099,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
         
-        self._NewPage( 'files', management_controller, initial_media_results = initial_media_results )
+        self._NewPage( 'files', management_controller, initial_hashes = initial_hashes )
         
     
     def _OpenDBFolder( self ):
@@ -2444,13 +2401,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _SaveGUISession( self, name = None ):
         
-        if self._loading_session:
-            
-            HydrusData.ShowText( 'Sorry, currently loading a session. Please wait.' )
-            
-            return
-            
-        
         if name is None:
             
             while True:
@@ -2503,14 +2453,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             management_controller = page.GetManagementController()
             
-            # this bit could obviously be 'getmediaresultsobject' or whatever, with sort/collect/selection/view status
-            media = page.GetMedia()
-            
-            hashes = set()
-            
-            for m in media: hashes.update( m.GetHashes() )
-            
-            hashes = list( hashes )
+            hashes = list( page.GetHashes() )
             
             session.AddPage( page_name, management_controller, hashes )
             
@@ -3005,7 +2948,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def CurrentlyBusy( self ):
         
-        return self._loading_session
+        return False
         
     
     def EventCharHook( self, event ):
@@ -3221,10 +3164,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            if not self._loading_session:
-                
-                self._SaveGUISession( 'last session' )
-                
+            self._SaveGUISession( 'last session' )
             
             self._message_manager.CleanBeforeDestroy()
             
@@ -3340,6 +3280,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def IsCurrentPage( self, page_key ):
+        
+        result = self._notebook.GetCurrentPage()
+        
+        if result is None:
+            
+            return False
+            
+        else:
+            
+            return page_key == result.GetPageKey()
+            
+        
+    
     def NewPageDuplicateFilter( self ):
         
         self._NewPageDuplicateFilter()
@@ -3372,12 +3326,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     
-    def NewPageQuery( self, service_key, initial_media_results = None, initial_predicates = None ):
+    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None ):
         
-        if initial_media_results is None: initial_media_results = []
-        if initial_predicates is None: initial_predicates = []
+        if initial_hashes is None:
+            
+            initial_hashes = []
+            
         
-        self._NewPageQuery( service_key, initial_media_results = initial_media_results, initial_predicates = initial_predicates )
+        if initial_predicates is None:
+            
+            initial_predicates = []
+            
+        
+        self._NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates )
         
     
     def NewSimilarTo( self, file_service_key, hash, hamming_distance ):

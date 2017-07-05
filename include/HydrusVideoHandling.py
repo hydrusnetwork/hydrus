@@ -176,7 +176,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
 def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
     
-    lines = GetFFMPEGInfoLines( path )
+    lines = GetFFMPEGInfoLines( path, count_frames_manually )
     
     if not ParseFFMPEGHasVideo( lines ):
         
@@ -324,6 +324,10 @@ def GetMime( path ):
     elif mime_text == 'mp3':
         
         return HC.AUDIO_MP3
+        
+    elif 'mp4' in mime_text:
+        
+        return HC.VIDEO_MP4
         
     elif mime_text == 'ogg':
         

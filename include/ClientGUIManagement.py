@@ -14,6 +14,7 @@ import ClientGUIACDropdown
 import ClientGUICanvas
 import ClientGUICollapsible
 import ClientGUICommon
+import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIListBoxes
 import ClientGUIMedia
@@ -2617,7 +2618,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._overall_status = wx.StaticText( self._url_panel )
         self._current_action = wx.StaticText( self._url_panel )
-        self._file_gauge = ClientGUICommon.Gauge( self._url_panel )
+        self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._url_panel )
         
         self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
@@ -2651,7 +2652,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
         self._url_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2677,20 +2678,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
-        def file_download_hook( gauge_range, gauge_value ):
-            
-            try:
-                
-                self._file_gauge.SetRange( gauge_range )
-                self._file_gauge.SetValue( gauge_value )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
-        self._urls_import.SetDownloadHook( file_download_hook )
+        self._urls_import.SetDownloadControl( self._file_download_control )
         
         import_file_options = self._urls_import.GetOptions()
         
@@ -3209,7 +3197,10 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         file_service_key = self._management_controller.GetKey( 'file_service' )
         
-        with wx.BusyCursor(): media_results = self._controller.Read( 'media_results', hashes )
+        with wx.BusyCursor():
+            
+            media_results = self._controller.Read( 'media_results', hashes )
+            
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, media_results )
         

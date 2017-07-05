@@ -114,6 +114,40 @@ def ColourIsGreyish( colour ):
     
     return greyish
     
+def ConvertHTTPSToHTTP( url ):
+    
+    if url.startswith( 'http://' ):
+        
+        return url
+        
+    elif url.startswith( 'https://' ):
+        
+        http_url = 'http://' + url[8:]
+        
+        return http_url
+        
+    else:
+        
+        raise Exception( 'Given a url that did not have a scheme!' )
+        
+    
+def ConvertHTTPToHTTPS( url ):
+    
+    if url.startswith( 'https://' ):
+        
+        return url
+        
+    elif url.startswith( 'http://' ):
+        
+        https_url = 'https://' + url[7:]
+        
+        return https_url
+        
+    else:
+        
+        raise Exception( 'Given a url that did not have a scheme!' )
+        
+    
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
     num_files = 0
@@ -338,6 +372,21 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
         
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+    
+def GetSearchURLs( url ):
+    
+    search_urls = [ url ]
+    
+    if url.startswith( 'http://' ):
+        
+        search_urls.append( ConvertHTTPToHTTPS( url ) )
+        
+    elif url.startswith( 'https://' ):
+        
+        search_urls.append( ConvertHTTPSToHTTP( url ) )
+        
+    
+    return search_urls
     
 def GetSortChoices( add_namespaces_and_ratings = True ):
 

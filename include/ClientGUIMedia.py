@@ -1395,9 +1395,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            media_results = HG.client_controller.Read( 'media_results', hashes )
-            
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = media_results )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
             
         
     
@@ -1407,9 +1405,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            media_results = HG.client_controller.Read( 'media_results', hashes )
-            
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_media_results = media_results )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
             
         
     
@@ -1495,6 +1491,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         self._PublishSelectionChange()
         
         if self._focussed_media is not None: self._HitMedia( self._focussed_media, False, False )
+        
+    
+    def ClearPageKey( self ):
+        
+        self._page_key = HydrusData.GenerateKey()
         
     
     def Collect( self, page_key, collect_by = -1 ):
@@ -1716,6 +1717,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.RefreshAcceleratorTable()
         
+        HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HG.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
         HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
@@ -1751,6 +1753,16 @@ class MediaPanelThumbnails( MediaPanel ):
         self._dirty_canvas_pages.append( wx.EmptyBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 24 ) )
         
     
+    def _DeleteAllDirtyPages( self ):
+        
+        for bmp in self._dirty_canvas_pages:
+            
+            bmp.Destroy()
+            
+        
+        self._dirty_canvas_pages = []
+        
+    
     def _DirtyAllPages( self ):
         
         clean_indices = self._clean_canvas_pages.keys()
@@ -1759,8 +1771,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._DirtyPage( clean_index )
             
-        
-        self.Refresh()
         
     
     def _DirtyPage( self, clean_index ):
@@ -2158,19 +2168,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if thumb_layout_changed or width_got_bigger:
                 
-                clean_indices = self._clean_canvas_pages.keys()
+                self._DirtyAllPages()
                 
-                for clean_index in clean_indices:
-                
-                    self._DirtyPage( clean_index )
-                    
-                
-                for bmp in self._dirty_canvas_pages:
-                    
-                    bmp.Destroy()
-                    
-                
-                self._dirty_canvas_pages = []
+                self._DeleteAllDirtyPages()
                 
             
             self.Refresh()
@@ -2201,6 +2201,8 @@ class MediaPanelThumbnails( MediaPanel ):
         self._PublishSelectionChange()
         
         HG.client_controller.pub( 'sorted_media_pulse', self._page_key, self._sorted_media )
+        
+        self.Refresh()
         
     
     def _ScrollEnd( self, shift = False ):
@@ -2587,7 +2589,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnail = self._GetThumbnailUnderMouse( event )
         
-        if thumbnail is not None: self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
+        if thumbnail is not None:
+            
+            self._HitMedia( thumbnail, event.CmdDown(), event.ShiftDown() )
+            
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
         selected_locations_managers = [ media.GetLocationsManager() for media in self._selected_media ]
@@ -3420,6 +3425,16 @@ class MediaPanelThumbnails( MediaPanel ):
         event.Skip()
         
     
+    def MaintainPageCache( self ):
+        
+        if not HG.client_controller.GetGUI().IsCurrentPage( self._page_key ):
+            
+            self._DirtyAllPages()
+            
+        
+        self._DeleteAllDirtyPages()
+        
+    
     def NewThumbnails( self, hashes ):
         
         affected_thumbnails = self._GetMedia( hashes )
@@ -3504,6 +3519,8 @@ class MediaPanelThumbnails( MediaPanel ):
         MediaPanel.Sort( self, page_key, sort_by )
         
         self._DirtyAllPages()
+        
+        self.Refresh()
         
     
     def ThumbnailsResized( self ):

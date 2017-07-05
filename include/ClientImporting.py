@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientFiles
+import ClientNetworking
 import ClientThreading
 import collections
 import HydrusConstants as HC
@@ -694,6 +695,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
         with self._lock:
+            
+            self._RegenerateSeedCacheStatus( page_key )
             
             if path in self._paths_to_tags:
                 
@@ -1769,7 +1772,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self ):
         
@@ -1871,6 +1874,98 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            def ConvertRegularToRawURL( regular_url ):
+                
+                # convert this:
+                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_500.jpg
+                # to this:
+                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+                # the 500 part can be a bunch of stuff, including letters
+                
+                url_components = regular_url.split( '_' )
+                
+                last_component = url_components[ -1 ]
+                
+                ( number_gubbins, file_ext ) = last_component.split( '.' )
+                
+                raw_last_component = 'raw.' + file_ext
+                
+                url_components[ -1 ] = raw_last_component
+                
+                raw_url = '_'.join( url_components )
+                
+                return raw_url
+                
+            
+            def Remove68Subdomain( long_url ):
+                
+                # sometimes the 68 subdomain gives a 404 on the raw url, so:
+                
+                # convert this:
+                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+                # to this:
+                # http://media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+                
+                # I am not sure if it is always 68, but let's not assume
+                
+                ( scheme, rest ) = long_url.split( '://', 1 )
+                
+                if rest.startswith( 'media.tumblr.com' ):
+                    
+                    return long_url
+                    
+                
+                ( gumpf, shorter_rest ) = rest.split( '.', 1 )
+                
+                shorter_url = scheme + '://' + shorter_rest
+                
+                return shorter_url
+                
+            
+            new_serialisable_info = []
+            
+            good_seeds = set()
+            
+            for ( seed, seed_info ) in old_serialisable_info:
+                
+                try:
+                    
+                    parse = urlparse.urlparse( seed )
+                    
+                    if 'media.tumblr.com' in parse.netloc:
+                        
+                        seed = Remove68Subdomain( seed )
+                        
+                        seed = ConvertRegularToRawURL( seed )
+                        
+                        seed = ClientData.ConvertHTTPToHTTPS( seed )
+                        
+                    
+                    if 'pixiv.net' in parse.netloc:
+                        
+                        seed = ClientData.ConvertHTTPToHTTPS( seed )
+                        
+                    
+                    if seed in good_seeds: # we hit a dupe, so skip it
+                        
+                        continue
+                        
+                    
+                except:
+                    
+                    pass
+                    
+                
+                good_seeds.add( seed )
+                
+                new_serialisable_info.append( ( seed, seed_info ) )
+                
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def AddSeeds( self, seeds ):
         
@@ -1883,9 +1978,21 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             for seed in seeds:
                 
-                if seed in self._seeds_to_info:
+                if seed.startswith( 'http' ):
                     
-                    self._seeds_ordered.remove( seed )
+                    search_seeds = ClientData.GetSearchURLs( seed )
+                    
+                else:
+                    
+                    search_seeds = [ seed ]
+                    
+                
+                for search_seed in search_seeds:
+                    
+                    if search_seed in self._seeds_to_info:
+                        
+                        continue
+                        
                     
                 
                 self._seeds_ordered.append( seed )
@@ -2085,7 +2192,24 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return seed in self._seeds_to_info
+            if seed.startswith( 'http' ):
+                
+                search_seeds = ClientData.GetSearchURLs( seed )
+                
+            else:
+                
+                search_seeds = [ seed ]
+                
+            
+            for search_seed in search_seeds:
+                
+                if search_seed in self._seeds_to_info:
+                    
+                    return True
+                    
+                
+            
+            return False
             
         
     
@@ -2811,6 +2935,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            with self._lock:
+                
+                self._RegenerateSeedCacheStatus( page_key )
+                
             file_original_filename = self._urls_to_filenames[ file_url ]
             
             downloaded_tags = [ 'filename:' + file_original_filename ]
@@ -3225,7 +3353,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._paused = False
         
         self._seed_cache_status = ( 'initialising', ( 0, 1 ) )
-        self._file_download_hook = None
+        self._download_control_set = None
+        self._download_control_clear = None
         
         self._lock = threading.Lock()
         
@@ -3260,8 +3389,6 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     def _WorkOnFiles( self, page_key ):
         
-        do_wait = True
-        
         file_url = self._urls_cache.GetNextSeed( CC.STATUS_UNKNOWN )
         
         if file_url is None:
@@ -3271,7 +3398,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            with self._lock:
+                
+                self._RegenerateSeedCacheStatus( page_key )
+                
+            
             ( status, hash ) = HG.client_controller.Read( 'url_status', file_url )
+            
+            url_not_known_beforehand = status == CC.STATUS_NEW
             
             if status == CC.STATUS_DELETED:
                 
@@ -3287,21 +3421,64 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    report_hooks = []
+                    network_job = ClientNetworking.NetworkJob( 'GET', file_url, temp_path = temp_path )
                     
                     with self._lock:
                         
-                        if self._file_download_hook is not None:
+                        if self._download_control_set is not None:
                             
-                            report_hooks.append( self._file_download_hook )
+                            wx.CallAfter( self._download_control_set, network_job )
                             
                         
                     
-                    HG.client_controller.DoHTTP( HC.GET, file_url, report_hooks = report_hooks, temp_path = temp_path )
+                    try:
+                        
+                        HG.client_controller.network_engine.AddJob( network_job )
+                        
+                        while not network_job.IsDone():
+                            
+                            time.sleep( 0.1 )
+                            
+                        
+                    finally:
+                        
+                        if self._download_control_clear is not None:
+                            
+                            wx.CallAfter( self._download_control_clear )
+                            
+                        
                     
-                    client_files_manager = HG.client_controller.client_files_manager
-                    
-                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                    if HG.view_shutdown:
+                        
+                        raise HydrusExceptions.ShutdownException()
+                        
+                    elif network_job.HasError():
+                        
+                        status = CC.STATUS_FAILED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
+                        
+                        time.sleep( 2 )
+                        
+                    elif network_job.IsCancelled():
+                        
+                        status = CC.STATUS_SKIPPED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
+                        
+                    else:
+                        
+                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status )
+                        
+                        if url_not_known_beforehand and hash is not None:
+                            
+                            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        
                     
                 finally:
                     
@@ -3310,14 +3487,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                do_wait = False
+                self._urls_cache.UpdateSeedStatus( file_url, status )
                 
-            
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
-            
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-            
-            self._urls_cache.UpdateSeedStatus( file_url, status )
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
@@ -3339,19 +3510,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
         
-        wx.CallAfter( self._file_download_hook, 1, 0 )
-        
         with self._lock:
             
             self._RegenerateSeedCacheStatus( page_key )
             
         
         HG.client_controller.pub( 'update_status', page_key )
-        
-        if do_wait:
-            
-            ClientData.WaitPolitely( page_key )
-            
         
         return True
         
@@ -3387,6 +3551,10 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                     HG.client_controller.WaitUntilPubSubsEmpty()
+                    
+                except HydrusExceptions.ShutdownException:
+                    
+                    return
                     
                 except Exception as e:
                     
@@ -3437,11 +3605,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDownloadHook( self, hook ):
+    def SetDownloadControl( self, download_control ):
         
         with self._lock:
             
-            self._file_download_hook = hook
+            self._download_control_set = download_control.SetNetworkJob
+            self._download_control_clear = download_control.ClearNetworkJob
             
         
     

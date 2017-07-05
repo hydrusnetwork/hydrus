@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 263</h3></li>
+				<ul>
+					<li>greatly improved how gui sessions are loaded--now the page tabs are loaded instantly, but the thumbnails are loaded in the background. session loaded should be significantly less laggy and buggy</li>
+					<li>the issue of pages sometimes initially sizing at zero size (which could be caused by minimising the client while a session load was ongoing) should hence be better/fixed completely!</li>
+					<li>gui sessions will now load their files in the exact order in which they were saved--behaviour that I think was not previously always reliable</li>
+					<li>more general network code work and polishing</li>
+					<li>added and improved unit tests for network code</li>
+					<li>improved how short-time-delta data bandwidth is reported</li>
+					<li>improved how short-time-delta data bandwidth is tested</li>
+					<li>wrote a networkjobcontrol to display and control the new network job object</li>
+					<li>tumblr parser now produces 68.-less urls</li>
+					<li>tumblr parser now produces https urls</li>
+					<li>cleaned up tumblr parser a little</li>
+					<li>url caches will clip existing tumblr urls of the 68.-subdomain and convert to the new raw format, clearing out dupes along the way</li>
+					<li>url caches will convert existing tumblr and pixiv urls to https, clearing out dupes along the way</li>
+					<li>the pixiv parser now deals with missing creator/title tags without errors</li>
+					<li>extended the specific file domain tag cache to also store deleted mappings, resulting in much faster request building for clients with large numbers of deleted mappings</li>
+					<li>improved some downloader page queue text display timing</li>
+					<li>added support for more types of mp4 file</li>
+					<li>improved how some memory maintenance calls work</li>
+					<li>improved how hydrus datacaches track their recently-used-data fifo list</li>
+					<li>pages now regularly clear out spare thumbnail canvas bmps</li>
+					<li>pages now regularly clear out cached thumbnail canvas bmps when they are not the currently viewed page</li>
+					<li>import caches, when asked for url membership, will now test both the http and https versions the url</li>
+					<li>maybe improved how 'open in file browser' works in windows</li>
+					<li>fixed the 'recount video frames' advanced thumbnail menu entry, which wasn't working with the new ffmpeg wrapper</li>
+					<li>moved some bloaty master hash data out of client.db and into client.master.db</li>
+					<li>pubsub profile will no longer profile 'message', as it just makes for spam</li>
+					<li>reduced some serverside pubsub spam</li>
+					<li>reduced some significant clientside pubsub spam that I think was smashing the gui event loop at inconvenient moments</li>
+					<li>improved some client shutdown object sync code</li>
+					<li>fixed an issue where some duplicate maintenance popups would not clear themselves up properly if interrupted mid-job</li>
+					<li>cleaned up some http-https conversion and comparison code</li>
+					<li>fixed some status-setting code that meant thumbnail pages were sometimes setting status after they were replaced and scheduled for deletion</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 262</h3></li>
 				<ul>
 					<li>added apng support!</li>
@@ -72,7 +108,7 @@
 				</ul>
 				<li><h3>version 260</h3></li>
 				<ul>
-					<li>?fixed video parsing when the video metadata includes random non-utf-friendly garbage</li>
+					<li>fixed video parsing when the video metadata includes random non-utf-friendly garbage</li>
 					<li>fixed video parsing when ffmpeg reports no fps at all</li>
 					<li>improved video frame counting accuracy</li>
 					<li>thumbnail waterfall process now adapts to the current speed of the cache and can hence use significantly less overhead</li>

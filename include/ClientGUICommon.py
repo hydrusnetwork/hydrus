@@ -1779,9 +1779,7 @@ class PopupMessage( PopupWindow ):
             
             hashes = result
             
-            media_results = HG.client_controller.Read( 'media_results', hashes )
-            
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
             
         
     
@@ -3773,7 +3771,10 @@ class TextAndGauge( wx.Panel ):
     
     def SetValue( self, text, value, range ):
         
-        self._st.SetLabelText( text )
+        if text != self._st.GetLabelText():
+            
+            self._st.SetLabelText( text )
+            
         
         if value is None or range is None:
             
@@ -3781,8 +3782,15 @@ class TextAndGauge( wx.Panel ):
             
         else:
             
-            self._gauge.SetRange( range )
-            self._gauge.SetValue( value )
+            if range != self._gauge.GetRange():
+                
+                self._gauge.SetRange( range )
+                
+            
+            if value != self._gauge.GetValue():
+                
+                self._gauge.SetValue( value )
+                
             
         
     

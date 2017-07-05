@@ -313,7 +313,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             if time_delta < self.MAX_SECONDS_TIME_DELTA:
                 
-                window = 1
+                window = 0
                 counter = self._seconds_bytes
                 
             elif time_delta < self.MAX_MINUTES_TIME_DELTA:
@@ -336,7 +336,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
             if time_delta < self.MAX_SECONDS_TIME_DELTA:
                 
-                window = 1
+                window = 0
                 counter = self._seconds_requests
                 
             elif time_delta < self.MAX_MINUTES_TIME_DELTA:
@@ -391,7 +391,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         if time_delta is not None and bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta <= 5:
             
-            usage = self._GetWeightedApproximateUsage( bandwidth_type, time_delta )
+            usage = self._GetWeightedApproximateUsage( time_delta )
             
         else:
             
@@ -403,26 +403,38 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         return usage
         
     
-    def _GetWeightedApproximateUsage( self, bandwidth_type, time_delta ):
+    def _GetWeightedApproximateUsage( self, time_delta ):
         
-        LONG_DELTA = time_delta * 15
-        SHORT_DELTA = time_delta * 3
+        SEARCH_DELTA = time_delta * 5
         
-        SHORT_WEIGHT = 3
+        window = 0
+        counter = self._seconds_bytes
         
-        usage_long = self._GetRawUsage( bandwidth_type, LONG_DELTA )
-        usage_short = self._GetRawUsage( bandwidth_type, SHORT_DELTA )
+        SEARCH_DELTA += window
         
-        total_weighted_usage = usage_long + ( usage_short * SHORT_WEIGHT )
+        now = HydrusData.GetNow()
         
-        total_weight = LONG_DELTA + ( SHORT_DELTA * SHORT_WEIGHT )
+        since = now - SEARCH_DELTA
         
-        # since this is in bytes, an int for the final answer is fine and proper
-        usage = int( total_weighted_usage / total_weight )
+        valid_keys = [ key for key in counter.keys() if key >= since ]
         
-        # usage per sec would be this / time_delta
+        if len( valid_keys ) == 0:
+            
+            return 0
+            
         
-        return usage
+        # If we want the average speed over past five secs but nothing has happened in sec 4 and 5, we don't want to count them
+        # otherwise your 1MB/s counts as 200KB/s
+        
+        earliest_timestamp = min( valid_keys )
+        
+        SAMPLE_DELTA = max( now - earliest_timestamp, 1 )
+        
+        total_bytes = sum( ( counter[ key ] for key in valid_keys ) )
+        
+        time_delta_average = total_bytes / SAMPLE_DELTA
+        
+        return time_delta_average
         
     
     def _MaintainCache( self ):

@@ -129,6 +129,7 @@ class HydrusDB( object ):
         self._db_name = db_name
         self._no_wal = no_wal
         
+        self._transaction_started = 0
         self._in_transaction = False
         
         self._connection_timestamp = 0
@@ -288,6 +289,7 @@ class HydrusDB( object ):
             
             self._c.execute( 'BEGIN IMMEDIATE;' )
             
+            self._transaction_started = HydrusData.GetNow()
             self._in_transaction = True
             
         
@@ -515,7 +517,7 @@ class HydrusDB( object ):
                 
                 self._current_status = 'db write locked'
                 
-                self._controller.pub( 'refresh_status' )
+                self.publish_status_update()
                 
                 self._BeginImmediate()
                 
@@ -524,7 +526,7 @@ class HydrusDB( object ):
                 self._current_status = 'db read locked'
                 
             
-            self._controller.pub( 'refresh_status' )
+            self.publish_status_update()
             
             if job_type in ( 'read', 'read_write' ):
                 
@@ -539,7 +541,7 @@ class HydrusDB( object ):
                 
                 self._current_status = 'db committing'
                 
-                self._controller.pub( 'refresh_status' )
+                self.publish_status_update()
                 
                 self._Commit()
                 
@@ -576,7 +578,7 @@ class HydrusDB( object ):
             
             self._current_status = ''
             
-            self._controller.pub( 'refresh_status' )
+            self.publish_status_update()
             
         
     
@@ -683,6 +685,11 @@ class HydrusDB( object ):
         self._pubsubs.append( ( topic, args, kwargs ) )
         
     
+    def publish_status_update( self ):
+        
+        pass
+        
+    
     def CurrentlyDoingJob( self ):
         
         return self._currently_doing_job
@@ -745,7 +752,7 @@ class HydrusDB( object ):
                 self._currently_doing_job = True
                 self._current_job_name = job.ToString()
                 
-                self._controller.pub( 'refresh_status' )
+                self.publish_status_update()
                 
                 self._pubsubs = []
                 
@@ -780,7 +787,7 @@ class HydrusDB( object ):
                 self._currently_doing_job = False
                 self._current_job_name = ''
                 
-                self._controller.pub( 'refresh_status' )
+                self.publish_status_update()
                 
             except Queue.Empty:
                 

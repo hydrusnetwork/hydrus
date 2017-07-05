@@ -188,9 +188,7 @@ class ReviewServicePanel( wx.Panel ):
         
         for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
             
-            media_results = self._controller.Read( 'media_results', hashes )
-            
-            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
             
         
     
@@ -1126,9 +1124,7 @@ class ReviewServicePanel( wx.Panel ):
                         
                         hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
                         
-                        media_results = HG.client_controller.Read( 'media_results', hashes )
-                        
-                        HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_media_results = media_results )
+                        HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
                         
                     
                 finally:

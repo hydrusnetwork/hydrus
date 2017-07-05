@@ -239,7 +239,8 @@ class HydrusController( object ):
         if not self._no_daemons:
             
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemory', HydrusDaemons.DAEMONMaintainMemory, period = 300 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemoryFast', HydrusDaemons.DAEMONMaintainMemoryFast, period = 60 ) )
+            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemorySlow', HydrusDaemons.DAEMONMaintainMemorySlow, period = 300 ) )
             
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300, init_wait = 60 ) )
             
@@ -262,7 +263,7 @@ class HydrusController( object ):
         pass
         
     
-    def MaintainMemory( self ):
+    def MaintainMemorySlow( self ):
         
         sys.stdout.flush()
         sys.stderr.flush()

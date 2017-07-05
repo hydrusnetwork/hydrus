@@ -12,6 +12,8 @@ import HydrusNetworking
 import os
 import wx
 
+ID_TIMER_NETWORK_JOB = wx.NewId()
+
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, bandwidth_rules ):
@@ -345,3 +347,110 @@ class EditStringToStringDictControl( wx.Panel ):
         return value_dict
         
     
+class NetworkJobControl( wx.Panel ):
+    
+    def __init__( self, parent ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._network_job = None
+        
+        self._text_and_gauge = ClientGUICommon.TextAndGauge( self )
+        
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
+        
+        #
+        
+        self._Update()
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._text_and_gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        #
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_NETWORK_JOB )
+        
+        self._move_hide_timer = wx.Timer( self, id = ID_TIMER_NETWORK_JOB )
+        
+        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        
+    
+    def _Update( self ):
+        
+        if self._network_job is None:
+            
+            self._text_and_gauge.SetValue( '', 0, 1 )
+            can_cancel = False
+            
+        else:
+            
+            if self._network_job.IsDone():
+                
+                can_cancel = False
+                
+            else:
+                
+                can_cancel = True
+                
+            
+            ( status_text, current_speed, bytes_read, bytes_to_read ) = self._network_job.GetStatus()
+            
+            if self._network_job.HasError():
+                
+                text = status_text
+                
+            else:
+                
+                text = status_text + ' ' + HydrusData.ConvertIntToBytes( current_speed ) + '/s'
+                
+            
+            self._text_and_gauge.SetValue( text, bytes_read, bytes_to_read )
+            
+        
+        if can_cancel:
+            
+            if not self._cancel_button.IsEnabled():
+                
+                self._cancel_button.Enable()
+                
+            
+        else:
+            
+            if self._cancel_button.IsEnabled():
+                
+                self._cancel_button.Disable()
+                
+            
+        
+    
+    def Cancel( self ):
+        
+        if self._network_job is not None:
+            
+            self._network_job.Cancel()
+            
+        
+    
+    def ClearNetworkJob( self ):
+        
+        self._network_job = None
+        
+    
+    def SetNetworkJob( self, network_job ):
+        
+        self._network_job = network_job
+        
+    
+    def TIMEREventUpdate( self, event ):
+        
+        if self.IsShown():
+            
+            self._Update()
+            
+        

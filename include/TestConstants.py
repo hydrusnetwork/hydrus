@@ -43,7 +43,7 @@ class MockController( object ):
     
     def ModelIsShutdown( self ):
         
-        return self.model_is_shutdown
+        return self.model_is_shutdown or HG.test_controller.ModelIsShutdown()
         
     
 class FakeHTTPConnectionManager():

@@ -19,7 +19,7 @@ import HydrusGlobals as HG
 
 class Page( wx.SplitterWindow ):
     
-    def __init__( self, parent, controller, management_controller, initial_media_results ):
+    def __init__( self, parent, controller, management_controller, initial_hashes ):
         
         wx.SplitterWindow.__init__( self, parent )
         
@@ -28,6 +28,8 @@ class Page( wx.SplitterWindow ):
         self._controller = controller
         
         self._management_controller = management_controller
+        
+        self._initial_hashes = initial_hashes
         
         self._management_controller.SetKey( 'page', self._page_key )
         
@@ -51,7 +53,7 @@ class Page( wx.SplitterWindow ):
         
         self._preview_panel = ClientGUICanvas.CanvasPanel( self._search_preview_split, self._page_key )
         
-        self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, initial_media_results )
+        self._media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, [] )
         
         self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, HC.options[ 'vpos' ] )
         
@@ -65,8 +67,45 @@ class Page( wx.SplitterWindow ):
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
         self._controller.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
         
+        if initial_hashes is not None and len( initial_hashes ) > 0:
+            
+            self._initialised = False
+            
+            self._controller.CallToThread( self.THREADLoadInitialMediaResults )
+            
+        else:
+            
+            self._initialised = True
+            
+        
     
-    def CleanBeforeDestroy( self ): self._management_panel.CleanBeforeDestroy()
+    def _SetPrettyStatus( self, status ):
+        
+        self._pretty_status = status
+        
+        self._controller.pubimmediate( 'refresh_status' )
+        
+    
+    def _SwapMediaPanel( self, new_panel ):
+        
+        self._preview_panel.SetMedia( None )
+        
+        self._media_panel.ClearPageKey()
+        
+        self.ReplaceWindow( self._media_panel, new_panel )
+        
+        self._media_panel.Hide()
+        
+        # If this is a CallAfter, OS X segfaults on refresh jej
+        wx.CallLater( 500, self._media_panel.Destroy )
+        
+        self._media_panel = new_panel
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        self._management_panel.CleanBeforeDestroy()
+        
     
     def EventPreviewUnsplit( self, event ):
         
@@ -80,6 +119,27 @@ class Page( wx.SplitterWindow ):
         self.Unsplit( self._search_preview_split )
         
         self._controller.pub( 'set_focus', self._page_key, None )
+        
+    
+    def GetHashes( self ):
+        
+        if self._initialised:
+            
+            media = self.GetMedia()
+            
+            hashes = []
+            
+            for m in media:
+                
+                hashes.extend( m.GetHashes() )
+                
+            
+            return hashes
+            
+        else:
+            
+            return self._initial_hashes
+            
         
     
     def GetManagementController( self ):
@@ -156,7 +216,10 @@ class Page( wx.SplitterWindow ):
     
     def RefreshQuery( self ):
         
-        self._controller.pub( 'refresh_query', self._page_key )
+        if self._initialised:
+            
+            self._controller.pub( 'refresh_query', self._page_key )
+            
         
     
     def ShowHideSplit( self ):
@@ -175,15 +238,31 @@ class Page( wx.SplitterWindow ):
             
         
     
-    def SetMediaFocus( self ): self._media_panel.SetFocus()
+    def SetMediaFocus( self ):
+        
+        self._media_panel.SetFocus()
+        
+    
+    def SetMediaResults( self, media_results ):
+        
+        file_service_key = self._management_controller.GetKey( 'file_service' )
+        
+        media_panel = ClientGUIMedia.MediaPanelThumbnails( self, self._page_key, file_service_key, media_results )
+        
+        self._SwapMediaPanel( media_panel )
+        
+        self._initialised = True
+        self._initial_hashes = []
+        
     
     def SetPrettyStatus( self, page_key, status ):
         
         if page_key == self._page_key:
             
-            self._pretty_status = status
-            
-            self._controller.pub( 'refresh_status' )
+            if self._initialised:
+                
+                self._SetPrettyStatus( status )
+                
             
         
     
@@ -201,22 +280,35 @@ class Page( wx.SplitterWindow ):
         
         if page_key == self._page_key:
             
-            self._preview_panel.SetMedia( None )
-            
-            self.ReplaceWindow( self._media_panel, new_panel )
-            
-            self._media_panel.Hide()
-            
-            # If this is a CallAfter, OS X segfaults on refresh jej
-            wx.CallLater( 500, self._media_panel.Destroy )
-            
-            self._media_panel = new_panel
+            self._SwapMediaPanel( new_panel )
             
         
     
     def TestAbleToClose( self ):
         
         self._management_panel.TestAbleToClose()
+        
+    
+    def THREADLoadInitialMediaResults( self ):
+        
+        initial_media_results = []
+        
+        for group_of_initial_hashes in HydrusData.SplitListIntoChunks( self._initial_hashes, 256 ):
+            
+            more_media_results = self._controller.Read( 'media_results', group_of_initial_hashes )
+            
+            initial_media_results.extend( more_media_results )
+            
+            status = u'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( self._initial_hashes ) )
+            
+            self._SetPrettyStatus( status )
+            
+        
+        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
+        
+        sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in self._initial_hashes ]
+        
+        wx.CallAfter( self.SetMediaResults, sorted_initial_media_results )
         
     
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):

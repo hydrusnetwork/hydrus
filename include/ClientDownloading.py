@@ -1,4 +1,5 @@
 import bs4
+import ClientData
 import ClientNetworking
 import HydrusConstants as HC
 import HydrusExceptions
@@ -1712,13 +1713,22 @@ class GalleryPixiv( Gallery ):
         
         user = soup.find( 'h1', class_ = 'user' )
         
-        tags.append( 'creator:' + user.string )
+        if user is not None:
+            
+            tags.append( 'creator:' + user.string )
+            
         
         title_parent = soup.find( 'section', class_ = re.compile( 'work-info' ) )
         
-        title = title_parent.find( 'h1', class_ = 'title' )
-        
-        tags.append( 'title:' + title.string )
+        if title_parent is not None:
+            
+            title = title_parent.find( 'h1', class_ = 'title' )
+            
+            if title is not None:
+                
+                tags.append( 'title:' + title.string )
+                
+            
         
         return ( image_url, tags )
         
@@ -1809,6 +1819,31 @@ class GalleryTumblr( Gallery ):
             return raw_url
             
         
+        def Remove68Subdomain( long_url ):
+            
+            # sometimes the 68 subdomain gives a 404 on the raw url, so:
+            
+            # convert this:
+            # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+            # to this:
+            # http://media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
+            
+            # I am not sure if it is always 68, but let's not assume
+            
+            ( scheme, rest ) = long_url.split( '://', 1 )
+            
+            if rest.startswith( 'media.tumblr.com' ):
+                
+                return long_url
+                
+            
+            ( gumpf, shorter_rest ) = rest.split( '.', 1 )
+            
+            shorter_url = scheme + '://' + shorter_rest
+            
+            return shorter_url
+            
+        
         definitely_no_more_pages = False
         
         processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-2] # -1 takes a js ';' off the end
@@ -1837,14 +1872,27 @@ class GalleryTumblr( Gallery ):
                     
                     if len( post[ 'photos' ] ) == 0:
                         
+                        photos = [ post ]
+                        
+                    else:
+                        
+                        photos = post[ 'photos' ]
+                        
+                    
+                    for photo in photos:
+                        
                         try:
                             
-                            url = post[ 'photo-url-1280' ]
+                            url = photo[ 'photo-url-1280' ]
                             
                             if raw_url_available:
                                 
                                 url = ConvertRegularToRawURL( url )
                                 
+                            
+                            url = Remove68Subdomain( url )
+                            
+                            url = ClientData.ConvertHTTPToHTTPS( url )
                             
                             SetExtraURLInfo( url, tags )
                             
@@ -1853,29 +1901,6 @@ class GalleryTumblr( Gallery ):
                         except:
                             
                             pass
-                            
-                        
-                    else:
-                        
-                        for photo in post[ 'photos' ]:
-                            
-                            try:
-                                
-                                url = photo[ 'photo-url-1280' ]
-                                
-                                if raw_url_available:
-                                    
-                                    url = ConvertRegularToRawURL( url )
-                                    
-                                
-                                SetExtraURLInfo( url, tags )
-                                
-                                urls.append( url )
-                                
-                            except:
-                                
-                                pass
-                                
                             
                         
                     

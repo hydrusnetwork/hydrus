@@ -1,10 +1,79 @@
 import ClientConstants as CC
 import ClientData
+import ClientNetworking
 import HydrusConstants as HC
 import HydrusGlobals as HG
+import HydrusNetworking
 import os
 import wx
 
+def GetDefaultBandwidthManager():
+    
+    KB = 1024
+    MB = 1024 ** 2
+    GB = 1024 ** 3
+    
+    bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage. db prob needs a break
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
+    
+    bandwidth_manager.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 ) # don't ever hammer a domain
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # don't go nuts on a site in a single day
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 600, 60 ) # after that first sample of small files, take it easy
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 600, 256 * MB ) # after that first sample of big files, take it easy
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 5, 1 ) # be extremely polite
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
+    
+    #
+    
+    return bandwidth_manager
+    
 def GetClientDefaultOptions():
     
     options = {}

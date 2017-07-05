@@ -210,7 +210,7 @@ class Controller( HydrusController.HydrusController ):
             
             if move_knocked_us_out_of_idle:
                 
-                self.pub( 'refresh_status' )
+                self.pubimmediate( 'refresh_status' )
                 
             
         
@@ -478,7 +478,7 @@ class Controller( HydrusController.HydrusController ):
         HG.force_idle_mode = not HG.force_idle_mode
         
         self.pub( 'wake_daemons' )
-        self.pub( 'refresh_status' )
+        self.pubimmediate( 'refresh_status' )
         
     
     def GetApp( self ):
@@ -580,6 +580,18 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.InitClientFilesManager()
+        
+        #
+        
+        bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+        session_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
+        login_manager = ClientNetworking.NetworkLoginManager()
+        
+        self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, login_manager )
+        
+        self.CallToThread( self.network_engine.MainLoop )
+        
+        #
         
         self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         
@@ -778,9 +790,9 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def MaintainMemory( self ):
+    def MaintainMemorySlow( self ):
         
-        HydrusController.HydrusController.MaintainMemory( self )
+        HydrusController.HydrusController.MaintainMemorySlow( self )
         
         if HydrusData.TimeHasPassed( self._timestamps[ 'last_page_change' ] + 30 * 60 ):
             
@@ -1031,6 +1043,20 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
             
+            if self.network_engine.bandwidth_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
+                
+                self.network_engine.bandwidth_manager.SetClean()
+                
+            
+            if self.network_engine.session_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.session_manager )
+                
+                self.network_engine.session_manager.SetClean()
+                
+            
         
     
     def SetServices( self, services ):
@@ -1041,6 +1067,16 @@ class Controller( HydrusController.HydrusController ):
             
             self.services_manager.RefreshServices()
             
+        
+    
+    def ShutdownModel( self ):
+        
+        if not HG.emergency_exit:
+            
+            self.SaveDirtyObjects()
+            
+        
+        HydrusController.HydrusController.ShutdownModel( self )
         
     
     def ShutdownView( self ):
