@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 264</h3></li>
+				<ul>
+					<li>converted the page of images downloader to the new network engine</li>
+					<li>converted the thread watcher downloader to the new network engine</li>
+					<li>rejiggered page of images and thread watcher management panels to better separate the two loops they work on</li>
+					<li>rejiggered some more downloader layout stuff in prep for a new control to better display url cache and overall import status--downloader-global pause button is now always at the top, for instance</li>
+					<li>removed 'waiting politely' indicator from download pages that use the new network engine</li>
+					<li>network job controls now have a simple border</li>
+					<li>network job controls will show current bytes progress and speed in a more intelligent and useful way--no longer spamming the initial 0KB/s, for instance, and flashing more useful summary information when downloading many small files</li>
+					<li>network job controls now display their current bytes progress and speed on a separate right-aligned text beside the main status text (to stop the speed text jumping around so much)</li>
+					<li>network job controls will not show the current download speed until some bytes are actually read</li>
+					<li>wrote a first version of 'services->review bandwidth' review frame, which lists all network contexts with data in the past month</li>
+					<li>wrote an independant and live-updating review frame for indivdual network contexts, launched from the review bandwidth frame, which shows current and historical bandwidth use for that context</li>
+					<li>the main gui status bar now reports current bandwidth usage! updated once a second</li>
+					<li>database->backup process now has some nicer gui, better and more reliable workflow, improved file copy notification, and now correctly obeys a popup-cancel command</li>
+					<li>started the new 'migrate database' gui under the database menu. it currently shows live usage and will gain some verb buttons to atomically alter things hopefully next week</li>
+					<li>moved from a strict begin/commit db model to a save/release system that only commits changes to disk at most every ten seconds or so. small 'write' transactions will now often have no disk-sync overhead and so are super fast, particularly when they come in a large batch.</li>
+					<li>simplified database connection, disconnection, begin, commit, and rollback code significantly</li>
+					<li>the url table in the client database is now non-unique (i.e. multiple files can have the same url). this may lead to undesired 'already in db' or 'deleted' statuses in some downloaders as they check for url status before starting their downloads. if this change turns out to a be a big pain in the future for pixiv manga or whatever, it may be revisited.</li>
+					<li>fixed a bug in deviant art parser that sometimes meant nsfw urls could not be found</li>
+					<li>fixed an issue where progress gauges could sometimes get stuck in a pulsing state</li>
+					<li>fixed a bug with the new optimised result building which sometimes occured when all the files in a batch had common ipfs service membership</li>
+					<li>improved support for unusual videos</li>
+					<li>improved accuracy of duration calculation for unusual videos</li>
+					<li>improved database optimisation after initial and ongoing repository processing</li>
+					<li>a 'wake subscriptions' event now occurs even on 'manage subscriptions' cancel (meaning temporarily-dialog-paused subs will always continue after the dialog is closed)</li>
+					<li>added a careful manual commit to stop the possibility of the definition-desync some users noticed after a power-loss during a big repository sync commit</li>
+					<li>removed some redundant old db compatibility code</li>
+					<li>permitted sqlite installations that allow in-memory temporary tables to use them (but not for vacuums, which tend to be a bit big for this stuff)</li>
+					<li>cleaned up some redundant timer id code</li>
+					<li>misc improvements</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 263</h3></li>
 				<ul>
 					<li>greatly improved how gui sessions are loaded--now the page tabs are loaded instantly, but the thumbnails are loaded in the background. session loaded should be significantly less laggy and buggy</li>

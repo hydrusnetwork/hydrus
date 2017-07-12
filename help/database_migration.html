@@ -37,7 +37,7 @@
 			<p>If you move your database, the program will have to shut down first. Before you boot up again, you will have to create a new program shortcut:</p>
 			<h3>informing the software that the database has moved</h3>
 			<p>A straight call to the client executable will look for a database in <i>install_dir/db</i>. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!</p>
-			<p>So, pass it a command line argument, like so:</p>
+			<p>So, pass it a -d or --db_dir command line argument, like so:</p>
 			<ul>
 				<li>client -d="D:\media\my_hydrus_database"</li>
 				<li><i>--or--</i></li>
