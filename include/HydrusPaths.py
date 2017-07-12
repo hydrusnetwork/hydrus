@@ -514,7 +514,7 @@ def MirrorFile( source, dest ):
     
     return True
     
-def MirrorTree( source, dest ):
+def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None ):
     
     pauser = HydrusData.BigJobPauser()
     
@@ -523,6 +523,16 @@ def MirrorTree( source, dest ):
     num_errors = 0
     
     for ( root, dirnames, filenames ) in os.walk( source ):
+        
+        if is_cancelled_hook is not None and is_cancelled_hook():
+            
+            return
+            
+        
+        if text_update_hook is not None:
+            
+            text_update_hook( 'Copying ' + root + '.' )
+            
         
         dest_root = root.replace( source, dest )
         

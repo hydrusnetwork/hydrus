@@ -1885,29 +1885,26 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._page_of_images_panel = ClientGUICommon.StaticBox( self, 'page of images downloader' )
         
-        self._import_queue_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'imports' )
-        
-        self._parser_status = wx.StaticText( self._import_queue_panel )
-        self._overall_status = wx.StaticText( self._import_queue_panel )
-        self._current_action = wx.StaticText( self._import_queue_panel )
-        self._file_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
-        self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
-        
-        self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button = wx.BitmapButton( self._page_of_images_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
-        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._import_queue_panel, self._page_key )
+        #
+        
+        self._import_queue_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'imports' )
+        
+        self._overall_status = wx.StaticText( self._import_queue_panel )
+        self._current_action = wx.StaticText( self._import_queue_panel )
+        self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( self._import_queue_panel )
         
         self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
         
-        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
-        
         self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
+        
+        self._parser_status = wx.StaticText( self._pending_page_urls_panel )
+        
+        self._page_download_control = ClientGUIControls.NetworkJobControl( self._pending_page_urls_panel )
         
         self._pending_page_urls_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 100 ) )
         
@@ -1954,18 +1951,20 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         input_hbox.AddF( self._page_url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
         input_hbox.AddF( self._page_url_paste, CC.FLAGS_VCENTER )
         
+        self._pending_page_urls_panel.AddF( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_page_urls_panel.AddF( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_page_urls_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        self._import_queue_panel.AddF( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
+        self._import_queue_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        self._page_of_images_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._page_of_images_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1992,20 +1991,8 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
         
-        def file_download_hook( gauge_range, gauge_value ):
-            
-            try:
-                
-                self._file_gauge.SetRange( gauge_range )
-                self._file_gauge.SetValue( gauge_value )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
-        self._page_of_images_import.SetDownloadHook( file_download_hook )
+        self._page_of_images_import.SetDownloadControlFile( self._file_download_control )
+        self._page_of_images_import.SetDownloadControlPage( self._page_download_control )
         
         ( import_file_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
         
@@ -2256,66 +2243,76 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._options_panel = wx.Panel( self._thread_watcher_panel )
         
-        self._watcher_status = wx.StaticText( self._options_panel )
-        self._overall_status = wx.StaticText( self._options_panel )
-        self._current_action = wx.StaticText( self._options_panel )
-        self._file_gauge = ClientGUICommon.Gauge( self._options_panel )
-        self._overall_gauge = ClientGUICommon.Gauge( self._options_panel )
+        self._pause_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        
+        #
+        
+        imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'imports' )
+        
+        self._overall_status = wx.StaticText( imports_panel )
+        self._current_action = wx.StaticText( imports_panel )
+        self._overall_gauge = ClientGUICommon.Gauge( imports_panel )
+        self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
+        
+        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( imports_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
+        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        
+        #
+        
+        checker_panel = ClientGUICommon.StaticBox( self._options_panel, 'checker' )
+        
+        self._watcher_status = wx.StaticText( checker_panel )
+        self._thread_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
         
         ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
         
-        self._thread_times_to_check = wx.SpinCtrl( self._options_panel, size = ( 80, -1 ), min = 0, max = 65536 )
+        self._thread_times_to_check = wx.SpinCtrl( checker_panel, size = ( 80, -1 ), min = 0, max = 65536 )
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
         
-        self._thread_check_period = ClientGUICommon.TimeDeltaButton( self._options_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
+        self._thread_check_period = ClientGUICommon.TimeDeltaButton( checker_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
         self._thread_check_period.SetValue( check_period )
         self._thread_check_period.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventCheckPeriod )
         
-        self._thread_check_now_button = wx.Button( self._options_panel, label = 'check now' )
+        self._thread_check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._options_panel, self._page_key )
-        
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
-        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
-        
-        self._pause_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
+        #
         
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_watcher_panel )
         self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
         #
         
+        imports_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        imports_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox_1.AddF( wx.StaticText( self._options_panel, label = 'check ' ), CC.FLAGS_VCENTER )
+        hbox_1.AddF( wx.StaticText( checker_panel, label = 'check ' ), CC.FLAGS_VCENTER )
         hbox_1.AddF( self._thread_times_to_check, CC.FLAGS_VCENTER )
-        hbox_1.AddF( wx.StaticText( self._options_panel, label = ' more times' ), CC.FLAGS_VCENTER )
+        hbox_1.AddF( wx.StaticText( checker_panel, label = ' more times' ), CC.FLAGS_VCENTER )
         
         hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox_2.AddF( wx.StaticText( self._options_panel, label = 'check every ' ), CC.FLAGS_VCENTER )
+        hbox_2.AddF( wx.StaticText( checker_panel, label = 'check every ' ), CC.FLAGS_VCENTER )
         hbox_2.AddF( self._thread_check_period, CC.FLAGS_VCENTER )
         
-        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_sizer.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
+        checker_panel.AddF( self._watcher_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.AddF( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.AddF( hbox_1, CC.FLAGS_LONE_BUTTON )
+        checker_panel.AddF( hbox_2, CC.FLAGS_LONE_BUTTON )
+        checker_panel.AddF( self._thread_check_now_button, CC.FLAGS_LONE_BUTTON )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._watcher_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._file_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._options_panel.SetSizer( vbox )
         
@@ -2346,20 +2343,8 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
         
-        def file_download_hook( gauge_range, gauge_value ):
-            
-            try:
-                
-                self._file_gauge.SetRange( gauge_range )
-                self._file_gauge.SetValue( gauge_value )
-                
-            except wx.PyDeadObjectError:
-                
-                pass
-                
-            
-        
-        self._thread_watcher_import.SetDownloadHook( file_download_hook )
+        self._thread_watcher_import.SetDownloadControlFile( self._file_download_control )
+        self._thread_watcher_import.SetDownloadControlThread( self._thread_download_control )
         
         ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
         
@@ -2614,17 +2599,17 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
+        #
+        
         self._url_panel = ClientGUICommon.StaticBox( self, 'raw url downloader' )
+        
+        self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
         self._overall_status = wx.StaticText( self._url_panel )
         self._current_action = wx.StaticText( self._url_panel )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._url_panel )
-        
-        self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
-        
-        self._waiting_politely_indicator = ClientGUICommon.GetWaitingPolitelyControl( self._url_panel, self._page_key )
         
         self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
         self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
@@ -2639,22 +2624,17 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_sizer.AddF( self._waiting_politely_indicator, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._pause_button, CC.FLAGS_VCENTER )
-        
         input_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         input_hbox.AddF( self._url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
         input_hbox.AddF( self._url_paste, CC.FLAGS_VCENTER )
         
+        self._url_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( button_sizer, CC.FLAGS_BUTTON_SIZER )
+        self._url_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._url_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2678,7 +2658,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
-        self._urls_import.SetDownloadControl( self._file_download_control )
+        self._urls_import.SetDownloadControlFile( self._file_download_control )
         
         import_file_options = self._urls_import.GetOptions()
         

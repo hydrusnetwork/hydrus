@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIFrames
@@ -7,12 +8,15 @@ import ClientGUIPanels
 import ClientGUITopLevelWindows
 import ClientTags
 import ClientThreading
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
 import HydrusNATPunch
+import HydrusPaths
 import os
 import traceback
+import webbrowser
 import wx
 
 class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -274,6 +278,198 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller ):
+        
+        self._controller = controller
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._bandwidths = ClientGUICommon.SaneListCtrlForSingleObject( self, 360, [ ( 'context', -1 ), ( 'context type', 100 ), ( 'current usage', 100 ), ( 'past 24 hours', 100 ), ( 'this month', 100 ) ], activation_callback = self.ShowNetworkContext )
+        
+        self._bandwidths.SetMinSize( ( 640, 360 ) )
+        
+        # a button/checkbox to say 'show only those with data in the past 30 days'
+        # a button to say 'delete all record of this context'
+        
+        #
+        
+        for ( network_context, bandwidth_tracker ) in self._controller.network_engine.bandwidth_manager.GetNetworkContextsAndBandwidthTrackersForUser():
+            
+            ( display_tuple, sort_tuple ) = self._GetTuples( network_context, bandwidth_tracker )
+            
+            self._bandwidths.Append( display_tuple, sort_tuple, network_context )
+            
+        
+        self._bandwidths.SortListItems( 0 )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._bandwidths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _GetTuples( self, network_context, bandwidth_tracker ):
+        
+        sortable_network_context = ( network_context.context_type, network_context.context_data )
+        sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
+        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        day_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
+        month_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+        
+        pretty_network_context = network_context.ToUnicode()
+        pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
+        
+        if current_usage == 0:
+            
+            pretty_current_usage = ''
+            
+        else:
+            
+            pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+            
+        
+        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage )
+        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage )
+        
+        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage ) )
+        
+    
+    def ShowNetworkContext( self ):
+        
+        for network_context in self._bandwidths.GetObjects( only_selected = True ):
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self._controller.GetGUI(), 'review bandwidth for ' + network_context.ToUnicode() )
+            
+            panel = ReviewNetworkContextBandwidthPanel( frame, self._controller, network_context )
+            
+            frame.SetPanel( panel )
+            
+        
+    
+class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller, network_context ):
+        
+        self._controller = controller
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._network_context = network_context
+        
+        self._bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( self._network_context )
+        
+        #
+        
+        info_panel = ClientGUICommon.StaticBox( self, 'description' )
+        
+        self._name = ClientGUICommon.BetterStaticText( info_panel, label = self._network_context.ToUnicode() )
+        self._description = ClientGUICommon.BetterStaticText( info_panel, label = CC.network_context_type_description_lookup[ self._network_context.context_type ] )
+        
+        #
+        
+        usage_panel = ClientGUICommon.StaticBox( self, 'usage' )
+        
+        self._current_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
+        
+        self._time_delta_usage_bandwidth_type = ClientGUICommon.BetterChoice( usage_panel )
+        self._time_delta_usage_time_delta = ClientGUICommon.TimeDeltaButton( usage_panel, days = True, hours = True, minutes = True, seconds = True )
+        self._time_delta_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
+        
+        #
+        
+        self._time_delta_usage_time_delta.SetValue( 86400 )
+        
+        for bandwidth_type in ( HC.BANDWIDTH_TYPE_DATA, HC.BANDWIDTH_TYPE_REQUESTS ):
+            
+            self._time_delta_usage_bandwidth_type.Append( HC.bandwidth_type_string_lookup[ bandwidth_type ], bandwidth_type )
+            
+        
+        self._time_delta_usage_bandwidth_type.SelectClientData( HC.BANDWIDTH_TYPE_DATA )
+        
+        # usage this month (with dropdown to select previous months for all months on record)
+        
+        # rules panel
+        # a way to show how much the current rules are used up--see review services for how this is already done
+        # button to edit rules for this domain
+        
+        #
+        
+        info_panel.AddF( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._time_delta_usage_bandwidth_type, CC.FLAGS_VCENTER )
+        hbox.AddF( ClientGUICommon.BetterStaticText( usage_panel, ' in the past ' ), CC.FLAGS_VCENTER )
+        hbox.AddF( self._time_delta_usage_time_delta, CC.FLAGS_VCENTER )
+        hbox.AddF( self._time_delta_usage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        usage_panel.AddF( self._current_usage_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        usage_panel.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( usage_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        min_width = ClientData.ConvertTextToPixelWidth( self, 60 )
+        
+        self.SetMinSize( ( min_width, -1 ) )
+        
+        #
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
+        
+        self._move_hide_timer = wx.Timer( self )
+        
+        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        
+    
+    def _Update( self ):
+        
+        current_usage = self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        
+        pretty_current_usage = 'current usage: ' + HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+        
+        self._current_usage_st.SetLabelText( pretty_current_usage )
+        
+        #
+        
+        bandwidth_type = self._time_delta_usage_bandwidth_type.GetChoice()
+        time_delta = self._time_delta_usage_time_delta.GetValue()
+        
+        time_delta_usage = self._bandwidth_tracker.GetUsage( bandwidth_type, time_delta )
+        
+        if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
+            
+            converter = HydrusData.ConvertIntToBytes
+            
+        elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
+            
+            converter = HydrusData.ConvertIntToPrettyString
+            
+        
+        pretty_time_delta_usage = ': ' + converter( time_delta_usage )
+        
+        self._time_delta_usage_st.SetLabelText( pretty_time_delta_usage )
+        
+    
+    def TIMEREventUpdate( self, event ):
+        
+        self._Update()
+        
+    
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
@@ -444,13 +640,33 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        # a help button, well labelled, that points to the help page
+        menu_items = []
         
-        # current install dir
-        # current db dir
+        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/database_migration.html' )
         
-        # current file dir stuff, listctrl
-        # location | portable | current percents: ftr | ideal percents: ftr
+        menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browesr.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
+        #
+        
+        info_panel = ClientGUICommon.StaticBox( self, 'current paths' )
+        
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( info_panel, CC.GlobalBMPs.refresh, self._Update )
+        
+        self._current_install_path_st = ClientGUICommon.BetterStaticText( info_panel )
+        self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
+        self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
+        
+        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'weight', 60 ), ( 'ideal usage', 160 ), ( 'current usage', 160 ) ] )
+        
+        # ways to:
+        # increase/decrease ideal weight
+        # force rebalance now
+        # add new path
+        # remove existing path
+        # set/clear thumb locations
+        # move whole db and portable paths (requires shutdown and user shortcut command line yes/no warning)
         
         # move the db and all portable client_files locations (provides warning about the shortcut and lets you copy the new location)
             # this will require a shutdown
@@ -465,3 +681,234 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         # do rebalance now button, only enabled if there is work to do
             # should report to a stoppable job_key panel or something. text, gauge, stop button
         
+        #
+        
+        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
+        
+        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
+        
+        help_hbox.AddF( st, CC.FLAGS_VCENTER )
+        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        
+        #
+        
+        info_panel.AddF( self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        info_panel.AddF( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( self._current_media_locations_listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        min_width = ClientData.ConvertTextToPixelWidth( self, 90 )
+        
+        self.SetMinSize( ( min_width, -1 ) )
+        
+        self._Update()
+        
+    
+    def _GenerateCurrentMediaTuples( self ):
+        
+        # ideal
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        
+        # current
+        
+        prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
+        
+        locations_to_file_weights = collections.Counter()
+        locations_to_fs_thumb_weights = collections.Counter()
+        locations_to_r_thumb_weights = collections.Counter()
+        
+        for ( prefix, location ) in prefixes_to_locations.items():
+            
+            if prefix.startswith( 'f' ):
+                
+                locations_to_file_weights[ location ] += 1
+                
+            
+            if prefix.startswith( 't' ):
+                
+                locations_to_fs_thumb_weights[ location ] += 1
+                
+            
+            if prefix.startswith( 'r' ):
+                
+                locations_to_r_thumb_weights[ location ] += 1
+                
+            
+        
+        #
+        
+        all_locations = set()
+        
+        all_locations.update( locations_to_ideal_weights.keys() )
+        
+        if resized_thumbnail_override is not None:
+            
+            all_locations.add( resized_thumbnail_override )
+            
+        
+        if full_size_thumbnail_override is not None:
+            
+            all_locations.add( full_size_thumbnail_override )
+            
+        
+        all_locations.update( locations_to_file_weights.keys() )
+        all_locations.update( locations_to_fs_thumb_weights.keys() )
+        all_locations.update( locations_to_r_thumb_weights.keys() )
+        
+        all_locations = list( all_locations )
+        
+        all_locations.sort()
+        
+        tuples = []
+        
+        total_ideal_weight = sum( locations_to_ideal_weights.values() )
+        
+        for location in all_locations:
+            
+            pretty_location = location
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            portable = not os.path.isabs( portable_location )
+            
+            if portable:
+                
+                pretty_portable = 'yes'
+                
+            else:
+                
+                pretty_portable = 'no'
+                
+            
+            if location in locations_to_ideal_weights:
+                
+                ideal_weight = locations_to_ideal_weights[ location ]
+                
+                pretty_ideal_weight = str( ideal_weight )
+                
+            else:
+                
+                ideal_weight = 0
+                
+                pretty_ideal_weight = 'n/a'
+                
+            
+            fp = locations_to_file_weights[ location ] / 256.0
+            tp = locations_to_fs_thumb_weights[ location ] / 256.0
+            rp = locations_to_r_thumb_weights[ location ] / 256.0
+            
+            p = HydrusData.ConvertFloatToPercentage
+            
+            current_usage = ( fp, tp, rp )
+            
+            usages = []
+            
+            if fp > 0:
+                
+                usages.append( p( fp ) + ' files' )
+                
+            
+            if tp > 0 and tp != fp:
+                
+                usages.append( p( tp ) + ' full-size thumbnails' )
+                
+            
+            if rp > 0 and rp != fp:
+                
+                usages.append( p( rp ) + ' resized thumbnails' )
+                
+            
+            pretty_current_usage = ','.join( usages )
+            
+            if location in locations_to_ideal_weights:
+                
+                ideal_fp = locations_to_ideal_weights[ location ] / float( total_ideal_weight )
+                
+            else:
+                
+                ideal_fp = 0.0
+                
+            
+            if full_size_thumbnail_override is not None and location == full_size_thumbnail_override:
+                
+                ideal_tp = 1.0
+                
+            else:
+                
+                ideal_tp = 0.0
+                
+            
+            if resized_thumbnail_override is not None and location == resized_thumbnail_override:
+                
+                ideal_rp = 1.0
+                
+            else:
+                
+                ideal_rp = 0.0
+                
+            
+            ideal_usage = ( ideal_fp, ideal_tp, ideal_rp )
+            
+            usages = []
+            
+            if ideal_fp > 0:
+                
+                usages.append( p( ideal_fp ) + ' files' )
+                
+            
+            if ideal_tp > 0 and ideal_tp != ideal_fp:
+                
+                usages.append( p( ideal_tp ) + ' full-size thumbnails' )
+                
+            
+            if ideal_rp > 0 and ideal_rp != ideal_fp:
+                
+                usages.append( p( ideal_rp ) + ' resized thumbnails' )
+                
+            
+            pretty_ideal_usage = ','.join( usages )
+            
+            display_tuple = ( pretty_location, pretty_portable, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
+            sort_tuple = ( location, portable, ideal_weight, ideal_usage, current_usage )
+            
+            tuples.append( ( display_tuple, sort_tuple ) )
+            
+        
+        return tuples
+        
+    
+    def _Update( self ):
+        
+        approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
+        
+        self._current_db_path_st.SetLabelText( 'database (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
+        self._current_install_path_st.SetLabelText( 'install: ' + HC.BASE_DIR )
+        
+        service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        
+        all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+        
+        approx_total_client_files = all_local_files_total_size * 1.1
+        
+        self._current_media_paths_st.SetLabelText( 'media (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + '):' )
+        
+        self._current_media_locations_listctrl.DeleteAllItems()
+        
+        for ( display_tuple, sort_tuple ) in self._GenerateCurrentMediaTuples():
+            
+            self._current_media_locations_listctrl.Append( display_tuple, sort_tuple )
+            
+        
+    

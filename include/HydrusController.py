@@ -25,18 +25,18 @@ class HydrusController( object ):
         
         self._name = 'hydrus'
         
-        self._db_dir = db_dir
+        self.db_dir = db_dir
         self._no_daemons = no_daemons
         self._no_wal = no_wal
         
-        self._no_wal_path = os.path.join( self._db_dir, 'no-wal' )
+        self._no_wal_path = os.path.join( self.db_dir, 'no-wal' )
         
         if os.path.exists( self._no_wal_path ):
             
             self._no_wal = True
             
         
-        self._db = None
+        self.db = None
         
         self._model_shutdown = False
         self._view_shutdown = False
@@ -96,7 +96,7 @@ class HydrusController( object ):
     
     def _Read( self, action, *args, **kwargs ):
         
-        result = self._db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
+        result = self.db.Read( action, HC.HIGH_PRIORITY, *args, **kwargs )
         
         return result
         
@@ -118,7 +118,7 @@ class HydrusController( object ):
     
     def _Write( self, action, priority, synchronous, *args, **kwargs ):
         
-        result = self._db.Write( action, priority, synchronous, *args, **kwargs )
+        result = self.db.Write( action, priority, synchronous, *args, **kwargs )
         
         return result
         
@@ -182,24 +182,24 @@ class HydrusController( object ):
     
     def DBCurrentlyDoingJob( self ):
         
-        if self._db is None:
+        if self.db is None:
             
             return False
             
         else:
             
-            return self._db.CurrentlyDoingJob()
+            return self.db.CurrentlyDoingJob()
             
         
     
     def GetDBDir( self ):
         
-        return self._db_dir
+        return self.db_dir
         
     
     def GetDBStatus( self ):
         
-        return self._db.GetStatus()
+        return self.db.GetStatus()
         
     
     def GetCache( self, name ):
@@ -231,7 +231,7 @@ class HydrusController( object ):
     
     def InitModel( self ):
         
-        self._db = self._InitDB()
+        self.db = self._InitDB()
         
     
     def InitView( self ):
@@ -248,13 +248,13 @@ class HydrusController( object ):
     
     def IsFirstStart( self ):
         
-        if self._db is None:
+        if self.db is None:
             
             return False
             
         else:
             
-            return self._db.IsFirstStart()
+            return self.db.IsFirstStart()
             
         
     
@@ -287,7 +287,7 @@ class HydrusController( object ):
         
         profile_log_filename = self._name + ' profile - ' + boot_pretty_timestamp + '.log'
         
-        profile_log_path = os.path.join( self._db_dir, profile_log_filename )
+        profile_log_path = os.path.join( self.db_dir, profile_log_filename )
         
         with open( profile_log_path, 'a' ) as f:
             
@@ -333,9 +333,9 @@ class HydrusController( object ):
         self._model_shutdown = True
         HG.model_shutdown = True
         
-        if self._db is not None:
+        if self.db is not None:
             
-            while not self._db.LoopIsFinished(): time.sleep( 0.1 )
+            while not self.db.LoopIsFinished(): time.sleep( 0.1 )
             
         
     

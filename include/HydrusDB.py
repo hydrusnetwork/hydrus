@@ -62,22 +62,6 @@ def CanVacuum( db_path, stop_time = None ):
         return False
         
     
-def SetupDBCreatePragma( c, no_wal = False ):
-    
-    c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
-    
-    if HC.PLATFORM_WINDOWS:
-        
-        c.execute( 'PRAGMA page_size = 4096;' )
-        
-    
-    if not no_wal:
-        
-        c.execute( 'PRAGMA journal_mode = WAL;' )
-        
-    
-    c.execute( 'PRAGMA synchronous = 2;' )
-    
 def VacuumDB( db_path ):
     
     db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
@@ -110,6 +94,8 @@ def VacuumDB( db_path ):
         c.execute( 'PRAGMA page_size = ' + str( ideal_page_size ) + ';' )
         
     
+    c.execute( 'PRAGMA auto_vacuum = 0;' ) # none
+    
     c.execute( 'VACUUM;' )
     
     if previous_journal_mode == 'wal':
@@ -131,6 +117,7 @@ class HydrusDB( object ):
         
         self._transaction_started = 0
         self._in_transaction = False
+        self._transaction_contains_writes = False
         
         self._connection_timestamp = 0
         
@@ -263,34 +250,20 @@ class HydrusDB( object ):
             
             db_path = os.path.join( self._db_dir, self._db_filenames[ name ] )
             
-            if not os.path.exists( db_path ):
-                
-                db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )
-                
-                c = db.cursor()
-                
-                SetupDBCreatePragma( c, no_wal = self._no_wal )
-                
-                del c
-                del db
-                
-            
             self._c.execute( 'ATTACH ? AS ' + name + ';', ( db_path, ) )
             
         
     
     def _BeginImmediate( self ):
         
-        if self._in_transaction:
-            
-            HydrusData.Print( 'Received a call to begin, but was already in a transaction!' )
-            
-        else:
+        if not self._in_transaction:
             
             self._c.execute( 'BEGIN IMMEDIATE;' )
+            self._c.execute( 'SAVEPOINT hydrus_savepoint;' )
             
             self._transaction_started = HydrusData.GetNow()
             self._in_transaction = True
+            self._transaction_contains_writes = False
             
         
     
@@ -406,6 +379,10 @@ class HydrusDB( object ):
             
             self._CreateDB()
             
+            self._Commit()
+            
+            self._BeginImmediate()
+            
         
     
     def _InitDBCursor( self ):
@@ -421,6 +398,8 @@ class HydrusDB( object ):
         self._connection_timestamp = HydrusData.GetNow()
         
         self._c = self._db.cursor()
+        
+        self._c.execute( 'PRAGMA temp_store = 2;' )
         
         self._c.execute( 'PRAGMA main.cache_size = -10000;' )
         
@@ -446,7 +425,9 @@ class HydrusDB( object ):
                 
                 self._c.execute( 'PRAGMA ' + db_name + '.journal_mode = WAL;' )
                 
-                # This was 1 previously, but some interrupted commits were rolling back inconsistently across the attached dbs
+                # if this is set to 1, transactions are not immediately synced to the journal and can be undone following a power-loss
+                # if set to 2, all transactions are synced
+                # either way, transactions are atomically consistent, but let's not mess around when power-cut during heavy file import or w/e
                 self._c.execute( 'PRAGMA ' + db_name + '.synchronous = 2;' )
                 
                 try:
@@ -489,6 +470,15 @@ class HydrusDB( object ):
                 
             
         
+        try:
+            
+            self._BeginImmediate()
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.DBAccessException( HydrusData.ToUnicode( e ) )
+            
+        
     
     def _InitDiskCache( self ):
         
@@ -517,9 +507,7 @@ class HydrusDB( object ):
                 
                 self._current_status = 'db write locked'
                 
-                self.publish_status_update()
-                
-                self._BeginImmediate()
+                self._transaction_contains_writes = True
                 
             else:
                 
@@ -537,13 +525,19 @@ class HydrusDB( object ):
                 result = self._Write( action, *args, **kwargs )
                 
             
-            if self._in_transaction:
+            if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + 10 ):
                 
                 self._current_status = 'db committing'
                 
                 self.publish_status_update()
                 
                 self._Commit()
+                
+                self._BeginImmediate()
+                
+            else:
+                
+                self._Save()
                 
             
             for ( topic, args, kwargs ) in self._pubsubs:
@@ -558,23 +552,22 @@ class HydrusDB( object ):
             
         except Exception as e:
             
-            if self._in_transaction:
+            try:
                 
-                try:
-                    
-                    self._Rollback()
-                    
-                except Exception as rollback_e:
-                    
-                    HydrusData.Print( 'When the transaction failed, attempting to rollback the database failed.' )
-                    
-                    HydrusData.PrintException( rollback_e )
-                    
+                self._Rollback()
+                
+            except Exception as rollback_e:
+                
+                HydrusData.Print( 'When the transaction failed, attempting to rollback the database failed.' )
+                
+                HydrusData.PrintException( rollback_e )
                 
             
             self._ManageDBError( job, e )
             
         finally:
+            
+            self._pubsubs = []
             
             self._current_status = ''
             
@@ -596,14 +589,19 @@ class HydrusDB( object ):
         
         if self._in_transaction:
             
-            self._c.execute( 'ROLLBACK;' )
-            
-            self._in_transaction = False
+            self._c.execute( 'ROLLBACK TO hydrus_savepoint;' )
             
         else:
             
             HydrusData.Print( 'Received a call to rollback, but was not in a transaction!' )
             
+        
+    
+    def _Save( self ):
+        
+        self._c.execute( 'RELEASE hydrus_savepoint;' )
+        
+        self._c.execute( 'SAVEPOINT hydrus_savepoint;' )
         
     
     def _SelectFromList( self, select_statement, xs ):
@@ -680,7 +678,7 @@ class HydrusDB( object ):
         raise NotImplementedError()
         
     
-    def pub_after_commit( self, topic, *args, **kwargs ):
+    def pub_after_job( self, topic, *args, **kwargs ):
         
         self._pubsubs.append( ( topic, args, kwargs ) )
         
@@ -693,6 +691,20 @@ class HydrusDB( object ):
     def CurrentlyDoingJob( self ):
         
         return self._currently_doing_job
+        
+    
+    def GetApproxTotalFileSize( self ):
+        
+        total = 0
+        
+        for filename in self._db_filenames.values():
+            
+            path = os.path.join( self._db_dir, filename )
+            
+            total += os.path.getsize( path )
+            
+        
+        return total
         
     
     def GetStatus( self ):
@@ -753,8 +765,6 @@ class HydrusDB( object ):
                 self._current_job_name = job.ToString()
                 
                 self.publish_status_update()
-                
-                self._pubsubs = []
                 
                 try:
                     

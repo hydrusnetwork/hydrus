@@ -334,6 +334,14 @@ class BetterStaticText( wx.StaticText ):
         # st.Wrap is a pain to deal with here, seems to sometimes/always not be able to increase after an initial non-zero call
         
     
+    def SetLabelText( self, text ):
+        
+        if text != self.GetLabelText():
+            
+            wx.StaticText.SetLabelText( self, text )
+            
+        
+    
 class BufferedWindow( wx.Window ):
     
     def __init__( self, *args, **kwargs ):
@@ -773,24 +781,35 @@ class Gauge( wx.Gauge ):
         
         wx.Gauge.__init__( self, *args, **kwargs )
         
-        self._actual_max = None
+        self._actual_range = None
+        
+        self._is_pulsing = False
         
     
-    def SetRange( self, max ):
+    def SetRange( self, range ):
         
-        if max is None:
+        if range is None:
             
             self.Pulse()
             
-        elif max > 1000:
-            
-            self._actual_max = max
-            wx.Gauge.SetRange( self, 1000 )
+            self._is_pulsing = True
             
         else:
             
-            self._actual_max = None
-            wx.Gauge.SetRange( self, max )
+            if range > 1000:
+                
+                self._actual_range = range
+                range = 1000
+                
+            else:
+                
+                self._actual_range = None
+                
+            
+            if range != self.GetRange():
+                
+                wx.Gauge.SetRange( self, range )
+                
             
         
     
@@ -800,13 +819,19 @@ class Gauge( wx.Gauge ):
             
             self.Pulse()
             
-        elif self._actual_max is None:
-            
-            wx.Gauge.SetValue( self, value )
+            self._is_pulsing = True
             
         else:
             
-            wx.Gauge.SetValue( self, min( int( 1000 * ( float( value ) / self._actual_max ) ), 1000 ) )
+            if self._actual_range is not None:
+                
+                value = min( int( 1000 * ( float( value ) / self._actual_range ) ), 1000 )
+                
+            
+            if value != self.GetValue() or self._is_pulsing:
+                
+                wx.Gauge.SetValue( self, value )
+                
             
         
     
@@ -1873,15 +1898,8 @@ class PopupMessage( PopupWindow ):
             
             ( gauge_value, gauge_range ) = popup_gauge_1
             
-            if gauge_range is None or gauge_value is None:
-                
-                self._gauge_1.Pulse()
-                
-            else:
-                
-                self._gauge_1.SetRange( gauge_range )
-                self._gauge_1.SetValue( gauge_value )
-                
+            self._gauge_1.SetRange( gauge_range )
+            self._gauge_1.SetValue( gauge_value )
             
             self._gauge_1.Show()
             
@@ -1914,15 +1932,8 @@ class PopupMessage( PopupWindow ):
             
             ( gauge_value, gauge_range ) = popup_gauge_2
             
-            if gauge_range is None or gauge_value is None:
-                
-                self._gauge_2.Pulse()
-                
-            else:
-                
-                self._gauge_2.SetRange( gauge_range )
-                self._gauge_2.SetValue( gauge_value )
-                
+            self._gauge_2.SetRange( gauge_range )
+            self._gauge_2.SetValue( gauge_value )
             
             self._gauge_2.Show()
             
@@ -3776,22 +3787,8 @@ class TextAndGauge( wx.Panel ):
             self._st.SetLabelText( text )
             
         
-        if value is None or range is None:
-            
-            self._gauge.Pulse()
-            
-        else:
-            
-            if range != self._gauge.GetRange():
-                
-                self._gauge.SetRange( range )
-                
-            
-            if value != self._gauge.GetValue():
-                
-                self._gauge.SetValue( value )
-                
-            
+        self._gauge.SetRange( range )
+        self._gauge.SetValue( value )
         
     
 ( DirtyEvent, EVT_DIRTY ) = wx.lib.newevent.NewEvent()

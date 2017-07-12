@@ -4854,7 +4854,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
         
-        HG.client_controller.pub( 'notify_new_subscriptions' )
+        # we pubsub changes outside, so it happens even on cancel
         
     
     def Delete( self ):

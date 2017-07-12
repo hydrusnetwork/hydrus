@@ -1,5 +1,6 @@
 import ClientCaches
 import ClientConstants as CC
+import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
@@ -11,8 +12,6 @@ import HydrusGlobals as HG
 import HydrusNetworking
 import os
 import wx
-
-ID_TIMER_NETWORK_JOB = wx.NewId()
 
 class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
     
@@ -351,11 +350,20 @@ class NetworkJobControl( wx.Panel ):
     
     def __init__( self, parent ):
         
-        wx.Panel.__init__( self, parent )
+        wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
         
         self._network_job = None
+        self._download_started = False
         
-        self._text_and_gauge = ClientGUICommon.TextAndGauge( self )
+        self._left_text = ClientGUICommon.BetterStaticText( self )
+        self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
+        
+        # 512/768KB - 200KB/s
+        right_width = ClientData.ConvertTextToPixelWidth( self._right_text, 20 )
+        
+        self._right_text.SetMinSize( ( right_width, -1 ) )
+        
+        self._gauge = ClientGUICommon.Gauge( self )
         
         self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
         
@@ -365,18 +373,28 @@ class NetworkJobControl( wx.Panel ):
         
         #
         
+        st_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        st_hbox.AddF( self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        st_hbox.AddF( self._right_text, CC.FLAGS_VCENTER )
+        
+        left_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        left_vbox.AddF( st_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        left_vbox.AddF( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._text_and_gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
         #
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_NETWORK_JOB )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
         
-        self._move_hide_timer = wx.Timer( self, id = ID_TIMER_NETWORK_JOB )
+        self._move_hide_timer = wx.Timer( self )
         
         self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
         
@@ -385,7 +403,11 @@ class NetworkJobControl( wx.Panel ):
         
         if self._network_job is None:
             
-            self._text_and_gauge.SetValue( '', 0, 1 )
+            self._left_text.SetLabelText( '' )
+            self._right_text.SetLabelText( '' )
+            self._gauge.SetRange( 1 )
+            self._gauge.SetValue( 0 )
+            
             can_cancel = False
             
         else:
@@ -401,16 +423,43 @@ class NetworkJobControl( wx.Panel ):
             
             ( status_text, current_speed, bytes_read, bytes_to_read ) = self._network_job.GetStatus()
             
-            if self._network_job.HasError():
+            self._left_text.SetLabelText( status_text )
+            
+            if not self._download_started and current_speed > 0:
                 
-                text = status_text
+                self._download_started = True
+                
+            
+            if self._download_started and not self._network_job.HasError():
+                
+                speed_text = ''
+                
+                if bytes_read is not None:
+                    
+                    if bytes_to_read is not None and bytes_read != bytes_to_read:
+                        
+                        speed_text += HydrusData.ConvertValueRangeToBytes( bytes_read, bytes_to_read )
+                        
+                    else:
+                        
+                        speed_text += HydrusData.ConvertIntToBytes( bytes_read )
+                        
+                    
+                
+                if current_speed != bytes_to_read: # if it is a real quick download, just say its size
+                    
+                    speed_text += ' ' + HydrusData.ConvertIntToBytes( current_speed ) + '/s'
+                    
+                
+                self._right_text.SetLabelText( speed_text )
                 
             else:
                 
-                text = status_text + ' ' + HydrusData.ConvertIntToBytes( current_speed ) + '/s'
+                self._right_text.SetLabelText( '' )
                 
             
-            self._text_and_gauge.SetValue( text, bytes_read, bytes_to_read )
+            self._gauge.SetRange( bytes_to_read )
+            self._gauge.SetValue( bytes_read )
             
         
         if can_cancel:
@@ -439,12 +488,17 @@ class NetworkJobControl( wx.Panel ):
     
     def ClearNetworkJob( self ):
         
+        self._Update()
+        
         self._network_job = None
+        
+        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
         
     
     def SetNetworkJob( self, network_job ):
         
         self._network_job = network_job
+        self._download_started = False
         
     
     def TIMEREventUpdate( self, event ):

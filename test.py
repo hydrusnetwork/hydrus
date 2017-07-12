@@ -53,14 +53,14 @@ class Controller( object ):
     
     def __init__( self ):
         
-        self._db_dir = tempfile.mkdtemp()
+        self.db_dir = tempfile.mkdtemp()
         
-        TestConstants.DB_DIR = self._db_dir
+        TestConstants.DB_DIR = self.db_dir
         
-        self._server_files_dir = os.path.join( self._db_dir, 'server_files' )
-        self._updates_dir = os.path.join( self._db_dir, 'test_updates' )
+        self._server_files_dir = os.path.join( self.db_dir, 'server_files' )
+        self._updates_dir = os.path.join( self.db_dir, 'test_updates' )
         
-        client_files_default = os.path.join( self._db_dir, 'client_files' )
+        client_files_default = os.path.join( self.db_dir, 'client_files' )
         
         HydrusPaths.MakeSureDirectoryExists( self._server_files_dir )
         HydrusPaths.MakeSureDirectoryExists( self._updates_dir )
@@ -73,7 +73,7 @@ class Controller( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
-        self._new_options = ClientData.ClientOptions( self._db_dir )
+        self._new_options = ClientData.ClientOptions( self.db_dir )
         
         def show_text( text ): pass
         
@@ -315,7 +315,7 @@ class Controller( object ):
         
         time.sleep( 2 )
         
-        HydrusPaths.DeletePath( self._db_dir )
+        HydrusPaths.DeletePath( self.db_dir )
         
     
     def ViewIsShutdown( self ):

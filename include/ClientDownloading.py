@@ -1175,9 +1175,14 @@ class GalleryDeviantArt( Gallery ):
                 
                 # used to fetch this from a tumblr share url, now we grab from some hidden gubbins behind an age gate
                 
-                a_hidden = soup.find( 'a', class_ = 'ismature' )
+                a_ismatures = soup.find_all( 'a', class_ = 'ismature' )
                 
-                imgs = a_hidden.find_all( 'img' )
+                imgs = []
+                
+                for a_ismature in a_ismatures:
+                    
+                    imgs.extend( a_ismature.find_all( 'img' ) )
+                    
                 
                 for img in imgs:
                     

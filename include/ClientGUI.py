@@ -18,6 +18,7 @@ import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
+import ClientNetworking
 import ClientSearch
 import ClientServices
 import ClientThreading
@@ -48,6 +49,8 @@ import types
 import webbrowser
 import wx
 
+ID_TIMER_GUI_BANDWIDTH = wx.NewId()
+
 # Sizer Flags
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'services', 'help' ]
@@ -69,13 +72,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
         
+        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 7 )
         idle_width = ClientData.ConvertTextToPixelWidth( self, 4 )
         system_busy_width = ClientData.ConvertTextToPixelWidth( self, 11 )
         db_width = ClientData.ConvertTextToPixelWidth( self, 12 )
         
         self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 4 )
-        self._statusbar.SetStatusWidths( [ -1, idle_width, system_busy_width, db_width ] )
+        self._statusbar.SetFieldsCount( 5 )
+        self._statusbar.SetStatusWidths( [ -1, bandwidth_width, idle_width, system_busy_width, db_width ] )
         
         self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
@@ -103,6 +107,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
         
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         self._controller.sub( self, 'NewCompose', 'new_compose_frame' )
@@ -145,6 +150,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._RefreshStatusBar()
         
         wx.CallAfter( self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
+        
+        self._move_hide_timer = wx.Timer( self, id = ID_TIMER_GUI_BANDWIDTH )
+        
+        self._move_hide_timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
     def _AboutWindow( self ):
@@ -1184,8 +1193,25 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'create a database backup', 'Back the database up to an external location.', self._controller.BackupDatabase )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'restore a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
+            backup_path = self._new_options.GetNoneableString( 'backup_path' )
+            
+            if backup_path is None:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                
+            else:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'update database backup', 'Back the database up to an external location.', self._controller.BackupDatabase )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'migrate database (under construction!)', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1398,6 +1424,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenu( menu, admin_menu, 'administrate services' )
                 
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage (under construction!)', 'See where you are consuming data.', self._ReviewBandwidth )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1890,6 +1920,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HC.options[ 'pause_subs_sync' ] = original_pause_status
             
+            HG.client_controller.pub( 'notify_new_subscriptions' )
+            
         
     
     def _ManageTagCensorship( self ):
@@ -1910,6 +1942,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _ManageUPnP( self ):
         
         with ClientGUIDialogsManage.DialogManageUPnP( self ) as dlg: dlg.ShowModal()
+        
+    
+    def _MigrateDatabase( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'migrate database' )
+        
+        panel = ClientGUIScrolledPanelsReview.MigrateDatabasePanel( frame, self._controller )
+        
+        frame.SetPanel( panel )
         
     
     def _ModifyAccount( self, service_key ):
@@ -2300,9 +2341,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._statusbar.SetToolTipString( job_name )
         
         self._statusbar.SetStatusText( media_status, number = 0 )
-        self._statusbar.SetStatusText( idle_status, number = 1 )
-        self._statusbar.SetStatusText( busy_status, number = 2 )
-        self._statusbar.SetStatusText( db_status, number = 3 )
+        self._statusbar.SetStatusText( idle_status, number = 2 )
+        self._statusbar.SetStatusText( busy_status, number = 3 )
+        self._statusbar.SetStatusText( db_status, number = 4 )
         
     
     def _RegenerateACCache( self ):
@@ -2388,6 +2429,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 self._notebook.SetPageText( selection, new_name )
                 
             
+        
+    
+    def _ReviewBandwidth( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewAllBandwidthPanel( frame, self._controller )
+        
+        frame.SetPanel( panel )
         
     
     def _ReviewServices( self ):
@@ -2505,6 +2555,90 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         page = self._notebook.GetCurrentPage()
         
         if page is not None: page.SetSynchronisedWait()
+        
+    
+    def _SetupBackupPath( self ):
+        
+        backup_intro = 'Everything in your client is stored in the database, which consists of a handful of .db files and a single subdirectory that contains all your media files. It is a very good idea to maintain a regular backup schedule--to save from hard drive failure, serious software fault, accidental deletion, or any other unexpected problem. It sucks to lose all your work, so make sure it can\'t happen!'
+        backup_intro += os.linesep * 2
+        backup_intro += 'If you prefer to create a manual backup with an external program like FreeFileSync, then please cancel out of the dialog after this and set up whatever you like, but if you would rather a simple solution, simply select a directory and the client will remember it as the designated backup location. Creating or updating your backup can be triggered at any time from the database menu.'
+        backup_intro += os.linesep * 2
+        backup_intro += 'An ideal backup location is initially empty and on a different hard drive.'
+        backup_intro += os.linesep * 2
+        backup_intro += 'If you have a large database (100,000+ files) or a slow hard drive, creating the initial backup may take a long time--perhaps an hour or more--but updating an existing backup should only take a couple of minutes (since the client only has to copy new or modified files). Try to update your backup every week!'
+        backup_intro += os.linesep * 2
+        backup_intro += 'If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
+        
+        wx.MessageBox( backup_intro )
+        
+        with wx.DirDialog( self, 'Select backup location.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                if path == '':
+                    
+                    path = None
+                    
+                
+                if path == self._controller.GetDBDir():
+                    
+                    wx.MessageBox( 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
+                    
+                    return
+                    
+                
+                if os.path.exists( path ):
+                    
+                    filenames = os.listdir( path )
+                    
+                    num_files = len( filenames )
+                    
+                    if num_files == 0:
+                        
+                        extra_info = 'It looks currently empty, which is great--there is no danger of anything being overwritten.'
+                        
+                    elif 'client.db' in filenames:
+                        
+                        extra_info = 'It looks like a client database already exists in the location--be certain that it is ok to overwrite it.'
+                        
+                    else:
+                        
+                        extra_info = 'It seems to have some files already in it--be careful and make sure you chose the correct location.'
+                        
+                    
+                else:
+                    
+                    extra_info = 'The path does not exist yet--it will be created when you make your first backup.'
+                    
+                
+                text = 'You chose "' + path + '". Here is what I understand about it:'
+                text += os.linesep * 2
+                text += extra_info
+                text += os.linesep * 2
+                text += 'Are you sure this is the correct directory?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn:
+                    
+                    if dlg_yn.ShowModal() == wx.ID_YES:
+                        
+                        self._new_options.SetNoneableString( 'backup_path', path )
+                        
+                        text = 'Would you like to create your backup now?'
+                        
+                        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn_2:
+                            
+                            if dlg_yn_2.ShowModal() == wx.ID_YES:
+                                
+                                self._controller.BackupDatabase()
+                                
+                            
+                        
+                    
+                
+            
+        
         
     
     def _ShowHideSplitters( self ):
@@ -3112,6 +3246,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._RefreshStatusBar()
         
         event.Skip( True )
+        
+    
+    def TIMEREventBandwidth( self, event ):
+        
+        current_usage = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT ).GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        
+        if current_usage == 0:
+            
+            bandwidth_status = ''
+            
+        else:
+            
+            bandwidth_status = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+            
+        
+        self._statusbar.SetStatusText( bandwidth_status, number = 1 )
         
     
     def Exit( self, restart = False ):

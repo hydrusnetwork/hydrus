@@ -1981,15 +1981,8 @@ class ScriptManagementControl( wx.Panel ):
                 ( value, range ) = ( 0, 1 )
                 
             
-            if value is None or range is None:
-                
-                self._gauge.Pulse()
-                
-            else:
-                
-                self._gauge.SetRange( range )
-                self._gauge.SetValue( value )
-                
+            self._gauge.SetRange( range )
+            self._gauge.SetValue( value )
             
             urls = self._job_key.GetURLs()
             

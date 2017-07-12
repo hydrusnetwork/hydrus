@@ -662,7 +662,7 @@ class FrameThatResizes( Frame ):
     
 class FrameThatTakesScrollablePanel( FrameThatResizes ):
     
-    def __init__( self, parent, title, frame_key, float_on_parent = True ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', float_on_parent = True ):
         
         self._panel = None
         

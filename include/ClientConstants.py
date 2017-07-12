@@ -252,6 +252,24 @@ NETWORK_CONTEXT_DOWNLOADER = 3
 NETWORK_CONTEXT_DOWNLOADER_QUERY = 4
 NETWORK_CONTEXT_SUBSCRIPTION = 5
 
+network_context_type_string_lookup = {}
+
+network_context_type_string_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'global'
+network_context_type_string_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'hydrus service'
+network_context_type_string_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'web domain'
+network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'downloader'
+network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'downloader query instance'
+network_context_type_string_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'subscription'
+
+network_context_type_description_lookup = {}
+
+network_context_type_description_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'All network traffic, no matter the source or destination.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'Network traffic going to or from this hydrus service.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network traffic going to or from this domain (or a subdomain).'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through this downloader.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'Network traffic going through this single downloader query (you probably shouldn\'t be able to see this!)'
+network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through this subscription.'
+
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1
 SHORTCUT_MODIFIER_SHIFT = 2
@@ -511,6 +529,7 @@ class GlobalBMPs( object ):
         GlobalBMPs.inbox = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'inbox.png' ) )
         GlobalBMPs.trash = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )
         
+        GlobalBMPs.refresh = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'refresh.png' ) )
         GlobalBMPs.archive = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'archive.png' ) )
         GlobalBMPs.to_inbox = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'to_inbox.png' ) )
         GlobalBMPs.delete = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'trash.png' ) )

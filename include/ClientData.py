@@ -896,6 +896,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
         self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
+        self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
         
         self._dictionary[ 'strings' ] = {}
         

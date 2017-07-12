@@ -32,9 +32,6 @@ if HC.PLATFORM_WINDOWS:
     
     import wx.lib.flashwin
     
-ID_TIMER_VIDEO = wx.NewId()
-ID_TIMER_RENDER_WAIT = wx.NewId()
-ID_TIMER_ANIMATION_BAR_UPDATE = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_CURSOR_HIDE = wx.NewId()
 ID_TIMER_HOVER_SHOW = wx.NewId()
@@ -260,11 +257,11 @@ class Animation( wx.Window ):
         self._canvas_bmp = None
         self._frame_bmp = None
         
-        self._timer_video = wx.Timer( self, id = ID_TIMER_VIDEO )
+        self._timer_video = wx.Timer( self )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventVideo, id = ID_TIMER_VIDEO )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventVideo )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -700,12 +697,12 @@ class AnimationBar( wx.Window ):
         self._it_was_playing = False
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_TIMER, self.TIMERFlashIndexUpdate, id = ID_TIMER_ANIMATION_BAR_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMERFlashIndexUpdate )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
-        self._flash_index_update_timer = wx.Timer( self, id = ID_TIMER_ANIMATION_BAR_UPDATE )
+        self._flash_index_update_timer = wx.Timer( self )
         
     
     def _GetXFromFrameIndex( self, index, width_offset = 0 ):
@@ -5505,11 +5502,11 @@ class StaticImage( wx.Window ):
         
         self._canvas_bmp = None
         
-        self._timer_render_wait = wx.Timer( self, id = ID_TIMER_RENDER_WAIT )
+        self._timer_render_wait = wx.Timer( self )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventRenderWait, id = ID_TIMER_RENDER_WAIT )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventRenderWait )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         

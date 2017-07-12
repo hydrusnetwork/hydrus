@@ -193,7 +193,7 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
         if fps is None:
             
-            raise HydrusExceptions.MimeException( 'Could not determine either the duration or fps!' )
+            fps = 24 # screw it, let's just put one in there
             
         
         if not count_frames_manually:
@@ -205,7 +205,7 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
         num_frames = ParseFFMPEGNumFramesManually( lines )
         
-        duration = num_frames / fps
+        duration = num_frames / float( fps )
         
     else:
         

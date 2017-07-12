@@ -12,6 +12,7 @@ import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNetworking
+import HydrusPaths
 import HydrusSerialisable
 import HydrusThreading
 import HydrusVideoHandling
@@ -48,7 +49,7 @@ class Controller( HydrusController.HydrusController ):
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self._options = ClientDefaults.GetClientDefaultOptions()
-        self._new_options = ClientData.ClientOptions( self._db_dir )
+        self._new_options = ClientData.ClientOptions( self.db_dir )
         
         HC.options = self._options
         
@@ -63,28 +64,47 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ClientDB.DB( self, self._db_dir, 'client', no_wal = self._no_wal )
+        return ClientDB.DB( self, self.db_dir, 'client', no_wal = self._no_wal )
         
     
     def BackupDatabase( self ):
         
-        with wx.DirDialog( self._gui, 'Select backup location.' ) as dlg:
+        path = self._new_options.GetNoneableString( 'backup_path' )
+        
+        if path is None:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            wx.MessageBox( 'No backup path is set!' )
+            
+            return
+            
+        
+        if not os.path.exists( path ):
+            
+            wx.MessageBox( 'The backup path does not exist--creating it now.' )
+            
+            HydrusPaths.MakeSureDirectoryExists( path )
+            
+        
+        client_db_path = os.path.join( path, 'client.db' )
+        
+        if os.path.exists( client_db_path ):
+            
+            action = 'Update the existing'
+            
+        else:
+            
+            action = 'Create a new'
+            
+        
+        text = action + ' backup at "' + path + '"?'
+        text += os.linesep * 2
+        text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
+        
+        with ClientGUIDialogs.DialogYesNo( self._gui, text ) as dlg_yn:
+            
+            if dlg_yn.ShowModal() == wx.ID_YES:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                text = 'Are you sure "' + path + '" is the correct directory?'
-                text += os.linesep * 2
-                text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
-                
-                with ClientGUIDialogs.DialogYesNo( self._gui, text ) as dlg_yn:
-                    
-                    if dlg_yn.ShowModal() == wx.ID_YES:
-                        
-                        self.Write( 'backup', path )
-                        
-                    
+                self.Write( 'backup', path )
                 
             
         
@@ -153,7 +173,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CheckAlreadyRunning( self ):
     
-        while HydrusData.IsAlreadyRunning( self._db_dir, 'client' ):
+        while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
             
             self.pub( 'splash_set_status_text', 'client already running' )
             
@@ -176,7 +196,7 @@ class Controller( HydrusController.HydrusController ):
             
             for i in range( 10, 0, -1 ):
                 
-                if not HydrusData.IsAlreadyRunning( self._db_dir, 'client' ):
+                if not HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
                     
                     break
                     
@@ -695,7 +715,7 @@ class Controller( HydrusController.HydrusController ):
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_call_wait = 6 ) )
             
         
-        if self._db.IsFirstStart():
+        if self.db.IsFirstStart():
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
             message += os.linesep * 2
@@ -706,12 +726,12 @@ class Controller( HydrusController.HydrusController ):
             HydrusData.ShowText( message )
             
         
-        if self._db.IsDBUpdated():
+        if self.db.IsDBUpdated():
             
             HydrusData.ShowText( 'The client has updated to version ' + str( HC.SOFTWARE_VERSION ) + '!' )
             
         
-        for message in self._db.GetInitialMessages():
+        for message in self.db.GetInitialMessages():
             
             HydrusData.ShowText( message )
             
@@ -966,6 +986,8 @@ class Controller( HydrusController.HydrusController ):
     
     def RestoreDatabase( self ):
         
+        restore_intro = ''
+        
         with wx.DirDialog( self._gui, 'Select backup location.' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
@@ -986,12 +1008,12 @@ class Controller( HydrusController.HydrusController ):
                             
                             wx.CallAfter( self._gui.Exit )
                             
-                            while not self._db.LoopIsFinished():
+                            while not self.db.LoopIsFinished():
                                 
                                 time.sleep( 0.1 )
                                 
                             
-                            self._db.RestoreBackup( path )
+                            self.db.RestoreBackup( path )
                             
                             while not HG.shutdown_complete:
                                 
@@ -1200,9 +1222,9 @@ class Controller( HydrusController.HydrusController ):
             
             self.CheckAlreadyRunning()
             
-            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self._db_dir, 'client' )
+            self._last_shutdown_was_bad = HydrusData.LastShutdownWasBad( self.db_dir, 'client' )
             
-            HydrusData.RecordRunningStart( self._db_dir, 'client' )
+            HydrusData.RecordRunningStart( self.db_dir, 'client' )
             
             self.InitModel()
             
@@ -1251,7 +1273,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.ShutdownModel()
             
-            HydrusData.CleanRunningFile( self._db_dir, 'client' )
+            HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
         except HydrusExceptions.PermissionException: pass
         except HydrusExceptions.ShutdownException: pass

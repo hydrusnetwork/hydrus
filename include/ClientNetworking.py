@@ -90,7 +90,13 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
     
     while domain.count( '.' ) > 0:
         
-        domains.append( domain )
+        # let's discard www.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
+        startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
+        
+        if not startswith_www:
+            
+            domains.append( domain )
+            
         
         domain = '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
         
@@ -1098,7 +1104,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         self._lock = threading.Lock()
         
         self._network_contexts_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
-        self._network_contexts_to_bandwidth_rules = {}
+        self._network_contexts_to_bandwidth_rules = collections.defaultdict( HydrusNetworking.BandwidthRules )
         
         for context_type in [ CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION ]:
             
@@ -1118,7 +1124,8 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() ]
+        # note this discards downloader_query instances, which have page_key-specific identifiers and are temporary, not meant to be hung onto forever, and are generally invisible to the user
+        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() if network_context.context_type != CC.NETWORK_CONTEXT_DOWNLOADER_QUERY ]
         all_serialisable_rules = [ ( network_context.GetSerialisableTuple(), rules.GetSerialisableTuple() ) for ( network_context, rules ) in self._network_contexts_to_bandwidth_rules.items() ]
         
         return ( all_serialisable_trackers, all_serialisable_rules )
@@ -1210,24 +1217,6 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDomains( self, history_time_delta_threshold = 86400 * 30 ):
-        
-        with self._lock:
-            
-            domains = []
-            
-            for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
-                
-                if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN and bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, history_time_delta_threshold ) > 0:
-                    
-                    domains.append( network_context.content_data )
-                    
-                
-            
-            return domains
-            
-        
-    
     def GetEstimateInfo( self, network_contexts ):
         
         with self._lock:
@@ -1241,6 +1230,29 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             # return ( text, seconds )
             
             pass
+            
+        
+    
+    def GetNetworkContextsAndBandwidthTrackersForUser( self, history_time_delta_threshold = 86400 * 30 ):
+        
+        with self._lock:
+            
+            result = []
+            
+            for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
+                
+                if network_context.context_type == CC.NETWORK_CONTEXT_DOWNLOADER_QUERY: # user doesn't want these
+                    
+                    continue
+                    
+                
+                if bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, history_time_delta_threshold ) > 0:
+                    
+                    result.append( ( network_context, bandwidth_tracker ) )
+                    
+                
+            
+            return result
             
         
     
@@ -1332,6 +1344,11 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return self.__hash__() != other.__hash__()
         
     
+    def __repr__( self ):
+        
+        return self.ToUnicode()
+        
+    
     def _GetSerialisableInfo( self ):
         
         if self.context_data is None:
@@ -1357,6 +1374,18 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         else:
             
             self.context_data = serialisable_context_data.decode( 'hex' )
+            
+        
+    
+    def ToUnicode( self ):
+        
+        if self.context_data is None:
+            
+            return CC.network_context_type_string_lookup[ self.context_type ] + ' domain'
+            
+        else:
+            
+            return CC.network_context_type_string_lookup[ self.context_type ] + ': ' + HydrusData.ToUnicode( self.context_data )
             
         
     

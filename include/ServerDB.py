@@ -270,8 +270,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Backup( self ):
         
-        self._Commit()
-        
         self._CloseDBCursor()
         
         HG.server_busy = True
@@ -325,8 +323,6 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBCursor()
             
-            self._BeginImmediate()
-            
         
         HydrusData.Print( 'backing up: done!' )
         
@@ -341,10 +337,6 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusPaths.MakeSureDirectoryExists( new_dir )
             
-        
-        HydrusDB.SetupDBCreatePragma( self._c, no_wal = self._no_wal )
-        
-        self._BeginImmediate()
         
         self._c.execute( 'CREATE TABLE services ( service_id INTEGER PRIMARY KEY, service_key BLOB_BYTES, service_type INTEGER, name TEXT, port INTEGER, dictionary_string TEXT );' )
         
@@ -392,8 +384,6 @@ class DB( HydrusDB.HydrusDB ):
         admin_service = HydrusNetwork.GenerateService( HC.SERVER_ADMIN_KEY, HC.SERVER_ADMIN, 'server admin', HC.DEFAULT_SERVER_ADMIN_PORT )
         
         self._AddService( admin_service ) # this sets up the admin account and a registration key by itself
-        
-        self._Commit()
         
     
     def _DeleteOrphans( self ):
@@ -1136,7 +1126,7 @@ class DB( HydrusDB.HydrusDB ):
         
         subject_account_keys = [ subject_account.GetAccountKey() for subject_account in subject_accounts ]
         
-        self.pub_after_commit( 'update_session_accounts', service_key, subject_account_keys )
+        self.pub_after_job( 'update_session_accounts', service_key, subject_account_keys )
         
     
     def _ModifyAccountTypes( self, service_key, account, account_types, deletee_account_type_keys_to_new_account_type_keys ):
@@ -1193,7 +1183,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._RefreshAccountTypeCache( service_id )
         
-        self.pub_after_commit( 'update_all_session_accounts', service_key )
+        self.pub_after_job( 'update_all_session_accounts', service_key )
         
     
     def _ModifyServices( self, account, services ):
@@ -1201,11 +1191,6 @@ class DB( HydrusDB.HydrusDB ):
         account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE )
         
         self._Commit()
-        
-        if not self._fast_big_transaction_wal:
-            
-            self._c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
-            
         
         self._c.execute( 'PRAGMA foreign_keys = ON;' )
         
@@ -1247,11 +1232,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._Commit()
+        self._CloseDBCursor()
         
         self._InitDBCursor()
-        
-        self._BeginImmediate()
         
         return service_keys_to_access_keys
         
@@ -3796,8 +3779,6 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusData.Print( 'committing to disk' )
             
-            self._Commit()
-            
             self._CloseDBCursor()
             
             try:
@@ -3825,8 +3806,6 @@ class DB( HydrusDB.HydrusDB ):
             finally:
                 
                 self._InitDBCursor()
-                
-                self._BeginImmediate()
                 
             
             

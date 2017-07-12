@@ -167,7 +167,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _InitDB( self ):
         
-        return ServerDB.DB( self, self._db_dir, 'server', no_wal = self._no_wal )
+        return ServerDB.DB( self, self.db_dir, 'server', no_wal = self._no_wal )
         
     
     def StartService( self, service ):
@@ -209,7 +209,7 @@ class Controller( HydrusController.HydrusController ):
                             return
                             
                         
-                        ( ssl_cert_path, ssl_key_path ) = self._db.GetSSLPaths()
+                        ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
                         
                         sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
                         
@@ -272,12 +272,12 @@ class Controller( HydrusController.HydrusController ):
         
         self.ShutdownModel()
         
-        HydrusData.CleanRunningFile( self._db_dir, 'server' )
+        HydrusData.CleanRunningFile( self.db_dir, 'server' )
         
     
     def GetFilesDir( self ):
         
-        return self._db.GetFilesDir()
+        return self.db.GetFilesDir()
         
     
     def GetServerSessionManager( self ):
@@ -375,7 +375,7 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        HydrusData.RecordRunningStart( self._db_dir, 'server' )
+        HydrusData.RecordRunningStart( self.db_dir, 'server' )
         
         HydrusData.Print( u'Initialising db\u2026' )
         
