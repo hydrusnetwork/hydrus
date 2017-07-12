@@ -796,6 +796,11 @@ class Gauge( wx.Gauge ):
             
         else:
             
+            if self._is_pulsing:
+                
+                self.StopPulsing()
+                
+            
             if range > 1000:
                 
                 self._actual_range = range
@@ -815,24 +820,36 @@ class Gauge( wx.Gauge ):
     
     def SetValue( self, value ):
         
-        if value is None:
+        if not self._is_pulsing:
             
-            self.Pulse()
-            
-            self._is_pulsing = True
-            
-        else:
-            
-            if self._actual_range is not None:
+            if value is None:
                 
-                value = min( int( 1000 * ( float( value ) / self._actual_range ) ), 1000 )
+                self.Pulse()
+                
+                self._is_pulsing = True
+                
+            else:
+                
+                if self._actual_range is not None:
+                    
+                    value = min( int( 1000 * ( float( value ) / self._actual_range ) ), 1000 )
+                    
+                
+                if value != self.GetValue():
+                    
+                    wx.Gauge.SetValue( self, value )
+                    
                 
             
-            if value != self.GetValue() or self._is_pulsing:
-                
-                wx.Gauge.SetValue( self, value )
-                
-            
+        
+    
+    def StopPulsing( self ):
+        
+        self._is_pulsing = False
+        
+        self.SetRange( 1 )
+        self.SetValue( 1 )
+        self.SetValue( 0 )
         
     
 class ListBook( wx.Panel ):
