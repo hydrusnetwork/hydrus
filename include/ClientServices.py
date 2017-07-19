@@ -1591,7 +1591,7 @@ class ServiceIPFS( ServiceRemote ):
                     
                     if len( urls ) > 0:
                         
-                        HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURLs, job_key, urls, multihash )
+                        HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_key, urls, multihash )
                         
                     
                 
@@ -1615,7 +1615,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = url_tree[3]
                 
-                HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, multihash )
+                HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_key, url, multihash )
                 
             else:
                 

@@ -4,8 +4,10 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIFrames
 import ClientGUIScrolledPanels
+import ClientGUIScrolledPanelsEdit
 import ClientGUIPanels
 import ClientGUITopLevelWindows
+import ClientNetworking
 import ClientTags
 import ClientThreading
 import collections
@@ -18,6 +20,17 @@ import os
 import traceback
 import webbrowser
 import wx
+
+try:
+    
+    import ClientGUIMatPlotLib
+    
+    MATPLOTLIB_OK = True
+    
+except ImportError:
+    
+    MATPLOTLIB_OK = False
+    
 
 class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -236,7 +249,10 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Are you sure?' ) as dlg:
             
-            if dlg.ShowModal() != wx.ID_YES: return
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
             
         
         if action == self.COPY:
@@ -286,34 +302,107 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._bandwidths = ClientGUICommon.SaneListCtrlForSingleObject( self, 360, [ ( 'context', -1 ), ( 'context type', 100 ), ( 'current usage', 100 ), ( 'past 24 hours', 100 ), ( 'this month', 100 ) ], activation_callback = self.ShowNetworkContext )
+        self._history_time_delta_threshold = ClientGUICommon.TimeDeltaButton( self, days = True, hours = True, minutes = True, seconds = True )
+        self._history_time_delta_threshold.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventTimeDeltaChanged )
         
-        self._bandwidths.SetMinSize( ( 640, 360 ) )
+        self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
+        self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
         
-        # a button/checkbox to say 'show only those with data in the past 30 days'
-        # a button to say 'delete all record of this context'
+        self._bandwidths = ClientGUICommon.SaneListCtrlForSingleObject( self, 360, [ ( 'name', -1 ), ( 'type', 100 ), ( 'current usage', 100 ), ( 'past 24 hours', 100 ), ( 'this month', 100 ), ( 'has specific rules', 120 ) ], activation_callback = self.ShowNetworkContext )
+        
+        self._bandwidths.SetMinSize( ( 740, 360 ) )
+        
+        self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
+        
+        default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowDefaultRulesHelp )
+        default_rules_help_button.SetToolTipString( 'Show help regarding default bandwidth rules.' )
+        
+        self._delete_record_button = ClientGUICommon.BetterButton( self, 'delete selected history', self._DeleteNetworkContexts )
         
         #
         
-        for ( network_context, bandwidth_tracker ) in self._controller.network_engine.bandwidth_manager.GetNetworkContextsAndBandwidthTrackersForUser():
-            
-            ( display_tuple, sort_tuple ) = self._GetTuples( network_context, bandwidth_tracker )
-            
-            self._bandwidths.Append( display_tuple, sort_tuple, network_context )
-            
+        self._history_time_delta_threshold.SetValue( 86400 * 30 )
         
         self._bandwidths.SortListItems( 0 )
         
+        self._update_timer = wx.Timer( self )
+        
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
+        
+        self._Update()
+        
         #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'Show network contexts with usage in the past: ' ), CC.FLAGS_VCENTER )
+        hbox.AddF( self._history_time_delta_threshold, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._history_time_delta_none, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.AddF( self._edit_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( default_rules_help_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._delete_record_button, CC.FLAGS_VCENTER )
+        
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._bandwidths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
     
+    def _DeleteNetworkContexts( self ):
+        
+        selected_network_contexts = self._bandwidths.GetObjects( only_selected = True )
+        
+        if len( selected_network_contexts ) > 0:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Are you sure? This will delete all bandwidth record for the selected network contexts.' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._controller.network_engine.bandwidth_manager.DeleteHistory( selected_network_contexts )
+                    
+                    self._Update()
+                    
+                
+        
+    
+    def _EditDefaultBandwidthRules( self ):
+        
+        network_contexts_and_bandwidth_rules = self._controller.network_engine.bandwidth_manager.GetDefaultRules()
+        
+        choice_tuples = [ ( network_context.ToUnicode() + ' (' + str( len( bandwidth_rules.GetRules() ) ) + ' rules)', ( network_context, bandwidth_rules ) ) for ( network_context, bandwidth_rules ) in network_contexts_and_bandwidth_rules ]
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select network context', choice_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( network_context, bandwidth_rules ) = dlg.GetChoice()
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + network_context.ToUnicode() ) as dlg_2:
+                    
+                    panel = ClientGUIScrolledPanelsEdit.EditBandwidthRulesPanel( dlg_2, bandwidth_rules )
+                    
+                    dlg_2.SetPanel( panel )
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        bandwidth_rules = panel.GetValue()
+                        
+                        self._controller.network_engine.bandwidth_manager.SetRules( network_context, bandwidth_rules )
+                        
+                    
+                
+            
+        
+    
     def _GetTuples( self, network_context, bandwidth_tracker ):
+        
+        has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
         
         sortable_network_context = ( network_context.context_type, network_context.context_data )
         sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
@@ -336,7 +425,88 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage )
         pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage )
         
-        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage ) )
+        if has_rules:
+            
+            pretty_has_rules = 'yes'
+            
+        else:
+            
+            pretty_has_rules = ''
+            
+        
+        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules ) )
+        
+    
+    def _ShowDefaultRulesHelp( self ):
+        
+        help = 'Network requests act in multiple contexts. Most use the \'global\' and \'web domain\' network contexts, but a hydrus server request, for instance, will add its own service-specific context, and a subscription will add both itself and its downloader.'
+        help += os.linesep * 2
+        help += 'If a network context does not have some specific rules set up, it will use its respective default, which may or may not have rules of its own. If you want to set general policy, like "Never download more than 1GB/day from any individual website," or "Limit the entire client to 2MB/s," do it through \'global\' and these defaults.'
+        help += os.linesep * 2
+        help += 'All contexts\' rules are consulted and have to pass before a request can do work. If you set a 200KB/s limit on a website domain and a 50KB/s limit on global, your download will only ever run at 50KB/s. To make sense, network contexts with broader scope should have more lenient rules.'
+        help += os.linesep * 2
+        help += 'There are two special \'instance\' contexts, for downloaders and threads. These represent individual queries, either a single gallery search or a single watched thread. It is useful to set rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
+        help += os.linesep * 2
+        help += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. The simplest way of throttling your client is by editing the rules for the global context.'
+        
+        wx.MessageBox( help )
+        
+    
+    def _Update( self ):
+        
+        ( sort_col, sort_asc ) = self._bandwidths.GetSortState()
+        
+        selected_network_contexts = self._bandwidths.GetObjects( only_selected = True )
+        
+        self._bandwidths.DeleteAllItems()
+        
+        if self._history_time_delta_none.GetValue() == True:
+            
+            history_time_delta_threshold = None
+            
+        else:
+            
+            history_time_delta_threshold = self._history_time_delta_threshold.GetValue()
+            
+        
+        network_contexts_and_bandwidth_trackers = self._controller.network_engine.bandwidth_manager.GetNetworkContextsAndBandwidthTrackersForUser( history_time_delta_threshold )
+        
+        for ( index, ( network_context, bandwidth_tracker ) ) in enumerate( network_contexts_and_bandwidth_trackers ):
+            
+            ( display_tuple, sort_tuple ) = self._GetTuples( network_context, bandwidth_tracker )
+            
+            self._bandwidths.Append( display_tuple, sort_tuple, network_context )
+            
+            if network_context in selected_network_contexts:
+                
+                self._bandwidths.Select( index )
+                
+            
+        
+        self._bandwidths.SortListItems( sort_col, sort_asc )
+        
+        timer_duration_s = max( len( network_contexts_and_bandwidth_trackers ), 20 )
+        
+        self._update_timer.Start( 1000 * timer_duration_s, wx.TIMER_ONE_SHOT )
+        
+    
+    def EventTimeDeltaChanged( self, event ):
+        
+        if self._history_time_delta_none.GetValue() == True:
+            
+            self._history_time_delta_threshold.Disable()
+            
+        else:
+            
+            self._history_time_delta_threshold.Enable()
+            
+        
+        self._Update()
+        
+    
+    def TIMEREventUpdate( self, event ):
+        
+        self._Update()
         
     
     def ShowNetworkContext( self ):
@@ -361,14 +531,19 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._network_context = network_context
         
+        self._bandwidth_rules = self._controller.network_engine.bandwidth_manager.GetRules( self._network_context )
         self._bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( self._network_context )
+        
+        self._last_fetched_rule_rows = set()
         
         #
         
         info_panel = ClientGUICommon.StaticBox( self, 'description' )
         
+        description = CC.network_context_type_description_lookup[ self._network_context.context_type ]
+        
         self._name = ClientGUICommon.BetterStaticText( info_panel, label = self._network_context.ToUnicode() )
-        self._description = ClientGUICommon.BetterStaticText( info_panel, label = CC.network_context_type_description_lookup[ self._network_context.context_type ] )
+        self._description = ClientGUICommon.BetterStaticText( info_panel, label = description )
         
         #
         
@@ -382,6 +557,17 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
+        rules_panel = ClientGUICommon.StaticBox( self, 'rules' )
+        
+        self._uses_default_rules_st = ClientGUICommon.BetterStaticText( rules_panel, style = wx.ALIGN_CENTER )
+        
+        self._rules_rows_panel = wx.Panel( rules_panel )
+        
+        self._use_default_rules_button = ClientGUICommon.BetterButton( rules_panel, 'use default rules', self._UseDefaultRules )
+        self._edit_rules_button = ClientGUICommon.BetterButton( rules_panel, 'edit rules', self._EditRules )
+        
+        #
+        
         self._time_delta_usage_time_delta.SetValue( 86400 )
         
         for bandwidth_type in ( HC.BANDWIDTH_TYPE_DATA, HC.BANDWIDTH_TYPE_REQUESTS ):
@@ -391,11 +577,23 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._time_delta_usage_bandwidth_type.SelectClientData( HC.BANDWIDTH_TYPE_DATA )
         
-        # usage this month (with dropdown to select previous months for all months on record)
+        monthly_usage = self._bandwidth_tracker.GetMonthlyDataUsage()
         
-        # rules panel
-        # a way to show how much the current rules are used up--see review services for how this is already done
-        # button to edit rules for this domain
+        if len( monthly_usage ) > 0:
+            
+            if MATPLOTLIB_OK:
+                
+                self._barchart_canvas = ClientGUIMatPlotLib.BarChartBandwidthHistory( usage_panel, monthly_usage )
+                
+            else:
+                
+                self._barchart_canvas = ClientGUICommon.BetterStaticText( usage_panel, 'Could not find matplotlib, so cannot display bar chart here.' )
+                
+            
+        else:
+            
+            self._barchart_canvas = ClientGUICommon.BetterStaticText( usage_panel, 'No usage yet, so no usage history to show.' )
+            
         
         #
         
@@ -413,27 +611,64 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         usage_panel.AddF( self._current_usage_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         usage_panel.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        usage_panel.AddF( self._barchart_canvas, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._edit_rules_button, CC.FLAGS_SIZER_VCENTER )
+        hbox.AddF( self._use_default_rules_button, CC.FLAGS_SIZER_VCENTER )
+        
+        rules_panel.AddF( self._uses_default_rules_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        rules_panel.AddF( self._rules_rows_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        rules_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( usage_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( usage_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
-        min_width = ClientData.ConvertTextToPixelWidth( self, 60 )
-        
-        self.SetMinSize( ( min_width, -1 ) )
-        
         #
+        
+        self._rules_rows_panel.Bind( wx.EVT_TIMER, self.TIMEREventUpdateRules )
+        
+        self._rules_timer = wx.Timer( self._rules_rows_panel )
+        
+        self._rules_timer.Start( 5000, wx.TIMER_CONTINUOUS )
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
         
-        self._move_hide_timer = wx.Timer( self )
+        self._timer = wx.Timer( self )
         
-        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        
+        self._UpdateRules()
+        self._Update()
+        
+    
+    def _EditRules( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit bandwidth rules for ' + self._network_context.ToUnicode() ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditBandwidthRulesPanel( dlg, self._bandwidth_rules )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._bandwidth_rules = panel.GetValue()
+                
+                self._controller.network_engine.bandwidth_manager.SetRules( self._network_context, self._bandwidth_rules )
+                
+                self._UpdateRules()
+                
+            
         
     
     def _Update( self ):
@@ -465,9 +700,103 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._time_delta_usage_st.SetLabelText( pretty_time_delta_usage )
         
     
+    def _UpdateRules( self ):
+        
+        changes_made = False
+        
+        if self._network_context.IsDefault() or self._network_context == ClientNetworking.GLOBAL_NETWORK_CONTEXT:
+            
+            if self._use_default_rules_button.IsShown():
+                
+                self._uses_default_rules_st.Hide()
+                self._use_default_rules_button.Hide()
+                
+                changes_made = True
+                
+            
+        else:
+            
+            if self._controller.network_engine.bandwidth_manager.UsesDefaultRules( self._network_context ):
+                
+                self._uses_default_rules_st.SetLabelText( 'uses default rules' )
+                
+                self._edit_rules_button.SetLabel( 'set specific rules' )
+                
+                if self._use_default_rules_button.IsShown():
+                    
+                    self._use_default_rules_button.Hide()
+                    
+                    changes_made = True
+                    
+                
+            else:
+                
+                self._uses_default_rules_st.SetLabelText( 'has its own rules' )
+                
+                self._edit_rules_button.SetLabel( 'edit rules' )
+                
+                if not self._use_default_rules_button.IsShown():
+                    
+                    self._use_default_rules_button.Show()
+                    
+                    changes_made = True
+                    
+                
+            
+        
+        rule_rows = self._bandwidth_rules.GetUsageStringsAndGaugeTuples( self._bandwidth_tracker, threshold = 0 )
+        
+        if rule_rows != self._last_fetched_rule_rows:
+            
+            self._last_fetched_rule_rows = rule_rows
+            
+            self._rules_rows_panel.DestroyChildren()
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            for ( status, ( v, r ) ) in rule_rows:
+                
+                tg = ClientGUICommon.TextAndGauge( self._rules_rows_panel )
+                
+                tg.SetValue( status, v, r )
+                
+                vbox.AddF( tg, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            
+            self._rules_rows_panel.SetSizer( vbox )
+            
+            changes_made = True
+            
+        
+        if changes_made:
+            
+            self.Layout()
+            
+            ClientGUITopLevelWindows.PostSizeChangedEvent( self )
+            
+        
+    
+    def _UseDefaultRules( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to revert to using the default rules for this context?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.network_engine.bandwidth_manager.DeleteRules( self._network_context )
+                
+                self._UpdateRules()
+                
+            
+        
+    
     def TIMEREventUpdate( self, event ):
         
         self._Update()
+        
+    
+    def TIMEREventUpdateRules( self, event ):
+        
+        self._UpdateRules()
         
     
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -638,6 +967,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
+        self._new_options = self._controller.GetNewOptions()
+        
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         menu_items = []
@@ -650,36 +981,28 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_panel = ClientGUICommon.StaticBox( self, 'current paths' )
-        
-        self._refresh_button = ClientGUICommon.BetterBitmapButton( info_panel, CC.GlobalBMPs.refresh, self._Update )
+        info_panel = ClientGUICommon.StaticBox( self, 'locations' )
         
         self._current_install_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'weight', 60 ), ( 'ideal usage', 160 ), ( 'current usage', 160 ) ] )
+        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'weight and ideal usage', 200 ), ( 'current usage', 200 ) ] )
+        
+        self._add_path_button = ClientGUICommon.BetterButton( info_panel, 'add location', self._AddPath )
+        self._remove_path_button = ClientGUICommon.BetterButton( info_panel, 'empty/remove location', self._RemovePaths )
+        self._increase_weight_button = ClientGUICommon.BetterButton( info_panel, 'increase weight', self._IncreaseWeight )
+        self._decrease_weight_button = ClientGUICommon.BetterButton( info_panel, 'decrease weight', self._DecreaseWeight )
+        self._rebalance_button = ClientGUICommon.BetterButton( info_panel, 'move files now', self._Rebalance )
+        
+        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel, style = wx.ALIGN_CENTER )
         
         # ways to:
-        # increase/decrease ideal weight
-        # force rebalance now
-        # add new path
-        # remove existing path
         # set/clear thumb locations
         # move whole db and portable paths (requires shutdown and user shortcut command line yes/no warning)
         
-        # move the db and all portable client_files locations (provides warning about the shortcut and lets you copy the new location)
-            # this will require a shutdown
-        
-        # rebalance files, listctrl
-        # location | portable yes/no | weight | ideal percent
-        # every change here, if valid, is saved immediately
-        
         # store all resized thumbs in sep location
         # store all full_size thumbs in sep location
-        
-        # do rebalance now button, only enabled if there is work to do
-            # should report to a stoppable job_key panel or something. text, gauge, stop button
         
         #
         
@@ -694,11 +1017,20 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_panel.AddF( self._refresh_button, CC.FLAGS_LONE_BUTTON )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._add_path_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._remove_path_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._increase_weight_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._decrease_weight_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
+        
         info_panel.AddF( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_media_locations_listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        info_panel.AddF( self._rebalance_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -716,11 +1048,72 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
+    def _AddPath( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        with wx.DirDialog( self, 'Select the location' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                if path in locations_to_ideal_weights:
+                    
+                    wx.MessageBox( 'You already have that location entered!' )
+                    
+                    return
+                    
+                
+                self._new_options.SetClientFilesLocation( path, 1 )
+                
+                self._Update()
+                
+            
+        
+    
+    def _AdjustWeight( self, amount ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        adjustees = set()
+        
+        for ( location, portable, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+            
+            if location in locations_to_ideal_weights:
+                
+                adjustees.add( location )
+                
+            
+        
+        if len( adjustees ) > 0:
+            
+            for location in adjustees:
+                
+                current_weight = locations_to_ideal_weights[ location ]
+                
+                new_amount = current_weight + amount
+                
+                if new_amount > 0:
+                    
+                    self._new_options.SetClientFilesLocation( location, new_amount )
+                    
+                
+            
+            self._Update()
+            
+        
+    
+    def _DecreaseWeight( self ):
+        
+        self._AdjustWeight( -1 )
+        
+    
     def _GenerateCurrentMediaTuples( self ):
         
         # ideal
         
-        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
         
         # current
         
@@ -796,7 +1189,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 ideal_weight = locations_to_ideal_weights[ location ]
                 
-                pretty_ideal_weight = str( ideal_weight )
+                pretty_ideal_weight = str( int( ideal_weight ) )
                 
             else:
                 
@@ -880,13 +1273,77 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             pretty_ideal_usage = ','.join( usages )
             
-            display_tuple = ( pretty_location, pretty_portable, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
-            sort_tuple = ( location, portable, ideal_weight, ideal_usage, current_usage )
+            display_tuple = ( pretty_location, pretty_portable, pretty_ideal_weight + ': ' + pretty_ideal_usage, pretty_current_usage )
+            sort_tuple = ( location, portable, ( ideal_weight, ideal_usage ), current_usage )
             
-            tuples.append( ( display_tuple, sort_tuple ) )
+            tuples.append( ( location, display_tuple, sort_tuple ) )
             
         
         return tuples
+        
+    
+    def _IncreaseWeight( self ):
+        
+        self._AdjustWeight( 1 )
+        
+    
+    def _Rebalance( self ):
+        
+        # replace this with the job_key dialog next week
+        
+        def do_it():
+            
+            wx.CallAfter( wx.MessageBox, 'rebalance started - this notification will improve soon!' )
+            
+            self._controller.client_files_manager.Rebalance()
+            
+            wx.CallAfter( wx.MessageBox, 'rebalance finished' )
+            
+            wx.CallAfter( self._Update )
+            
+        
+        self._controller.CallToThread( do_it )
+        
+    
+    def _RemovePaths( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        removees = set()
+        
+        for ( location, portable, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+            
+            if location in locations_to_ideal_weights:
+                
+                removees.add( location )
+                
+            
+        
+        # eventually have a check and veto if not enough size on the destination partition
+        
+        if len( removees ) == 0:
+            
+            wx.MessageBox( 'Please select some locations with weight.' )
+            
+        elif len( removees ) == len( locations_to_ideal_weights ):
+            
+            wx.MessageBox( 'You cannot empty every single location--please add a new place for the files to be moved to and then try again.' )
+            
+        else:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Are you sure? This will schedule all the selected locations to have all their current files removed.' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    for location in removees:
+                        
+                        self._new_options.RemoveClientFilesLocation( location )
+                        
+                    
+                    self._Update()
+                    
+                
+            
         
     
     def _Update( self ):
@@ -904,11 +1361,31 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_media_paths_st.SetLabelText( 'media (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + '):' )
         
+        selected_locations = { l[0] for l in self._current_media_locations_listctrl.GetSelectedClientData() }
+        
         self._current_media_locations_listctrl.DeleteAllItems()
         
-        for ( display_tuple, sort_tuple ) in self._GenerateCurrentMediaTuples():
+        for ( i, ( location, display_tuple, sort_tuple ) ) in enumerate( self._GenerateCurrentMediaTuples() ):
             
             self._current_media_locations_listctrl.Append( display_tuple, sort_tuple )
+            
+            if location in selected_locations:
+                
+                self._current_media_locations_listctrl.Select( i )
+                
+            
+        
+        if self._controller.client_files_manager.RebalanceWorkToDo():
+            
+            self._rebalance_button.Enable()
+            
+            self._rebalance_status_st.SetLabelText( 'files need to be moved' )
+            
+        else:
+            
+            self._rebalance_button.Disable()
+            
+            self._rebalance_status_st.SetLabelText( 'all files are in their ideal locations' )
             
         
     

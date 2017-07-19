@@ -228,190 +228,6 @@ def GetYoutubeFormats( youtube_url ):
     
     return info
     
-def THREADDownloadURL( job_key, url, url_string ):
-    
-    job_key.SetVariable( 'popup_title', url_string )
-    job_key.SetVariable( 'popup_text_1', 'initialising' )
-    
-    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-    
-    try:
-        
-        response = ClientNetworking.RequestsGet( url, stream = True )
-        
-        with open( temp_path, 'wb' ) as f:
-            
-            ClientNetworking.StreamResponseToFile( job_key, response, f )
-            
-        
-        job_key.SetVariable( 'popup_text_1', 'importing' )
-        
-        client_files_manager = HG.client_controller.client_files_manager
-        
-        ( result, hash ) = client_files_manager.ImportFile( temp_path )
-        
-    except HydrusExceptions.CancelledException:
-        
-        return
-        
-    except HydrusExceptions.NetworkException:
-        
-        job_key.Cancel()
-        
-        raise
-        
-    finally:
-        
-        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-        
-    
-    if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
-        
-        if result == CC.STATUS_SUCCESSFUL:
-            
-            job_key.SetVariable( 'popup_text_1', 'successful!' )
-            
-        else:
-            
-            job_key.SetVariable( 'popup_text_1', 'was already in the database!' )
-            
-        
-        job_key.SetVariable( 'popup_files', { hash } )
-        
-    elif result == CC.STATUS_DELETED:
-        
-        job_key.SetVariable( 'popup_text_1', 'had already been deleted!' )
-        
-    
-    job_key.Finish()
-    
-def THREADDownloadURLs( job_key, urls, title ):
-    
-    job_key.SetVariable( 'popup_title', title )
-    job_key.SetVariable( 'popup_text_1', 'initialising' )
-    
-    num_successful = 0
-    num_redundant = 0
-    num_deleted = 0
-    num_failed = 0
-    
-    successful_hashes = set()
-    
-    for ( i, url ) in enumerate( urls ):
-        
-        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-        
-        if should_quit:
-            
-            break
-            
-        
-        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, len( urls ) ) )
-        job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( urls ) ) )
-        
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-        
-        try:
-            
-            try:
-                
-                response = ClientNetworking.RequestsGet( url, stream = True )
-                
-                with open( temp_path, 'wb' ) as f:
-                    
-                    ClientNetworking.StreamResponseToFile( job_key, response, f )
-                    
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            except HydrusExceptions.NetworkException:
-                
-                job_key.Cancel()
-                
-                raise
-                
-            
-            try:
-                
-                job_key.SetVariable( 'popup_text_2', 'importing' )
-                
-                client_files_manager = HG.client_controller.client_files_manager
-                
-                ( result, hash ) = client_files_manager.ImportFile( temp_path )
-                
-            except Exception as e:
-                
-                job_key.DeleteVariable( 'popup_text_2' )
-                
-                HydrusData.Print( url + ' failed to import!' )
-                HydrusData.PrintException( e )
-                
-                num_failed += 1
-                
-                continue
-                
-            
-        finally:
-            
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-            
-        
-        if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
-            
-            if result == CC.STATUS_SUCCESSFUL:
-                
-                num_successful += 1
-                
-            else:
-                
-                num_redundant += 1
-                
-            
-            successful_hashes.add( hash )
-            
-        elif result == CC.STATUS_DELETED:
-            
-            num_deleted += 1
-            
-        
-    
-    text_components = []
-    
-    if num_successful > 0:
-        
-        text_components.append( HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful' )
-        
-    
-    if num_redundant > 0:
-        
-        text_components.append( HydrusData.ConvertIntToPrettyString( num_redundant ) + ' already in db' )
-        
-    
-    if num_deleted > 0:
-        
-        text_components.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' deleted' )
-        
-    
-    if num_failed > 0:
-        
-        text_components.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed (errors written to log)' )
-        
-    
-    job_key.SetVariable( 'popup_text_1', ', '.join( text_components ) )
-    
-    if len( successful_hashes ) > 0:
-        
-        job_key.SetVariable( 'popup_files', successful_hashes )
-        
-    
-    job_key.DeleteVariable( 'popup_gauge_1' )
-    job_key.DeleteVariable( 'popup_text_2' )
-    job_key.DeleteVariable( 'popup_gauge_2' )
-    
-    job_key.Finish()
-    
 def Parse4chanPostScreen( html ):
     
     soup = GetSoup( html )
@@ -1796,7 +1612,7 @@ class GalleryTumblr( Gallery ):
         
         username = query
         
-        return 'http://' + username + '.tumblr.com/api/read/json?start=' + str( page_index * 50 ) + '&num=50'
+        return 'https://' + username + '.tumblr.com/api/read/json?start=' + str( page_index * 50 ) + '&num=50'
         
     
     def _ParseGalleryPage( self, data, url_base ):
@@ -1890,12 +1706,22 @@ class GalleryTumblr( Gallery ):
                             
                             url = photo[ 'photo-url-1280' ]
                             
-                            if raw_url_available:
-                                
-                                url = ConvertRegularToRawURL( url )
-                                
+                            # some urls are given in the form:
+                            # https://68.media.tumblr.com/tumblr_m5yb5m2O6A1rso2eyo1_540.jpg
+                            # which is missing the hex key in the middle
+                            # these urls are unavailable as raws from the main media server
+                            # these seem to all be the pre-2013 files, but we'll double-check just in case anyway
+                            unusual_hexless_url = url.count( '/' ) == 3
                             
-                            url = Remove68Subdomain( url )
+                            if not unusual_hexless_url:
+                                
+                                if raw_url_available:
+                                    
+                                    url = ConvertRegularToRawURL( url )
+                                    
+                                    url = Remove68Subdomain( url )
+                                    
+                                
                             
                             url = ClientData.ConvertHTTPToHTTPS( url )
                             

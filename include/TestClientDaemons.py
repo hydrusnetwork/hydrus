@@ -25,11 +25,16 @@ class TestDaemons( unittest.TestCase ):
         
         try:
             
+            HG.test_controller.SetRead( 'hash_status', CC.STATUS_NEW )
+            
             HydrusPaths.MakeSureDirectoryExists( test_dir )
             
-            with open( os.path.join( test_dir, '0' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
-            with open( os.path.join( test_dir, '1' ), 'wb' ) as f: f.write( TestConstants.tinest_gif ) # previously imported
-            with open( os.path.join( test_dir, '2' ), 'wb' ) as f: f.write( TestConstants.tinest_gif )
+            hydrus_png_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+            
+            HydrusPaths.MirrorFile( hydrus_png_path, os.path.join( test_dir, '0' ) )
+            HydrusPaths.MirrorFile( hydrus_png_path, os.path.join( test_dir, '1' ) ) # previously imported
+            HydrusPaths.MirrorFile( hydrus_png_path, os.path.join( test_dir, '2' ) )
+            
             with open( os.path.join( test_dir, '3' ), 'wb' ) as f: f.write( 'blarg' ) # broken
             with open( os.path.join( test_dir, '4' ), 'wb' ) as f: f.write( 'blarg' ) # previously failed
             

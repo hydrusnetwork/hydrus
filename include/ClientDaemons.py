@@ -1,3 +1,5 @@
+import ClientData
+import ClientImporting
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
@@ -112,7 +114,16 @@ def DAEMONDownloadFiles( controller ):
                                 
                                 controller.WaitUntilPubSubsEmpty()
                                 
-                                client_files_manager.ImportFile( temp_path, override_deleted = True )
+                                automatic_archive = False
+                                exclude_deleted = False # this is the important part here
+                                min_size = None
+                                min_resolution = None
+                                
+                                import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                                
+                                file_import_job = ClientImporting.FileImportJob( temp_path, import_file_options )
+                                
+                                client_files_manager.ImportFile( file_import_job )
                                 
                                 successful_hashes.add( hash )
                                 
@@ -230,10 +241,6 @@ def DAEMONMaintainTrash( controller ):
             hashes = controller.Read( 'trash_hashes', limit = 10, minimum_age = max_age )
             
         
-    
-def DAEMONRebalanceClientFiles( controller ):
-    
-    controller.client_files_manager.Rebalance()
     
 def DAEMONSaveDirtyObjects( controller ):
     

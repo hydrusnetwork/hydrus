@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 265</h3></li>
+				<ul>
+					<li>the bandwidth engine now recognises individual thread watcher threads as a network context that can inherit default bandwidth rules</li>
+					<li>tweaked default bandwidth rules and reset existing rules to this new default</li>
+					<li>review all bandwidth frame now has a time delta button to choose how the network contexts are filtered</li>
+					<li>review all bandwidth frame now updates itself every 20 seconds or so</li>
+					<li>review all bandwidth frame now has a 'delete history' button</li>
+					<li>review all bandwidth frame now shows if services have specific rules</li>
+					<li>review all bandwidth frame now has an 'edit default rules' button that lets you select and set rules for default network contexts</li>
+					<li>review network context bandwidth frame now has a bar chart to show historical usage!</li>
+					<li>bar chart is optional based on matplotlib availability</li>
+					<li>review network context bandwidth frame now lists current bandwidth rules and current usage. it says whether these are default or specific rules</li>
+					<li>review network context bandwidth frame now has a button to edit/clear specific rules</li>
+					<li>rows of bandwidth rules and current usage, where presented in ui, are now ordered in ascending time delta</li>
+					<li>misc bandwidth code improvements</li>
+					<li>client file imports are now bundled into their own job object that generates cpu-expensive file metadata outside of the main file and database locks. file imports are now much less laggy and should generally block the feel of the ui much less</li>
+					<li>removed the database 'rebalance files' menu entry</li>
+					<li>removed the 'client files location' page from options</li>
+					<li>db client_files rebalance will no longer occur in idle or shutdown time</li>
+					<li>(this stuff is now handled in the migrate database dialog)</li>
+					<li>'migrate database' now uses a dialog, meaning you cannot interact with the rest of the program while it is open</li>
+					<li>migrate database now has file location editing verbs--add, remove, +/- weight, rebalance_now. thumbnail location and portable db migration will be added next week</li>
+					<li>flushed out the backup guide in the getting started help, including to reflect the new internal process</li>
+					<li>the client now saves the 'last session' gui session before running a database backup</li>
+					<li>the shutdown maintenance yes/no dialog will now auto-no after 15 seconds</li>
+					<li>gave status bar tabs a bit more space for their text (some window managers were cutting them off)</li>
+					<li>tumblr api lookups are now https</li>
+					<li>tumblr files uploaded pre-2013 will no longer receive the 68. subdomain stripping, as they are not supported at the media.tumblr.com domain (much like 'raw' urls)</li>
+					<li>pages will now not 'start' their download queues or thread checkers or whatever data checking loops they have until their initial media results are loaded</li>
+					<li>key events started from an autocomplete entry but consumed by a higher window (typically F5 or F9/ctrl+t for refresh or new page at the main gui level) will no longer be duplicated</li>
+					<li>fixed a shutdown issue with network job controls that could break a clean shutdown in some circumstances</li>
+					<li>if the user attempts to create more than 128 pages, the client will now instead complain with a popup message. Due to OS-based gui handle limits, more than this many pages increasingly risks a crash</li>
+					<li>if the client has more than 128 pages both open and waiting in the undo menu, it will destroy the 'closed' ones</li>
+				</ul>
 				<li><h3>version 264</h3></li>
 				<ul>
 					<li>converted the page of images downloader to the new network engine</li>

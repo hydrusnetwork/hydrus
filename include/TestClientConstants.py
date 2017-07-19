@@ -26,7 +26,7 @@ class TestFunctions( unittest.TestCase ):
         fields.append( ( 'recaptcha', CC.FIELD_VERIFICATION_RECAPTCHA, 'reticulating splines' ) )
         fields.append( ( 'resto', CC.FIELD_THREAD_ID, '1000000' ) )
         fields.append( ( 'spoiler/on', CC.FIELD_CHECKBOX, True ) )
-        fields.append( ( 'upfile', CC.FIELD_FILE, ( hash, HC.IMAGE_GIF, TestConstants.tinest_gif ) ) )
+        fields.append( ( 'upfile', CC.FIELD_FILE, ( hash, HC.IMAGE_GIF, TestConstants.tiniest_gif ) ) )
         
         result = ClientGUIManagement.GenerateDumpMultipartFormDataCTAndBody( fields )
         

@@ -14,6 +14,7 @@ import ClientGUICollapsible
 import ClientGUIListBoxes
 import ClientGUIPredicates
 import ClientGUITopLevelWindows
+import ClientImporting
 import ClientThreading
 import collections
 import gc
@@ -3374,7 +3375,7 @@ class DialogSelectYoutubeURL( Dialog ):
                 
                 job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
                 
-                HG.client_controller.CallToThread( ClientDownloading.THREADDownloadURL, job_key, url, url_string )
+                HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_key, url, url_string )
                 
                 HG.client_controller.pub( 'message', job_key )
                 

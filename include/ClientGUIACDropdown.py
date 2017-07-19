@@ -349,7 +349,8 @@ class AutoCompleteDropdown( wx.Panel ):
                 
             else:
                 
-                self._dropdown_list.ProcessEvent( event ) # this typically skips the event, letting the text ctrl take it
+                # Don't say processevent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
+                self._dropdown_list.EventCharHook( event ) # this typically skips the event, letting the text ctrl take it
                 
             
         else:

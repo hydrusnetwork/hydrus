@@ -66,9 +66,12 @@ def SaveThumbnailToStream( pil_image, dimensions, f ):
         pil_image.save( f, 'JPEG', quality = 92 )
         
     
-def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
-    mime = GetMime( path )
+    if mime is None:
+        
+        mime = GetMime( path )
+        
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
@@ -176,7 +179,10 @@ def GetFileInfo( path ):
     
     size = os.path.getsize( path )
     
-    if size == 0: raise HydrusExceptions.SizeException( 'File is of zero length!' )
+    if size == 0:
+        
+        raise HydrusExceptions.SizeException( 'File is of zero length!' )
+        
     
     mime = GetMime( path )
     
@@ -232,7 +238,10 @@ def GetHashFromPath( path ):
     
     with open( path, 'rb' ) as f:
         
-        for block in HydrusPaths.ReadFileLikeAsBlocks( f ): h.update( block )
+        for block in HydrusPaths.ReadFileLikeAsBlocks( f ):
+            
+            h.update( block )
+            
         
     
     return h.digest()

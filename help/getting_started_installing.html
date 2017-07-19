@@ -46,10 +46,22 @@
 			<p>Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.</p>
 			<h3>backing up</h3>
 			<p>You <i>do</i> backup, right? <i>Right</i>?</p>
-			<p>I run a backup every week so that if my computer blows up, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it didn't feel great at all. I only push backups so hard so you might avoid what I felt. ;_;</p>
-			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive.</p>
-			<p>If you want to backup hydrus, you can either go <i>database->create database backup</i> or just shut the client down and copy the entire install directory somewhere.</p>
-			<p>I recommend you do it before you update, just in case there is a problem with my code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
+			<p>I run a backup every week so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it sucked. I encourage backups so you might avoid what I felt. ;_;</p>
+			<p>I use <a href="http://www.abstractspoon.com/tdl_resources.html">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive. I recommend both highly.</p>
+			<p>By default, hydrus stores all your user data in one location, so backing up is simple:</p>
+			<ul>
+				<li>
+					<p><h3>the easy way - inside the client</h3></p>
+					<p>Go <i>database->set up a database backup location</i> in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.</p>
+					<p>Once you have your location set up, you can thereafter hit <i>database->update database backup</i>. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.</p>
+				</li>
+				<li>
+					<p><h3>the powerful way - using an external program</h3></p>
+					<p>If you are more comfortable copying directories around yourself, would like to integrate hydrus into a broader backup scheme you already run, or you are an advanced user with a complicated hydrus install that you have migrated across multiple drives, then you need to backup two things: the client*.db files and your client_files directory(ies). By default, they are all stored in install_dir/db. The .db files contain your settings and metadata like tags, while the client_files subdirs store your actual media and its thumbnails. If everything is still under install_dir/db, then it is usually easiest to just backup the whole install dir, keeping a function 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!</p>
+					<p>Shut the client down while you run the backup, obviously.</p>
+				</li>
+			</ul>
+			<p>I recommend you always backup before you update, just in case there is a problem with my code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
 			<p class="right"><a href="getting_started_files.html">Let's import some files! ----></a></p>
 		</div>
 	</body>

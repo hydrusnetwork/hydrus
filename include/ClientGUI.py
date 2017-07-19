@@ -72,10 +72,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
         
-        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 7 )
-        idle_width = ClientData.ConvertTextToPixelWidth( self, 4 )
-        system_busy_width = ClientData.ConvertTextToPixelWidth( self, 11 )
-        db_width = ClientData.ConvertTextToPixelWidth( self, 12 )
+        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 9 )
+        idle_width = ClientData.ConvertTextToPixelWidth( self, 6 )
+        system_busy_width = ClientData.ConvertTextToPixelWidth( self, 13 )
+        db_width = ClientData.ConvertTextToPixelWidth( self, 14 )
         
         self._statusbar = self.CreateStatusBar()
         self._statusbar.SetFieldsCount( 5 )
@@ -527,6 +527,51 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             if dlg.ShowModal() == wx.ID_YES:
                 
                 self._controller.CallToThread( do_it )
+                
+            
+        
+    
+    def _BackupDatabase( self ):
+        
+        path = self._new_options.GetNoneableString( 'backup_path' )
+        
+        if path is None:
+            
+            wx.MessageBox( 'No backup path is set!' )
+            
+            return
+            
+        
+        if not os.path.exists( path ):
+            
+            wx.MessageBox( 'The backup path does not exist--creating it now.' )
+            
+            HydrusPaths.MakeSureDirectoryExists( path )
+            
+        
+        client_db_path = os.path.join( path, 'client.db' )
+        
+        if os.path.exists( client_db_path ):
+            
+            action = 'Update the existing'
+            
+        else:
+            
+            action = 'Create a new'
+            
+        
+        text = action + ' backup at "' + path + '"?'
+        text += os.linesep * 2
+        text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg_yn:
+            
+            if dlg_yn.ShowModal() == wx.ID_YES:
+                
+                self._SaveGUISession( 'last session' )
+                
+                # session save causes a db read in the menu refresh, so let's put this off just a bit
+                wx.CallLater( 1500, self._controller.Write, 'backup', path )
                 
             
         
@@ -1201,7 +1246,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             else:
                 
-                ClientGUIMenus.AppendMenuItem( self, menu, 'update database backup', 'Back the database up to an external location.', self._controller.BackupDatabase )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
                 ClientGUIMenus.AppendMenuItem( self, menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
                 
             
@@ -1219,7 +1264,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'rebalance file storage', 'Move your files around your chosen storage directories until they satisfy the weights you have set in the options.', self._RebalanceClientFiles )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphans )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
@@ -1946,11 +1990,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _MigrateDatabase( self ):
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'migrate database' )
-        
-        panel = ClientGUIScrolledPanelsReview.MigrateDatabasePanel( frame, self._controller )
-        
-        frame.SetPanel( panel )
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'migrate database' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsReview.MigrateDatabasePanel( dlg, self._controller )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
         
     
     def _ModifyAccount( self, service_key ):
@@ -2016,6 +2063,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
     
     def _NewPage( self, page_name, management_controller, initial_hashes = None, forced_insertion_index = None ):
+        
+        if self._notebook.GetPageCount() + len( self._closed_pages ) >= 128:
+            
+            self._DeleteAllClosedPages()
+            
+        
+        if self._notebook.GetPageCount() >= 128:
+            
+            HydrusData.ShowText( 'The client cannot have more than 128 pages open! For system stability reasons, please close some now!' )
+            
+            return
+            
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
@@ -2271,21 +2330,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         return shortcut_processed
-        
-    
-    def _RebalanceClientFiles( self ):
-        
-        text = 'This will move your files around your storage directories until they satisfy the weights you have set in the options. It will also recover any folders that are in the wrong place. Use this if you have recently changed your file storage locations and want to hurry any transfers you have set up, or if you are recovering a complicated backup.'
-        text += os.linesep * 2
-        text += 'The operation will lock file access and the database. Popup messages will report its progress.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._controller.CallToThread( self._controller.client_files_manager.Rebalance, partial = False )
-                
-            
         
     
     def _Refresh( self ):
@@ -2631,7 +2675,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             
                             if dlg_yn_2.ShowModal() == wx.ID_YES:
                                 
-                                self._controller.BackupDatabase()
+                                self._BackupDatabase()
                                 
                             
                         

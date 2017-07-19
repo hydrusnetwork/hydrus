@@ -251,6 +251,7 @@ NETWORK_CONTEXT_DOMAIN = 2
 NETWORK_CONTEXT_DOWNLOADER = 3
 NETWORK_CONTEXT_DOWNLOADER_QUERY = 4
 NETWORK_CONTEXT_SUBSCRIPTION = 5
+NETWORK_CONTEXT_THREAD_WATCHER_THREAD = 6
 
 network_context_type_string_lookup = {}
 
@@ -260,6 +261,7 @@ network_context_type_string_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'web domain'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'downloader'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'downloader query instance'
 network_context_type_string_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'subscription'
+network_context_type_string_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_THREAD ] = 'thread watcher thread instance'
 
 network_context_type_description_lookup = {}
 
@@ -269,6 +271,7 @@ network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network tra
 network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through this downloader.'
 network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'Network traffic going through this single downloader query (you probably shouldn\'t be able to see this!)'
 network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through this subscription.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_THREAD ] = 'Network traffic going through this single thread watch (you probably shouldn\'t be able to see this!)'
 
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1

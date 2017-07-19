@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientFiles
+import ClientImageHandling
 import ClientNetworking
 import ClientThreading
 import collections
@@ -11,6 +12,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusFileHandling
+import HydrusImageHandling
 import HydrusGlobals as HG
 import HydrusPaths
 import HydrusSerialisable
@@ -26,6 +28,350 @@ import urlparse
 import wx
 import HydrusThreading
 
+def THREADDownloadURL( job_key, url, url_string ):
+    
+    job_key.SetVariable( 'popup_title', url_string )
+    job_key.SetVariable( 'popup_text_1', 'initialising' )
+    
+    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+    
+    try:
+        
+        response = ClientNetworking.RequestsGet( url, stream = True )
+        
+        with open( temp_path, 'wb' ) as f:
+            
+            ClientNetworking.StreamResponseToFile( job_key, response, f )
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'importing' )
+        
+        file_import_job = FileImportJob( temp_path )
+        
+        client_files_manager = HG.client_controller.client_files_manager
+        
+        ( result, hash ) = client_files_manager.ImportFile( file_import_job )
+        
+    except HydrusExceptions.CancelledException:
+        
+        return
+        
+    except HydrusExceptions.NetworkException:
+        
+        job_key.Cancel()
+        
+        raise
+        
+    finally:
+        
+        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+        
+    
+    if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+        
+        if result == CC.STATUS_SUCCESSFUL:
+            
+            job_key.SetVariable( 'popup_text_1', 'successful!' )
+            
+        else:
+            
+            job_key.SetVariable( 'popup_text_1', 'was already in the database!' )
+            
+        
+        job_key.SetVariable( 'popup_files', { hash } )
+        
+    elif result == CC.STATUS_DELETED:
+        
+        job_key.SetVariable( 'popup_text_1', 'had already been deleted!' )
+        
+    
+    job_key.Finish()
+    
+def THREADDownloadURLs( job_key, urls, title ):
+    
+    job_key.SetVariable( 'popup_title', title )
+    job_key.SetVariable( 'popup_text_1', 'initialising' )
+    
+    num_successful = 0
+    num_redundant = 0
+    num_deleted = 0
+    num_failed = 0
+    
+    successful_hashes = set()
+    
+    for ( i, url ) in enumerate( urls ):
+        
+        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+        
+        if should_quit:
+            
+            break
+            
+        
+        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, len( urls ) ) )
+        job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( urls ) ) )
+        
+        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+        
+        try:
+            
+            try:
+                
+                response = ClientNetworking.RequestsGet( url, stream = True )
+                
+                with open( temp_path, 'wb' ) as f:
+                    
+                    ClientNetworking.StreamResponseToFile( job_key, response, f )
+                    
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            except HydrusExceptions.NetworkException:
+                
+                job_key.Cancel()
+                
+                raise
+                
+            
+            try:
+                
+                job_key.SetVariable( 'popup_text_2', 'importing' )
+                
+                file_import_job = FileImportJob( temp_path )
+                
+                client_files_manager = HG.client_controller.client_files_manager
+                
+                ( result, hash ) = client_files_manager.ImportFile( file_import_job )
+                
+            except Exception as e:
+                
+                job_key.DeleteVariable( 'popup_text_2' )
+                
+                HydrusData.Print( url + ' failed to import!' )
+                HydrusData.PrintException( e )
+                
+                num_failed += 1
+                
+                continue
+                
+            
+        finally:
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+        if result in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+            
+            if result == CC.STATUS_SUCCESSFUL:
+                
+                num_successful += 1
+                
+            else:
+                
+                num_redundant += 1
+                
+            
+            successful_hashes.add( hash )
+            
+        elif result == CC.STATUS_DELETED:
+            
+            num_deleted += 1
+            
+        
+    
+    text_components = []
+    
+    if num_successful > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful' )
+        
+    
+    if num_redundant > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_redundant ) + ' already in db' )
+        
+    
+    if num_deleted > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' deleted' )
+        
+    
+    if num_failed > 0:
+        
+        text_components.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed (errors written to log)' )
+        
+    
+    job_key.SetVariable( 'popup_text_1', ', '.join( text_components ) )
+    
+    if len( successful_hashes ) > 0:
+        
+        job_key.SetVariable( 'popup_files', successful_hashes )
+        
+    
+    job_key.DeleteVariable( 'popup_gauge_1' )
+    job_key.DeleteVariable( 'popup_text_2' )
+    job_key.DeleteVariable( 'popup_gauge_2' )
+    
+    job_key.Finish()
+    
+class FileImportJob( object ):
+    
+    def __init__( self, temp_path, import_file_options = None ):
+        
+        if import_file_options is None:
+            
+            import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+            
+        
+        self._temp_path = temp_path
+        self._import_file_options = import_file_options
+        
+        self._hash = None
+        self._pre_import_status = None
+        
+        self._file_info = None
+        self._thumbnail = None
+        self._phashes = None
+        self._extra_hashes = None
+        
+    
+    def GetExtraHashes( self ):
+        
+        return self._extra_hashes
+        
+    
+    def GetImportFileOptions( self ):
+        
+        return self._import_file_options
+        
+    
+    def GetFileInfo( self ):
+        
+        return self._file_info
+        
+    
+    def GetHash( self ):
+        
+        return self._hash
+        
+    
+    def GetMime( self ):
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        
+        return mime
+        
+    
+    def GetPreImportStatus( self ):
+        
+        return self._pre_import_status
+        
+    
+    def GetPHashes( self ):
+        
+        return self._phashes
+        
+    
+    def GetTempPathAndThumbnail( self ):
+        
+        return ( self._temp_path, self._thumbnail )
+        
+    
+    def PubsubContentUpdates( self ):
+        
+        if self._pre_import_status == CC.STATUS_REDUNDANT:
+            
+            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+            
+            if automatic_archive:
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( self._hash, ) ) ) ] }
+                
+                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                
+            
+        
+    
+    def IsGoodToImport( self ):
+        
+        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        
+        if width is not None and height is not None:
+            
+            if min_resolution is not None:
+                
+                ( min_x, min_y ) = min_resolution
+                
+                if width < min_x or height < min_y:
+                    
+                    return ( False, 'Resolution too small.' )
+                    
+                
+            
+        
+        if min_size is not None:
+            
+            if size < min_size:
+                
+                return ( False, 'File too small.' )
+                
+            
+        
+        return ( True, 'File looks good.' )
+        
+    
+    def IsNewToDB( self ):
+        
+        if self._pre_import_status == CC.STATUS_NEW:
+            
+            return True
+            
+        
+        if self._pre_import_status == CC.STATUS_DELETED:
+            
+            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+            
+            if not exclude_deleted:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def GenerateHashAndStatus( self ):
+        
+        HydrusImageHandling.ConvertToPngIfBmp( self._temp_path )
+        
+        self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
+        
+        self._pre_import_status = HG.client_controller.Read( 'hash_status', self._hash )
+        
+    
+    def GenerateInfo( self ):
+        
+        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path )
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
+            
+            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime = mime )
+            
+        
+        if mime in HC.MIMES_WE_CAN_PHASH:
+            
+            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path )
+            
+        
+        self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
+        
+    
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IMPORT
@@ -214,9 +560,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         gallery.GetFile( temp_path, url, report_hooks = [ self._file_download_hook ] )
                         
                     
+                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    
                     client_files_manager = HG.client_controller.client_files_manager
                     
-                    ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                    ( status, hash ) = client_files_manager.ImportFile( file_import_job )
                     
                 finally:
                     
@@ -726,9 +1074,11 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     raise Exception( 'File failed to copy--see log for error.' )
                     
                 
+                file_import_job = FileImportJob( temp_path, self._import_file_options )
+                
                 client_files_manager = HG.client_controller.client_files_manager
                 
-                ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                ( status, hash ) = client_files_manager.ImportFile( file_import_job )
                 
             finally:
                 
@@ -1171,9 +1521,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                     raise Exception( 'File failed to copy--see log for error.' )
                                     
                                 
+                                file_import_job = FileImportJob( temp_path, self._import_file_options )
+                                
                                 client_files_manager = HG.client_controller.client_files_manager
                                 
-                                ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                                ( status, hash ) = client_files_manager.ImportFile( file_import_job )
                                 
                             finally:
                                 
@@ -1480,7 +1832,9 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                        file_import_job = FileImportJob( temp_path, self._import_file_options )
+                        
+                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                         
                         self._urls_cache.UpdateSeedStatus( file_url, status )
                         
@@ -2576,9 +2930,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                         
-                        client_files_manager = HG.client_controller.client_files_manager
+                        file_import_job = FileImportJob( temp_path, self._import_file_options )
                         
-                        ( status, hash ) = client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                         
                         service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( url, ) ) ) ] }
                         
@@ -2970,6 +3324,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._watcher_status = 'ready to start'
         self._seed_cache_status = ( 'initialising', ( 0, 1 ) )
         
+        self._thread_key = HydrusData.GenerateKey()
+        
         self._lock = threading.Lock()
         
     
@@ -3067,7 +3423,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    network_job = ClientNetworking.NetworkJob( 'GET', file_url, temp_path = temp_path )
+                    network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', file_url, temp_path = temp_path )
                     
                     with self._lock:
                         
@@ -3114,7 +3470,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                        file_import_job = FileImportJob( temp_path, self._import_file_options )
+                        
+                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                         
                         self._urls_cache.UpdateSeedStatus( file_url, status )
                         
@@ -3199,7 +3557,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 json_url = ClientDownloading.GetImageboardThreadJSONURL( self._thread_url )
                 
-                network_job = ClientNetworking.NetworkJob( 'GET', json_url )
+                network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', json_url )
                 
                 with self._lock:
                     
@@ -3291,6 +3649,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 error_occurred = True
                 
                 watcher_status = HydrusData.ToUnicode( e )
+                
+                HydrusData.PrintException( e )
                 
             
             with self._lock:
@@ -3637,7 +3997,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( temp_path, import_file_options = self._import_file_options )
+                        file_import_job = FileImportJob( temp_path, self._import_file_options )
+                        
+                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                         
                         self._urls_cache.UpdateSeedStatus( file_url, status )
                         

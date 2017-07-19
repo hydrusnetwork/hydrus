@@ -16,7 +16,10 @@ import HydrusPaths
 
 def ConvertToPngIfBmp( path ):
     
-    with open( path, 'rb' ) as f: header = f.read( 2 )
+    with open( path, 'rb' ) as f:
+        
+        header = f.read( 2 )
+        
     
     if header == 'BM':
         

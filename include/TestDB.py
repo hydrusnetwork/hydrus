@@ -70,6 +70,8 @@ class TestClientDB( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestConstants.DB_DIR, 'client' )
         
+        HG.test_controller.SetRead( 'hash_status', CC.STATUS_NEW )
+        
     
     @classmethod
     def tearDownClass( cls ):
@@ -98,7 +100,13 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        self._write( 'import_file', path )
+        file_import_job = ClientImporting.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
         
         #
         
@@ -306,10 +314,16 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        ( written_result, written_hash ) = self._write( 'import_file', path )
+        file_import_job = ClientImporting.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        written_result = self._write( 'import_file', file_import_job )
         
         self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
-        self.assertEqual( written_hash, hash )
+        self.assertEqual( file_import_job.GetHash(), hash )
         
         time.sleep( 1 )
         
@@ -584,7 +598,13 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        self._write( 'import_file', path )
+        file_import_job = ClientImporting.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
         
         #
         
@@ -701,15 +721,29 @@ class TestClientDB( unittest.TestCase ):
             
             hash = hex_hash.decode( 'hex' )
             
-            ( written_result, written_hash ) = self._write( 'import_file', path )
+            file_import_job = ClientImporting.FileImportJob( path )
+            
+            file_import_job.GenerateHashAndStatus()
+            
+            file_import_job.GenerateInfo()
+            
+            written_result = self._write( 'import_file', file_import_job )
             
             self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
-            self.assertEqual( written_hash, hash )
+            self.assertEqual( file_import_job.GetHash(), hash )
             
-            ( written_result, written_hash ) = self._write( 'import_file', path )
+            file_import_job = ClientImporting.FileImportJob( path )
+            
+            file_import_job.GenerateHashAndStatus()
+            
+            file_import_job.GenerateInfo()
+            
+            written_result = self._write( 'import_file', file_import_job )
             
             self.assertEqual( written_result, CC.STATUS_REDUNDANT )
-            self.assertEqual( written_hash, hash )
+            self.assertEqual( file_import_job.GetHash(), hash )
+            
+            written_hash = file_import_job.GetHash()
             
             ( media_result, ) = self._read( 'media_results', ( written_hash, ) )
             
@@ -815,7 +849,13 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        self._write( 'import_file', path )
+        file_import_job = ClientImporting.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
         
         #
         
@@ -848,7 +888,15 @@ class TestClientDB( unittest.TestCase ):
         
         HC.options[ 'exclude_deleted_files' ] = False
         
-        ( result, hash ) = self._write( 'import_file', path )
+        file_import_job = ClientImporting.FileImportJob( path )
+        
+        file_import_job.GenerateHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        self._write( 'import_file', file_import_job )
+        
+        hash = file_import_job.GetHash()
         
         #
         

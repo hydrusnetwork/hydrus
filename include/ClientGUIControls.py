@@ -488,17 +488,23 @@ class NetworkJobControl( wx.Panel ):
     
     def ClearNetworkJob( self ):
         
-        self._Update()
-        
-        self._network_job = None
-        
-        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        if self:
+            
+            self._Update()
+            
+            self._network_job = None
+            
+            self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            
         
     
     def SetNetworkJob( self, network_job ):
         
-        self._network_job = network_job
-        self._download_started = False
+        if self:
+            
+            self._network_job = network_job
+            self._download_started = False
+            
         
     
     def TIMEREventUpdate( self, event ):

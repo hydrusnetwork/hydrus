@@ -20,7 +20,7 @@ def GetDefaultBandwidthManager():
     rules = HydrusNetworking.BandwidthRules()
     
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage. db prob needs a break
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage/bugspam. db and gui prob need a break
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
     
@@ -40,6 +40,8 @@ def GetDefaultBandwidthManager():
     
     rules = HydrusNetworking.BandwidthRules()
     
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 50 ) # don't sync a giant db in one day
+    
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
@@ -54,9 +56,9 @@ def GetDefaultBandwidthManager():
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 600, 60 ) # after that first sample of small files, take it easy
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 600, 256 * MB ) # after that first sample of big files, take it easy
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY ), rules )
     
@@ -64,11 +66,21 @@ def GetDefaultBandwidthManager():
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 5, 1 ) # be extremely polite
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 200 ) # catch up on a big sub in little chunks every day
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ), rules )
     
     #
     

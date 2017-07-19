@@ -20,6 +20,7 @@ import HydrusFileHandling
 import HydrusGlobals as HG
 import HydrusImageHandling
 import HydrusNetwork
+import HydrusNetworking
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
@@ -4812,6 +4813,15 @@ class DB( HydrusDB.HydrusDB ):
         return ( CC.STATUS_NEW, None )
         
     
+    def _GetHashStatus( self, hash ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        ( status, hash ) = self._GetHashIdStatus( hash_id )
+        
+        return status
+        
+    
     def _GetHydrusSessions( self ):
         
         now = HydrusData.GetNow()
@@ -6230,86 +6240,26 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _ImportFile( self, temp_path, import_file_options = None, override_deleted = False ):
+    def _ImportFile( self, file_import_job ):
         
-        if import_file_options is None:
-            
-            import_file_options = ClientDefaults.GetDefaultImportFileOptions()
-            
-        
-        ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
-        
-        HydrusImageHandling.ConvertToPngIfBmp( temp_path )
-        
-        hash = HydrusFileHandling.GetHashFromPath( temp_path )
+        hash = file_import_job.GetHash()
         
         hash_id = self._GetHashId( hash )
         
         ( status, status_hash ) = self._GetHashIdStatus( hash_id )
         
-        if status == CC.STATUS_DELETED:
+        if status != CC.STATUS_REDUNDANT:
             
-            if override_deleted or not exclude_deleted_files:
-                
-                status = CC.STATUS_NEW
-                
-            
-        
-        if status == CC.STATUS_REDUNDANT:
-            
-            if archive:
-                
-                self._ArchiveFiles( ( hash_id, ) )
-                
-                self.pub_content_updates_after_commit( { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( hash, ) ) ) ] } )
-                
-            
-        elif status == CC.STATUS_NEW:
-            
-            ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( temp_path )
-            
-            if width is not None and height is not None:
-                
-                if min_resolution is not None:
-                    
-                    ( min_x, min_y ) = min_resolution
-                    
-                    if width < min_x or height < min_y:
-                        
-                        raise Exception( 'Resolution too small' )
-                        
-                    
-                
-            
-            if min_size is not None:
-                
-                if size < min_size:
-                    
-                    raise Exception( 'File too small' )
-                    
-                
+            ( size, mime, width, height, duration, num_frames, num_words ) = file_import_job.GetFileInfo()
             
             timestamp = HydrusData.GetNow()
             
-            client_files_manager = self._controller.client_files_manager
+            phashes = file_import_job.GetPHashes()
             
-            if mime in HC.MIMES_WITH_THUMBNAILS:
-                
-                thumbnail = HydrusFileHandling.GenerateThumbnail( temp_path )
-                
-                # lockless because this db call is made by the locked client files manager
-                client_files_manager.LocklessAddFullSizeThumbnail( hash, thumbnail )
-                
-            
-            if mime in HC.MIMES_WE_CAN_PHASH:
-                
-                phashes = ClientImageHandling.GenerateShapePerceptualHashes( temp_path )
+            if phashes is not None:
                 
                 self._CacheSimilarFilesAssociatePHashes( hash_id, phashes )
                 
-            
-            # lockless because this db call is made by the locked client files manager
-            client_files_manager.LocklessAddFile( hash, mime, temp_path )
             
             self._AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, num_words ) ], overwrite = True )
             
@@ -6321,9 +6271,13 @@ class DB( HydrusDB.HydrusDB ):
             
             self.pub_content_updates_after_commit( { CC.LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
             
-            ( md5, sha1, sha512 ) = HydrusFileHandling.GetExtraHashesFromPath( temp_path )
+            ( md5, sha1, sha512 ) = file_import_job.GetExtraHashes()
             
             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
+            
+            import_file_options = file_import_job.GetImportFileOptions()
+            
+            ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
             
             if archive:
                 
@@ -6362,7 +6316,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return ( status, hash )
+        return status
         
     
     def _ImportUpdate( self, update_network_string, update_hash, mime ):
@@ -7885,6 +7839,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
+        elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
@@ -9661,6 +9616,17 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DROP TABLE urls_old;' )
             
             self._c.execute( 'ANALYZE urls;' )
+            
+        
+        if version == 264:
+            
+            default_bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+            
+            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+            
+            bandwidth_manager._network_contexts_to_bandwidth_rules = dict( default_bandwidth_manager._network_contexts_to_bandwidth_rules )
+            
+            self._SetJSONDump( bandwidth_manager )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

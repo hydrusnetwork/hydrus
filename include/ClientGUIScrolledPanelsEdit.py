@@ -137,6 +137,26 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         return HydrusNetwork.AccountType.GenerateAccountTypeFromParameters( self._account_type_key, title, permissions, bandwidth_rules )
         
     
+class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, bandwidth_rules ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._bandwidth_rules_ctrl = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._bandwidth_rules_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        return self._bandwidth_rules_ctrl.GetValue()
+        
+    
 class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, duplicate_action, duplicate_action_options ):

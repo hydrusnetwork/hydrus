@@ -705,11 +705,25 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
-    def CleanBeforeDestroy( self ): pass
+    def CleanBeforeDestroy( self ):
+        
+        pass
+        
     
-    def SetSearchFocus( self, page_key ): pass
+    def SetSearchFocus( self, page_key ):
+        
+        pass
+        
     
-    def TestAbleToClose( self ): pass
+    def Start( self ):
+        
+        pass
+        
+    
+    def TestAbleToClose( self ):
+        
+        pass
+        
     
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
@@ -1453,8 +1467,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._UpdateStatus()
         
-        self._gallery_import.Start( self._page_key )
-        
     
     def _SeedCache( self ):
         
@@ -1725,6 +1737,11 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
             
         
     
+    def Start( self ):
+        
+        self._gallery_import.Start( self._page_key )
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImporterGallery
 
 class ManagementPanelImporterHDD( ManagementPanelImporter ):
@@ -1774,8 +1791,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
         self._UpdateStatus()
-        
-        self._hdd_import.Start( self._page_key )
         
     
     def _SeedCache( self ):
@@ -1857,6 +1872,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._hdd_import.PausePlay()
         
         self._UpdateStatus()
+        
+    
+    def Start( self ):
+        
+        self._hdd_import.Start( self._page_key )
         
     
     def TestAbleToClose( self ):
@@ -2002,8 +2022,6 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._download_unlinked_images.SetValue( download_unlinked_images )
         
         self._UpdateStatus()
-        
-        self._page_of_images_import.Start( self._page_key )
         
     
     def _SeedCache( self ):
@@ -2228,6 +2246,11 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         if page_key == self._page_key: self._page_url_input.SetFocus()
         
     
+    def Start( self ):
+        
+        self._page_of_images_import.Start( self._page_key )
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES ] = ManagementPanelImporterPageOfImages
 
 class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
@@ -2355,11 +2378,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_check_period.SetValue( check_period )
-        
-        if self._thread_watcher_import.HasThread():
-            
-            self._thread_watcher_import.Start( self._page_key )
-            
         
         self._UpdateStatus()
         
@@ -2572,6 +2590,14 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
     
+    def Start( self ):
+        
+        if self._thread_watcher_import.HasThread():
+            
+            self._thread_watcher_import.Start( self._page_key )
+            
+        
+    
     def TestAbleToClose( self ):
         
         if self._thread_watcher_import.HasThread():
@@ -2665,8 +2691,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._import_file_options.SetOptions( import_file_options )
         
         self._UpdateStatus()
-        
-        self._urls_import.Start( self._page_key )
         
         HG.client_controller.sub( self, 'SetURLInput', 'set_page_url_input' )
         
@@ -2837,6 +2861,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
         
     
+    def Start( self ):
+        
+        self._urls_import.Start( self._page_key )
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_URLS ] = ManagementPanelImporterURLs
 
 class ManagementPanelPetitions( ManagementPanel ):
@@ -2957,8 +2986,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
-        
-        wx.CallAfter( self._FetchNumPetitions )
         
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
@@ -3325,6 +3352,11 @@ class ManagementPanelPetitions( ManagementPanel ):
         if page_key == self._page_key: self._DrawCurrentPetition()
         
     
+    def Start( self ):
+        
+        wx.CallAfter( self._FetchNumPetitions )
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_PETITIONS ] = ManagementPanelPetitions
 
 class ManagementPanelQuery( ManagementPanel ):
@@ -3364,11 +3396,6 @@ class ManagementPanelQuery( ManagementPanel ):
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
-        
-        if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
-            
-            wx.CallAfter( self._DoQuery )
-            
         
         self._controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
@@ -3517,6 +3544,18 @@ class ManagementPanelQuery( ManagementPanel ):
             panel.Sort( self._page_key, self._sort_by.GetChoice() )
             
             self._controller.pub( 'swap_media_panel', self._page_key, panel )
+            
+        
+    
+    def Start( self ):
+        
+        file_search_context = self._management_controller.GetVariable( 'file_search_context' )
+        
+        initial_predicates = file_search_context.GetPredicates()
+        
+        if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
+            
+            wx.CallAfter( self._DoQuery )
             
         
 

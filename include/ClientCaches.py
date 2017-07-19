@@ -972,12 +972,49 @@ class ClientFilesManager( object ):
             
         
     
-    def ImportFile( self, *args, **kwargs ):
+    def ImportFile( self, file_import_job ):
         
-        with self._lock:
+        file_import_job.GenerateHashAndStatus()
+        
+        hash = file_import_job.GetHash()
+        
+        if file_import_job.IsNewToDB():
             
-            return self._controller.WriteSynchronous( 'import_file', *args, **kwargs )
+            file_import_job.GenerateInfo()
             
+            ( good_to_import, reason ) = file_import_job.IsGoodToImport()
+            
+            if good_to_import:
+                
+                with self._lock:
+                    
+                    ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
+                    
+                    mime = file_import_job.GetMime()
+                    
+                    self.LocklessAddFile( hash, mime, temp_path )
+                    
+                    if thumbnail is not None:
+                        
+                        self.LocklessAddFullSizeThumbnail( hash, thumbnail )
+                        
+                    
+                    import_status = self._controller.WriteSynchronous( 'import_file', file_import_job )
+                    
+                
+            else:
+                
+                raise Exception( reason )
+                
+            
+        else:
+            
+            file_import_job.PubsubContentUpdates()
+            
+            import_status = file_import_job.GetPreImportStatus()
+            
+        
+        return ( import_status, hash )
         
     
     def LocklessGetFilePath( self, hash, mime = None ):
@@ -1043,7 +1080,7 @@ class ClientFilesManager( object ):
         return os.path.exists( path )
         
     
-    def Rebalance( self, partial = True, stop_time = None ):
+    def Rebalance( self, stop_time = None ):
         
         if self._bad_error_occured:
             
@@ -1060,25 +1097,12 @@ class ClientFilesManager( object ):
                 
                 text = 'Moving \'' + prefix + '\' from ' + overweight_location + ' to ' + underweight_location
                 
-                if partial:
-                    
-                    HydrusData.Print( text )
-                    
-                else:
-                    
-                    self._controller.pub( 'splash_set_status_text', text )
-                    HydrusData.ShowText( text )
-                    
+                HydrusData.Print( text )
                 
                 # these two lines can cause a deadlock because the db sometimes calls stuff in here.
                 self._controller.Write( 'relocate_client_files', prefix, overweight_location, underweight_location )
                 
                 self._Reinit()
-                
-                if partial:
-                    
-                    break
-                    
                 
                 if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
                     
@@ -1096,25 +1120,12 @@ class ClientFilesManager( object ):
                 
                 text = 'Recovering \'' + prefix + '\' from ' + recoverable_location + ' to ' + correct_location
                 
-                if partial:
-                    
-                    HydrusData.Print( text )
-                    
-                else:
-                    
-                    self._controller.pub( 'splash_set_status_text', text )
-                    HydrusData.ShowText( text )
-                    
+                HydrusData.Print( text )
                 
                 recoverable_path = os.path.join( recoverable_location, prefix )
                 correct_path = os.path.join( correct_location, prefix )
                 
                 HydrusPaths.MergeTree( recoverable_path, correct_path )
-                
-                if partial:
-                    
-                    break
-                    
                 
                 if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
                     
@@ -1125,17 +1136,20 @@ class ClientFilesManager( object ):
                 
             
         
-        if not partial:
-            
-            HydrusData.ShowText( 'All folders balanced!' )
-            
-        
     
     def RegenerateResizedThumbnail( self, hash ):
         
         with self._lock:
             
             self._GenerateResizedThumbnail( hash )
+            
+        
+    
+    def RebalanceWorkToDo( self ):
+        
+        with self._lock:
+            
+            return self._GetRebalanceTuple() is not None
             
         
     

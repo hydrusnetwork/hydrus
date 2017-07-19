@@ -77,6 +77,8 @@ class Page( wx.SplitterWindow ):
             
             self._initialised = True
             
+            self._management_panel.Start()
+            
         
     
     def _SetPrettyStatus( self, status ):
@@ -253,6 +255,8 @@ class Page( wx.SplitterWindow ):
         
         self._initialised = True
         self._initial_hashes = []
+        
+        self._management_panel.Start()
         
     
     def SetPrettyStatus( self, page_key, status ):

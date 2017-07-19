@@ -334,12 +334,16 @@ class Controller( object ):
         
         if name == 'import_file':
             
-            ( path, ) = args
+            ( file_import_job, ) = args
             
-            with open( path, 'rb' ) as f: file = f.read()
-            
-            if file == 'blarg': raise Exception( 'File failed to import for some reason!' )
-            else: return ( CC.STATUS_SUCCESSFUL, '0123456789abcdef'.decode( 'hex' ) )
+            if file_import_job.GetHash().encode( 'hex' ) == 'a593942cb7ea9ffcd8ccf2f0fa23c338e23bfecd9a3e508dfc0bcf07501ead08': # 'blarg' in sha256 hex
+                
+                raise Exception( 'File failed to import for some reason!' )
+                
+            else:
+                
+                return CC.STATUS_SUCCESSFUL
+                
             
         
     

@@ -1408,11 +1408,39 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def RemoveClientFilesLocation( self, location ):
+        
+        with self._lock:
+            
+            if len( self._dictionary[ 'client_files_locations_ideal_weights' ] ) < 2:
+                
+                raise Exception( 'Cannot remove any more files locations!' )
+                
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
+            
+        
+    
     def SetBoolean( self, name, value ):
         
         with self._lock:
             
             self._dictionary[ 'booleans' ][ name ] = value
+            
+        
+    
+    def SetClientFilesLocation( self, location, weight ):
+        
+        with self._lock:
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            weight = float( weight )
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ].append( ( portable_location, weight ) )
             
         
     

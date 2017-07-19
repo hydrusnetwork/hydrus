@@ -1106,7 +1106,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
         self._network_contexts_to_bandwidth_rules = collections.defaultdict( HydrusNetworking.BandwidthRules )
         
-        for context_type in [ CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION ]:
+        for context_type in [ CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ]:
             
             self._network_contexts_to_bandwidth_rules[ NetworkContext( context_type ) ] = HydrusNetworking.BandwidthRules()
             
@@ -1124,8 +1124,8 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        # note this discards downloader_query instances, which have page_key-specific identifiers and are temporary, not meant to be hung onto forever, and are generally invisible to the user
-        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() if network_context.context_type != CC.NETWORK_CONTEXT_DOWNLOADER_QUERY ]
+        # note this discards ephemeral network contexts, which have page_key-specific identifiers and are temporary, not meant to be hung onto forever, and are generally invisible to the user
+        all_serialisable_trackers = [ ( network_context.GetSerialisableTuple(), tracker.GetSerialisableTuple() ) for ( network_context, tracker ) in self._network_contexts_to_bandwidth_trackers.items() if not network_context.IsEphemeral() ]
         all_serialisable_rules = [ ( network_context.GetSerialisableTuple(), rules.GetSerialisableTuple() ) for ( network_context, rules ) in self._network_contexts_to_bandwidth_rules.items() ]
         
         return ( all_serialisable_trackers, all_serialisable_rules )
@@ -1201,7 +1201,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if network_context.content_data is None:
+            if network_context.context_data is None:
                 
                 return # can't delete 'default' network contexts
                 
@@ -1214,6 +1214,46 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
             
             self._SetDirty()
+            
+        
+    
+    def DeleteHistory( self, network_contexts ):
+        
+        with self._lock:
+            
+            for network_context in network_contexts:
+                
+                if network_context in self._network_contexts_to_bandwidth_trackers:
+                    
+                    del self._network_contexts_to_bandwidth_trackers[ network_context ]
+                    
+                    if network_context == GLOBAL_NETWORK_CONTEXT:
+                        
+                        # just to reset it, so we have a 0 global context at all times
+                        self._network_contexts_to_bandwidth_trackers[ GLOBAL_NETWORK_CONTEXT ] = HydrusNetworking.BandwidthTracker()
+                        
+                    
+                
+            
+            self._SetDirty()
+            
+        
+    
+    def GetDefaultRules( self ):
+        
+        with self._lock:
+            
+            result = []
+            
+            for ( network_context, bandwidth_rules ) in self._network_contexts_to_bandwidth_rules.items():
+                
+                if network_context.IsDefault():
+                    
+                    result.append( ( network_context, bandwidth_rules ) )
+                    
+                
+            
+            return result
             
         
     
@@ -1233,7 +1273,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNetworkContextsAndBandwidthTrackersForUser( self, history_time_delta_threshold = 86400 * 30 ):
+    def GetNetworkContextsAndBandwidthTrackersForUser( self, history_time_delta_threshold = None ):
         
         with self._lock:
             
@@ -1241,18 +1281,31 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
                 
-                if network_context.context_type == CC.NETWORK_CONTEXT_DOWNLOADER_QUERY: # user doesn't want these
+                if network_context.IsDefault() or network_context.IsEphemeral():
                     
                     continue
                     
                 
-                if bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, history_time_delta_threshold ) > 0:
+                if network_context != GLOBAL_NETWORK_CONTEXT and history_time_delta_threshold is not None:
                     
-                    result.append( ( network_context, bandwidth_tracker ) )
+                    if bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, history_time_delta_threshold ) == 0:
+                        
+                        continue
+                        
                     
+                
+                result.append( ( network_context, bandwidth_tracker ) )
                 
             
             return result
+            
+        
+    
+    def GetRules( self, network_context ):
+        
+        with self._lock:
+            
+            return self._GetRules( network_context )
             
         
     
@@ -1260,7 +1313,14 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._network_contexts_to_bandwidth_trackers[ network_context ]
+            if network_context in self._network_contexts_to_bandwidth_trackers:
+                
+                return self._network_contexts_to_bandwidth_trackers[ network_context ]
+                
+            else:
+                
+                return HydrusNetworking.BandwidthTracker()
+                
             
         
     
@@ -1310,7 +1370,27 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._network_contexts_to_bandwidth_rules[ network_context ] = bandwidth_rules
+            if len( bandwidth_rules.GetRules() ) == 0:
+                
+                if network_context in self._network_contexts_to_bandwidth_rules:
+                    
+                    del self._network_contexts_to_bandwidth_rules[ network_context ]
+                    
+                
+            else:
+                
+                self._network_contexts_to_bandwidth_rules[ network_context ] = bandwidth_rules
+                
+            
+            self._SetDirty()
+            
+        
+    
+    def UsesDefaultRules( self, network_context ):
+        
+        with self._lock:
+            
+            return network_context not in self._network_contexts_to_bandwidth_rules
             
         
     
@@ -1377,11 +1457,28 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def IsDefault( self ):
+        
+        return self.context_data is None and self.context_type != CC.NETWORK_CONTEXT_GLOBAL
+        
+    
+    def IsEphemeral( self ):
+        
+        return self.context_type in ( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD )
+        
+    
     def ToUnicode( self ):
         
         if self.context_data is None:
             
-            return CC.network_context_type_string_lookup[ self.context_type ] + ' domain'
+            if self.context_type == CC.NETWORK_CONTEXT_GLOBAL:
+                
+                return 'global'
+                
+            else:
+                
+                return CC.network_context_type_string_lookup[ self.context_type ] + ' default'
+                
             
         else:
             
@@ -2163,6 +2260,29 @@ class NetworkJobHydrus( NetworkJob ):
         network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key ) )
         
         return network_contexts
+        
+    
+class NetworkJobThreadWatcher( NetworkJob ):
+    
+    def __init__( self, thread_key, method, url, body = None, temp_path = None, for_login = False ):
+        
+        self._thread_key = thread_key
+        
+        NetworkJob.__init__( self, method, url, body, temp_path = temp_path, for_login = for_login )
+        
+    
+    def _GenerateNetworkContexts( self ):
+        
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+        
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD, self._thread_key ) )
+        
+        return network_contexts
+        
+    
+    def _GetSessionNetworkContext( self ):
+        
+        return self._network_contexts[-2] # the domain one
         
     
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
