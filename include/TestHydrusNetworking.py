@@ -41,13 +41,13 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
     
@@ -61,35 +61,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertFalse( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertFalse( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -100,35 +100,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertFalse( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -140,35 +140,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertFalse( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertFalse( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertFalse( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertTrue( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
     
@@ -182,35 +182,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -221,35 +221,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -261,35 +261,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
     
@@ -301,35 +301,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -340,35 +340,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         #
@@ -380,35 +380,35 @@ class TestBandwidthRules( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = now ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_10 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
         with patch.object( HydrusData, 'GetNow', return_value = now_20 ):
             
-            self.assertTrue( rules.CanStart( ZERO_USAGE ) )
-            self.assertTrue( rules.CanStart( LOW_USAGE ) )
-            self.assertFalse( rules.CanStart( HIGH_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( ZERO_USAGE ) )
+            self.assertTrue( rules.CanStartRequest( LOW_USAGE ) )
+            self.assertFalse( rules.CanStartRequest( HIGH_USAGE ) )
             
-            self.assertTrue( rules.CanContinue( ZERO_USAGE ) )
-            self.assertTrue( rules.CanContinue( LOW_USAGE ) )
-            self.assertTrue( rules.CanContinue( HIGH_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( ZERO_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( LOW_USAGE ) )
+            self.assertTrue( rules.CanContinueDownload( HIGH_USAGE ) )
             
         
     

@@ -920,7 +920,10 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
     
     finished = GetNowPrecise()
     
-    if finished - started > min_duration_ms / 1000.0:
+    time_took = finished - started
+    time_took_ms = int( time_took * 1000.0 )
+    
+    if time_took_ms > min_duration_ms:
         
         output = cStringIO.StringIO()
         
@@ -946,11 +949,12 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
         
     else:
         
-        details = 'It took less than ' + ConvertIntToPrettyString( min_duration_ms ) + 'ms.' + os.linesep * 2
+        summary += ' - It took ' + ConvertIntToPrettyString( time_took_ms ) + 'ms.'
+        
+        details = ''
         
     
     HG.controller.PrintProfile( summary, details )
-    
     
 def RandomPop( population ):
     
@@ -1549,6 +1553,16 @@ class ContentUpdate( object ):
     def __repr__( self ):
         
         return 'Content Update: ' + ToUnicode( ( self._data_type, self._action, self._row ) )
+        
+    
+    def GetAction( self ):
+        
+        return self._action
+        
+    
+    def GetDataType( self ):
+        
+        return self._data_type
         
     
     def GetHashes( self ):

@@ -18,6 +18,7 @@ import urlparse
 import HydrusData
 import ClientConstants as CC
 import HydrusGlobals as HG
+import wx
 
 # This is fairly ugly, but it works for what I need it to do
 
@@ -481,22 +482,56 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class Gallery( object ):
     
-    def _AddSessionCookies( self, request_headers ): pass
+    def __init__( self ):
+        
+        self._network_job_factory = self._DefaultNetworkJobFactory
+        
     
-    def _FetchData( self, url, referer_url = None, report_hooks = None, temp_path = None ):
+    def _DefaultNetworkJobFactory( self, method, url, **kwargs ):
         
-        if report_hooks is None: report_hooks = []
+        return ClientNetworking.NetworkJob( method, url, **kwargs )
         
-        request_headers = {}
+    
+    def _EnsureLoggedIn( self ):
         
-        if referer_url is not None:
+        pass
+        
+    
+    def _FetchData( self, url, referral_url = None, temp_path = None ):
+        
+        self._EnsureLoggedIn()
+        
+        network_job = self._network_job_factory( 'GET', url, referral_url = referral_url, temp_path = temp_path )
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        while not network_job.IsDone():
             
-            request_headers[ 'Referer' ] = referer_url
+            time.sleep( 0.1 )
             
         
-        self._AddSessionCookies( request_headers )
+        if HG.view_shutdown:
+            
+            raise HydrusExceptions.ShutdownException()
+            
+        elif network_job.HasError():
+            
+            e = network_job.GetErrorException()
+            
+            raise e
+            
+        elif network_job.IsCancelled():
+            
+            raise HydrusExceptions.CancelledException( 'Download cancelled!' )
+            
+        else:
+            
+            if temp_path is None:
+                
+                return network_job.GetContent()
+                
+            
         
-        return HG.client_controller.DoHTTP( HC.GET, url, request_headers = request_headers, report_hooks = report_hooks, temp_path = temp_path )
         
     
     def _GetGalleryPageURL( self, query, page_index ):
@@ -509,15 +544,15 @@ class Gallery( object ):
         raise NotImplementedError()
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        self._FetchData( url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( url, temp_path = temp_path )
         
     
-    def GetFileAndTags( self, temp_path, url, report_hooks = None ):
+    def GetFileAndTags( self, temp_path, url ):
         
-        temp_path = self.GetFile( temp_path, url, report_hooks )
-        tags = self.GetTags( url, report_hooks = report_hooks )
+        self.GetFile( temp_path, url )
+        tags = self.GetTags( url )
         
         return tags
         
@@ -533,9 +568,14 @@ class Gallery( object ):
         return ( page_of_urls, definitely_no_more_pages )
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
         raise NotImplementedError()
+        
+    
+    def SetNetworkJobFactory( self, network_job_factory ):
+        
+        self._network_job_factory = network_job_factory
         
     
 class GalleryBooru( Gallery ):
@@ -722,7 +762,7 @@ class GalleryBooru( Gallery ):
                     
                 else:
                     
-                    urls.append( url )
+                    urls.append( bad_url )
                     
                 
             
@@ -883,46 +923,37 @@ class GalleryBooru( Gallery ):
         return ( image_url, tags )
         
     
-    def _GetFileURLAndTags( self, url, report_hooks = None ):
+    def _GetFileURLAndTags( self, url ):
         
-        html = self._FetchData( url, report_hooks = report_hooks )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
     
-    def GetFileAndTags( self, temp_path, url, report_hooks = None ):
+    def GetFileAndTags( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
         return tags
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
         return tags
         
     
 class GalleryDeviantArt( Gallery ):
-    
-    def _AddSessionCookies( self, request_headers ):
-        
-        manager = HG.client_controller.GetManager( 'web_sessions' )
-        
-        cookies = manager.GetCookies( 'deviant art' )
-        
-        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
-        
     
     def _GetGalleryPageURL( self, query, page_index ):
         
@@ -973,7 +1004,7 @@ class GalleryDeviantArt( Gallery ):
         return ( urls, definitely_no_more_pages )
         
     
-    def _ParseImagePage( self, html, referer_url ):
+    def _ParseImagePage( self, html, referral_url ):
         
         soup = GetSoup( html )
         
@@ -1038,21 +1069,21 @@ class GalleryDeviantArt( Gallery ):
         return img_url
         
     
-    def _GetFileURL( self, url, report_hooks = None ):
+    def _GetFileURL( self, url ):
         
-        html = self._FetchData( url, report_hooks = report_hooks )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        file_url = self._GetFileURL( url, report_hooks = report_hooks )
+        file_url = self._GetFileURL( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
         result = GetExtraURLInfo( url )
         
@@ -1101,7 +1132,7 @@ class GalleryGiphy( Gallery ):
         return ( urls, definitely_no_more_pages )
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
         id = GetExtraURLInfo( url )
         
@@ -1115,7 +1146,7 @@ class GalleryGiphy( Gallery ):
             
             try:
                 
-                raw_json = self._FetchData( url, report_hooks = report_hooks )
+                raw_json = self._FetchData( url )
                 
                 json_dict = json.loads( raw_json )
                 
@@ -1134,18 +1165,16 @@ class GalleryGiphy( Gallery ):
     
 class GalleryHentaiFoundry( Gallery ):
     
-    def _AddSessionCookies( self, request_headers ):
+    def _EnsureLoggedIn( self ):
         
         manager = HG.client_controller.GetManager( 'web_sessions' )
         
-        cookies = manager.GetCookies( 'hentai foundry' )
-        
-        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
+        manager.EnsureLoggedIn( 'hentai foundry' )
         
     
-    def _GetFileURLAndTags( self, url, report_hooks = None ):
+    def _GetFileURLAndTags( self, url ):
         
-        html = self._FetchData( url, report_hooks = report_hooks )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
@@ -1251,25 +1280,25 @@ class GalleryHentaiFoundry( Gallery ):
         return ( image_url, tags )
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
     
-    def GetFileAndTags( self, temp_path, url, report_hooks = None ):
+    def GetFileAndTags( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
         return tags
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
         return tags
         
@@ -1310,9 +1339,9 @@ class GalleryHentaiFoundryTags( GalleryHentaiFoundry ):
     
 class GalleryNewgrounds( Gallery ):
     
-    def _GetFileURLAndTags( self, url, report_hooks = None ):
+    def _GetFileURLAndTags( self, url ):
         
-        html = self._FetchData( url, report_hooks = report_hooks )
+        html = self._FetchData( url )
         
         return self._ParseImagePage( html, url )
         
@@ -1415,25 +1444,25 @@ class GalleryNewgrounds( Gallery ):
         return ( flash_url, tags )
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
     
-    def GetFileAndTags( self, temp_path, url, report_hooks = None ):
+    def GetFileAndTags( self, temp_path, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( file_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( file_url, referral_url = url, temp_path = temp_path )
         
         return tags
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
-        ( file_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( file_url, tags ) = self._GetFileURLAndTags( url )
         
         return tags
         
@@ -1458,13 +1487,11 @@ class GalleryNewgroundsMovies( GalleryNewgrounds ):
     
 class GalleryPixiv( Gallery ):
     
-    def _AddSessionCookies( self, request_headers ):
+    def _EnsureLoggedIn( self ):
         
         manager = HG.client_controller.GetManager( 'web_sessions' )
         
-        cookies = manager.GetCookies( 'pixiv' )
-        
-        ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
+        manager.EnsureLoggedIn( 'pixiv' )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -1554,32 +1581,32 @@ class GalleryPixiv( Gallery ):
         return ( image_url, tags )
         
     
-    def _GetFileURLAndTags( self, page_url, report_hooks = None ):
+    def _GetFileURLAndTags( self, page_url ):
         
-        html = self._FetchData( page_url, report_hooks = report_hooks )
+        html = self._FetchData( page_url )
         
         return self._ParseImagePage( html, page_url )
         
     
-    def GetFile( self, temp_path, url, report_hooks = None ):
+    def GetFile( self, temp_path, url ):
         
-        ( image_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( image_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( image_url, referral_url = url, temp_path = temp_path )
         
     
-    def GetFileAndTags( self, temp_path, url, report_hooks = None ):
+    def GetFileAndTags( self, temp_path, url ):
         
-        ( image_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
-        self._FetchData( image_url, referer_url = url, report_hooks = report_hooks, temp_path = temp_path )
+        self._FetchData( image_url, referral_url = url, temp_path = temp_path )
         
         return tags
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
-        ( image_url, tags ) = self._GetFileURLAndTags( url, report_hooks = report_hooks )
+        ( image_url, tags ) = self._GetFileURLAndTags( url )
         
         return tags
         
@@ -1741,7 +1768,7 @@ class GalleryTumblr( Gallery ):
         return ( urls, definitely_no_more_pages )
         
     
-    def GetTags( self, url, report_hooks = None ):
+    def GetTags( self, url ):
         
         result = GetExtraURLInfo( url )
         

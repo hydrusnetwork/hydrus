@@ -1566,7 +1566,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
-        force_reload = False
+        we_were_affected = False
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
@@ -1582,12 +1582,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     self._RedrawMedia( affected_media )
                     
-                    force_reload = True
+                    we_were_affected = True
                     
                 
             
         
-        self._PublishSelectionChange( force_reload = force_reload )
+        if we_were_affected:
+            
+            self._PublishSelectionChange( force_reload = True )
+            
         
         if self._focussed_media is not None:
             

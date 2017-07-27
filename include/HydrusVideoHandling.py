@@ -221,7 +221,10 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
                 
                 if num_frames != int( num_frames ): # we want whole numbers--anything else suggests start_offset is off or whatever
                     
-                    it_was_accurate = False
+                    if os.path.getsize( path ) < 30 * 1048576: # but only defer to a super precise +/- 1-frame manual count in this case when the file is small
+                        
+                        it_was_accurate = False
+                        
                     
                 
             

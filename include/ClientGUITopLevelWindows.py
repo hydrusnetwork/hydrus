@@ -489,6 +489,29 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
         self.EndModal( wx.ID_OK )
         
     
+class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
+    
+    def __init__( self, parent, title ):
+        
+        DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
+        
+    
+    def DoOK( self ):
+        
+        try:
+            
+            self._panel.TryToClose()
+            
+        except HydrusExceptions.VetoException:
+            
+            return
+            
+        
+        SaveTLWSizeAndPosition( self, self._frame_key )
+        
+        self.EndModal( wx.ID_OK )
+        
+    
 class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):

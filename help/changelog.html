@@ -8,6 +8,59 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 266</h3></li>
+				<ul>
+					<li>converted gallery downloaders to the new network engine</li>
+					<li>greatly simplified how gallery downloaders report network activity and converted them to show the new network job control as well</li>
+					<li>subscriptions also work on the new engine but will not show network gui yet</li>
+					<li>hacked hentai foundry and pixiv login to use the new network engine</li>
+					<li>successful logins to hf or pixiv now print to the log</li>
+					<li>the new network engine now clears temporary session cookies after 90 mins of inactivity</li>
+					<li>gallery downloaders and subscriptions now use the new 'downloader instance' and subscription bandwidth rules. by default, this means downloaders will do small bursts every five minutes and that subscriptions will do at most 256MB per day</li>
+					<li>subscriptions' bandwidth use is now listed by name in the review bandwidth panel</li>
+					<li>subscriptions use a new bandwidth test to determine if they should start or continue based on current bandwidth limits. it should mean subs do a good bit of work and then stop when they are supposed to without ever waiting on bandwidth more than 30s or so</li>
+					<li>thread watcher and page of images now ignore bandwidth limits when doing their 'page' fetching part</li>
+					<li>gallery page fetching will ignore bandwidth rules (in order to stop gallery walk desyncs from having to wait a long time)--it will fetch one page per five seconds</li>
+					<li>the thread watcher and page of images importers now work on their files and page-checking simultaneously--also, the page of images will process its page queue at any time, not only when the current file queue is finished</li>
+					<li>the gallery downloader page now works on its files and gallery page parsing simultaneously!</li>
+					<li>wrote a 'file import status' control to better wrap up the import summary, progress gauge, and file import status button into one panel</li>
+					<li>thread watchers now use the new file status control</li>
+					<li>'page of images' downloaders now use the new file status control</li>
+					<li>the gallery downloaders now use the new file status control</li>
+					<li>all network jobs will now retry up to four times on the BadStatusLine ConnectionError, which seems to be a TLS (https) negotiation timeout/remote termination</li>
+					<li>all requests on the new network engine will now timeout after ten seconds</li>
+					<li>they will also retry on generic timeout errors</li>
+					<li>popup messages can now be shown in 'modal' mode as a dialog that prohibits interaction with the rest of the client.</li>
+					<li>these will not boot while the client is minimised</li>
+					<li>database maintenance routines will now all publish messages like this</li>
+					<li>'migrate database' panel now publishes a modal message when it does a file rebalance</li>
+					<li>rewrote the controller-side pubsub pipeline to respond faster and consume fewer program resources, particularly for the client</li>
+					<li>import pages now update themselves in a less spammy way behind the scenes, meaning more active pages can be open at once without them stepping on each other and clogging things up</li>
+					<li>simplified how importers set their status information in several ways</li>
+					<li>reduced a swath of pubsub spam related to content updates</li>
+					<li>improved how spammy small jobs are written to the profile log</li>
+					<li>reduced text flicker on all download pages</li>
+					<li>more misc pubsub improvements</li>
+					<li>reduced some gui update/refresh spam on hidden pages</li>
+					<li>cleaned up a bunch of database->gui message reporting and cleanup code</li>
+					<li>added close other/left/right pages to tab right-click menu</li>
+					<li>the top-right media hover window will no longer refit-flicker on a ratings change</li>
+					<li>wrote a new panel wrapper for listctrls that handles the underlying row of buttons in a neater way and automatically disables them if they are nullipotent (mostly, this means greying out 'delete' buttons when nothing is selected)</li>
+					<li>several listctrls use this new panel</li>
+					<li>when it is not strictly necessary, videos that are >30MB will no longer use the CPU-expensive manual frame count parsing</li>
+					<li>a problem where newly reloaded thread watchers could sometimes stick in a 1/1 initialisation state _should_ be fixed</li>
+					<li>fixed gelbooru url parsing (they stopped using the janky redirect.php urls)</li>
+					<li>fixed an issue that meant ipfs pin was erroring when trying to show gui-side</li>
+					<li>'page of images' downloaders now protest if they are told to close while working</li>
+					<li>some small layout and status text fixes</li>
+					<li>adminside petition processing now has a 'flip selected' box to flip checked status of all selected contents</li>
+					<li>adminside petition processing contents chechklistbox now supports multiple selection</li>
+					<li>improved the reliability of some shutdown code</li>
+					<li>cleared out some old unused code</li>
+					<li>misc new control cleanup</li>
+					<li>misc fixes</li>
+					<li>more misc fixes</li>
+				</ul>
 				<li><h3>version 265</h3></li>
 				<ul>
 					<li>the bandwidth engine now recognises individual thread watcher threads as a network context that can inherit default bandwidth rules</li>

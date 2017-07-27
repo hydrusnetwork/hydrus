@@ -41,6 +41,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._is_booted = False
         
+        self._splash = None
+        
         HydrusController.HydrusController.__init__( self, db_dir, no_daemons, no_wal )
         
         self._name = 'client'
@@ -65,6 +67,32 @@ class Controller( HydrusController.HydrusController ):
     def _InitDB( self ):
         
         return ClientDB.DB( self, self.db_dir, 'client', no_wal = self._no_wal )
+        
+    
+    def _CreateSplash( self ):
+        
+        try:
+            
+            self._splash = ClientGUI.FrameSplash( self )
+            
+        except:
+            
+            HydrusData.Print( 'There was an error trying to start the splash screen!' )
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+            raise
+            
+        
+    
+    def _DestroySplash( self ):
+        
+        if self._splash is not None:
+            
+            self._splash.Destroy()
+            
+            self._splash = None
+            
         
     
     def CallBlockingToWx( self, func, *args, **kwargs ):
@@ -278,22 +306,6 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CreateSplash( self ):
-        
-        try:
-            
-            self._splash = ClientGUI.FrameSplash( self )
-            
-        except:
-            
-            HydrusData.Print( 'There was an error trying to start the splash screen!' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-            raise
-            
-        
-    
     def CurrentlyIdle( self ):
         
         if HG.force_idle_mode:
@@ -401,7 +413,7 @@ class Controller( HydrusController.HydrusController ):
             
             try:
                 
-                self.CreateSplash()
+                self._CreateSplash()
                 
                 idle_shutdown_action = self._options[ 'idle_shutdown' ]
                 
@@ -442,7 +454,7 @@ class Controller( HydrusController.HydrusController ):
                 
             except:
                 
-                self.pub( 'splash_destroy' )
+                self._DestroySplash()
                 
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
@@ -806,11 +818,6 @@ class Controller( HydrusController.HydrusController ):
         return self._menu_open
         
     
-    def NotifyPubSubs( self ):
-        
-        wx.CallAfter( self.ProcessPubSub )
-        
-    
     def PageCompletelyDestroyed( self, page_key ):
         
         if self.gui:
@@ -851,8 +858,19 @@ class Controller( HydrusController.HydrusController ):
     
     def PrepStringForDisplay( self, text ):
         
-        if self._options[ 'gui_capitalisation' ]: return text
-        else: return text.lower()
+        if self._options[ 'gui_capitalisation' ]:
+            
+            return text
+            
+        else:
+            
+            return text.lower()
+            
+        
+    
+    def ProcessPubSub( self ):
+        
+        self.CallBlockingToWx( self._pubsub.Process )
         
     
     def RefreshServices( self ):
@@ -1002,7 +1020,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( u'booting controller\u2026' )
         
-        self.CreateSplash()
+        self._CreateSplash()
         
         boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
         
@@ -1216,7 +1234,7 @@ class Controller( HydrusController.HydrusController ):
             
         finally:
             
-            self.pub( 'splash_destroy' )
+            self._DestroySplash()
             
         
     
@@ -1234,15 +1252,21 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             
-        except HydrusExceptions.PermissionException: pass
-        except HydrusExceptions.ShutdownException: pass
+        except HydrusExceptions.PermissionException:
+            
+            pass
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
         except:
             
             ClientData.ReportShutdownException()
             
         finally:
             
-            self.pub( 'splash_destroy' )
+            self._DestroySplash()
             
         
     

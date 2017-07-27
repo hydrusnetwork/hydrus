@@ -19,7 +19,11 @@ class HydrusPubSub( object ):
         self._controller = controller
         self._binding_errors_to_ignore = binding_errors_to_ignore
         
+        self._doing_work = False
+        
         self._pubsubs = []
+        
+        self._pub_event = threading.Event()
         
         self._lock = threading.Lock()
         
@@ -72,12 +76,9 @@ class HydrusPubSub( object ):
         return callables
         
     
-    def NoJobsQueued( self ):
+    def DoingWork( self ):
         
-        with self._lock:
-            
-            return len( self._pubsubs ) == 0
-            
+        return self._doing_work
         
     
     def Process( self ):
@@ -89,46 +90,78 @@ class HydrusPubSub( object ):
         # because the (short) processing thread finished and entirely pubsubbed before wx had a chance to boot the
         # message.
         
-        callables = []
+        self._doing_work = True
         
-        with self._lock:
+        try:
             
-            if len( self._pubsubs ) > 0:
+            callables = []
+            
+            with self._lock:
                 
-                ( topic, args, kwargs ) = self._pubsubs.pop( 0 )
-                
-                callables = self._GetCallables( topic )
-                
-            
-        
-        # do this _outside_ the lock, lol
-        
-        pubsub_profilable = topic != 'message'
-        
-        if HG.pubsub_profile_mode and pubsub_profilable:
-            
-            summary = 'Profiling ' + HydrusData.ConvertIntToPrettyString( len( callables ) ) + ' x ' + topic
-            
-            HydrusData.ShowText( summary )
-            
-            for callable in callables:
-                
-                HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals() )
-                
-            
-        else:
-            
-            for callable in callables:
-                
-                try:
-                    
-                    callable( *args, **kwargs )
-                    
-                except HydrusExceptions.ShutdownException:
+                if len( self._pubsubs ) == 0:
                     
                     return
                     
                 
+                pubsubs = self._pubsubs
+                
+                self._pubsubs = []
+                
+            
+            for ( topic, args, kwargs ) in pubsubs:
+                
+                try:
+                    
+                    callables = self._GetCallables( topic )
+                    
+                    # do this _outside_ the lock, lol
+                    
+                    pubsub_profilable = topic != 'message'
+                    
+                    if HG.pubsub_profile_mode and pubsub_profilable:
+                        
+                        summary = 'Profiling ' + HydrusData.ConvertIntToPrettyString( len( callables ) ) + ' x ' + topic
+                        
+                        HydrusData.ShowText( summary )
+                        
+                        per_summary = 'Profiling ' + topic
+                        
+                        for callable in callables:
+                            
+                            try:
+                                
+                                HydrusData.Profile( per_summary, 'callable( *args, **kwargs )', globals(), locals() )
+                                
+                            except HydrusExceptions.ShutdownException:
+                                
+                                return False
+                                
+                            
+                        
+                    else:
+                        
+                        for callable in callables:
+                            
+                            try:
+                                
+                                callable( *args, **kwargs )
+                                
+                            except HydrusExceptions.ShutdownException:
+                                
+                                return False
+                                
+                            
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                
+            
+        finally:
+            
+            self._doing_work = False
             
         
     
@@ -139,7 +172,7 @@ class HydrusPubSub( object ):
             self._pubsubs.append( ( topic, args, kwargs ) )
             
         
-        self._controller.NotifyPubSubs()
+        self._pub_event.set()
         
     
     def pubimmediate( self, topic, *args, **kwargs ):
@@ -167,3 +200,17 @@ class HydrusPubSub( object ):
             
         
     
+    def WaitOnPub( self ):
+        
+        self._pub_event.wait( 3 )
+        
+        self._pub_event.clear()
+        
+    
+    def WorkToDo( self ):
+        
+        with self._lock:
+            
+            return len( self._pubsubs ) > 0
+            
+        

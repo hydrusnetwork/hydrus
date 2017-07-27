@@ -508,7 +508,7 @@ def ReportShutdownException():
     wx.CallAfter( wx.MessageBox, traceback.format_exc() )
     wx.CallAfter( wx.MessageBox, text )
     
-def ShowExceptionClient( e ):
+def ShowExceptionClient( e, do_wait = True ):
     
     ( etype, value, tb ) = sys.exc_info()
     
@@ -572,7 +572,10 @@ def ShowExceptionClient( e ):
     
     HG.client_controller.pub( 'message', job_key )
     
-    time.sleep( 1 )
+    if do_wait:
+        
+        time.sleep( 1 )
+        
     
 def ShowTextClient( text ):
     
@@ -1444,24 +1447,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetClientFilesLocationsToIdealWeights( self, locations_to_weights, resized_thumbnail_override, full_size_thumbnail_override ):
-        
-        with self._lock:
-            
-            portable_locations_and_weights = [ ( HydrusPaths.ConvertAbsPathToPortablePath( location ), float( weight ) ) for ( location, weight ) in locations_to_weights.items() ]
-            
-            self._dictionary[ 'client_files_locations_ideal_weights' ] = portable_locations_and_weights
-            
-            if resized_thumbnail_override is not None:
-                
-                resized_thumbnail_override = HydrusPaths.ConvertAbsPathToPortablePath( resized_thumbnail_override )
-                
-            
-            self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
-            self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = full_size_thumbnail_override
-            
-        
-    
     def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
         
         with self._lock:
@@ -1483,6 +1468,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+            
+        
+    
+    def SetFullsizeThumbnailOverride( self, full_size_thumbnail_override ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = full_size_thumbnail_override
             
         
     
@@ -1539,6 +1532,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_strings' ][ name ] = value
+            
+        
+    
+    def SetResizedThumbnailOverride( self, resized_thumbnail_override ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
             
         
     

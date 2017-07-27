@@ -358,11 +358,6 @@ class Controller( HydrusController.HydrusController ):
         self.WriteSynchronous( 'analyze', stop_time )
         
     
-    def NotifyPubSubs( self ):
-        
-        self.CallToThread( self.ProcessPubSub )
-        
-    
     def ReportDataUsed( self, num_bytes ):
         
         self._admin_service.ServerReportDataUsed( num_bytes )

@@ -95,9 +95,9 @@ class TestBandwidthManager( unittest.TestCase ):
             
             bm = ClientNetworking.NetworkBandwidthManager()
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
@@ -106,9 +106,9 @@ class TestBandwidthManager( unittest.TestCase ):
             bm.ReportRequestUsed( SUBDOMAIN_NETWORK_CONTEXTS )
             bm.ReportDataUsed( SUBDOMAIN_NETWORK_CONTEXTS, 25 )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
@@ -116,85 +116,85 @@ class TestBandwidthManager( unittest.TestCase ):
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
             bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
             
-            self.assertFalse( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             
-            self.assertFalse( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
-            self.assertTrue( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertTrue( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
             #
             
@@ -202,9 +202,9 @@ class TestBandwidthManager( unittest.TestCase ):
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             
-            self.assertFalse( bm.CanStart( GLOBAL_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( DOMAIN_NETWORK_CONTEXTS ) )
-            self.assertFalse( bm.CanStart( SUBDOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
+            self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
         
     

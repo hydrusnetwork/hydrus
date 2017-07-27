@@ -6,6 +6,7 @@ import ClientGUIFrames
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIPanels
+import ClientGUIPopupMessages
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientTags
@@ -963,6 +964,9 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
+    RESIZED_RATIO = 0.012
+    FULLSIZE_RATIO = 0.016
+    
     def __init__( self, parent, controller ):
         
         self._controller = controller
@@ -987,7 +991,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'weight and ideal usage', 200 ), ( 'current usage', 200 ) ] )
+        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'free space', 70 ), ( 'weight', 50 ), ( 'ideal usage', 200 ), ( 'current usage', 200 ) ] )
         
         self._add_path_button = ClientGUICommon.BetterButton( info_panel, 'add location', self._AddPath )
         self._remove_path_button = ClientGUICommon.BetterButton( info_panel, 'empty/remove location', self._RemovePaths )
@@ -995,14 +999,21 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._decrease_weight_button = ClientGUICommon.BetterButton( info_panel, 'decrease weight', self._DecreaseWeight )
         self._rebalance_button = ClientGUICommon.BetterButton( info_panel, 'move files now', self._Rebalance )
         
-        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel, style = wx.ALIGN_CENTER )
+        self._resized_thumbs_location = wx.TextCtrl( info_panel )
+        self._resized_thumbs_location.Disable()
         
-        # ways to:
-        # set/clear thumb locations
+        self._fullsize_thumbs_location = wx.TextCtrl( info_panel )
+        self._fullsize_thumbs_location.Disable()
+        
+        self._resized_thumbs_location_set = ClientGUICommon.BetterButton( info_panel, 'set', self._SetResizedThumbnailLocation )
+        self._fullsize_thumbs_location_set = ClientGUICommon.BetterButton( info_panel, 'set', self._SetFullsizeThumbnailLocation )
+        
+        self._resized_thumbs_location_clear = ClientGUICommon.BetterButton( info_panel, 'clear', self._ClearResizedThumbnailLocation )
+        self._fullsize_thumbs_location_clear = ClientGUICommon.BetterButton( info_panel, 'clear', self._ClearFullsizeThumbnailLocation )
+        
+        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel )
+        
         # move whole db and portable paths (requires shutdown and user shortcut command line yes/no warning)
-        
-        # store all resized thumbs in sep location
-        # store all full_size thumbs in sep location
         
         #
         
@@ -1017,19 +1028,35 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._add_path_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._remove_path_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._increase_weight_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._decrease_weight_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._add_path_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._remove_path_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._increase_weight_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._decrease_weight_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
+        
+        r_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        r_hbox.AddF( ClientGUICommon.BetterStaticText( info_panel, 'resized thumbnail location' ), CC.FLAGS_VCENTER )
+        r_hbox.AddF( self._resized_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        r_hbox.AddF( self._resized_thumbs_location_set, CC.FLAGS_VCENTER )
+        r_hbox.AddF( self._resized_thumbs_location_clear, CC.FLAGS_VCENTER )
+        
+        t_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        t_hbox.AddF( ClientGUICommon.BetterStaticText( info_panel, 'full-size thumbnail location' ), CC.FLAGS_VCENTER )
+        t_hbox.AddF( self._fullsize_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        t_hbox.AddF( self._fullsize_thumbs_location_set, CC.FLAGS_VCENTER )
+        t_hbox.AddF( self._fullsize_thumbs_location_clear, CC.FLAGS_VCENTER )
         
         info_panel.AddF( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._current_media_locations_listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        info_panel.AddF( self._current_media_locations_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        info_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        info_panel.AddF( r_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._rebalance_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -1041,7 +1068,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.SetSizer( vbox )
         
-        min_width = ClientData.ConvertTextToPixelWidth( self, 90 )
+        min_width = ClientData.ConvertTextToPixelWidth( self, 100 )
         
         self.SetMinSize( ( min_width, -1 ) )
         
@@ -1065,6 +1092,13 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
+                if path == resized_thumbnail_override or path == full_size_thumbnail_override:
+                    
+                    wx.MessageBox( 'That path is already used as a special thumbnail location--please choose another.' )
+                    
+                    return
+                    
+                
                 self._new_options.SetClientFilesLocation( path, 1 )
                 
                 self._Update()
@@ -1078,7 +1112,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         adjustees = set()
         
-        for ( location, portable, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+        for ( location, portable, free_space, weight, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
             
             if location in locations_to_ideal_weights:
                 
@@ -1104,12 +1138,30 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _ClearFullsizeThumbnailLocation( self ):
+        
+        self._new_options.SetFullsizeThumbnailOverride( None )
+        
+        self._Update()
+        
+    
+    def _ClearResizedThumbnailLocation( self ):
+        
+        self._new_options.SetResizedThumbnailOverride( None )
+        
+        self._Update()
+        
+    
     def _DecreaseWeight( self ):
         
         self._AdjustWeight( -1 )
         
     
-    def _GenerateCurrentMediaTuples( self ):
+    def _GenerateCurrentMediaTuples( self, approx_total_client_files ):
+        
+        f_space = approx_total_client_files
+        r_space = approx_total_client_files * self.RESIZED_RATIO
+        t_space = approx_total_client_files * self.FULLSIZE_RATIO
         
         # ideal
         
@@ -1185,6 +1237,52 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 pretty_portable = 'no'
                 
             
+            free_space = HydrusPaths.GetFreeSpace( location )
+            pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
+            
+            fp = locations_to_file_weights[ location ] / 256.0
+            tp = locations_to_fs_thumb_weights[ location ] / 256.0
+            rp = locations_to_r_thumb_weights[ location ] / 256.0
+            
+            p = HydrusData.ConvertFloatToPercentage
+            
+            current_bytes = fp * f_space + tp * t_space + rp * r_space
+            
+            current_usage = ( fp, tp, rp )
+            
+            usages = []
+            
+            if fp > 0:
+                
+                usages.append( p( fp ) + ' files' )
+                
+            
+            if tp > 0:
+                
+                usages.append( p( tp ) + ' full-size thumbnails' )
+                
+            
+            if rp > 0:
+                
+                usages.append( p( rp ) + ' resized thumbnails' )
+                
+            
+            if len( usages ) > 0:
+                
+                if fp == tp and tp == rp:
+                    
+                    usages = [ p( fp ) + ' everything' ]
+                    
+                
+                pretty_current_usage = HydrusData.ConvertIntToBytes( current_bytes ) + ' - ' + ','.join( usages )
+                
+            else:
+                
+                pretty_current_usage = 'nothing'
+                
+            
+            #
+            
             if location in locations_to_ideal_weights:
                 
                 ideal_weight = locations_to_ideal_weights[ location ]
@@ -1198,33 +1296,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 pretty_ideal_weight = 'n/a'
                 
             
-            fp = locations_to_file_weights[ location ] / 256.0
-            tp = locations_to_fs_thumb_weights[ location ] / 256.0
-            rp = locations_to_r_thumb_weights[ location ] / 256.0
-            
-            p = HydrusData.ConvertFloatToPercentage
-            
-            current_usage = ( fp, tp, rp )
-            
-            usages = []
-            
-            if fp > 0:
-                
-                usages.append( p( fp ) + ' files' )
-                
-            
-            if tp > 0 and tp != fp:
-                
-                usages.append( p( tp ) + ' full-size thumbnails' )
-                
-            
-            if rp > 0 and rp != fp:
-                
-                usages.append( p( rp ) + ' resized thumbnails' )
-                
-            
-            pretty_current_usage = ','.join( usages )
-            
             if location in locations_to_ideal_weights:
                 
                 ideal_fp = locations_to_ideal_weights[ location ] / float( total_ideal_weight )
@@ -1234,23 +1305,39 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 ideal_fp = 0.0
                 
             
-            if full_size_thumbnail_override is not None and location == full_size_thumbnail_override:
+            if full_size_thumbnail_override is None:
                 
-                ideal_tp = 1.0
+                ideal_tp = ideal_fp
                 
             else:
                 
-                ideal_tp = 0.0
+                if location == full_size_thumbnail_override:
+                    
+                    ideal_tp = 1.0
+                    
+                else:
+                    
+                    ideal_tp = 0.0
+                    
                 
             
-            if resized_thumbnail_override is not None and location == resized_thumbnail_override:
+            if resized_thumbnail_override is None:
                 
-                ideal_rp = 1.0
+                ideal_rp = ideal_fp
                 
             else:
                 
-                ideal_rp = 0.0
+                if location == resized_thumbnail_override:
+                    
+                    ideal_rp = 1.0
+                    
+                else:
+                    
+                    ideal_rp = 0.0
+                    
                 
+            
+            ideal_bytes = ideal_fp * f_space + ideal_tp * t_space + ideal_rp * r_space
             
             ideal_usage = ( ideal_fp, ideal_tp, ideal_rp )
             
@@ -1261,20 +1348,32 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 usages.append( p( ideal_fp ) + ' files' )
                 
             
-            if ideal_tp > 0 and ideal_tp != ideal_fp:
+            if ideal_tp > 0:
                 
                 usages.append( p( ideal_tp ) + ' full-size thumbnails' )
                 
             
-            if ideal_rp > 0 and ideal_rp != ideal_fp:
+            if ideal_rp > 0:
                 
                 usages.append( p( ideal_rp ) + ' resized thumbnails' )
                 
             
-            pretty_ideal_usage = ','.join( usages )
+            if len( usages ) > 0:
+                
+                if ideal_fp == ideal_tp and ideal_tp == ideal_rp:
+                    
+                    usages = [ p( ideal_fp ) + ' everything' ]
+                    
+                
+                pretty_ideal_usage = HydrusData.ConvertIntToBytes( ideal_bytes ) + ' - ' + ','.join( usages )
+                
+            else:
+                
+                pretty_ideal_usage = 'nothing'
+                
             
-            display_tuple = ( pretty_location, pretty_portable, pretty_ideal_weight + ': ' + pretty_ideal_usage, pretty_current_usage )
-            sort_tuple = ( location, portable, ( ideal_weight, ideal_usage ), current_usage )
+            display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
+            sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
             
             tuples.append( ( location, display_tuple, sort_tuple ) )
             
@@ -1289,20 +1388,22 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Rebalance( self ):
         
-        # replace this with the job_key dialog next week
+        job_key = ClientThreading.JobKey( cancellable = True )
         
-        def do_it():
+        job_key.SetVariable( 'popup_title', 'rebalancing files' )
+        
+        self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
+        
+        with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, 'migrating files' ) as dlg:
             
-            wx.CallAfter( wx.MessageBox, 'rebalance started - this notification will improve soon!' )
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
             
-            self._controller.client_files_manager.Rebalance()
+            dlg.SetPanel( panel )
             
-            wx.CallAfter( wx.MessageBox, 'rebalance finished' )
-            
-            wx.CallAfter( self._Update )
+            dlg.ShowModal()
             
         
-        self._controller.CallToThread( do_it )
+        self._Update()
         
     
     def _RemovePaths( self ):
@@ -1311,7 +1412,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         removees = set()
         
-        for ( location, portable, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+        for ( location, portable, free_space, weight, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
             
             if location in locations_to_ideal_weights:
                 
@@ -1346,6 +1447,64 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _SetFullsizeThumbnailLocation( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        with wx.DirDialog( self ) as dlg:
+            
+            if full_size_thumbnail_override is not None:
+                
+                dlg.SetPath( full_size_thumbnail_override )
+                
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                if path in locations_to_ideal_weights:
+                    
+                    wx.MessageBox( 'That path already exists as a regular file location! Please choose another.' )
+                    
+                else:
+                    
+                    self._new_options.SetFullsizeThumbnailOverride( path )
+                    
+                    self._Update()
+                    
+                
+            
+        
+    
+    def _SetResizedThumbnailLocation( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        with wx.DirDialog( self ) as dlg:
+            
+            if resized_thumbnail_override is not None:
+                
+                dlg.SetPath( resized_thumbnail_override )
+                
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = dlg.GetPath()
+                
+                if path in locations_to_ideal_weights:
+                    
+                    wx.MessageBox( 'That path already exists as a regular file location! Please choose another.' )
+                    
+                else:
+                    
+                    self._new_options.SetResizedThumbnailOverride( path )
+                    
+                    self._Update()
+                    
+                
+            
+        
+    
     def _Update( self ):
         
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
@@ -1357,7 +1516,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         
-        approx_total_client_files = all_local_files_total_size * 1.1
+        approx_total_client_files = all_local_files_total_size * ( 1.0 + self.RESIZED_RATIO + self.FULLSIZE_RATIO )
         
         self._current_media_paths_st.SetLabelText( 'media (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + '):' )
         
@@ -1365,7 +1524,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_media_locations_listctrl.DeleteAllItems()
         
-        for ( i, ( location, display_tuple, sort_tuple ) ) in enumerate( self._GenerateCurrentMediaTuples() ):
+        for ( i, ( location, display_tuple, sort_tuple ) ) in enumerate( self._GenerateCurrentMediaTuples( all_local_files_total_size ) ):
             
             self._current_media_locations_listctrl.Append( display_tuple, sort_tuple )
             
@@ -1375,15 +1534,55 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        #
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        if resized_thumbnail_override is None:
+            
+            self._resized_thumbs_location.SetValue( 'none set' )
+            
+            self._resized_thumbs_location_set.Enable()
+            self._resized_thumbs_location_clear.Disable()
+            
+        else:
+            
+            self._resized_thumbs_location.SetValue( resized_thumbnail_override )
+            
+            self._resized_thumbs_location_set.Disable()
+            self._resized_thumbs_location_clear.Enable()
+            
+        
+        if full_size_thumbnail_override is None:
+            
+            self._fullsize_thumbs_location.SetValue( 'none set' )
+            
+            self._fullsize_thumbs_location_set.Enable()
+            self._fullsize_thumbs_location_clear.Disable()
+            
+        else:
+            
+            self._fullsize_thumbs_location.SetValue( full_size_thumbnail_override )
+            
+            self._fullsize_thumbs_location_set.Disable()
+            self._fullsize_thumbs_location_clear.Enable()
+            
+        
+        #
+        
         if self._controller.client_files_manager.RebalanceWorkToDo():
             
             self._rebalance_button.Enable()
+            
+            self._rebalance_status_st.SetForegroundColour( ( 128, 0, 0 ) )
             
             self._rebalance_status_st.SetLabelText( 'files need to be moved' )
             
         else:
             
             self._rebalance_button.Disable()
+            
+            self._rebalance_status_st.SetForegroundColour( ( 0, 128, 0 ) )
             
             self._rebalance_status_st.SetLabelText( 'all files are in their ideal locations' )
             

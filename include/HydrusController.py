@@ -43,8 +43,6 @@ class HydrusController( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
         
-        self._currently_doing_pubsub = False
-        
         self._daemons = []
         self._caches = {}
         self._managers = {}
@@ -57,6 +55,8 @@ class HydrusController( object ):
         
         self._just_woke_from_sleep = False
         self._system_busy = False
+        
+        threading.Thread( target = self.DAEMONPubSub, name = 'Pubsub Daemon' ).start()
         
     
     def _GetCallToThread( self ):
@@ -276,11 +276,6 @@ class HydrusController( object ):
         return self._model_shutdown
         
     
-    def NotifyPubSubs( self ):
-        
-        raise NotImplementedError()
-        
-    
     def PrintProfile( self, summary, profile_text ):
         
         boot_pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._timestamps[ 'boot' ] ) )
@@ -301,16 +296,7 @@ class HydrusController( object ):
     
     def ProcessPubSub( self ):
         
-        self._currently_doing_pubsub = True
-        
-        try:
-            
-            self._pubsub.Process()
-            
-        finally:
-            
-            self._currently_doing_pubsub = False
-            
+        self._pubsub.Process()
         
     
     def Read( self, action, *args, **kwargs ):
@@ -335,7 +321,10 @@ class HydrusController( object ):
         
         if self.db is not None:
             
-            while not self.db.LoopIsFinished(): time.sleep( 0.1 )
+            while not self.db.LoopIsFinished():
+                
+                time.sleep( 0.1 )
+                
             
         
     
@@ -398,7 +387,7 @@ class HydrusController( object ):
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 
-            elif self._pubsub.NoJobsQueued() and not self._currently_doing_pubsub:
+            elif not self._pubsub.WorkToDo() and not self._pubsub.DoingWork():
                 
                 return
                 
@@ -422,5 +411,27 @@ class HydrusController( object ):
     def WriteSynchronous( self, action, *args, **kwargs ):
         
         return self._Write( action, HC.LOW_PRIORITY, True, *args, **kwargs )
+        
+    
+    def DAEMONPubSub( self ):
+        
+        while not HG.model_shutdown:
+            
+            if self._pubsub.WorkToDo():
+                
+                try:
+                    
+                    self.ProcessPubSub()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e, do_wait = True )
+                    
+                
+            else:
+                
+                self._pubsub.WaitOnPub()
+                
+            
         
     

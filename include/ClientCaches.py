@@ -1080,60 +1080,77 @@ class ClientFilesManager( object ):
         return os.path.exists( path )
         
     
-    def Rebalance( self, stop_time = None ):
+    def Rebalance( self, job_key ):
         
-        if self._bad_error_occured:
+        try:
             
-            return
+            if self._bad_error_occured:
+                
+                wx.MessageBox( 'A serious file error has previously occured during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
+                
+                return
+                
             
-        
-        with self._lock:
-            
-            rebalance_tuple = self._GetRebalanceTuple()
-            
-            while rebalance_tuple is not None:
-                
-                ( prefix, overweight_location, underweight_location ) = rebalance_tuple
-                
-                text = 'Moving \'' + prefix + '\' from ' + overweight_location + ' to ' + underweight_location
-                
-                HydrusData.Print( text )
-                
-                # these two lines can cause a deadlock because the db sometimes calls stuff in here.
-                self._controller.Write( 'relocate_client_files', prefix, overweight_location, underweight_location )
-                
-                self._Reinit()
-                
-                if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
-                    
-                    return
-                    
+            with self._lock:
                 
                 rebalance_tuple = self._GetRebalanceTuple()
                 
-            
-            recover_tuple = self._GetRecoverTuple()
-            
-            while recover_tuple is not None:
-                
-                ( prefix, recoverable_location, correct_location ) = recover_tuple
-                
-                text = 'Recovering \'' + prefix + '\' from ' + recoverable_location + ' to ' + correct_location
-                
-                HydrusData.Print( text )
-                
-                recoverable_path = os.path.join( recoverable_location, prefix )
-                correct_path = os.path.join( correct_location, prefix )
-                
-                HydrusPaths.MergeTree( recoverable_path, correct_path )
-                
-                if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                while rebalance_tuple is not None:
                     
-                    return
+                    if job_key.IsCancelled():
+                        
+                        break
+                        
+                    
+                    ( prefix, overweight_location, underweight_location ) = rebalance_tuple
+                    
+                    text = 'Moving \'' + prefix + '\' from ' + overweight_location + ' to ' + underweight_location
+                    
+                    HydrusData.Print( text )
+                    
+                    job_key.SetVariable( 'popup_text_1', text )
+                    
+                    # these two lines can cause a deadlock because the db sometimes calls stuff in here.
+                    self._controller.Write( 'relocate_client_files', prefix, overweight_location, underweight_location )
+                    
+                    self._Reinit()
+                    
+                    rebalance_tuple = self._GetRebalanceTuple()
                     
                 
                 recover_tuple = self._GetRecoverTuple()
                 
+                while recover_tuple is not None:
+                    
+                    if job_key.IsCancelled():
+                        
+                        break
+                        
+                    
+                    ( prefix, recoverable_location, correct_location ) = recover_tuple
+                    
+                    text = 'Recovering \'' + prefix + '\' from ' + recoverable_location + ' to ' + correct_location
+                    
+                    HydrusData.Print( text )
+                    
+                    job_key.SetVariable( 'popup_text_1', text )
+                    
+                    recoverable_path = os.path.join( recoverable_location, prefix )
+                    correct_path = os.path.join( correct_location, prefix )
+                    
+                    HydrusPaths.MergeTree( recoverable_path, correct_path )
+                    
+                    recover_tuple = self._GetRecoverTuple()
+                    
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+            job_key.Delete()
             
         
     
@@ -1162,7 +1179,7 @@ class ClientFilesManager( object ):
             job_key.SetVariable( 'popup_title', 'regenerating thumbnails' )
             job_key.SetVariable( 'popup_text_1', 'creating directories' )
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'modal_message', job_key )
             
             num_broken = 0
             
@@ -3156,96 +3173,185 @@ class UndoManager( object ):
     
 class WebSessionManagerClient( object ):
     
+    SESSION_TIMEOUT = 90 * 60
+    
     def __init__( self, controller ):
         
         self._controller = controller
         
-        existing_sessions = self._controller.Read( 'web_sessions' )
+        self._error_names = set()
         
-        self._names_to_sessions = { name : ( cookies, expires ) for ( name, cookies, expires ) in existing_sessions }
+        self._network_contexts_to_session_timeouts = {}
         
         self._lock = threading.Lock()
         
     
-    def GetCookies( self, name ):
+    def _GetCookiesDict( self, network_context ):
+        
+        session = self._GetSession( network_context )
+        
+        cookies = session.cookies
+        
+        cookies.clear_expired_cookies()
+        
+        domains = cookies.list_domains()
+        
+        for domain in domains:
+            
+            if domain.endswith( network_context.context_data ):
+                
+                return cookies.get_dict( domain )
+                
+            
+        
+        return {}
+        
+    
+    def _GetSession( self, network_context ):
+        
+        session = self._controller.network_engine.session_manager.GetSession( network_context )
+        
+        if network_context not in self._network_contexts_to_session_timeouts:
+            
+            self._network_contexts_to_session_timeouts[ network_context ] = 0
+            
+        
+        if HydrusData.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
+            
+            session.cookies.clear_session_cookies()
+            
+        
+        self._network_contexts_to_session_timeouts[ network_context ] = HydrusData.GetNow() + self.SESSION_TIMEOUT
+        
+        return session
+        
+    
+    def _IsLoggedIn( self, network_context, required_cookies ):
+        
+        cookie_dict = self._GetCookiesDict( network_context )
+        
+        for name in required_cookies:
+            
+            if name not in cookie_dict:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def EnsureLoggedIn( self, name ):
+        
+        if name in self._error_names:
+            
+            raise Exception( name + ' could not establish a session! This ugly error is temporary due to the network engine rewrite. Please restart the client to reattempt this network context.' )
+            
         
         now = HydrusData.GetNow()
         
         with self._lock:
             
-            if name in self._names_to_sessions:
-                
-                ( cookies, expires ) = self._names_to_sessions[ name ]
-                
-                if HydrusData.TimeHasPassed( expires - 300 ): del self._names_to_sessions[ name ]
-                else: return cookies
-                
-            
-            # name not found, or expired
-            
-            if name == 'deviant art':
-                
-                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.GET, 'http://www.deviantart.com/', return_cookies = True )
-                
-                expires = now + 30 * 86400
-                
             if name == 'hentai foundry':
                 
-                ( response_gumpf, cookies ) = self._controller.DoHTTP( HC.GET, 'http://www.hentai-foundry.com/?enterAgree=1', return_cookies = True )
+                network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
                 
-                raw_csrf = cookies[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
-                
-                processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
-                
-                csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
-                
-                hentai_foundry_form_info = ClientDefaults.GetDefaultHentaiFoundryInfo()
-                
-                hentai_foundry_form_info[ 'YII_CSRF_TOKEN' ] = csrf_token
-                
-                body = urllib.urlencode( hentai_foundry_form_info )
-                
-                request_headers = {}
-                ClientNetworking.AddCookiesToHeaders( cookies, request_headers )
-                request_headers[ 'Content-Type' ] = 'application/x-www-form-urlencoded'
-                
-                self._controller.DoHTTP( HC.POST, 'http://www.hentai-foundry.com/site/filters', request_headers = request_headers, body = body )
-                
-                expires = now + 60 * 60
+                required_cookies = [ 'PHPSESSID', 'YII_CSRF_TOKEN' ]
                 
             elif name == 'pixiv':
                 
-                result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
+                network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
                 
-                if result is None:
+                required_cookies = [ 'PHPSESSID' ]
+                
+            
+            if self._IsLoggedIn( network_context, required_cookies ):
+                
+                return
+                
+            
+            try:
+                
+                if name == 'hentai foundry':
                     
-                    raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                    self.LoginHF( network_context )
+                    
+                elif name == 'pixiv':
+                    
+                    result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
+                    
+                    if result is None:
+                        
+                        raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                        
+                    
+                    ( pixiv_id, password ) = result
+                    
+                    self.LoginPixiv( network_context, pixiv_id, password )
                     
                 
-                ( pixiv_id, password ) = result
+                if not self._IsLoggedIn( network_context, required_cookies ):
+                    
+                    raise Exception( name + ' login did not work correctly!' )
+                    
                 
-                cookies = self.GetPixivCookies( pixiv_id, password )
+                HydrusData.Print( 'Successfully logged into ' + name + '.' )
                 
-                expires = now + 30 * 86400
+            except:
+                
+                self._error_names.add( name )
+                
+                raise
                 
             
-            self._names_to_sessions[ name ] = ( cookies, expires )
-            
-            self._controller.Write( 'web_session', name, cookies, expires )
-            
-            return cookies
-            
+        
+    
+    def LoginHF( self, network_context ):
+        
+        session = self._GetSession( network_context )
+        
+        response = session.get( 'https://www.hentai-foundry.com/' )
+        
+        response.content
+        
+        time.sleep( 1 )
+        
+        response = session.get( 'https://www.hentai-foundry.com/?enterAgree=1' )
+        
+        response.content
+        
+        time.sleep( 1 )
+        
+        cookie_dict = self._GetCookiesDict( network_context )
+        
+        raw_csrf = cookie_dict[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
+        
+        processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
+        
+        csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
+        
+        hentai_foundry_form_info = ClientDefaults.GetDefaultHentaiFoundryInfo()
+        
+        hentai_foundry_form_info[ 'YII_CSRF_TOKEN' ] = csrf_token
+        
+        response = session.post( 'http://www.hentai-foundry.com/site/filters', data = hentai_foundry_form_info )
+        
+        response.content
+        
+        time.sleep( 1 )
         
     
     # This updated login form is cobbled together from the example in PixivUtil2
     # it is breddy shid because I'm not using mechanize or similar browser emulation (like requests's sessions) yet
     # Pixiv 400s if cookies and referrers aren't passed correctly
     # I am leaving this as a mess with the hope the eventual login engine will replace it
-    def GetPixivCookies( self, pixiv_id, password ):
+    def LoginPixiv( self, network_context, pixiv_id, password ):
         
-        ( response, cookies ) = self._controller.DoHTTP( HC.GET, 'https://accounts.pixiv.net/login', return_cookies = True )
+        session = self._GetSession( network_context )
         
-        soup = ClientDownloading.GetSoup( response )
+        response = session.get( 'https://accounts.pixiv.net/login' )
+        
+        soup = ClientDownloading.GetSoup( response.content )
         
         # some whocking 20kb bit of json tucked inside a hidden form input wew lad
         i = soup.find( 'input', id = 'init-config' )
@@ -3276,21 +3382,7 @@ class WebSessionManagerClient( object ):
         
         headers[ 'referer' ] = "https://accounts.pixiv.net/login?lang=en^source=pc&view_type=page&ref=wwwtop_accounts_index"
         headers[ 'origin' ] = "https://accounts.pixiv.net"
-        ClientNetworking.AddCookiesToHeaders( cookies, headers )
         
-        r = requests.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
-        
-        # doesn't work
-        #( response_gumpf, cookies ) = self._controller.DoHTTP( HC.POST, 'https://accounts.pixiv.net/api/login?lang=en', request_headers = headers, body = body, return_cookies = True )
-        
-        cookies = dict( r.cookies )
-        
-        # _ only given to logged-in php sessions
-        if 'PHPSESSID' not in cookies or '_' not in cookies[ 'PHPSESSID' ]:
-            
-            raise HydrusExceptions.ForbiddenException( 'Pixiv login credentials not accepted!' )
-            
-        
-        return cookies
+        r = session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
         
     

@@ -21,11 +21,15 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         columns = [ ( 'type', -1 ), ( 'time delta', 120 ), ( 'max allowed', 80 ) ]
         
-        self._listctrl = ClientGUICommon.SaneListCtrl( self, 100, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        listctrl_panel = ClientGUICommon.SaneListCtrlPanel( self )
         
-        self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
-        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
-        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        self._listctrl = ClientGUICommon.SaneListCtrl( listctrl_panel, 100, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         
         #
         
@@ -40,14 +44,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         #
         
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.AddF( self._add_button, CC.FLAGS_LONE_BUTTON )
-        hbox.AddF( self._edit_button, CC.FLAGS_LONE_BUTTON )
-        hbox.AddF( self._delete_button, CC.FLAGS_LONE_BUTTON )
-        
-        self.AddF( self._listctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        self.AddF( listctrl_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def _Add( self ):
@@ -238,11 +235,15 @@ class EditStringToStringDictControl( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._listctrl = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        listctrl_panel = ClientGUICommon.SaneListCtrlPanel( self )
         
-        self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
-        self._edit = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
-        self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
+        self._listctrl = ClientGUICommon.SaneListCtrl( listctrl_panel, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self.Add )
+        listctrl_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
         
         #
         
@@ -253,16 +254,9 @@ class EditStringToStringDictControl( wx.Panel ):
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._edit, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._delete, CC.FLAGS_VCENTER )
-        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -394,14 +388,12 @@ class NetworkJobControl( wx.Panel ):
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
         
-        self._move_hide_timer = wx.Timer( self )
-        
-        self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        self._update_timer = wx.Timer( self )
         
     
     def _Update( self ):
         
-        if self._network_job is None:
+        if self._network_job is None or self._network_job.NoEngineYet():
             
             self._left_text.SetLabelText( '' )
             self._right_text.SetLabelText( '' )
@@ -490,11 +482,11 @@ class NetworkJobControl( wx.Panel ):
         
         if self:
             
-            self._Update()
-            
             self._network_job = None
             
-            self._move_hide_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            self._Update()
+            
+            self._update_timer.Stop()
             
         
     
@@ -505,11 +497,13 @@ class NetworkJobControl( wx.Panel ):
             self._network_job = network_job
             self._download_started = False
             
+            self._update_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            
         
     
     def TIMEREventUpdate( self, event ):
         
-        if self.IsShown():
+        if HG.client_controller.gui.IAmInCurrentPage( self ):
             
             self._Update()
             

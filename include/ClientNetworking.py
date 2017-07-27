@@ -1157,7 +1157,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = True
         
     
-    def CanContinue( self, network_contexts ):
+    def CanContinueDownload( self, network_contexts ):
         
         with self._lock:
             
@@ -1167,7 +1167,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
-                if not bandwidth_rules.CanContinue( bandwidth_tracker ):
+                if not bandwidth_rules.CanContinueDownload( bandwidth_tracker ):
                     
                     return False
                     
@@ -1177,7 +1177,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanStart( self, network_contexts ):
+    def CanDoWork( self, network_contexts ):
         
         with self._lock:
             
@@ -1187,7 +1187,27 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
-                if not bandwidth_rules.CanStart( bandwidth_tracker ):
+                if not bandwidth_rules.CanDoWork( bandwidth_tracker ):
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
+    def CanStartRequest( self, network_contexts ):
+        
+        with self._lock:
+            
+            for network_context in network_contexts:
+                
+                bandwidth_rules = self._GetRules( network_context )
+                
+                bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
+                
+                if not bandwidth_rules.CanStartRequest( bandwidth_tracker ):
                     
                     return False
                     
@@ -1551,124 +1571,124 @@ class NetworkEngine( object ):
     
     def MainLoop( self ):
         
-        self._is_running = True
+        def ProcessBandwidthJob( job ):
+            
+            if job.IsDone():
+                
+                return False
+                
+            elif job.IsAsleep():
+                
+                return True
+                
+            elif not job.BandwidthOK():
+                
+                job.SetStatus( u'waiting on bandwidth\u2026' )
+                
+                return True
+                
+            else:
+                
+                self._jobs_login_throttled.append( job )
+                
+                return False
+                
+            
         
-        while not ( self._local_shutdown or self.controller.ModelIsShutdown() ):
+        def ProcessLoginJob( job ):
             
-            def ProcessBandwidthJob( job ):
+            if job.IsDone():
                 
-                if job.IsDone():
-                    
-                    return False
-                    
-                elif job.IsAsleep():
-                    
-                    return True
-                    
-                elif not job.BandwidthOK():
-                    
-                    job.SetStatus( u'waiting on bandwidth\u2026' )
-                    
-                    return True
-                    
-                else:
-                    
-                    self._jobs_login_throttled.append( job )
-                    
-                    return False
-                    
+                return False
                 
-            
-            def ProcessLoginJob( job ):
+            elif job.IsAsleep():
                 
-                if job.IsDone():
+                return True
+                
+            elif job.NeedsLogin():
+                
+                if job.CanLogin():
                     
-                    return False
-                    
-                elif job.IsAsleep():
-                    
-                    return True
-                    
-                elif job.NeedsLogin():
-                    
-                    if job.CanLogin():
+                    if self._current_login_process is None:
                         
-                        if self._current_login_process is None:
-                            
-                            login_process = job.GenerateLoginProcess()
-                            
-                            self.controller.CallToThread( login_process.Start )
-                            
-                            self._current_login_process = login_process
-                            
-                            job.SetStatus( u'logging in\u2026' )
-                            
-                        else:
-                            
-                            job.SetStatus( u'waiting on login\u2026' )
-                            
-                            job.Sleep( 5 )
-                            
+                        login_process = job.GenerateLoginProcess()
+                        
+                        self.controller.CallToThread( login_process.Start )
+                        
+                        self._current_login_process = login_process
+                        
+                        job.SetStatus( u'logging in\u2026' )
                         
                     else:
                         
-                        job.SetStatus( 'unable to login!' )
+                        job.SetStatus( u'waiting on login\u2026' )
                         
-                        job.Sleep( 15 )
+                        job.Sleep( 5 )
                         
-                    
-                    return True
                     
                 else:
                     
-                    self._jobs_ready_to_start.append( job )
+                    job.SetStatus( 'unable to login!' )
                     
-                    return False
+                    job.Sleep( 15 )
+                    
+                
+                return True
+                
+            else:
+                
+                self._jobs_ready_to_start.append( job )
+                
+                return False
+                
+            
+        
+        def ProcessCurrentLoginJob():
+            
+            if self._current_login_process is not None:
+                
+                if self._current_login_process.IsDone():
+                    
+                    self._current_login_process = None
                     
                 
             
-            def ProcessCurrentLoginJob():
+        
+        def ProcessReadyJob( job ):
+            
+            if job.IsDone():
                 
-                if self._current_login_process is not None:
-                    
-                    if self._current_login_process.IsDone():
-                        
-                        self._current_login_process = None
-                        
-                    
+                return False
+                
+            elif len( self._jobs_downloading ) < self.MAX_JOBS:
+                
+                self.controller.CallToThread( job.Start )
+                
+                self._jobs_downloading.append( job )
+                
+                return False
+                
+            else:
+                
+                return True
                 
             
-            def ProcessReadyJob( job ):
+        
+        def ProcessDownloadingJob( job ):
+            
+            if job.IsDone():
                 
-                if job.IsDone():
-                    
-                    return False
-                    
-                elif len( self._jobs_downloading ) < self.MAX_JOBS:
-                    
-                    self.controller.CallToThread( job.Start )
-                    
-                    self._jobs_downloading.append( job )
-                    
-                    return False
-                    
-                else:
-                    
-                    return True
-                    
+                return False
+                
+            else:
+                
+                return True
                 
             
-            def ProcessDownloadingJob( job ):
-                
-                if job.IsDone():
-                    
-                    return False
-                    
-                else:
-                    
-                    return True
-                    
-                
+        
+        self._is_running = True
+        
+        while not ( self._local_shutdown or self.controller.ModelIsShutdown() ):
             
             with self._lock:
                 
@@ -1701,6 +1721,8 @@ class NetworkEngine( object ):
         
     
 class NetworkJob( object ):
+    
+    MAX_CONNECTION_ATTEMPTS = 5
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
@@ -1749,6 +1771,61 @@ class NetworkJob( object ):
         network_contexts.extend( ( NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
         
         return network_contexts
+        
+    
+    def _SendRequestAndGetResponse( self ):
+        
+        with self._lock:
+            
+            session = self._GetSession()
+            
+            method = self._method
+            url = self._url
+            data = self._body
+            
+            headers = {}
+            
+            if self._referral_url is not None:
+                
+                headers = { 'referer' : self._referral_url }
+                
+            
+        
+        connection_successful = False
+        connection_attempts = 1
+        
+        while not connection_successful:
+            
+            try:
+                
+                with self._lock:
+                    
+                    self._ReportRequestUsed()
+                    
+                    self._status_text = u'sending request\u2026'
+                    
+                
+                response = session.request( method, url, data = data, headers = headers, stream = True, timeout = 10 )
+                
+                connection_successful = True
+                
+            except requests.exceptions.ConnectionError, requests.exceptions.Timeout:
+                
+                connection_attempts += 1
+                
+                if connection_attempts > self.MAX_CONNECTION_ATTEMPTS:
+                    
+                    raise HydrusExceptions.NetworkException( 'Could not connect!' )
+                    
+                
+                with self._lock:
+                    
+                    self._status_text = u'connection failed--retrying'
+                    
+                
+            
+        
+        return response
         
     
     def _GetSession( self ):
@@ -1808,7 +1885,7 @@ class NetworkJob( object ):
             
         else:
             
-            result = self.engine.bandwidth_manager.CanContinue( self._network_contexts )
+            result = self.engine.bandwidth_manager.CanContinueDownload( self._network_contexts )
             
             if not result:
                 
@@ -1908,7 +1985,7 @@ class NetworkJob( object ):
             
             if self._ObeysBandwidth():
                 
-                result = self.engine.bandwidth_manager.CanStart( self._network_contexts )
+                result = self.engine.bandwidth_manager.CanStartRequest( self._network_contexts )
                 
                 if not result:
                     
@@ -1993,6 +2070,14 @@ class NetworkJob( object ):
             
         
     
+    def GetNetworkContexts( self ):
+        
+        with self._lock:
+            
+            return list( self._network_contexts )
+            
+        
+    
     def GetStatus( self ):
         
         with self._lock:
@@ -2055,6 +2140,11 @@ class NetworkJob( object ):
             
         
     
+    def NoEngineYet( self ):
+        
+        return self.engine is None
+        
+    
     def OverrideBandwidth( self ):
         
         with self._lock:
@@ -2085,27 +2175,7 @@ class NetworkJob( object ):
         
         try:
             
-            with self._lock:
-                
-                self._ReportRequestUsed()
-                
-                session = self._GetSession()
-                
-                method = self._method
-                url = self._url
-                data = self._body
-                
-                headers = {}
-                
-                if self._referral_url is not None:
-                    
-                    headers = { 'referer' : self._referral_url }
-                    
-                
-                self._status_text = u'sending request\u2026'
-                
-            
-            response = session.request( method, url, data = data, headers = headers, stream = True )
+            response = self._SendRequestAndGetResponse()
             
             with self._lock:
                 
@@ -2168,6 +2238,8 @@ class NetworkJob( object ):
                 
                 trace = traceback.format_exc()
                 
+                HydrusData.Print( trace )
+                
                 self._SetError( e, trace )
                 
             
@@ -2182,11 +2254,11 @@ class NetworkJob( object ):
     
 class NetworkJobDownloader( NetworkJob ):
     
-    def __init__( self, downloader_key, method, url, body = None, temp_path = None ):
+    def __init__( self, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
         self._downloader_key = downloader_key
         
-        NetworkJob.__init__( self, method, url, body, temp_path = temp_path )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2198,13 +2270,18 @@ class NetworkJobDownloader( NetworkJob ):
         return network_contexts
         
     
+    def _GetSessionNetworkContext( self ):
+        
+        return self._network_contexts[-2] # the domain one
+        
+    
 class NetworkJobDownloaderQuery( NetworkJobDownloader ):
     
-    def __init__( self, downloader_page_key, downloader_key, method, url, body = None, temp_path = None ):
+    def __init__( self, downloader_page_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
         self._downloader_page_key = downloader_page_key
         
-        NetworkJobDownloader.__init__( self, downloader_key, method, url, body, temp_path = temp_path )
+        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2218,16 +2295,39 @@ class NetworkJobDownloaderQuery( NetworkJobDownloader ):
     
     def _GetSessionNetworkContext( self ):
         
-        return self._network_contexts[-2] # the downloader one
+        return self._network_contexts[-3] # the domain one
+        
+    
+class NetworkJobDownloaderQueryTemporary( NetworkJob ):
+    
+    def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+        
+        self._downloader_page_key = downloader_page_key
+        
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        
+    
+    def _GenerateNetworkContexts( self ):
+        
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+        
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, self._downloader_page_key ) )
+        
+        return network_contexts
+        
+    
+    def _GetSessionNetworkContext( self ):
+        
+        return self._network_contexts[-2] # the domain one
         
     
 class NetworkJobSubscription( NetworkJobDownloader ):
     
-    def __init__( self, subscription_key, downloader_key, method, url, body = None, temp_path = None ):
+    def __init__( self, subscription_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
         self._subscription_key = subscription_key
         
-        NetworkJobDownloader.__init__( self, downloader_key, method, url, body, temp_path = temp_path )
+        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2241,16 +2341,39 @@ class NetworkJobSubscription( NetworkJobDownloader ):
     
     def _GetSessionNetworkContext( self ):
         
-        return self._network_contexts[-2] # the downloader one
+        return self._network_contexts[-3] # the domain one
+        
+    
+class NetworkJobSubscriptionTemporary( NetworkJob ):
+    
+    def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+        
+        self._subscription_key = subscription_key
+        
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        
+    
+    def _GenerateNetworkContexts( self ):
+        
+        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+        
+        network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, self._subscription_key ) )
+        
+        return network_contexts
+        
+    
+    def _GetSessionNetworkContext( self ):
+        
+        return self._network_contexts[-2] # the domain one
         
     
 class NetworkJobHydrus( NetworkJob ):
     
-    def __init__( self, service_key, method, url, body = None, temp_path = None, for_login = False ):
+    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
         self._service_key = service_key
         
-        NetworkJob.__init__( self, method, url, body, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2264,11 +2387,11 @@ class NetworkJobHydrus( NetworkJob ):
     
 class NetworkJobThreadWatcher( NetworkJob ):
     
-    def __init__( self, thread_key, method, url, body = None, temp_path = None, for_login = False ):
+    def __init__( self, thread_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
         self._thread_key = thread_key
         
-        NetworkJob.__init__( self, method, url, body, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2401,6 +2524,8 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
             network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
             session = cPickle.loads( str( pickled_session ) )
+            
+            session.cookies.clear_session_cookies()
             
             self._network_contexts_to_sessions[ network_context ] = session
             

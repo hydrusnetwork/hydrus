@@ -87,7 +87,15 @@ class FakeHTTPConnectionManager():
     
 class FakeWebSessionManager():
     
-    def GetCookies( self, *args, **kwargs ): return { 'session_cookie' : 'blah' }
+    def EnsureLoggedIn( self, name ):
+        
+        pass
+        
+    
+    def GetCookies( self, *args, **kwargs ):
+        
+        return { 'session_cookie' : 'blah' }
+        
     
 class TestFrame( wx.Frame ):
     

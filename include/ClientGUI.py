@@ -12,6 +12,7 @@ import ClientGUIManagement
 import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
+import ClientGUIPopupMessages
 import ClientGUIScrolledPanelsManagement
 import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
@@ -99,7 +100,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         wx.GetApp().SetTopWindow( self )
         
-        self._message_manager = ClientGUICommon.PopupMessageManager( self )
+        self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self )
         
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventFrameNewPage )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventFrameNewPage )
@@ -109,6 +110,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
         
+        self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
         self._controller.sub( self, 'NewCompose', 'new_compose_frame' )
         self._controller.sub( self, 'NewPageDuplicateFilter', 'new_duplicate_filter' )
@@ -739,19 +741,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ClosePage( self, selection, polite = True ):
+    def _CloseLeftPages( self, from_index ):
+        
+        closees = [ index for index in range( self._notebook.GetPageCount() ) if index < from_index ]
+        
+        self._ClosePages( closees )
+        
+    
+    def _CloseOtherPages( self, except_index ):
+        
+        closees = [ index for index in range( self._notebook.GetPageCount() ) if index != except_index ]
+        
+        self._ClosePages( closees )
+        
+    
+    def _ClosePage( self, index, polite = True ):
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
         
-        if selection == -1 or selection > self._notebook.GetPageCount() - 1:
+        if index == -1 or index > self._notebook.GetPageCount() - 1:
             
-            return
+            return False
             
         
-        name = self._notebook.GetPageText( selection )
+        name = self._notebook.GetPageText( index )
         
-        page = self._notebook.GetPage( selection )
+        page = self._notebook.GetPage( index )
         
         if polite:
             
@@ -761,7 +777,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             except HydrusExceptions.PermissionException:
                 
-                return
+                return False
                 
             
         
@@ -769,10 +785,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with self._lock:
             
-            self._closed_pages.append( ( HydrusData.GetNow(), selection, name, page ) )
+            self._closed_pages.append( ( HydrusData.GetNow(), index, name, page ) )
             
         
-        self._notebook.RemovePage( selection )
+        self._notebook.RemovePage( index )
         
         if self._notebook.GetPageCount() == 0:
             
@@ -780,6 +796,30 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.pub( 'notify_new_undo' )
+        
+        return True
+        
+    
+    def _ClosePages( self, indices ):
+        
+        indices.reverse() # so we are closing from the end first
+        
+        for index in indices:
+            
+            successful = self._ClosePage( index )
+            
+            if not successful:
+                
+                break
+                
+            
+        
+    
+    def _CloseRightPages( self, from_index ):
+        
+        closees = [ index for index in range( self._notebook.GetPageCount() ) if index > from_index ]
+        
+        self._ClosePages( closees )
         
     
     def _DebugMakeSomePopups( self ):
@@ -3096,6 +3136,37 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         job_key.Delete( 5 )
         
     
+    def AddModalMessage( self, job_key ):
+        
+        if job_key.IsCancelled():
+            
+            return
+            
+        
+        if self.IsIconized():
+            
+            wx.CallLater( 10000, self.AddModalMessage, job_key )
+            
+        else:
+            
+            title = job_key.GetIfHasVariable( 'popup_title' )
+            
+            if title is None:
+                
+                title = 'important job'
+                
+            
+            with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, title ) as dlg:
+                
+                panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
     def ClearClosedPages( self ):
         
         new_closed_pages = []
@@ -3206,18 +3277,43 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventNotebookMenu( self, event ):
         
+        num_pages = self._notebook.GetPageCount()
+        
         ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
         
         click_over_tab = tab_index != -1
+        
+        end_index = num_pages - 1
         
         menu = wx.Menu()
         
         if tab_index != -1:
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
+            
+            if num_pages > 1:
+                
+                can_close_left = tab_index > 0
+                can_close_right = tab_index < end_index
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
+                
+                if can_close_left:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
+                    
+                
+                if can_close_right:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
+                    
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
-            more_than_one_tab = self._notebook.GetPageCount() > 1
+            more_than_one_tab = num_pages > 1
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -3227,8 +3323,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if click_over_tab:
             
             if more_than_one_tab:
-                
-                end_index = self._notebook.GetPageCount() - 1
                 
                 can_home = tab_index > 1
                 can_move_left = tab_index > 0
@@ -3440,6 +3534,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def GetCurrentPage( self ):
         
         return self._notebook.GetCurrentPage()
+        
+    
+    def IAmInCurrentPage( self, window ):
+        
+        current_page = self.GetCurrentPage()
+        
+        if current_page is None:
+            
+            return False
+            
+        
+        in_current_page = ClientGUICommon.IsWXAncestor( window, current_page )
+        
+        return in_current_page
         
     
     def ImportFiles( self, paths ):
@@ -3745,7 +3853,6 @@ class FrameSplash( wx.Frame ):
         
         self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
         self._controller.sub( self, 'SetText', 'splash_set_status_text' )
-        self._controller.sub( self, 'Destroy', 'splash_destroy' )
         
         self.Raise()
         

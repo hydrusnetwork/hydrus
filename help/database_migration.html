@@ -17,7 +17,7 @@
 				</li>
 				<li>
 					<b>the actual database</b>
-					<p>The client stores all its preferences and currently open tabs and knowledge <i>about</i> files--like file size and resolution, tags, ratings, inbox status, and so on and so on--in a handful of SQLite database files, defaulting to <i>install_dir/db</i>. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.</p>
+					<p>The client stores all its preferences and current state and knowledge <i>about</i> files--like file size and resolution, tags, ratings, inbox status, and so on and so on--in a handful of SQLite database files, defaulting to <i>install_dir/db</i>. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.</p>
 					<p>In order to perform a search or to fetch or process tags, the client has to interact with these files in many small bursts, which means it is best if these files are on a drive with low latency. An SSD is ideal, but a regularly-defragged HDD with a reasonable amount of free space also works well.</p>
 				</li>
 				<li>
@@ -28,14 +28,15 @@
 			</ol>
 			<h3>these components can be put on different drives</h3>
 			<p>Although an initial install will keep these parts together, it is possible to run the database on a fast drive but keep your media in cheap slow storage. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.</p>
-			<h3>pulling them apart</h3>
+			<h3>pulling your media apart</h3>
 			<p><b class="warning">As always, I recommend creating a backup before you try any of this, just in case it goes wrong.</b></p>
-			<p>If you have multiple drives and would like to spread your database across them, please do not move the folders around yourself--the database has an internal 'knowledge' of where it thinks its thumbnail and file folders are, and if you move them while it is closed, it will throw 'missing path' errors as soon as it boots. The internal hydrus logic of relative and absolute paths is not always obvious, so it is easy to make mistakes, even if you think you know what you are doing. Instead, please do it through the gui:</p>
+			<p>If you have multiple drives and would like to spread your media across them, please do not move the folders around yourself--the database has an internal 'knowledge' of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will throw 'missing path' errors as soon as it boots. The internal hydrus logic of relative and absolute paths is not always obvious, so it is easy to make mistakes, even if you think you know what you are doing. Instead, please do it through the gui:</p>
 			<p>Go <i>database->migration</i>, giving you this dialog:</p>
 			<p><img src="db_migration.png" /></p>
-			<p class="warning">***Talk about what portable means.***</p>
-			<p>These operations are simple, but they can take some time to complete.</p>
-			<p>If you move your database, the program will have to shut down first. Before you boot up again, you will have to create a new program shortcut:</p>
+			<p><b>Portable</b> means that the path is beneath the main db dir and so is stored as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).</p>
+			<p><b>Weight</b> means the relative amount of media you would like to store in that location.</p>
+			<p>The operations on this dialog are simple and atomic--at no point is your db ever invalid. Once you have the locations and ideal usage set how you like, hit the 'move files now' button to actually shuffle your files around. It will take some time to finish.</p>
+			<p>If you decide to move your database, the program will have to shut down first. Before you boot up again, you will have to create a new program shortcut:</p>
 			<h3>informing the software that the database has moved</h3>
 			<p>A straight call to the client executable will look for a database in <i>install_dir/db</i>. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!</p>
 			<p>So, pass it a -d or --db_dir command line argument, like so:</p>

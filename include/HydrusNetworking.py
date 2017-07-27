@@ -105,7 +105,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanContinue( self, bandwidth_tracker, threshold = 15 ):
+    def CanContinueDownload( self, bandwidth_tracker, threshold = 15 ):
         
         with self._lock:
             
@@ -134,16 +134,38 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanStart( self, bandwidth_tracker, threshold = 5 ):
+    def CanDoWork( self, bandwidth_tracker, threshold = 30 ):
+        
+        with self._lock:
+            
+            for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
+                
+                # Do not prohibit a raft of work starting or continuing because one small rule is over at this current second
+                if time_delta is not None and time_delta <= threshold:
+                    
+                    continue
+                    
+                
+                if bandwidth_tracker.GetUsage( bandwidth_type, time_delta ) >= max_allowed:
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        
+    
+    def CanStartRequest( self, bandwidth_tracker, threshold = 5 ):
         
         with self._lock:
             
             for ( bandwidth_type, time_delta, max_allowed ) in self._rules:
                 
                 # Do not prohibit a new job from starting just because the current download speed is 210/200KB/s
-                ignore_rule_for_starting = bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta is not None and time_delta <= threshold
+                ignore_rule = bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta is not None and time_delta <= threshold
                 
-                if ignore_rule_for_starting:
+                if ignore_rule:
                     
                     continue
                     

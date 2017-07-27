@@ -885,7 +885,9 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             for ( service_key, content_updates ) in service_keys_to_content_updates.items():
                 
-                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
+                # ratings updates do not change the shape of this hover but file changes of several kinds do
+                
+                if True in ( my_hash in content_update.GetHashes() for content_update in content_updates if content_update.GetDataType() == HC.CONTENT_TYPE_FILES ):
                     
                     do_redraw = True
                     

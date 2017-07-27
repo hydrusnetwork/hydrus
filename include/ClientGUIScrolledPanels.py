@@ -36,3 +36,11 @@ class ReviewPanel( ResizingScrolledPanel ):
     
     pass
     
+
+class ReviewPanelVetoable( ResizingScrolledPanel ):
+    
+    def TryToClose( self ):
+        
+        return
+        
+    

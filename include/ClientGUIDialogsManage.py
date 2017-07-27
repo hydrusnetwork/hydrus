@@ -14,6 +14,7 @@ import ClientDownloading
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientGUIScrolledPanelsEdit
+import ClientGUISeedCache
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -62,122 +63,6 @@ def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     for ( name, value ) in fields.items(): m.field( name, HydrusData.ToByteString( value ) )
     
     return m.get()
-    
-class DialogManage4chanPass( ClientGUIDialogs.Dialog ):
-    
-    def __init__( self, parent ):
-        
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage 4chan pass' )
-        
-        result = HG.client_controller.Read( 'serialisable_simple', '4chan_pass' )
-        
-        if result is None:
-            
-            result = ( '', '', 0 )
-            
-        
-        ( token, pin, self._timeout ) = result
-        
-        self._token = wx.TextCtrl( self )
-        self._pin = wx.TextCtrl( self )
-        
-        self._status = ClientGUICommon.BetterStaticText( self )
-        
-        self._SetStatus()
-        
-        self._reauthenticate = wx.Button( self, label = 'reauthenticate' )
-        self._reauthenticate.Bind( wx.EVT_BUTTON, self.EventReauthenticate )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        self._token.SetValue( token )
-        self._pin.SetValue( pin )
-        
-        rows = []
-        
-        rows.append( ( 'token: ', self._token ) )
-        rows.append( ( 'pin: ', self._pin ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._reauthenticate, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        x = max( x, 240 )
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def _SetStatus( self ):
-        
-        if self._timeout == 0: label = 'not authenticated'
-        elif HydrusData.TimeHasPassed( self._timeout ): label = 'timed out'
-        else: label = 'authenticated - ' + HydrusData.ConvertTimestampToPrettyExpires( self._timeout )
-        
-        self._status.SetLabelText( label )
-        
-    
-    def EventOK( self, event ):
-        
-        token = self._token.GetValue()
-        pin = self._pin.GetValue()
-        
-        HG.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
-        
-        self.EndModal( wx.ID_OK )
-        
-    
-    def EventReauthenticate( self, event ):
-        
-        token = self._token.GetValue()
-        pin = self._pin.GetValue()
-        
-        if token == '' and pin == '':
-            
-            self._timeout = 0
-            
-        else:
-            
-            form_fields = {}
-            
-            form_fields[ 'act' ] = 'do_login'
-            form_fields[ 'id' ] = token
-            form_fields[ 'pin' ] = pin
-            form_fields[ 'long_login' ] = 'yes'
-            
-            ( ct, body ) = GenerateMultipartFormDataCTAndBodyFromDict( form_fields )
-            
-            request_headers = {}
-            request_headers[ 'Content-Type' ] = ct
-            
-            response = HG.client_controller.DoHTTP( HC.POST, 'https://sys.4chan.org/auth', request_headers = request_headers, body = body )
-            
-            self._timeout = HydrusData.GetNow() + 365 * 24 * 3600
-            
-        
-        HG.client_controller.Write( 'serialisable_simple', '4chan_pass', ( token, pin, self._timeout ) )
-        
-        self._SetStatus()
-        
     
 class DialogManageBoorus( ClientGUIDialogs.Dialog ):
     
@@ -2893,7 +2778,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
+            panel = ClientGUISeedCache.EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
             
             dlg.SetPanel( panel )
             
