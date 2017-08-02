@@ -155,6 +155,18 @@ class Page( wx.SplitterWindow ):
         return self._media_panel.GetSortedMedia()
         
     
+    def GetNumFiles( self ):
+        
+        if self._initialised:
+            
+            return self._media_panel.GetNumFiles()
+            
+        else:
+            
+            return len( self._initial_hashes )
+            
+        
+    
     def GetPageKey( self ):
         
         return self._page_key
@@ -286,6 +298,8 @@ class Page( wx.SplitterWindow ):
             
             self._SwapMediaPanel( new_panel )
             
+            self._controller.pub( 'refresh_page_name', self._page_key )
+            
         
     
     def TestAbleToClose( self ):
@@ -318,7 +332,7 @@ class Page( wx.SplitterWindow ):
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name ):
         
@@ -331,13 +345,13 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_info = []
         
-        for ( page_name, management_controller, hashes ) in self._pages:
+        for ( management_controller, hashes ) in self._pages:
             
             serialisable_management_controller = management_controller.GetSerialisableTuple()
             
             serialisable_hashes = [ hash.encode( 'hex' ) for hash in hashes ]
             
-            serialisable_info.append( ( page_name, serialisable_management_controller, serialisable_hashes ) )
+            serialisable_info.append( ( serialisable_management_controller, serialisable_hashes ) )
             
         
         return serialisable_info
@@ -345,19 +359,40 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        for ( page_name, serialisable_management_controller, serialisable_hashes ) in serialisable_info:
+        for ( serialisable_management_controller, serialisable_hashes ) in serialisable_info:
             
             management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
             
             hashes = [ hash.decode( 'hex' ) for hash in serialisable_hashes ]
             
-            self._pages.append( ( page_name, management_controller, hashes ) )
+            self._pages.append( ( management_controller, hashes ) )
             
         
     
-    def AddPage( self, page_name, management_controller, hashes ):
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
-        self._pages.append( ( page_name, management_controller, hashes ) )
+        if version == 1:
+            
+            new_serialisable_info = []
+            
+            for ( page_name, serialisable_management_controller, serialisable_hashes ) in old_serialisable_info:
+                
+                management_controller = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_management_controller )
+                
+                management_controller.SetPageName( page_name )
+                
+                serialisable_management_controller = management_controller.GetSerialisableTuple()
+                
+                new_serialisable_info.append( ( serialisable_management_controller, serialisable_hashes ) )
+                
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+    def AddPage( self, management_controller, hashes ):
+        
+        self._pages.append( ( management_controller, hashes ) )
         
     
     def IteratePages( self ):

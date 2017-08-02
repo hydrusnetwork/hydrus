@@ -325,6 +325,26 @@ def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
     
     return file_infos
     
+def IsImageboardThread( url ):
+    
+    if '4chan.org' in url:
+        
+        if '/thread/' in url:
+            
+            return True
+            
+        
+    
+    if '8ch.net' in url:
+        
+        if '/res/' in url:
+            
+            return True
+            
+        
+    
+    return False
+    
 def ParseImageboardThreadURL( thread_url ):
     
     try:
@@ -348,6 +368,7 @@ def ParseImageboardThreadURL( thread_url ):
     except:
         
         raise Exception ( 'Could not understand that url!' )
+        
     
     is_4chan = '4chan.org' in host
     is_8chan = '8ch.net' in host
@@ -666,7 +687,10 @@ class GalleryBooru( Gallery ):
         soup = GetSoup( html )
         
         # this catches 'post-preview' along with 'post-preview not-approved' sort of bullshit
-        def starts_with_classname( classname ): return classname is not None and classname.startswith( self._thumb_classname )
+        def starts_with_classname( classname ):
+            
+            return classname is not None and classname.startswith( self._thumb_classname )
+            
         
         thumbnails = soup.find_all( class_ = starts_with_classname )
         
@@ -680,27 +704,21 @@ class GalleryBooru( Gallery ):
             thumbnails = thumbnails[ len( popular_thumbnails ) : ]
             
         
-        if self._gallery_advance_num is None:
-            
-            if len( thumbnails ) == 0:
-                
-                definitely_no_more_pages = True
-                
-            else:
-                
-                self._gallery_advance_num = len( thumbnails )
-                
-            
-        
         for thumbnail in thumbnails:
             
             links = thumbnail.find_all( 'a' )
             
-            if thumbnail.name == 'a': links.append( thumbnail )
+            if thumbnail.name == 'a':
+                
+                links.append( thumbnail )
+                
             
             for link in links:
                 
-                if link.string is not None and link.string == 'Image Only': continue # rule 34 @ paheal fix
+                if link.string is not None and link.string == 'Image Only':
+                    
+                    continue # rule 34 @ paheal fix
+                    
                 
                 url = link[ 'href' ]
                 
@@ -711,6 +729,18 @@ class GalleryBooru( Gallery ):
                     urls_set.add( url )
                     urls.append( url )
                     
+                
+            
+        
+        if self._gallery_advance_num is None:
+            
+            if len( urls ) == 0:
+                
+                definitely_no_more_pages = True
+                
+            else:
+                
+                self._gallery_advance_num = len( urls )
                 
             
         

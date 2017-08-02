@@ -7,6 +7,7 @@ import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUIPredicates
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
@@ -47,7 +48,7 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._deletee_account_type_keys_to_new_account_type_keys = {}
         
-        self._account_types_listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 200, [ ( 'title', -1 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._account_types_listctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 200, [ ( 'title', -1 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
@@ -243,7 +244,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 400, [ ( 'type', 220 ), ( 'name', -1 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 400, [ ( 'type', 220 ), ( 'name', -1 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         menu_items = []
         
@@ -269,7 +270,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._listctrl.Append( display_tuple, sort_tuple, service )
             
         
-        self._listctrl.SortListItems( 0 )
+        #self._listctrl.SortListItems( 0 )
         
         #
         
@@ -1249,7 +1250,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._client_files = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'preferred path', -1 ), ( 'how the client will store it', 180 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+            self._client_files = ClientGUIListCtrl.SaneListCtrl( self, 120, [ ( 'preferred path', -1 ), ( 'how the client will store it', 180 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1786,10 +1787,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general = ClientGUICommon.StaticBox( self, 'general' )
             
-            self._website_download_polite_wait = wx.SpinCtrl( general, min = 1, max = 30 )
-            
-            self._waiting_politely_text = wx.CheckBox( general )
-            
             self._verify_regular_https = wx.CheckBox( general )
             
             #
@@ -1810,9 +1807,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._website_download_polite_wait.SetValue( HC.options[ 'website_download_polite_wait' ] )
-            self._waiting_politely_text.SetValue( self._new_options.GetBoolean( 'waiting_politely_text' ) )
-            
             self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
@@ -1827,8 +1821,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'seconds to politely wait between gallery/thread url requests: ', self._website_download_polite_wait ) )
-            rows.append( ( 'instead of the traffic light waiting politely indicator, use text: ', self._waiting_politely_text ) )
             rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
@@ -1863,8 +1855,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'website_download_polite_wait' ] = self._website_download_polite_wait.GetValue()
-            self._new_options.SetBoolean( 'waiting_politely_text', self._waiting_politely_text.GetValue() )
             self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
@@ -2363,9 +2353,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._confirm_trash = wx.CheckBox( self )
             self._confirm_archive = wx.CheckBox( self )
             
-            self._always_embed_autocompletes = wx.CheckBox( self )
+            self._max_page_name_chars = wx.SpinCtrl( self, min = 1, max = 256 )
             
-            self._gui_capitalisation = wx.CheckBox( self )
+            self._page_file_count_display = ClientGUICommon.BetterChoice( self )
+            
+            for display_type in ( CC.PAGE_FILE_COUNT_DISPLAY_ALL, CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS, CC.PAGE_FILE_COUNT_DISPLAY_NONE ):
+                
+                self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
+                
+            
+            self._always_embed_autocompletes = wx.CheckBox( self )
             
             self._hide_preview = wx.CheckBox( self )
             
@@ -2380,7 +2377,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
-            self._frame_locations = ClientGUICommon.SaneListCtrl( frame_locations_panel, 200, [ ( 'name', -1 ), ( 'remember size', 90 ), ( 'remember position', 90 ), ( 'last size', 90 ), ( 'last position', 90 ), ( 'default gravity', 90 ), ( 'default position', 90 ), ( 'maximised', 90 ), ( 'fullscreen', 90 ) ], activation_callback = self.EditFrameLocations )
+            self._frame_locations = ClientGUIListCtrl.SaneListCtrl( frame_locations_panel, 200, [ ( 'name', -1 ), ( 'remember size', 90 ), ( 'remember position', 90 ), ( 'last size', 90 ), ( 'last position', 90 ), ( 'default gravity', 90 ), ( 'default position', 90 ), ( 'maximised', 90 ), ( 'fullscreen', 90 ) ], activation_callback = self.EditFrameLocations )
             
             self._frame_locations_edit_button = wx.Button( frame_locations_panel, label = 'edit' )
             self._frame_locations_edit_button.Bind( wx.EVT_BUTTON, self.EventEditFrameLocation )
@@ -2410,9 +2407,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._confirm_archive.SetValue( HC.options[ 'confirm_archive' ] )
             
-            self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
+            self._max_page_name_chars.SetValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
             
-            self._gui_capitalisation.SetValue( HC.options[ 'gui_capitalisation' ] )
+            self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
+            
+            self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
             
@@ -2432,7 +2431,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._frame_locations.Append( pretty_listctrl_list, listctrl_list )
                 
             
-            self._frame_locations.SortListItems( col = 0 )
+            #self._frame_locations.SortListItems( col = 0 )
             
             #
             
@@ -2444,8 +2443,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
+            rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
+            rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
-            rows.append( ( 'Capitalise gui: ', self._gui_capitalisation ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
@@ -2519,7 +2519,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
             HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
-            HC.options[ 'gui_capitalisation' ] = self._gui_capitalisation.GetValue()
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
             
@@ -2528,6 +2527,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetString( 'main_gui_title', title )
             
             self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
+            
+            self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
+            
+            self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
             
             HG.client_controller.pub( 'main_gui_title', title )
             
@@ -2570,7 +2573,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer mime handling' )
             
-            self._media_viewer_options = ClientGUICommon.SaneListCtrlForSingleObject( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions )
+            self._media_viewer_options = ClientGUIListCtrl.SaneListCtrlForSingleObject( self._media_viewer_panel, 300, [ ( 'mime', 150 ), ( 'media show action', 140 ), ( 'preview show action', 140 ), ( 'zoom info', -1 ) ], activation_callback = self.EditMediaViewerOptions )
             
             self._media_viewer_edit_button = wx.Button( self._media_viewer_panel, label = 'edit' )
             self._media_viewer_edit_button.Bind( wx.EVT_BUTTON, self.EventEditMediaViewerOptions )
@@ -2599,7 +2602,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._media_viewer_options.Append( display_tuple, sort_tuple, data )
                 
             
-            self._media_viewer_options.SortListItems( col = 0 )
+            #self._media_viewer_options.SortListItems( col = 0 )
             
             #
             
@@ -3536,7 +3539,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         columns = [ ( 'port', 80 ), ( 'name', -1 ), ( 'type', 220 ) ]
         
-        self._services_listctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._services_listctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 120, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         menu_items = []
         
@@ -3562,7 +3565,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._services_listctrl.Append( display_tuple, sort_tuple, serverside_service )
             
         
-        self._services_listctrl.SortListItems( 0 )
+        #self._services_listctrl.SortListItems( 0 )
         
         #
         
@@ -3750,7 +3753,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'reserved' )
         
-        self._reserved_shortcuts = ClientGUICommon.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'size', 100 ) ], activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( reserved_panel, 180, [ ( 'name', -1 ), ( 'size', 100 ) ], activation_callback = self._EditReserved )
         
         self._reserved_shortcuts.SetMinSize( ( 320, 200 ) )
         
@@ -3760,7 +3763,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         custom_panel = ClientGUICommon.StaticBox( self, 'custom' )
         
-        self._custom_shortcuts = ClientGUICommon.SaneListCtrlForSingleObject( custom_panel, 120, [ ( 'name', -1 ), ( 'size', 100 ) ], delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.SaneListCtrlForSingleObject( custom_panel, 120, [ ( 'name', -1 ), ( 'size', 100 ) ], delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
@@ -3973,7 +3976,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
             self._name = wx.TextCtrl( self )
-            self._shortcuts = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'shortcut', 150 ), ( 'command', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+            self._shortcuts = ClientGUIListCtrl.SaneListCtrl( self, 480, [ ( 'shortcut', 150 ), ( 'command', -1 ) ], delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
             
             self._shortcuts.SetMinSize( ( 360, 480 ) )
             
@@ -4010,7 +4013,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._shortcuts.Append( pretty_tuple, sort_tuple )
                 
             
-            self._shortcuts.SortListItems( 1 )
+            #self._shortcuts.SortListItems( 1 )
             
             #
             
@@ -4638,9 +4641,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        columns = [ ( 'name', -1 ), ( 'site', 80 ), ( 'period', 80 ), ( 'last checked', 100 ), ( 'recent error?', 100 ), ( 'urls', 60 ), ( 'failures', 60 ), ( 'paused', 80 ), ( 'check now?', 100 ) ]
+        columns = [ ( 'name', -1 ), ( 'site', 80 ), ( 'period', 80 ), ( 'last checked', 100 ), ( 'recent error?', 100 ), ( 'recent delay?', 100 ), ( 'urls', 60 ), ( 'failures', 60 ), ( 'paused', 80 ), ( 'check now?', 100 ) ]
         
-        self._subscriptions = ClientGUICommon.SaneListCtrlForSingleObject( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
         
@@ -4663,6 +4666,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
         
         self._retry_failures = ClientGUICommon.BetterButton( self, 'retry failures', self.RetryFailures )
+        self._scrub_delays = ClientGUICommon.BetterButton( self, 'scrub delays', self.ScrubDelays )
         self._pause_resume = ClientGUICommon.BetterButton( self, 'pause/resume', self.PauseResume )
         self._check_now = ClientGUICommon.BetterButton( self, 'check now', self.CheckNow )
         self._reset = ClientGUICommon.BetterButton( self, 'reset', self.Reset )
@@ -4686,6 +4690,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         action_box = wx.BoxSizer( wx.HORIZONTAL )
         
         action_box.AddF( self._retry_failures, CC.FLAGS_VCENTER )
+        action_box.AddF( self._scrub_delays, CC.FLAGS_VCENTER )
         action_box.AddF( self._pause_resume, CC.FLAGS_VCENTER )
         action_box.AddF( self._check_now, CC.FLAGS_VCENTER )
         action_box.AddF( self._reset, CC.FLAGS_VCENTER )
@@ -4730,6 +4735,19 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_error = 'yes'
             
         
+        ( no_work_until, no_work_until_reason ) = subscription.GetDelayInfo()
+        
+        if HydrusData.TimeHasPassed( no_work_until ):
+            
+            pretty_delay = ''
+            delay = 0
+            
+        else:
+            
+            pretty_delay = 'working again ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until ) + ' - ' + no_work_until_reason
+            delay = no_work_until - HydrusData.GetNow()
+            
+        
         num_urls = seed_cache.GetSeedCount()
         pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
         
@@ -4754,8 +4772,8 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_check_now = ''
             
         
-        display_tuple = ( name, pretty_site, pretty_period, pretty_last_checked, pretty_error, pretty_urls, pretty_failures, pretty_paused, pretty_check_now )
-        sort_tuple = ( name, pretty_site, period, last_checked, pretty_error, num_urls, num_failures, paused, check_now )
+        display_tuple = ( name, pretty_site, pretty_period, pretty_last_checked, pretty_error, pretty_delay, pretty_urls, pretty_failures, pretty_paused, pretty_check_now )
+        sort_tuple = ( name, pretty_site, period, last_checked, pretty_error, delay, num_urls, num_failures, paused, check_now )
         
         return ( display_tuple, sort_tuple )
         
@@ -5068,10 +5086,24 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-                
-                self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-                
+            
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            
+            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
+            
+        
+    
+    def ScrubDelays( self ):
+        
+        for i in self._subscriptions.GetAllSelected():
+            
+            subscription = self._subscriptions.GetObject( i )
+            
+            subscription.ScrubDelay()
+            
+            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
+            
+            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
             
         
     
@@ -6083,7 +6115,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         st.Wrap( 640 )
         
-        self._locations = ClientGUICommon.SaneListCtrl( self, 400, [ ( 'missing location', -1 ), ( 'expected subdirectory', 120 ), ( 'correct location', 240 ), ( 'now ok?', 120 ) ], activation_callback = self._SetLocations )
+        self._locations = ClientGUIListCtrl.SaneListCtrl( self, 400, [ ( 'missing location', -1 ), ( 'expected subdirectory', 120 ), ( 'correct location', 240 ), ( 'now ok?', 120 ) ], activation_callback = self._SetLocations )
         
         self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
         
@@ -6098,8 +6130,8 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._locations.Append( t, t )
             
         
-        self._locations.SortListItems( 1 ) # subdirs secondary
-        self._locations.SortListItems( 0 ) # missing location primary
+        #self._locations.SortListItems( 1 ) # subdirs secondary
+        #self._locations.SortListItems( 0 ) # missing location primary
         
         #
         

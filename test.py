@@ -118,7 +118,6 @@ class Controller( object ):
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_siblings' ] = {}
-        self._reads[ 'web_sessions' ] = {}
         
         HC.options = ClientDefaults.GetClientDefaultOptions()
         

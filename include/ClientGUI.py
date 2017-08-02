@@ -129,6 +129,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
+        self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self._statusbar_thread_updater, 'Update', 'refresh_status' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
@@ -273,11 +274,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             forced_insertion_index = starting_index
             
-            for ( page_name, management_controller, initial_hashes ) in session.IteratePages():
+            for ( management_controller, initial_hashes ) in session.IteratePages():
                 
                 try:
                     
-                    self._NewPage( page_name, management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index )
+                    self._NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index )
                     
                     forced_insertion_index += 1
                     
@@ -1511,7 +1512,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage (under construction!)', 'See where you are consuming data.', self._ReviewBandwidth )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1578,20 +1579,26 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             debug = wx.Menu()
             
+            debug_modes = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            
+            ClientGUIMenus.AppendMenu( debug, debug_modes, 'modes' )
+            
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._SaveGUISession, 'last session' )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
             
@@ -1646,6 +1653,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         return insertion_index
+        
+    
+    def _GetPageAndIndex( self, page_key ):
+        
+        for ( page, index ) in ( ( self._notebook.GetPage( index ), index ) for index in range( self._notebook.GetPageCount() ) ):
+            
+            if page.GetPageKey() == page_key:
+                
+                return ( page, index )
+                
+            
+        
+        raise HydrusExceptions.DataMissing()
         
     
     def _ImportFiles( self, paths = None ):
@@ -1909,6 +1929,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'wake_daemons' )
         self._controller.pubimmediate( 'refresh_status' )
         
+        wx.CallAfter( self.RefreshPageName )
+        
     
     def _ManageParsingScripts( self ):
         
@@ -2102,7 +2124,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _NewPage( self, page_name, management_controller, initial_hashes = None, forced_insertion_index = None ):
+    def _NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None ):
         
         if self._notebook.GetPageCount() + len( self._closed_pages ) >= 128:
             
@@ -2144,18 +2166,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             insertion_index = forced_insertion_index
             
         
+        page_name = 'page'
+        
         self._notebook.InsertPage( insertion_index, page, page_name, select = True )
         
         wx.CallAfter( page.SetSearchFocus )
+        wx.CallAfter( self.RefreshPageName, page.GetPageKey() )
         
     
     def _NewPageDuplicateFilter( self ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerDuplicateFilter()
         
-        page_name = 'duplicates'
-        
-        self._NewPage( page_name, management_controller )
+        self._NewPage( management_controller )
         
     
     def _NewPageImportBooru( self ):
@@ -2175,44 +2198,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
-        page_name = gallery_identifier.ToString()
-        
-        self._NewPage( page_name, management_controller )
+        self._NewPage( management_controller )
         
     
     def _NewPageImportPageOfImages( self ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
         
-        self._NewPage( 'download', management_controller )
+        self._NewPage( management_controller )
         
     
-    def _NewPageImportThreadWatcher( self ):
+    def _NewPageImportThreadWatcher( self, thread_url = None ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher( thread_url )
         
-        self._NewPage( 'thread watcher', management_controller )
+        self._NewPage( management_controller )
         
     
     def _NewPageImportURLs( self ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportURLs()
         
-        self._NewPage( 'url import', management_controller )
+        self._NewPage( management_controller )
         
     
     def _NewPagePetitions( self, service_key ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
         
-        service = self._controller.services_manager.GetService( service_key )
-        
-        page_name = service.GetName() + ' petitions'
-        
-        self._NewPage( page_name, management_controller )
+        self._NewPage( management_controller )
         
     
-    def _NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None ):
+    def _NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
         
         if initial_hashes is None:
             
@@ -2222,6 +2239,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         if initial_predicates is None:
             
             initial_predicates = []
+            
+        
+        if page_name is None:
+            
+            page_name = 'files'
             
         
         search_enabled = len( initial_hashes ) == 0
@@ -2237,9 +2259,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_service_key = tag_service_key, predicates = initial_predicates )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( file_service_key, file_search_context, search_enabled )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
         
-        self._NewPage( 'files', management_controller, initial_hashes = initial_hashes )
+        self._NewPage( management_controller, initial_hashes = initial_hashes )
         
     
     def _OpenDBFolder( self ):
@@ -2499,8 +2521,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             return
             
+
+        page = self._notebook.GetPage( selection )
         
-        current_name = self._notebook.GetPageText( selection )
+        management_controller = page.GetManagementController()
+        
+        current_name = management_controller.GetPageName()
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
             
@@ -2510,7 +2536,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 new_name = self._notebook.EscapeMnemonics( new_name )
                 
-                self._notebook.SetPageText( selection, new_name )
+                management_controller.SetPageName( new_name )
+                
+                self.RefreshPageName( page.GetPageKey() )
                 
             
         
@@ -2583,13 +2611,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             page = self._notebook.GetPage( i )
             
-            page_name = self._notebook.GetPageText( i )
-            
             management_controller = page.GetManagementController()
             
             hashes = list( page.GetHashes() )
             
-            session.AddPage( page_name, management_controller, hashes )
+            session.AddPage( management_controller, hashes )
             
         
         self._controller.Write( 'serialisable', session )
@@ -3138,7 +3164,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def AddModalMessage( self, job_key ):
         
-        if job_key.IsCancelled():
+        if job_key.IsCancelled() or job_key.IsDeleted():
+            
+            return
+            
+        
+        if job_key.IsDone():
+            
+            self._controller.pub( 'message', job_key )
             
             return
             
@@ -3162,7 +3195,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                r = dlg.ShowModal()
                 
             
         
@@ -3536,7 +3569,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return self._notebook.GetCurrentPage()
         
     
-    def IAmInCurrentPage( self, window ):
+    def IShouldRegularlyUpdate( self, window ):
         
         current_page = self.GetCurrentPage()
         
@@ -3547,7 +3580,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         in_current_page = ClientGUICommon.IsWXAncestor( window, current_page )
         
-        return in_current_page
+        in_other_window = ClientGUICommon.GetTLP( window ) != self
+        
+        return in_current_page or in_other_window
         
     
     def ImportFiles( self, paths ):
@@ -3559,25 +3594,37 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportURL( self, url ):
         
-        if True not in ( page.IsURLImportPage() for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ] ):
-            
-            self._NewPageImportURLs()
-            
+        # do sophisticated domain engine filtering here
+        # generalise this to more cleverly figure out if a page can do what we want, and if not, create one that can
         
-        for ( page, i ) in [ ( self._notebook.GetPage( i ), i ) for i in range( self._notebook.GetPageCount() ) ]:
+        if ClientDownloading.IsImageboardThread( url ):
             
-            if page.IsURLImportPage():
+            # change this when thread watchers can support multiple sub-pages etc...
+            
+            self._NewPageImportThreadWatcher( url )
+            
+        else:
+            
+            if True not in ( page.IsURLImportPage() for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ] ):
                 
-                if page != self._notebook.GetCurrentPage():
+                self._NewPageImportURLs()
+                
+            
+            for ( page, i ) in [ ( self._notebook.GetPage( i ), i ) for i in range( self._notebook.GetPageCount() ) ]:
+                
+                if page.IsURLImportPage():
                     
-                    self._notebook.SetSelection( i )
+                    if page != self._notebook.GetCurrentPage():
+                        
+                        self._notebook.SetSelection( i )
+                        
                     
-                
-                page_key = page.GetPageKey()
-                
-                HG.client_controller.pub( 'set_page_url_input', page_key, url )
-                
-                break
+                    page_key = page.GetPageKey()
+                    
+                    HG.client_controller.pub( 'set_page_url_input', page_key, url )
+                    
+                    break
+                    
                 
             
         
@@ -3617,7 +3664,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success )
         
-        self._NewPage( 'import', management_controller )
+        self._NewPage( management_controller )
         
     
     def NewPageImportPageOfImages( self ): self._NewPageImportPageOfImages()
@@ -3628,7 +3675,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     
-    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None ):
+    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
         
         if initial_hashes is None:
             
@@ -3640,7 +3687,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates )
+        self._NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name )
         
     
     def NewSimilarTo( self, file_service_key, hash, hamming_distance ):
@@ -3789,6 +3836,53 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._dirty_menus = set()
+        
+    
+    def RefreshPageName( self, page_key = None ):
+        
+        if page_key is None:
+            
+            pages_and_indices = [ ( self._notebook.GetPage( index ), index ) for index in range( self._notebook.GetPageCount() ) ]
+            
+        else:
+            
+            try:
+                
+                pages_and_indices = [ self._GetPageAndIndex( page_key ) ]
+                
+            except HydrusExceptions.DataMissing:
+                
+                return
+                
+            
+        
+        for ( page, index ) in pages_and_indices:
+            
+            management_controller = page.GetManagementController()
+            
+            page_name = management_controller.GetPageName()
+            
+            max_page_name_chars = self._new_options.GetInteger( 'max_page_name_chars' )
+            
+            if len( page_name ) > max_page_name_chars:
+                
+                page_name = page_name[ : max_page_name_chars ] + u'\u2026'
+                
+            
+            page_file_count_display = self._new_options.GetInteger( 'page_file_count_display' )
+            
+            if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and management_controller.IsImporter() ):
+                
+                num_files = page.GetNumFiles()
+                
+                page_name += ' (' + HydrusData.ConvertIntToPrettyString( num_files ) + ')'
+                
+            
+            if self._notebook.GetPageText( index ) != page_name:
+                
+                self._notebook.SetPageText( index, page_name )
+                
+            
         
     
     def RefreshStatusBar( self ):

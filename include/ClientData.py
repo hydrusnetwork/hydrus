@@ -252,15 +252,15 @@ def ConvertTagSliceToString( tag_slice ):
         return tag_slice
         
     
-def ConvertTextToPixels( window, ( char_rows, char_cols ) ):
+def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
     
-    dialog_units = ( char_rows * 4, char_cols * 8 )
+    dialog_units = ( char_cols * 4, char_rows * 8 )
     
     return window.ConvertDialogSizeToPixels( dialog_units )
     
-def ConvertTextToPixelWidth( window, char_rows ):
+def ConvertTextToPixelWidth( window, char_cols ):
     
-    ( width, height ) = ConvertTextToPixels( window, ( char_rows, 1 ) )
+    ( width, height ) = ConvertTextToPixels( window, ( char_cols, 1 ) )
     
     return width
     
@@ -625,20 +625,6 @@ def SortTagsList( tags, sort_type ):
     
     tags.sort( key = key, reverse = reverse )
     
-def WaitPolitely( page_key = None ):
-    
-    if page_key is not None:
-        
-        HG.client_controller.pub( 'waiting_politely', page_key, True )
-        
-    
-    time.sleep( HC.options[ 'website_download_polite_wait' ] )
-    
-    if page_key is not None:
-        
-        HG.client_controller.pub( 'waiting_politely', page_key, False )
-        
-    
 class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
@@ -816,7 +802,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
-        self._dictionary[ 'booleans' ][ 'waiting_politely_text' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
         self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
@@ -867,6 +852,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
         
         self._dictionary[ 'integers' ][ 'default_new_page_goes' ] = CC.NEW_PAGE_GOES_FAR_RIGHT
+        
+        self._dictionary[ 'integers' ][ 'max_page_name_chars' ] = 20
+        self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
         
         #
         

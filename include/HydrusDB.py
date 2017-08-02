@@ -18,6 +18,7 @@ import traceback
 import time
 
 CONNECTION_REFRESH_TIME = 60 * 30
+TRANSACTION_COMMIT_TIME = 10
 
 def CanVacuum( db_path, stop_time = None ):
     
@@ -525,7 +526,7 @@ class HydrusDB( object ):
                 result = self._Write( action, *args, **kwargs )
                 
             
-            if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + 10 ):
+            if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + TRANSACTION_COMMIT_TIME ):
                 
                 self._current_status = 'db committing'
                 
@@ -759,7 +760,7 @@ class HydrusDB( object ):
             
             try:
                 
-                ( priority, job ) = self._jobs.get( timeout = 0.5 )
+                ( priority, job ) = self._jobs.get( timeout = 1 )
                 
                 self._currently_doing_job = True
                 self._current_job_name = job.ToString()
@@ -787,7 +788,10 @@ class HydrusDB( object ):
                     
                     error_count += 1
                     
-                    if error_count > 5: raise
+                    if error_count > 5:
+                        
+                        raise
+                        
                     
                     self._jobs.put( ( priority, job ) ) # couldn't lock db; put job back on queue
                     
@@ -801,7 +805,12 @@ class HydrusDB( object ):
                 
             except Queue.Empty:
                 
-                pass # no jobs in the past little while; let's just check if we should shutdown
+                if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + TRANSACTION_COMMIT_TIME ):
+                    
+                    self._Commit()
+                    
+                    self._BeginImmediate()
+                    
                 
             
             if HydrusData.TimeHasPassed( self._connection_timestamp + CONNECTION_REFRESH_TIME ): # just to clear out the journal files

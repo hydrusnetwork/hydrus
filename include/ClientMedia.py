@@ -352,7 +352,7 @@ class LocationsManager( object ):
         deleted = set( self._deleted )
         pending = set( self._pending )
         petitioned = set( self._petitioned )
-        urls = list( self._urls )
+        urls = set( self._urls )
         service_keys_to_filenames = dict( self._service_keys_to_filenames )
         current_to_timestamps = dict( self._current_to_timestamps )
         
@@ -665,9 +665,18 @@ class MediaList( object ):
     
     def _GetMedia( self, hashes, discriminator = None ):
         
-        if discriminator is None: medias = self._sorted_media
-        elif discriminator == 'singletons': medias = self._singleton_media
-        elif discriminator == 'collections': medias = self._collected_media
+        if discriminator is None:
+            
+            medias = self._sorted_media
+            
+        elif discriminator == 'singletons':
+            
+            medias = self._singleton_media
+            
+        elif discriminator == 'collections':
+            
+            medias = self._collected_media
+            
         
         return [ media for media in medias if not hashes.isdisjoint( media.GetHashes() ) ]
         
@@ -867,6 +876,11 @@ class MediaList( object ):
             
         
         return ( sort_key, reverse )
+        
+    
+    def _HasHashes( self, hashes ):
+        
+        return True in ( not hashes.isdisjoint( media.GetHashes() ) for media in self._sorted_media )
         
     
     def _RecalcHashes( self ):
@@ -1180,11 +1194,19 @@ class MediaList( object ):
         return self._GetLast()
         
     
-    def GetMediaIndex( self, media ): return self._sorted_media.index( media )
+    def GetMediaIndex( self, media ):
+        
+        return self._sorted_media.index( media )
+        
     
     def GetNext( self, media ):
         
         return self._GetNext( media )
+        
+    
+    def GetNumFiles( self ):
+        
+        return len( self._hashes )
         
     
     def GetPrevious( self, media ):
@@ -1192,14 +1214,26 @@ class MediaList( object ):
         return self._GetPrevious( media )
         
     
-    def GetSortedMedia( self ): return self._sorted_media
+    def GetSortedMedia( self ):
+        
+        return self._sorted_media
+        
     
     def HasMedia( self, media ):
         
-        if media is None: return False
+        if media is None:
+            
+            return False
+            
         
-        if media in self._singleton_media: return True
-        elif media in self._collected_media: return True
+        if media in self._singleton_media:
+            
+            return True
+            
+        elif media in self._collected_media:
+            
+            return True
+            
         else:
             
             for media_collection in self._collected_media:

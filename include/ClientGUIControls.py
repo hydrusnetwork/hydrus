@@ -3,6 +3,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
@@ -21,9 +22,9 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         columns = [ ( 'type', -1 ), ( 'time delta', 120 ), ( 'max allowed', 80 ) ]
         
-        listctrl_panel = ClientGUICommon.SaneListCtrlPanel( self )
+        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
         
-        self._listctrl = ClientGUICommon.SaneListCtrl( listctrl_panel, 100, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 100, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -235,9 +236,9 @@ class EditStringToStringDictControl( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        listctrl_panel = ClientGUICommon.SaneListCtrlPanel( self )
+        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
         
-        self._listctrl = ClientGUICommon.SaneListCtrl( listctrl_panel, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._listctrl = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -480,7 +481,7 @@ class NetworkJobControl( wx.Panel ):
     
     def ClearNetworkJob( self ):
         
-        if self:
+        if self and self._network_job is not None:
             
             self._network_job = None
             
@@ -492,7 +493,7 @@ class NetworkJobControl( wx.Panel ):
     
     def SetNetworkJob( self, network_job ):
         
-        if self:
+        if self and self._network_job != network_job:
             
             self._network_job = network_job
             self._download_started = False
@@ -503,7 +504,7 @@ class NetworkJobControl( wx.Panel ):
     
     def TIMEREventUpdate( self, event ):
         
-        if HG.client_controller.gui.IAmInCurrentPage( self ):
+        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._Update()
             

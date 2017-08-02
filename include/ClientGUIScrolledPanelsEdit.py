@@ -9,6 +9,7 @@ import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
@@ -169,7 +170,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_services_panel = ClientGUICommon.StaticBox( self, 'tag services' )
         
-        self._tag_service_actions = ClientGUICommon.SaneListCtrl( tag_services_panel, 120, [ ( 'service name', 120 ), ( 'action', 240 ), ( 'tags merged', -1 ) ], delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        self._tag_service_actions = ClientGUIListCtrl.SaneListCtrl( tag_services_panel, 120, [ ( 'service name', 120 ), ( 'action', 240 ), ( 'tags merged', -1 ) ], delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
         self._tag_service_actions.SetMinSize( ( 560, 120 ) )
         
@@ -181,7 +182,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rating_services_panel = ClientGUICommon.StaticBox( self, 'rating services' )
         
-        self._rating_service_actions = ClientGUICommon.SaneListCtrl( rating_services_panel, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        self._rating_service_actions = ClientGUIListCtrl.SaneListCtrl( rating_services_panel, 120, [ ( 'service name', -1 ), ( 'action', 240 ) ], delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
         self._rating_service_actions.SetMinSize( ( 380, 120 ) )
         

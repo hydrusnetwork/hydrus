@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 267</h3></li>
+				<ul>
+					<li>drag-and-dropping a 4chan or 8chan url onto the client will now automatically open a thread watcher for that url</li>
+					<li>fixed an issue where web domain or subscription network contexts that included unicode characters in their context data were unable to serialise and save to the db, causing error spam when the bandwidth manager attempted to save itself</li>
+					<li>subscriptions will now show a network job control in their popup as they do network work</li>
+					<li>subscriptions will cancel more reliably during gallery parse</li>
+					<li>subscriptions now have some 'delay' logic that will stop them sometimes restarting as soon as they are cancelled or otherwise have to stop mid-work</li>
+					<li>subscriptions will now tolerate up to five 'already in cache' urls per page parse until it considers the page 'already seen'. this is to catch the odd additional late insert and avoid the problem of a page updating and shuffling everything up one as the subscription walks through pages</li>
+					<li>maintenance modal popup messages should no longer appear if their jobs are very quick</li>
+					<li>queued up modal popup messages will no longer flicker their dialogs on a de-minimise</li>
+					<li>should have fixed an issue where modal popup messages could sometimes error out on a close attempt, locking the client's whole gui and requiring a force quit</li>
+					<li>fixed an issue where the modal popup message dialog was OKing on a close attempt of a non-cancellable job, despite presenting user text indicating otherwise</li>
+					<li>did a bunch of data work on pages</li>
+					<li>page tab names will now be clipped to 20 characters by default</li>
+					<li>pages now show (num_files) after their name by default, although you can set this for only import pages or turn it off completely</li>
+					<li>options for these new behaviours are in options->gui--and page names will update immediately on dialog ok</li>
+					<li>subscription and import folder 'show files' events (and a couple of other misc occasions) will now launch their page tab with the sub/folder name rather than a flat 'files'</li>
+					<li>wrote a new listctrl class with custom sort code that does not suffer from the 'crash when sorted while many pages open' bug. it also handles data in a simpler way for hydrus</li>
+					<li>review bandwidth listctrl now uses this new class and should now not crash your client. I will replace all the other listctrls with the new class over the coming weeks</li>
+					<li>temporarily, no old listctrls will auto-sort themselves (as this causes a crash for many users)! if you do not suffer from the crash, please sort them yourselves for now</li>
+					<li>reduced some large-scale gui import lag:</li>
+					<li>reduced content processing CPU load on clients with many thumbnails open</li>
+					<li>massively reduced content processing CPU load on non-current pages</li>
+					<li>offloaded newly-imported file thumbnail detection and generation to a non-gui thread</li>
+					<li>migrate database dialog now lets you move the whole database and all portable locations, which requires a client shutdown</li>
+					<li>the raw url downloader will no longer have a problem with pasted url lists that include empty newlines</li>
+					<li>all the downloaders/importers now sleep on cleverer event objects so they will burn less idle cpu and wake as soon as they have new work to do</li>
+					<li>fixed and otherwise improved some gallery downloader timing logic</li>
+					<li>hdd import pages now use the file import status control</li>
+					<li>the thread watcher's controls now try to wrap in a single sizer. it uses less space, but might sperg out, let me know if it is a problem. I'll replace the whole watcher timing system in the new engine anyway</li>
+					<li>fixed a gelbooru (and possibly others) booru parsing bug that meant half of the pages in the gallery walk were being skipped (e.g. 'mogudan' was producing ~350 files when there were actually 690 in the list)</li>
+					<li>fixed some dialog panel layout scrollbar-cutoff in sevaral Linux places and perhaps elsewhere</li>
+					<li>cleaned debug menu a little and added a save 'last session' entry</li>
+					<li>fixed an issue where some kinds of media would error on notification of new url association</li>
+					<li>clients will now save small transaction progress reliably within ten seconds no matter how idle they are</li>
+					<li>deleted the old 'gui capitalisation' option--I never got around to expanding it beyond a handful of menu labels, it was always too much to work on for too little reward</li>
+					<li>improved support for certain broken videos--these will import ok, but full rendering might be borked to different degrees, so let me know how it goes.</li>
+					<li>cleared out some old content processing code</li>
+					<li>cleared out some old unused db data</li>
+					<li>removed all old 'waiting politely' download settings and gui code</li>
+					<li>misc prep work for wx update</li>
+					<li>misc gui code refactoring</li>
+					<li>misc downloader cleanup and timing tweaks</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 266</h3></li>
 				<ul>
 					<li>converted gallery downloaders to the new network engine</li>

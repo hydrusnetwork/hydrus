@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import ClientGUICommon
+import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
@@ -105,9 +106,8 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
-        self._download = ClientGUICommon.TextAndGauge( self )
-        self._download.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
-        self._download.Hide()
+        self._network_job_ctrl = ClientGUIControls.NetworkJobControl( self )
+        self._network_job_ctrl.Hide()
         
         self._copy_to_clipboard_button = ClientGUICommon.BetterButton( self, 'copy to clipboard', self.CopyToClipboard )
         self._copy_to_clipboard_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
@@ -148,7 +148,7 @@ class PopupMessage( PopupWindow ):
         vbox.AddF( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._download, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -220,9 +220,9 @@ class PopupMessage( PopupWindow ):
         
         if result is not None:
             
-            hashes = result
+            ( popup_files, popup_files_name ) = result
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = popup_files, page_name = popup_files_name )
             
         
     
@@ -360,19 +360,19 @@ class PopupMessage( PopupWindow ):
             self._gauge_2.Hide()
             
         
-        popup_download = self._job_key.GetIfHasVariable( 'popup_download' )
+        popup_network_job = self._job_key.GetIfHasVariable( 'popup_network_job' )
         
-        if popup_download is not None:
+        if popup_network_job is not None:
             
-            ( text, gauge_value, gauge_range ) = popup_download
+            self._network_job_ctrl.SetNetworkJob( popup_network_job )
             
-            self._download.SetValue( text, gauge_value, gauge_range )
-            
-            self._download.Show()
+            self._network_job_ctrl.Show()
             
         else:
             
-            self._download.Hide()
+            self._network_job_ctrl.ClearNetworkJob()
+            
+            self._network_job_ctrl.Hide()
             
         
         popup_clipboard = self._job_key.GetIfHasVariable( 'popup_clipboard' )
@@ -393,9 +393,11 @@ class PopupMessage( PopupWindow ):
             self._copy_to_clipboard_button.Hide()
             
         
-        popup_files = self._job_key.GetIfHasVariable( 'popup_files' )
+        result = self._job_key.GetIfHasVariable( 'popup_files' )
         
-        if popup_files is not None:
+        if result is not None:
+            
+            ( popup_files, popup_files_name ) = result
             
             hashes = popup_files
             
@@ -661,7 +663,7 @@ class PopupMessageManager( wx.Frame ):
                 
                 if parent.IsShown():
                     
-                    my_position = parent.ClientToScreenXY( my_x, my_y )
+                    my_position = parent.ClientToScreen( ( my_x, my_y ) )
                     
                     if my_position != self.GetPosition():
                         
@@ -925,6 +927,8 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                 
                 wx.MessageBox( 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
                 
+                raise HydrusExceptions.VetoException()
+                
             
         
     
@@ -934,16 +938,12 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
             if self._job_key.IsDone():
                 
-                self._timer.Stop()
-                
                 parent = self.GetParent()
                 
                 if parent.IsModal(): # event sometimes fires after modal done
                     
                     self.GetParent().DoOK()
                     
-            
-                self._timer.Start( 500, wx.TIMER_CONTINUOUS )
                 
             else:
                 

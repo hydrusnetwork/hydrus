@@ -630,55 +630,55 @@ class TestClientDB( unittest.TestCase ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
-        session.AddPage( 'hf download page', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
         
-        session.AddPage( 'hdd download page', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
         
-        session.AddPage( 'thread watcher', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
         
-        session.AddPage( 'url download page', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         management_controller = ClientGUIManagement.CreateManagementControllerPetitions( CC.LOCAL_TAG_SERVICE_KEY ) # local because the controller wants to look up the service
         
-        session.AddPage( 'petition page', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', HydrusData.GenerateKey(), fsc, True )
         
-        session.AddPage( 'files', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, False )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', HydrusData.GenerateKey(), fsc, False )
         
-        session.AddPage( 'files', management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+        session.AddPage( management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
         
         fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', HydrusData.GenerateKey(), fsc, True )
         
-        session.AddPage( 'files', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', HydrusData.GenerateKey(), fsc, True )
         
-        session.AddPage( 'files', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, HydrusData.GenerateKey() ) ) ] )
         
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( HydrusData.GenerateKey(), fsc, True )
+        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', HydrusData.GenerateKey(), fsc, True )
         
-        session.AddPage( 'files', management_controller, [] )
+        session.AddPage( management_controller, [] )
         
         self._write( 'serialisable', session )
         
@@ -686,12 +686,12 @@ class TestClientDB( unittest.TestCase ):
         
         page_names = []
         
-        for ( page_name, management_controller, initial_hashes ) in result.IteratePages():
+        for ( management_controller, initial_hashes ) in result.IteratePages():
             
-            page_names.append( page_name )
+            page_names.append( management_controller.GetPageName() )
             
-        
-        self.assertEqual( page_names, [ 'hf download page', 'hdd download page', 'thread watcher', 'url download page', 'petition page', 'files', 'files', 'files', 'files', 'files' ] )
+        print( page_names )
+        self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'page download', u'local tags petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
         
     
     def test_import( self ):
@@ -1219,20 +1219,6 @@ class TestClientDB( unittest.TestCase ):
         self._write( 'hydrus_session', *session )
         
         result = self._read( 'hydrus_sessions' )
-        
-        self.assertEqual( result, [ session ] )
-        
-        #
-        
-        result = self._read( 'web_sessions' )
-        
-        self.assertEqual( result, [] )
-        
-        session = ( 'website name', [ 'cookie 1', 'cookie 2' ], HydrusData.GetNow() + 100000 )
-        
-        self._write( 'web_session', *session )
-        
-        result = self._read( 'web_sessions' )
         
         self.assertEqual( result, [ session ] )
         

@@ -124,6 +124,8 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
         
+        self._due_a_forced_selection_pub = False
+        
         self._PublishSelectionChange()
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
@@ -1076,23 +1078,47 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _PublishSelectionChange( self, force_reload = False ):
         
-        if len( self._selected_media ) == 0:
+        if HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
-            tags_media = self._sorted_media
+            if len( self._selected_media ) == 0:
+                
+                tags_media = self._sorted_media
+                
+            else:
+                
+                tags_media = self._selected_media
+                
+            
+            force_reload = force_reload or self._due_a_forced_selection_pub
+            
+            HG.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
+            HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+            
+            if force_reload:
+                
+                self._due_a_forced_selection_pub = False
+                
             
         else:
             
-            tags_media = self._selected_media
+            if force_reload:
+                
+                self._due_a_forced_selection_pub = True
+                
             
-        
-        HG.client_controller.pub( 'new_tags_selection', self._page_key, tags_media, force_reload = force_reload )
-        HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
         
     
     def _PublishSelectionIncrement( self, medias ):
         
-        HG.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
-        HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+        if HG.client_controller.gui.IsCurrentPage( self._page_key ):
+            
+            HG.client_controller.pub( 'increment_tags_selection', self._page_key, medias )
+            HG.client_controller.pub( 'new_page_status', self._page_key, self._GetPrettyStatus() )
+            
+        else:
+            
+            self._due_a_forced_selection_pub = True
+            
         
     
     def _RecalculateVirtualSize( self ): pass
@@ -1478,19 +1504,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if page_key == self._page_key:
             
+            HG.client_controller.pub( 'refresh_page_name', self._page_key )
+            
             return ClientMedia.ListeningMediaList.AddMediaResults( self, media_results, append = append )
             
-        
-    
-    def Archive( self, hashes ):
-        
-        affected_media = self._GetMedia( hashes )
-        
-        if len( affected_media ) > 0: self._RedrawMedia( affected_media )
-        
-        self._PublishSelectionChange()
-        
-        if self._focussed_media is not None: self._HitMedia( self._focussed_media, False, False )
         
     
     def ClearPageKey( self ):
@@ -1566,28 +1583,29 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
         
-        we_were_affected = False
+        we_were_file_or_tag_affected = False
         
         for ( service_key, content_updates ) in service_keys_to_content_updates.items():
             
             for content_update in content_updates:
                 
-                ( data_type, action, row ) = content_update.ToTuple()
-                
                 hashes = content_update.GetHashes()
                 
-                affected_media = self._GetMedia( hashes )
-                
-                if len( affected_media ) > 0:
+                if self._HasHashes( hashes ):
+                    
+                    affected_media = self._GetMedia( hashes )
                     
                     self._RedrawMedia( affected_media )
                     
-                    we_were_affected = True
+                    if content_update.GetDataType() in ( HC.CONTENT_TYPE_FILES, HC.CONTENT_TYPE_MAPPINGS ):
+                        
+                        we_were_file_or_tag_affected = True
+                        
                     
                 
             
         
-        if we_were_affected:
+        if we_were_file_or_tag_affected:
             
             self._PublishSelectionChange( force_reload = True )
             
@@ -1626,7 +1644,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def SetFocussedMedia( self, page_key, media ): pass
+    def SetFocussedMedia( self, page_key, media ):
+        
+        pass
+        
     
     def Sort( self, page_key, sort_by = None ):
         
@@ -2204,6 +2225,8 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._PublishSelectionChange()
         
+        HG.client_controller.pub( 'refresh_page_name', self._page_key )
+        
         self.Refresh()
         
     
@@ -2306,7 +2329,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._RecalculateVirtualSize()
             
-            self._FadeThumbnails( thumbnails )
+            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
+            #self._FadeThumbnails( thumbnails )
             
             if len( self._selected_media ) == 0:
                 

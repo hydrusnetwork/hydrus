@@ -1293,7 +1293,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNetworkContextsAndBandwidthTrackersForUser( self, history_time_delta_threshold = None ):
+    def GetNetworkContextsForUser( self, history_time_delta_threshold = None ):
         
         with self._lock:
             
@@ -1314,7 +1314,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                result.append( ( network_context, bandwidth_tracker ) )
+                result.append( network_context )
                 
             
             return result
@@ -1419,7 +1419,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, context_type = None, context_data = None ):
         
@@ -1457,7 +1457,14 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            serialisable_context_data = self.context_data.encode( 'hex' )
+            if self.context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_SUBSCRIPTION ):
+                
+                serialisable_context_data = self.context_data
+                
+            else:
+                
+                serialisable_context_data = self.context_data.encode( 'hex' )
+                
             
         
         return ( self.context_type, serialisable_context_data )
@@ -1473,7 +1480,37 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            self.context_data = serialisable_context_data.decode( 'hex' )
+            if self.context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_SUBSCRIPTION ):
+                
+                self.context_data = serialisable_context_data
+                
+            else:
+                
+                self.context_data = serialisable_context_data.decode( 'hex' )
+                
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( context_type, serialisable_context_data ) = old_serialisable_info
+            
+            if serialisable_context_data is not None:
+                
+                # unicode subscription names were erroring on the hex call
+                if context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_SUBSCRIPTION ):
+                    
+                    context_data = serialisable_context_data.decode( 'hex' )
+                    
+                    serialisable_context_data = context_data
+                    
+                
+            
+            new_serialisable_info = ( context_type, serialisable_context_data )
+            
+            return ( 2, new_serialisable_info )
             
         
     

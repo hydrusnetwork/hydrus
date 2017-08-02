@@ -3,6 +3,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
 import ClientGUIControls
+import ClientGUIListCtrl
 import ClientGUIScrolledPanels
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
@@ -403,7 +404,7 @@ class EditNodes( wx.Panel ):
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        self._nodes = ClientGUICommon.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._nodes = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 120 ), ( 'node type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         
@@ -1562,7 +1563,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._scripts = ClientGUICommon.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 140 ), ( 'query type', 80 ), ( 'script type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._scripts = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 200, [ ( 'name', 140 ), ( 'query type', 80 ), ( 'script type', 80 ), ( 'produces', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         

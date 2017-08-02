@@ -209,6 +209,8 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
     else:
         
+        num_frames = None
+        
         if not count_frames_manually:
             
             fps = ParseFFMPEGFPS( lines )
@@ -238,7 +240,17 @@ def GetFFMPEGVideoProperties( path, count_frames_manually = False ):
         
         if count_frames_manually:
             
-            num_frames = ParseFFMPEGNumFramesManually( lines )
+            try:
+                
+                num_frames = ParseFFMPEGNumFramesManually( lines )
+                
+            except HydrusExceptions.MimeException:
+                
+                if num_frames is None:
+                    
+                    raise
+                    
+                
             
         
     

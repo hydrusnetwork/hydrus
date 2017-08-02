@@ -11,7 +11,7 @@ import wx
 
 class JobKey( object ):
     
-    def __init__( self, pausable = False, cancellable = False, only_when_idle = False, only_start_if_unbusy = False, stop_time = None ):
+    def __init__( self, pausable = False, cancellable = False, only_when_idle = False, only_start_if_unbusy = False, stop_time = None, cancel_on_shutdown = True ):
         
         self._key = HydrusData.GenerateKey()
         
@@ -20,6 +20,7 @@ class JobKey( object ):
         self._only_when_idle = only_when_idle
         self._only_start_if_unbusy = only_start_if_unbusy
         self._stop_time = stop_time
+        self._cancel_on_shutdown = cancel_on_shutdown
         
         self._start_time = HydrusData.GetNow()
         
@@ -56,7 +57,7 @@ class JobKey( object ):
             
             should_cancel = False
             
-            if HydrusThreading.IsThreadShuttingDown():
+            if self._cancel_on_shutdown and HydrusThreading.IsThreadShuttingDown():
                 
                 should_cancel = True
                 
@@ -220,21 +221,21 @@ class JobKey( object ):
         
         self._CheckCancelTests()
         
-        return HydrusThreading.IsThreadShuttingDown() or self._cancelled.is_set()
+        return self._cancelled.is_set()
         
     
     def IsDeleted( self ):
         
         self._CheckCancelTests()
         
-        return HydrusThreading.IsThreadShuttingDown() or self._deleted.is_set()
+        return self._deleted.is_set()
         
     
     def IsDone( self ):
         
         self._CheckCancelTests()
         
-        return HydrusThreading.IsThreadShuttingDown() or self._done.is_set()
+        return self._done.is_set()
         
     
     def IsPausable( self ):

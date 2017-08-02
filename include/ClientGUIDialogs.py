@@ -12,6 +12,7 @@ import ClientGUIFrames
 import ClientGUICommon
 import ClientGUICollapsible
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUIPredicates
 import ClientGUITopLevelWindows
 import ClientImporting
@@ -831,9 +832,9 @@ class DialogInputLocalFiles( Dialog ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddPathsToList, None ) )
         
-        listctrl_panel = ClientGUICommon.SaneListCtrlPanel( self )
+        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
         
-        self._paths_list = ClientGUICommon.SaneListCtrl( listctrl_panel, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
+        self._paths_list = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 120, [ ( 'path', -1 ), ( 'guessed mime', 110 ), ( 'size', 60 ) ], delete_key_callback = self.RemovePaths )
         
         listctrl_panel.SetListCtrl( self._paths_list )
         
@@ -2184,7 +2185,7 @@ class DialogPathsToTags( Dialog ):
             self._service_key = service_key
             self._paths = paths
             
-            self._paths_list = ClientGUICommon.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
+            self._paths_list = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -2297,7 +2298,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
                 
-                self._quick_namespaces_list = ClientGUICommon.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
+                self._quick_namespaces_list = ClientGUIListCtrl.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
                 
                 self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
                 self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -3317,7 +3318,7 @@ class DialogSelectYoutubeURL( Dialog ):
         
         self._info = info
         
-        self._urls = ClientGUICommon.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', -1 ) ] )
+        self._urls = ClientGUIListCtrl.SaneListCtrl( self, 360, [ ( 'format', 150 ), ( 'resolution', -1 ) ] )
         self._urls.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventOK )
         
         self._urls.SetMinSize( ( 360, 200 ) )
@@ -3331,9 +3332,14 @@ class DialogSelectYoutubeURL( Dialog ):
         
         #
         
-        for ( extension, resolution ) in self._info: self._urls.Append( ( extension, resolution ), ( extension, resolution ) )
+        self._info.sort()
         
-        self._urls.SortListItems( 0 )
+        for ( extension, resolution ) in self._info:
+            
+            self._urls.Append( ( extension, resolution ), ( extension, resolution ) )
+            
+        
+        #self._urls.SortListItems( 0 )
         
         #
         
@@ -3401,7 +3407,7 @@ class DialogSetupExport( Dialog ):
         
         self._tags_box.SetMinSize( ( 220, 300 ) )
         
-        self._paths = ClientGUICommon.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
+        self._paths = ClientGUIListCtrl.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 70 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
         self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
         self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
         
@@ -3724,7 +3730,7 @@ class DialogSetupExport( Dialog ):
     
 class DialogTextEntry( Dialog ):
     
-    def __init__( self, parent, message, default = '', allow_blank = False, suggestions = None ):
+    def __init__( self, parent, message, default = '', allow_blank = False, suggestions = None, max_chars = None ):
         
         if suggestions is None:
             
@@ -3735,6 +3741,7 @@ class DialogTextEntry( Dialog ):
         
         self._chosen_suggestion = None
         self._allow_blank = allow_blank
+        self._max_chars = max_chars
         
         button_choices =  []
         
@@ -3746,6 +3753,11 @@ class DialogTextEntry( Dialog ):
         self._text = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
         self._text.Bind( wx.EVT_TEXT, self.EventText )
         self._text.Bind( wx.EVT_TEXT_ENTER, self.EventEnter )
+        
+        if self._max_chars is not None:
+            
+            self._text.SetMaxLength( self._max_chars )
+            
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -3794,8 +3806,14 @@ class DialogTextEntry( Dialog ):
         
         if not self._allow_blank:
             
-            if self._text.GetValue() == '': self._ok.Disable()
-            else: self._ok.Enable()
+            if self._text.GetValue() == '':
+                
+                self._ok.Disable()
+                
+            else:
+                
+                self._ok.Enable()
+                
             
         
     

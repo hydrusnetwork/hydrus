@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
@@ -26,7 +27,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         height = 300
         columns = [ ( 'source', -1 ), ( 'status', 90 ), ( 'added', 150 ), ( 'last modified', 150 ), ( 'note', 200 ) ]
         
-        self._list_ctrl = ClientGUICommon.SaneListCtrlForSingleObject( self, height, columns )
+        self._list_ctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, height, columns )
         
         #
         
@@ -355,7 +356,7 @@ class SeedCacheStatusControl( wx.Panel ):
     
     def TIMEREventUpdate( self, event ):
         
-        if self._controller.gui.IAmInCurrentPage( self ):
+        if self._controller.gui.IShouldRegularlyUpdate( self ):
             
             self._Update()
             

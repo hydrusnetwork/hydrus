@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientGUIDialogs
+import ClientGUIListCtrl
 import ClientGUIScrolledPanelsReview
 import ClientGUITopLevelWindows
 import ClientThreading
@@ -188,7 +189,7 @@ class ReviewServicePanel( wx.Panel ):
         
         for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
             
-            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'booru share' )
             
         
     
@@ -986,7 +987,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._check_running_button = ClientGUICommon.BetterButton( self, 'check daemon', self._CheckRunning )
             
-            self._ipfs_shares = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'multihash', 120 ), ( 'num files', 80 ), ( 'total size', 80 ), ( 'note', -1 ) ], delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+            self._ipfs_shares = ClientGUIListCtrl.SaneListCtrl( self, 200, [ ( 'multihash', 120 ), ( 'num files', 80 ), ( 'total size', 80 ), ( 'note', -1 ) ], delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
             
             self._copy_multihash_button = ClientGUICommon.BetterButton( self, 'copy multihashes', self._CopyMultihashes )
             self._show_selected_button = ClientGUICommon.BetterButton( self, 'show selected in main gui', self._ShowSelectedInNewPages )
@@ -1124,7 +1125,7 @@ class ReviewServicePanel( wx.Panel ):
                         
                         hashes = HG.client_controller.Read( 'service_directory', self._service.GetServiceKey(), multihash )
                         
-                        HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+                        HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'ipfs directory' )
                         
                     
                 finally:

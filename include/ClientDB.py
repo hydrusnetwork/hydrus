@@ -371,16 +371,14 @@ class DB( HydrusDB.HydrusDB ):
         self._c.executemany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( bad_tag_id, good_tag_id ) in pairs ) )
         
     
-    def _AddWebSession( self, name, cookies, expires ):
-        
-        self._c.execute( 'REPLACE INTO web_sessions ( name, cookies, expiry ) VALUES ( ?, ?, ? );', ( name, cookies, expires ) )
-        
-    
     def _AnalyzeStaleBigTables( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
         
         names_to_analyze = self._GetBigTableNamesToAnalyze( force_reanalyze = force_reanalyze )
         
         if len( names_to_analyze ) > 0:
+            
+            key_pubbed = False
+            time_started = HydrusData.GetNow()
             
             job_key = ClientThreading.JobKey( cancellable = True )
             
@@ -388,11 +386,16 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_title', 'database maintenance - analyzing' )
                 
-                self._controller.pub( 'modal_message', job_key )
-                
                 random.shuffle( names_to_analyze )
                 
                 for name in names_to_analyze:
+                    
+                    if not key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
+                        
+                        self._controller.pub( 'modal_message', job_key )
+                        
+                        key_pubbed = True
+                        
                     
                     self._controller.pub( 'splash_set_status_text', 'analyzing ' + name )
                     job_key.SetVariable( 'popup_text_1', 'analyzing ' + name )
@@ -1359,6 +1362,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        time_started = HydrusData.GetNow()
         pub_job_key = False
         job_key_pubbed = False
         
@@ -1383,7 +1387,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_title', 'similar files duplicate pair discovery' )
                 
-                if pub_job_key and not job_key_pubbed:
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
                     
                     self._controller.pub( 'modal_message', job_key )
                     
@@ -1433,6 +1437,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesMaintainFiles( self, job_key = None, stop_time = None ):
         
+        time_started = HydrusData.GetNow()
         pub_job_key = False
         job_key_pubbed = False
         
@@ -1457,7 +1462,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 job_key.SetVariable( 'popup_title', 'similar files metadata maintenance' )
                 
-                if pub_job_key and not job_key_pubbed:
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
                     
                     self._controller.pub( 'modal_message', job_key )
                     
@@ -1556,6 +1561,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        time_started = HydrusData.GetNow()
         pub_job_key = False
         job_key_pubbed = False
         
@@ -1576,7 +1582,7 @@ class DB( HydrusDB.HydrusDB ):
             
             while len( rebalance_phash_ids ) > 0:
                 
-                if pub_job_key and not job_key_pubbed:
+                if pub_job_key and not job_key_pubbed and HydrusData.TimeHasPassed( time_started + 5 ):
                     
                     self._controller.pub( 'modal_message', job_key )
                     
@@ -2750,8 +2756,6 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'CREATE TABLE vacuum_timestamps ( name TEXT, timestamp INTEGER );' )
         
         self._c.execute( 'CREATE TABLE version ( version INTEGER );' )
-        
-        self._c.execute( 'CREATE TABLE web_sessions ( name TEXT PRIMARY KEY, cookies TEXT_YAML, expiry INTEGER );' )
         
         self._c.execute( 'CREATE TABLE yaml_dumps ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );' )
         
@@ -6137,13 +6141,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if minimum_age is None:
             
-            age_phrase = ''
+            age_phrase = ' ORDER BY timestamp ASC' # when deleting until trash is small enough, let's delete oldest first
             
         else:
             
             timestamp_cutoff = HydrusData.GetNow() - minimum_age
             
-            age_phrase = ' AND timestamp < ' + str( timestamp_cutoff ) + ' ORDER BY timestamp ASC'
+            age_phrase = ' AND timestamp < ' + str( timestamp_cutoff )
             
         
         hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?' + age_phrase + limit_phrase + ';', ( self._trash_service_id, ) ) }
@@ -6193,19 +6197,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return ( CC.STATUS_NEW, None )
-        
-    
-    def _GetWebSessions( self ):
-        
-        now = HydrusData.GetNow()
-        
-        self._c.execute( 'DELETE FROM web_sessions WHERE ? > expiry;', ( now, ) )
-        
-        sessions = []
-        
-        sessions = self._c.execute( 'SELECT name, cookies, expiry FROM web_sessions;' ).fetchall()
-        
-        return sessions
         
     
     def _GetYAMLDump( self, dump_type, dump_name = None ):
@@ -7916,7 +7907,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
         elif action == 'url_status': result = self._GetURLStatus( *args, **kwargs )
-        elif action == 'web_sessions': result = self._GetWebSessions( *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
         return result
@@ -9702,6 +9692,11 @@ class DB( HydrusDB.HydrusDB ):
             self._SetJSONDump( bandwidth_manager )
             
         
+        if version == 266:
+            
+            self._c.execute( 'DROP TABLE IF EXISTS web_sessions;' )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10307,7 +10302,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'update_server_services': result = self._UpdateServerServices( *args, **kwargs )
         elif action == 'update_services': result = self._UpdateServices( *args, **kwargs )
         elif action == 'vacuum': result = self._Vacuum( *args, **kwargs )
-        elif action == 'web_session': result = self._AddWebSession( *args, **kwargs )
         else: raise Exception( 'db received an unknown write command: ' + action )
         
         return result

@@ -75,9 +75,6 @@ def GetSafeSize( tlw, min_size, gravity ):
         
         ( parent_window_width, parent_window_height ) = parent.GetTopLevelParent().GetSize()
         
-        max_width = parent_window_width - 2 * CHILD_POSITION_PADDING
-        max_height = parent_window_height - 2 * CHILD_POSITION_PADDING
-        
         ( width_gravity, height_gravity ) = gravity
         
         if width_gravity == -1:
@@ -85,6 +82,8 @@ def GetSafeSize( tlw, min_size, gravity ):
             width = min_width
             
         else:
+            
+            max_width = parent_window_width - 2 * CHILD_POSITION_PADDING
             
             width = int( width_gravity * max_width )
             
@@ -94,6 +93,8 @@ def GetSafeSize( tlw, min_size, gravity ):
             height = min_height
             
         else:
+            
+            max_height = parent_window_height - 2 * CHILD_POSITION_PADDING
             
             height = int( height_gravity * max_height )
             
@@ -263,13 +264,20 @@ def SlideOffScreenTLWUpAndLeft( tlw ):
     
 class NewDialog( wx.Dialog ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, style_override = None ):
         
-        style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
-        
-        if not HC.PLATFORM_LINUX and parent is not None:
+        if style_override is None:
             
-            style |= wx.FRAME_FLOAT_ON_PARENT
+            style = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER
+            
+            if not HC.PLATFORM_LINUX and parent is not None:
+                
+                style |= wx.FRAME_FLOAT_ON_PARENT
+                
+            
+        else:
+            
+            style = style_override
             
         
         wx.Dialog.__init__( self, parent, title = title, style = style )
@@ -357,20 +365,20 @@ class NewDialog( wx.Dialog ):
     
 class DialogThatResizes( NewDialog ):
     
-    def __init__( self, parent, title, frame_key ):
+    def __init__( self, parent, title, frame_key, style_override = None ):
         
         self._frame_key = frame_key
         
-        NewDialog.__init__( self, parent, title )
+        NewDialog.__init__( self, parent, title, style_override = style_override )
         
     
 class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
-    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog', style_override = None ):
         
         self._panel = None
         
-        DialogThatResizes.__init__( self, parent, title, frame_key )
+        DialogThatResizes.__init__( self, parent, title, frame_key, style_override = style_override )
         
         self._InitialiseButtons()
         
@@ -452,7 +460,9 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         SetTLWSizeAndPosition( self, self._frame_key )
         
-        self._panel.SetupScrolling()
+        self._panel.SetupScrolling() # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
+        
+        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherant virtual size
         
     
 class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
@@ -491,12 +501,19 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
     
 class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, style_override = None ):
         
-        DialogThatTakesScrollablePanelClose.__init__( self, parent, title )
+        DialogThatTakesScrollablePanelClose.__init__( self, parent, title, style_override = style_override )
+        
+        self._ok_done = False
         
     
     def DoOK( self ):
+        
+        if self._ok_done:
+            
+            return
+            
         
         try:
             
@@ -510,6 +527,8 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
         SaveTLWSizeAndPosition( self, self._frame_key )
         
         self.EndModal( wx.ID_OK )
+        
+        self._ok_done = True
         
     
 class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):

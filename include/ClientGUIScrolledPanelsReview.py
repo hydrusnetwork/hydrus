@@ -3,6 +3,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIFrames
+import ClientGUIListCtrl
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIPanels
@@ -18,6 +19,9 @@ import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusPaths
 import os
+import sys
+import threading
+import time
 import traceback
 import webbrowser
 import wx
@@ -309,9 +313,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
         self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
         
-        self._bandwidths = ClientGUICommon.SaneListCtrlForSingleObject( self, 360, [ ( 'name', -1 ), ( 'type', 100 ), ( 'current usage', 100 ), ( 'past 24 hours', 100 ), ( 'this month', 100 ), ( 'has specific rules', 120 ) ], activation_callback = self.ShowNetworkContext )
-        
-        self._bandwidths.SetMinSize( ( 740, 360 ) )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 14 ), ( 'this month', 14 ), ( 'has specific rules', 20 ) ], self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
         
         self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
         
@@ -324,7 +326,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._history_time_delta_threshold.SetValue( 86400 * 30 )
         
-        self._bandwidths.SortListItems( 0 )
+        self._bandwidths.Sort( 0 )
         
         self._update_timer = wx.Timer( self )
         
@@ -355,9 +357,48 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self.SetSizer( vbox )
         
     
+    def _ConvertNetworkContextsToListCtrlTuples( self, network_context ):
+        
+        bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
+        
+        has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
+        
+        sortable_network_context = ( network_context.context_type, network_context.context_data )
+        sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
+        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        day_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
+        month_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+        
+        pretty_network_context = network_context.ToUnicode()
+        pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
+        
+        if current_usage == 0:
+            
+            pretty_current_usage = ''
+            
+        else:
+            
+            pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+            
+        
+        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage )
+        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage )
+        
+        if has_rules:
+            
+            pretty_has_rules = 'yes'
+            
+        else:
+            
+            pretty_has_rules = ''
+            
+        
+        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules ) )
+        
+    
     def _DeleteNetworkContexts( self ):
         
-        selected_network_contexts = self._bandwidths.GetObjects( only_selected = True )
+        selected_network_contexts = self._bandwidths.GetData( only_selected = True )
         
         if len( selected_network_contexts ) > 0:
             
@@ -401,43 +442,6 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _GetTuples( self, network_context, bandwidth_tracker ):
-        
-        has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
-        
-        sortable_network_context = ( network_context.context_type, network_context.context_data )
-        sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
-        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
-        day_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
-        month_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
-        
-        pretty_network_context = network_context.ToUnicode()
-        pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
-        
-        if current_usage == 0:
-            
-            pretty_current_usage = ''
-            
-        else:
-            
-            pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
-            
-        
-        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage )
-        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage )
-        
-        if has_rules:
-            
-            pretty_has_rules = 'yes'
-            
-        else:
-            
-            pretty_has_rules = ''
-            
-        
-        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules ) )
-        
-    
     def _ShowDefaultRulesHelp( self ):
         
         help = 'Network requests act in multiple contexts. Most use the \'global\' and \'web domain\' network contexts, but a hydrus server request, for instance, will add its own service-specific context, and a subscription will add both itself and its downloader.'
@@ -455,12 +459,6 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Update( self ):
         
-        ( sort_col, sort_asc ) = self._bandwidths.GetSortState()
-        
-        selected_network_contexts = self._bandwidths.GetObjects( only_selected = True )
-        
-        self._bandwidths.DeleteAllItems()
-        
         if self._history_time_delta_none.GetValue() == True:
             
             history_time_delta_threshold = None
@@ -470,23 +468,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             history_time_delta_threshold = self._history_time_delta_threshold.GetValue()
             
         
-        network_contexts_and_bandwidth_trackers = self._controller.network_engine.bandwidth_manager.GetNetworkContextsAndBandwidthTrackersForUser( history_time_delta_threshold )
+        network_contexts = self._controller.network_engine.bandwidth_manager.GetNetworkContextsForUser( history_time_delta_threshold )
         
-        for ( index, ( network_context, bandwidth_tracker ) ) in enumerate( network_contexts_and_bandwidth_trackers ):
-            
-            ( display_tuple, sort_tuple ) = self._GetTuples( network_context, bandwidth_tracker )
-            
-            self._bandwidths.Append( display_tuple, sort_tuple, network_context )
-            
-            if network_context in selected_network_contexts:
-                
-                self._bandwidths.Select( index )
-                
-            
+        self._bandwidths.SetData( network_contexts )
         
-        self._bandwidths.SortListItems( sort_col, sort_asc )
-        
-        timer_duration_s = max( len( network_contexts_and_bandwidth_trackers ), 20 )
+        timer_duration_s = max( len( network_contexts ), 20 )
         
         self._update_timer.Start( 1000 * timer_duration_s, wx.TIMER_ONE_SHOT )
         
@@ -512,7 +498,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def ShowNetworkContext( self ):
         
-        for network_context in self._bandwidths.GetObjects( only_selected = True ):
+        for network_context in self._bandwidths.GetData( only_selected = True ):
             
             frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self._controller.GetGUI(), 'review bandwidth for ' + network_context.ToUnicode() )
             
@@ -991,7 +977,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        self._current_media_locations_listctrl = ClientGUICommon.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'free space', 70 ), ( 'weight', 50 ), ( 'ideal usage', 200 ), ( 'current usage', 200 ) ] )
+        self._current_media_locations_listctrl = ClientGUIListCtrl.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'free space', 70 ), ( 'weight', 50 ), ( 'ideal usage', 200 ), ( 'current usage', 200 ) ] )
         
         self._add_path_button = ClientGUICommon.BetterButton( info_panel, 'add location', self._AddPath )
         self._remove_path_button = ClientGUICommon.BetterButton( info_panel, 'empty/remove location', self._RemovePaths )
@@ -1013,7 +999,11 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        # move whole db and portable paths (requires shutdown and user shortcut command line yes/no warning)
+        #
+        
+        migration_panel = ClientGUICommon.StaticBox( self, 'migrate entire database' )
+        
+        self._migrate_db_button = ClientGUICommon.BetterButton( migration_panel, 'move entire database and all portable paths', self._MigrateDatabase )
         
         #
         
@@ -1061,10 +1051,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
+        migration_panel.AddF( self._migrate_db_button, CC.FLAGS_LONE_BUTTON )
+        
+        #
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -1386,6 +1381,94 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._AdjustWeight( 1 )
         
     
+    def _MigrateDatabase( self ):
+        
+        message = 'This operation will move your database files and any \'portable\' paths. It is a big job that will require a client shutdown and need you to create a new shortcut before you can launch it again.'
+        message += os.linesep * 2
+        message += 'If you have not read the database migration help or otherwise do not know what is going on here, turn back now!'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_1:
+            
+            if dlg_1.ShowModal() == wx.ID_YES:
+                
+                source = self._controller.GetDBDir()
+                
+                with wx.DirDialog( self, message = 'Choose new database location.' ) as dlg_2:
+                    
+                    dlg_2.SetPath( source )
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        dest = dlg_2.GetPath()
+                        
+                        if source == dest:
+                            
+                            wx.MessageBox( 'That is the same location!' )
+                            
+                            return
+                            
+                        
+                        if len( os.listdir( dest ) ) > 0:
+                            
+                            message = dest + ' is not empty! Please select an empty destination--if your situation is more complicated, please do this move manually! Feel free to ask hydrus dev for help.'
+                            
+                            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg_not_empty:
+                                
+                                if dlg_not_empty.ShowModal() != wx.ID_YES:
+                                    
+                                    return
+                                    
+                                
+                            
+                        
+                        message = 'Here is the client\'s best guess at your new launch command. Make sure it looks correct and copy it to your clipboard. Update your program shortcut when the transfer is complete.'
+                        message += os.linesep * 2
+                        message += 'Hit ok to close the client and start the transfer, cancel to back out.'
+                        
+                        me = sys.argv[0]
+                        
+                        shortcut = '"' + me + '" -d="' + dest + '"'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message, default = shortcut ) as dlg_3:
+                            
+                            if dlg_3.ShowModal() == wx.ID_OK:
+                                
+                                # careful with this stuff!
+                                # the app's mainloop didn't want to exit for me, for a while, because this dialog didn't have time to exit before the thread's dialog laid a new event loop on top
+                                # the confused event loops lead to problems at a C++ level in ShowModal not being able to do the Destroy because parent stuff had already died
+                                # this works, so leave it alone if you can
+                                
+                                wx.CallAfter( self.GetParent().DoOK )
+                                
+                                prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+                                
+                                portable_locations = []
+                                
+                                for location in set( prefixes_to_locations.values() ):
+                                    
+                                    if not os.path.exists( location ):
+                                        
+                                        continue
+                                        
+                                    
+                                    portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+                                    portable = not os.path.isabs( portable_location )
+                                    
+                                    if portable:
+                                        
+                                        portable_locations.append( portable_location )
+                                        
+                                    
+                                
+                                threading.Thread( target = THREADMigrateDatabase, args = ( self._controller, source, portable_locations, dest ) ).start()
+                                
+                            
+                        
+                    
+                
+            
+        
+    
     def _Rebalance( self ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
@@ -1586,5 +1669,87 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._rebalance_status_st.SetLabelText( 'all files are in their ideal locations' )
             
+        
+    
+def THREADMigrateDatabase( controller, source, portable_locations, dest ):
+    
+    time.sleep( 2 ) # important to have this, so the migrate dialog can close itself and clean its event loop, wew
+    
+    def wx_code( job_key ):
+        
+        wx.CallLater( 3000, controller.gui.Exit )
+        
+        # no parent because this has to outlive the gui, obvs
+        
+        style_override = wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER | wx.DIALOG_NO_PARENT
+        
+        with ClientGUITopLevelWindows.DialogNullipotentVetoable( None, 'migrating files', style_override = style_override ) as dlg:
+            
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+    
+    db = controller.db
+    
+    job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
+    
+    job_key.SetVariable( 'popup_title', 'migrating database' )
+    
+    wx.CallAfter( wx_code, job_key )
+    
+    try:
+        
+        job_key.SetVariable( 'popup_text_1', 'waiting for db shutdown' )
+        
+        while not db.LoopIsFinished():
+            
+            time.sleep( 1 )
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'doing the move' )
+        
+        def text_update_hook( text ):
+            
+            job_key.SetVariable( 'popup_text_1', text )
+            
+        
+        for filename in os.listdir( source ):
+            
+            if filename.startswith( 'client' ) and filename.endswith( '.db' ):
+                
+                job_key.SetVariable( 'popup_text_1', 'moving ' + filename )
+                
+                source_path = os.path.join( source, filename )
+                dest_path = os.path.join( dest, filename )
+                
+                HydrusPaths.MergeFile( source_path, dest_path )
+                
+            
+        
+        for portable_location in portable_locations:
+            
+            source_path = os.path.join( source, portable_location )
+            dest_path = os.path.join( dest, portable_location )
+            
+            HydrusPaths.MergeTree( source_path, dest_path, text_update_hook = text_update_hook )
+            
+        
+        job_key.SetVariable( 'popup_text_1', 'done!' )
+        
+    except:
+        
+        wx.CallAfter( wx.MessageBox, traceback.format_exc() )
+        
+        job_key.SetVariable( 'popup_text_1', 'error!' )
+        
+    finally:
+        
+        time.sleep( 3 )
+        
+        job_key.Finish()
         
     

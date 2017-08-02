@@ -858,14 +858,7 @@ class Controller( HydrusController.HydrusController ):
     
     def PrepStringForDisplay( self, text ):
         
-        if self._options[ 'gui_capitalisation' ]:
-            
-            return text
-            
-        else:
-            
-            return text.lower()
-            
+        return text.lower()
         
     
     def ProcessPubSub( self ):

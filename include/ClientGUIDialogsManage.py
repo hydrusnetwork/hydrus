@@ -9,6 +9,7 @@ import ClientGUIACDropdown
 import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUIDialogs
 import ClientDownloading
 import ClientGUIOptionsPanels
@@ -1068,7 +1069,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        self._export_folders = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._export_folders = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         export_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
@@ -2170,7 +2171,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        self._import_folders = ClientGUICommon.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._import_folders = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -3227,7 +3228,7 @@ class DialogManageRegexFavourites( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage regex favourites' )
         
-        self._regexes = ClientGUICommon.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._regexes = ClientGUIListCtrl.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -3659,7 +3660,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
-            self._tag_parents = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
+            self._tag_parents = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -3909,7 +3910,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     self._RefreshPair( pair )
                     
                 
-                self._tag_parents.SortListItems()
+                #self._tag_parents.SortListItems()
                 
             
         
@@ -4124,7 +4125,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                         
                     
                 
-                self._tag_parents.SortListItems( 2 )
+                #self._tag_parents.SortListItems( 2 )
                 
                 if tags is not None:
                     
@@ -4268,7 +4269,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._current_new = None
             
-            self._tag_siblings = ClientGUICommon.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
+            self._tag_siblings = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -4518,7 +4519,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     self._RefreshPair( pair )
                     
                 
-                self._tag_siblings.SortListItems()
+                #self._tag_siblings.SortListItems()
                 
             
         
@@ -4808,7 +4809,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                         
                     
                 
-                self._tag_siblings.SortListItems( 2 )
+                #self._tag_siblings.SortListItems( 2 )
                 
                 if tags is not None:
                     
@@ -4836,7 +4837,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
-        self._mappings_list_ctrl = ClientGUICommon.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings, activation_callback = self.EditMappings )
+        self._mappings_list_ctrl = ClientGUIListCtrl.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings, activation_callback = self.EditMappings )
         
         self._add_custom = wx.Button( self, label = 'add custom mapping' )
         self._add_custom.Bind( wx.EVT_BUTTON, self.EventAddCustomMapping )
@@ -4886,9 +4887,12 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._mappings = HydrusNATPunch.GetUPnPMappings()
         
-        for mapping in self._mappings: self._mappings_list_ctrl.Append( mapping, mapping )
+        for mapping in self._mappings:
+            
+            self._mappings_list_ctrl.Append( mapping, mapping )
+            
         
-        self._mappings_list_ctrl.SortListItems( 1 )
+        #self._mappings_list_ctrl.SortListItems( 1 )
         
     
     def EditMappings( self ):

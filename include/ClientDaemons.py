@@ -215,6 +215,8 @@ def DAEMONMaintainTrash( controller ):
             
             service_info = controller.Read( 'service_info', CC.TRASH_SERVICE_KEY )
             
+            time.sleep( 2 )
+            
         
     
     if HC.options[ 'trash_max_age' ] is not None:
@@ -239,6 +241,8 @@ def DAEMONMaintainTrash( controller ):
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
             hashes = controller.Read( 'trash_hashes', limit = 10, minimum_age = max_age )
+            
+            time.sleep( 2 )
             
         
     

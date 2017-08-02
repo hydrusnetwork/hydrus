@@ -104,7 +104,6 @@ def GetClientDefaultOptions():
     options[ 'thumbnail_dimensions' ] = [ 150, 125 ]
     options[ 'password' ] = None
     options[ 'num_autocomplete_chars' ] = 2
-    options[ 'gui_capitalisation' ] = False
     options[ 'default_gui_session' ] = 'last session'
     options[ 'fetch_ac_results_automatically' ] = True
     options[ 'ac_timings' ] = ( 3, 500, 250 )
@@ -123,7 +122,6 @@ def GetClientDefaultOptions():
     options[ 'external_host' ] = None
     options[ 'gallery_file_limit' ] = 200
     options[ 'always_embed_autocompletes' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
-    options[ 'website_download_polite_wait' ] = 1
     options[ 'confirm_trash' ] = True
     options[ 'confirm_archive' ] = True
     options[ 'delete_to_recycle_bin' ] = True

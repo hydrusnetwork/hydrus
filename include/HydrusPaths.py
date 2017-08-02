@@ -436,7 +436,7 @@ def MergeFile( source, dest ):
     
     return True
     
-def MergeTree( source, dest ):
+def MergeTree( source, dest, text_update_hook = None ):
     
     pauser = HydrusData.BigJobPauser()
     
@@ -446,50 +446,66 @@ def MergeTree( source, dest ):
         
     else:
         
-        MakeSureDirectoryExists( dest )
-        
-        num_errors = 0
-        
-        for ( root, dirnames, filenames ) in os.walk( source ):
+        if len( os.listdir( dest ) ) == 0:
             
-            dest_root = root.replace( source, dest )
-            
-            for dirname in dirnames:
+            for filename in os.listdir( source ):
                 
-                pauser.Pause()
+                source_path = os.path.join( source, filename )
+                dest_path = os.path.join( dest, filename )
                 
-                source_path = os.path.join( root, dirname )
-                dest_path = os.path.join( dest_root, dirname )
-                
-                MakeSureDirectoryExists( dest_path )
-                
-                shutil.copystat( source_path, dest_path )
+                shutil.move( source_path, dest_path )
                 
             
-            for filename in filenames:
+        else:
+            
+            num_errors = 0
+            
+            for ( root, dirnames, filenames ) in os.walk( source ):
                 
-                if num_errors > 5:
+                if text_update_hook is not None:
                     
-                    raise Exception( 'Too many errors, directory move abandoned.' )
+                    text_update_hook( 'Copying ' + root + '.' )
                     
                 
-                pauser.Pause()
+                dest_root = root.replace( source, dest )
                 
-                source_path = os.path.join( root, filename )
-                dest_path = os.path.join( dest_root, filename )
-                
-                ok = MergeFile( source_path, dest_path )
-                
-                if not ok:
+                for dirname in dirnames:
                     
-                    num_errors += 1
+                    pauser.Pause()
+                    
+                    source_path = os.path.join( root, dirname )
+                    dest_path = os.path.join( dest_root, dirname )
+                    
+                    MakeSureDirectoryExists( dest_path )
+                    
+                    shutil.copystat( source_path, dest_path )
+                    
+                
+                for filename in filenames:
+                    
+                    if num_errors > 5:
+                        
+                        raise Exception( 'Too many errors, directory move abandoned.' )
+                        
+                    
+                    pauser.Pause()
+                    
+                    source_path = os.path.join( root, filename )
+                    dest_path = os.path.join( dest_root, filename )
+                    
+                    ok = MergeFile( source_path, dest_path )
+                    
+                    if not ok:
+                        
+                        num_errors += 1
+                        
                     
                 
             
-        
-        if num_errors == 0:
-            
-            DeletePath( source )
+            if num_errors == 0:
+                
+                DeletePath( source )
+                
             
         
     

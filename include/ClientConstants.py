@@ -273,6 +273,16 @@ network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'N
 network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through this subscription.'
 network_context_type_description_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_THREAD ] = 'Network traffic going through this single thread watch (you probably shouldn\'t be able to see this!)'
 
+PAGE_FILE_COUNT_DISPLAY_ALL = 0
+PAGE_FILE_COUNT_DISPLAY_NONE = 1
+PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS = 2
+
+page_file_count_display_string_lookup = {}
+
+page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ALL ] = 'for all pages'
+page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS ] = 'for import pages'
+page_file_count_display_string_lookup[ PAGE_FILE_COUNT_DISPLAY_NONE ] = 'for no pages'
+
 SHORTCUT_MODIFIER_CTRL = 0
 SHORTCUT_MODIFIER_ALT = 1
 SHORTCUT_MODIFIER_SHIFT = 2
