@@ -1460,7 +1460,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                                         
                                     
                                 
-                                threading.Thread( target = THREADMigrateDatabase, args = ( self._controller, source, portable_locations, dest ) ).start()
+                                HG.client_controller.CallToThreadLongRunning( THREADMigrateDatabase, self._controller, source, portable_locations, dest )
                                 
                             
                         

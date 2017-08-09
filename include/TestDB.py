@@ -690,7 +690,7 @@ class TestClientDB( unittest.TestCase ):
             
             page_names.append( management_controller.GetPageName() )
             
-        print( page_names )
+        
         self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'page download', u'local tags petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
         
     

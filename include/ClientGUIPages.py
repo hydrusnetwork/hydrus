@@ -329,6 +329,120 @@ class Page( wx.SplitterWindow ):
         wx.CallAfter( self.SetMediaResults, sorted_initial_media_results )
         
     
+class PagesNotebook( wx.Notebook ):
+    
+    def __init__( self, parent, controller ):
+        
+        # bring the gui's current _notebook into here and merge all the rename_page, new_page, and other stuff into this
+        
+        wx.Notebook.__init__( self, parent )
+        
+        self._controller = controller
+        
+    
+    def _GetMediaPages( self ):
+        
+        results = []
+        
+        for page in self._GetPages():
+            
+            if isinstance( page, wx.Notebook ):
+                
+                results.extend( page.GetMediaPages() )
+                
+            else:
+                
+                results.append( page )
+                
+            
+        
+        return results
+        
+    
+    def _GetPages( self ):
+        
+        return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        for page in self._GetPages():
+            
+            page.CleanBeforeDestroy()
+            
+        
+    
+    def GetNumFiles( self ):
+        
+        return sum( page.GetNumFiles() for page in self._GetPages() )
+        
+    
+    def GetMediaPages( self ):
+        
+        return self._GetMediaPages()
+        
+    
+    def GetPages( self ):
+        
+        return self._GetPages()
+        
+    
+    def GetPrettyStatus( self ):
+        
+        current_page = self.GetCurrentPage()
+        
+        if current_page is None:
+            
+            return ''
+            
+        else:
+            
+            return current_page.GetPrettyStatus()
+            
+        
+    
+    def HasPage( self, page ):
+        
+        return page in self._GetMediaPages()
+        
+    
+    def PrepareToHide( self ):
+        
+        for page in self._GetPages():
+            
+            page.PrepareToHide()
+            
+        
+    
+    def ShowPage( self, showee ):
+        
+        for ( i, page ) in enumerate( self._GetPages() ):
+            
+            if isinstance( page, wx.Notebook ) and page.HasPage( showee ):
+                
+                self.SetSelection( i )
+                
+                page.ShowPage( showee )
+                
+                break
+                
+            elif page == showee:
+                
+                self.SetSelection( i )
+                
+                break
+                
+            
+        
+    
+    def TestAbleToClose( self ):
+        
+        for page in self._GetPages():
+            
+            page.TestAbleToClose()
+            
+        
+    
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION

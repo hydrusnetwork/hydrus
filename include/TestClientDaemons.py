@@ -40,7 +40,14 @@ class TestDaemons( unittest.TestCase ):
             
             #
             
-            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir )
+            actions = {}
+            
+            actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_FAILED ] = CC.IMPORT_FOLDER_IGNORE
+            
+            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, actions = actions )
             
             HG.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
             

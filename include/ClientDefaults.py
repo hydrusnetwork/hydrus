@@ -91,8 +91,6 @@ def GetClientDefaultOptions():
     options = {}
     
     options[ 'play_dumper_noises' ] = True
-    options[ 'default_sort' ] = 0 # smallest
-    options[ 'sort_fallback' ] = 4 # newest
     options[ 'default_collect' ] = None
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
@@ -214,27 +212,32 @@ def GetDefaultHentaiFoundryInfo():
 
     info = {}
     
-    info[ 'rating_nudity' ] = 3
-    info[ 'rating_violence' ] = 3
-    info[ 'rating_profanity' ] = 3
-    info[ 'rating_racism' ] = 3
-    info[ 'rating_sex' ] = 3
-    info[ 'rating_spoilers' ] = 3
+    info[ 'rating_nudity' ] = '3'
+    info[ 'rating_violence' ] = '3'
+    info[ 'rating_profanity' ] = '3'
+    info[ 'rating_racism' ] = '3'
+    info[ 'rating_sex' ] = '3'
+    info[ 'rating_spoilers' ] = '3'
     
-    info[ 'rating_yaoi' ] = 1
-    info[ 'rating_yuri' ] = 1
-    info[ 'rating_teen' ] = 1
-    info[ 'rating_guro' ] = 1
-    info[ 'rating_furry' ] = 1
-    info[ 'rating_beast' ] = 1
-    info[ 'rating_male' ] = 1
-    info[ 'rating_female' ] = 1
-    info[ 'rating_futa' ] = 1
-    info[ 'rating_other' ] = 1
+    info[ 'rating_yaoi' ] = '1'
+    info[ 'rating_yuri' ] = '1'
+    info[ 'rating_teen' ] = '1'
+    info[ 'rating_guro' ] = '1'
+    info[ 'rating_furry' ] = '1'
+    info[ 'rating_beast' ] = '1'
+    info[ 'rating_male' ] = '1'
+    info[ 'rating_female' ] = '1'
+    info[ 'rating_futa' ] = '1'
+    info[ 'rating_other' ] = '1'
+    info[ 'rating_scat' ] = '1'
+    info[ 'rating_incest' ] = '1'
+    info[ 'rating_rape' ] = '1'
     
     info[ 'filter_media' ] = 'A'
     info[ 'filter_order' ] = 'date_new'
-    info[ 'filter_type' ] = 0
+    info[ 'filter_type' ] = '0'
+    
+    info[ 'yt0' ] = 'Apply' # the submit button wew lad
     
     return info
     

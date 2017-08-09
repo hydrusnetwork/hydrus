@@ -24,10 +24,9 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on seed add/remove
         
-        height = 300
-        columns = [ ( 'source', -1 ), ( 'status', 90 ), ( 'added', 150 ), ( 'last modified', 150 ), ( 'note', 200 ) ]
+        columns = [ ( 'source', -1 ), ( 'status', 12 ), ( 'added', 20 ), ( 'last modified', 20 ), ( 'note', 30 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, height, columns )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'seed_cache', 30, 30, columns, self._ConvertSeedToListCtrlTuples )
         
         #
         
@@ -53,15 +52,11 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for seed in seeds:
             
-            sort_tuple = self._seed_cache.GetSeedInfo( seed )
-            
-            ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
-            
-            self._list_ctrl.Append( display_tuple, sort_tuple, seed )
+            self._list_ctrl.AddData( seed )
             
         
     
-    def _GetListCtrlTuples( self, seed ):
+    def _ConvertSeedToListCtrlTuples( self, seed ):
         
         sort_tuple = self._seed_cache.GetSeedInfo( seed )
         
@@ -82,7 +77,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         notes = []
         
-        for seed in self._list_ctrl.GetObjects( only_selected = True ):
+        for seed in self._list_ctrl.GetData( only_selected = True ):
             
             ( seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
             
@@ -104,7 +99,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _CopySelectedSeeds( self ):
         
-        seeds = self._list_ctrl.GetObjects( only_selected = True )
+        seeds = self._list_ctrl.GetData( only_selected = True )
         
         if len( seeds ) > 0:
             
@@ -118,7 +113,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DeleteSelected( self ):
         
-        seeds_to_delete = self._list_ctrl.GetObjects( only_selected = True )
+        seeds_to_delete = self._list_ctrl.GetData( only_selected = True )
         
         if len( seeds_to_delete ) > 0:
             
@@ -136,14 +131,14 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetSelected( self, status_to_set ):
         
-        seeds_to_set = self._list_ctrl.GetObjects( only_selected = True )
+        seeds_to_set = self._list_ctrl.GetData( only_selected = True )
         
         self._seed_cache.UpdateSeedsStatus( seeds_to_set, status_to_set )
         
     
     def _ShowMenuIfNeeded( self ):
         
-        if self._list_ctrl.GetSelectedItemCount() > 0:
+        if self._list_ctrl.HasSelected() > 0:
             
             menu = wx.Menu()
             
@@ -170,7 +165,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._seed_cache.HasSeed( seed ):
                 
-                if self._list_ctrl.HasObject( seed ):
+                if self._list_ctrl.HasData( seed ):
                     
                     seeds_to_update.append( seed )
                     
@@ -181,28 +176,16 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                if self._list_ctrl.HasObject( seed ):
+                if self._list_ctrl.HasData( seed ):
                     
                     seeds_to_delete.append( seed )
                     
                 
             
         
-        for seed in seeds_to_delete:
-            
-            index = self._list_ctrl.GetIndexFromObject( seed )
-            
-            self._list_ctrl.DeleteItem( index )
-            
+        self._list_ctrl.DeleteDatas( seeds_to_delete )
         
-        for seed in seeds_to_update:
-            
-            index = self._list_ctrl.GetIndexFromObject( seed )
-            
-            ( display_tuple, sort_tuple ) = self._GetListCtrlTuples( seed )
-            
-            self._list_ctrl.UpdateRow( index, display_tuple, sort_tuple, seed )
-            
+        self._list_ctrl.UpdateDatas( seeds_to_update )
         
         self._AddSeeds( seeds_to_add )
         

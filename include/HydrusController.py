@@ -48,6 +48,7 @@ class HydrusController( object ):
         self._managers = {}
         
         self._call_to_threads = []
+        self._long_running_call_to_threads = []
         
         self._timestamps = collections.defaultdict( lambda: 0 )
         
@@ -56,7 +57,7 @@ class HydrusController( object ):
         self._just_woke_from_sleep = False
         self._system_busy = False
         
-        threading.Thread( target = self.DAEMONPubSub, name = 'Pubsub Daemon' ).start()
+        self.CallToThreadLongRunning( self.DAEMONPubSub )
         
     
     def _GetCallToThread( self ):
@@ -85,6 +86,25 @@ class HydrusController( object ):
             
             call_to_thread = random.choice( self._call_to_threads )
             
+        
+        return call_to_thread
+        
+    
+    def _GetCallToThreadLongRunning( self ):
+        
+        for call_to_thread in self._long_running_call_to_threads:
+            
+            if not call_to_thread.CurrentlyWorking():
+                
+                return call_to_thread
+                
+            
+        
+        call_to_thread = HydrusThreading.THREADCallToThread( self )
+        
+        self._long_running_call_to_threads.append( call_to_thread )
+        
+        call_to_thread.start()
         
         return call_to_thread
         
@@ -125,7 +145,14 @@ class HydrusController( object ):
     
     def pub( self, topic, *args, **kwargs ):
         
-        self._pubsub.pub( topic, *args, **kwargs )
+        if self._model_shutdown:
+            
+            self._pubsub.pubimmediate( topic, *args, **kwargs )
+            
+        else:
+            
+            self._pubsub.pub( topic, *args, **kwargs )
+            
         
     
     def pubimmediate( self, topic, *args, **kwargs ):
@@ -158,6 +185,30 @@ class HydrusController( object ):
             
         
         call_to_thread = self._GetCallToThread()
+        
+        call_to_thread.put( callable, *args, **kwargs )
+        
+    
+    def CallToThreadLongRunning( self, callable, *args, **kwargs ):
+        
+        if HG.callto_report_mode:
+            
+            what_to_report = [ callable ]
+            
+            if len( args ) > 0:
+                
+                what_to_report.append( args )
+                
+            
+            if len( kwargs ) > 0:
+                
+                what_to_report.append( kwargs )
+                
+            
+            HydrusData.ShowText( tuple( what_to_report ) )
+            
+        
+        call_to_thread = self._GetCallToThreadLongRunning()
         
         call_to_thread.put( callable, *args, **kwargs )
         

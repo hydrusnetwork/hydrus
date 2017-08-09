@@ -501,7 +501,8 @@ def ConvertTimestampToPrettyPending( timestamp ):
     elif months > 0: return 'in ' + ' '.join( ( mo, d ) )
     elif days > 0: return 'in ' + ' '.join( ( d, h ) )
     elif hours > 0: return 'in ' + ' '.join( ( h, m ) )
-    else: return 'in ' + ' '.join( ( m, s ) )
+    elif minutes > 0: return 'in ' + ' '.join( ( m, s ) )
+    else: return 'in ' + s
     
 def ConvertTimestampToPrettySync( timestamp ):
     

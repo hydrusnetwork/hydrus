@@ -1649,11 +1649,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         pass
         
     
-    def Sort( self, page_key, sort_by = None ):
+    def Sort( self, page_key, media_sort = None ):
         
         if page_key == self._page_key:
             
-            ClientMedia.ListeningMediaList.Sort( self, sort_by )
+            ClientMedia.ListeningMediaList.Sort( self, media_sort )
             
         
     
@@ -3540,9 +3540,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def Sort( self, page_key, sort_by = None ):
+    def Sort( self, page_key, media_sort = None ):
         
-        MediaPanel.Sort( self, page_key, sort_by )
+        MediaPanel.Sort( self, page_key, media_sort )
         
         self._DirtyAllPages()
         

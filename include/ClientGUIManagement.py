@@ -68,14 +68,13 @@ def CreateManagementController( page_name, management_type, file_service_key = N
         file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
         
     
-    management_controller = ManagementController( page_name )
+    new_options = HG.client_controller.GetNewOptions()
     
-    # sort
-    # collect
-    # nah, these are only valid for types with regular file lists
+    management_controller = ManagementController( page_name )
     
     management_controller.SetType( management_type )
     management_controller.SetKey( 'file_service', file_service_key )
+    management_controller.SetVariable( 'media_sort', new_options.GetDefaultSort() )
     
     return management_controller
     
@@ -577,6 +576,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseDefaults( self ):
         
+        self._serialisables[ 'media_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        
         if self._management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
             
             self._keys[ 'duplicate_filter_file_domain' ] = CC.LOCAL_FILE_SERVICE_KEY
@@ -651,7 +652,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
             
-            return( 3, new_serialisable_info )
+            return ( 3, new_serialisable_info )
             
         
     
@@ -680,6 +681,11 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             return self._serialisables[ name ]
             
+        
+    
+    def HasVariable( self, name ):
+        
+        return name in self._simples or name in self._serialisables
         
     
     def IsImporter( self ):
@@ -734,16 +740,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         self._page = page
         self._page_key = self._management_controller.GetKey( 'page' )
         
-        self._sort_by = ClientGUICommon.ChoiceSort( self, self._page_key )
-        
-        try:
-            
-            self._sort_by.SetSelection( HC.options[ 'default_sort' ] )
-            
-        except:
-            
-            self._sort_by.SetSelection( 0 )
-            
+        self._sort_by = ClientGUICommon.ChoiceSort( self, management_controller = self._management_controller )
         
         self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
         
@@ -1469,7 +1466,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
@@ -1794,7 +1791,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
@@ -1973,7 +1970,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
@@ -2313,7 +2310,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
@@ -2599,7 +2596,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
@@ -2910,7 +2907,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3156,7 +3153,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel.Collect( self._page_key, self._collect_by.GetChoice() )
         
-        panel.Sort( self._page_key, self._sort_by.GetChoice() )
+        panel.Sort( self._page_key, self._sort_by.GetSort() )
         
         self._controller.pub( 'swap_media_panel', self._page_key, panel )
         
@@ -3333,7 +3330,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if self._search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3486,7 +3483,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel.Collect( self._page_key, self._collect_by.GetChoice() )
             
-            panel.Sort( self._page_key, self._sort_by.GetChoice() )
+            panel.Sort( self._page_key, self._sort_by.GetSort() )
             
             self._controller.pub( 'swap_media_panel', self._page_key, panel )
             

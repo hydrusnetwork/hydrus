@@ -75,66 +75,14 @@ class DAEMON( threading.Thread ):
         self._event.set()
         
     
-class DAEMONQueue( DAEMON ):
-    
-    def __init__( self, controller, name, callable, queue_topic, period = 10 ):
-        
-        DAEMON.__init__( self, controller, name )
-        
-        self._callable = callable
-        self._queue = Queue.Queue()
-        self._queue_topic = queue_topic
-        self._period = period
-        
-        self._controller.sub( self, 'put', queue_topic )
-        
-        self.start()
-        
-    
-    def put( self, data ): self._queue.put( data )
-    
-    def run( self ):
-        
-        time.sleep( 3 )
-        
-        while True:
-            
-            while self._queue.empty():
-                
-                if IsThreadShuttingDown():
-                    
-                    return
-                    
-                
-                self._event.wait( self._period )
-                
-                self._event.clear()
-                
-            
-            items = []
-            
-            while not self._queue.empty(): items.append( self._queue.get() )
-            
-            try:
-                
-                self._callable( self._controller, items )
-                
-            except HydrusExceptions.ShutdownException:
-                
-                return
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-            
-        
-    
 class DAEMONWorker( DAEMON ):
     
     def __init__( self, controller, name, callable, topics = None, period = 3600, init_wait = 3, pre_call_wait = 0 ):
         
-        if topics is None: topics = []
+        if topics is None:
+            
+            topics = []
+            
         
         DAEMON.__init__( self, controller, name )
         
@@ -144,7 +92,10 @@ class DAEMONWorker( DAEMON ):
         self._init_wait = init_wait
         self._pre_call_wait = pre_call_wait
         
-        for topic in topics: self._controller.sub( self, 'set', topic )
+        for topic in topics:
+            
+            self._controller.sub( self, 'set', topic )
+            
         
         self.start()
         
@@ -239,7 +190,7 @@ class THREADCallToThread( DAEMON ):
         
         self._queue = Queue.Queue()
         
-        self._currently_working = False
+        self._currently_working = True # start off true so new threads aren't used twice by two quick successive calls
         
     
     def CurrentlyWorking( self ):
@@ -248,6 +199,8 @@ class THREADCallToThread( DAEMON ):
         
     
     def put( self, callable, *args, **kwargs ):
+        
+        self._currently_working = True
         
         self._queue.put( ( callable, args, kwargs ) )
         
@@ -258,20 +211,21 @@ class THREADCallToThread( DAEMON ):
         
         while True:
             
-            while self._queue.empty():
-                
-                if self._controller.ModelIsShutdown(): return
-                
-                self._event.wait( 1200 )
-                
-                self._event.clear()
-                
-            
             try:
                 
-                ( callable, args, kwargs ) = self._queue.get()
+                while self._queue.empty():
+                    
+                    if self._controller.ModelIsShutdown():
+                        
+                        return
+                        
+                    
+                    self._event.wait( 1200 )
+                    
+                    self._event.clear()
+                    
                 
-                self._currently_working = True
+                ( callable, args, kwargs ) = self._queue.get()
                 
                 callable( *args, **kwargs )
                 

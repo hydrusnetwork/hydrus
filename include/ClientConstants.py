@@ -342,14 +342,6 @@ SHUTDOWN_TIMESTAMP_DELETE_ORPHANS = 2
 
 ( SizeChangedEvent, EVT_SIZE_CHANGED ) = wx.lib.newevent.NewCommandEvent()
 
-SORT_BY_SMALLEST = 0
-SORT_BY_LARGEST = 1
-SORT_BY_SHORTEST = 2
-SORT_BY_LONGEST = 3
-SORT_BY_NEWEST = 4
-SORT_BY_OLDEST = 5
-SORT_BY_MIME = 6
-SORT_BY_RANDOM = 7
 SORT_BY_LEXICOGRAPHIC_ASC = 8
 SORT_BY_LEXICOGRAPHIC_DESC = 9
 SORT_BY_INCIDENCE_ASC = 10
@@ -358,52 +350,33 @@ SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC = 12
 SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC = 13
 SORT_BY_INCIDENCE_NAMESPACE_ASC = 14
 SORT_BY_INCIDENCE_NAMESPACE_DESC = 15
-SORT_BY_WIDTH_ASC = 16
-SORT_BY_WIDTH_DESC = 17
-SORT_BY_HEIGHT_ASC = 18
-SORT_BY_HEIGHT_DESC = 19
-SORT_BY_RATIO_ASC = 20
-SORT_BY_RATIO_DESC = 21
-SORT_BY_NUM_PIXELS_ASC = 22
-SORT_BY_NUM_PIXELS_DESC = 23
+
+SORT_FILES_BY_FILESIZE = 0
+SORT_FILES_BY_DURATION = 1
+SORT_FILES_BY_IMPORT_TIME = 2
+SORT_FILES_BY_MIME = 3
+SORT_FILES_BY_RANDOM = 4
+SORT_FILES_BY_WIDTH = 5
+SORT_FILES_BY_HEIGHT = 6
+SORT_FILES_BY_RATIO = 7
+SORT_FILES_BY_NUM_PIXELS = 8
+SORT_FILES_BY_NUM_TAGS = 9
+
+SORT_ASC = 0
+SORT_DESC = 1
 
 SORT_CHOICES = []
 
-SORT_CHOICES.append( ( 'system', SORT_BY_SMALLEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_LARGEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_SHORTEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_LONGEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_NEWEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_OLDEST ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_WIDTH_ASC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_WIDTH_DESC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_HEIGHT_ASC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_HEIGHT_DESC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_RATIO_DESC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_RATIO_ASC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_NUM_PIXELS_ASC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_NUM_PIXELS_DESC ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_MIME ) )
-SORT_CHOICES.append( ( 'system', SORT_BY_RANDOM ) )
-
-sort_string_lookup = {}
-
-sort_string_lookup[ SORT_BY_SMALLEST ] = 'smallest filesize first'
-sort_string_lookup[ SORT_BY_LARGEST ] = 'largest filesize first'
-sort_string_lookup[ SORT_BY_SHORTEST ] = 'shortest duration first'
-sort_string_lookup[ SORT_BY_LONGEST ] = 'longest duration first'
-sort_string_lookup[ SORT_BY_NEWEST ] = 'most recently imported first'
-sort_string_lookup[ SORT_BY_OLDEST ] = 'least recently imported first'
-sort_string_lookup[ SORT_BY_MIME ] = 'mime'
-sort_string_lookup[ SORT_BY_RANDOM ] = 'random order'
-sort_string_lookup[ SORT_BY_WIDTH_ASC ] = 'least wide first'
-sort_string_lookup[ SORT_BY_WIDTH_DESC ] = 'most wide first'
-sort_string_lookup[ SORT_BY_HEIGHT_ASC ] = 'least tall first'
-sort_string_lookup[ SORT_BY_HEIGHT_DESC ] = 'most tall first'
-sort_string_lookup[ SORT_BY_RATIO_ASC ] = 'tallest ratio first'
-sort_string_lookup[ SORT_BY_RATIO_DESC ] = 'widest ratio first'
-sort_string_lookup[ SORT_BY_NUM_PIXELS_ASC ] = 'fewest pixels first'
-sort_string_lookup[ SORT_BY_NUM_PIXELS_DESC ] = 'most pixels first'
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_FILESIZE ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_DURATION ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_IMPORT_TIME ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_MIME ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_RANDOM ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_WIDTH ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_HEIGHT ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_RATIO ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_PIXELS ) )
+SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_TAGS ) )
 
 STATUS_UNKNOWN = 0
 STATUS_SUCCESSFUL = 1

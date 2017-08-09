@@ -51,6 +51,7 @@ SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER = 45
 SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER = 46
 SERIALISABLE_TYPE_NETWORK_CONTEXT = 47
 SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER = 48
+SERIALISABLE_TYPE_MEDIA_SORT = 49
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -165,6 +166,23 @@ class SerialisableBaseNamed( SerialisableBase ):
     def GetName( self ): return self._name
     
     def SetName( self, name ): self._name = name
+    
+    def SetNonDupeName( self, disallowed_names ):
+        
+        i = 1
+        
+        new_name = self._name
+        original_name = self._name
+        
+        while new_name in disallowed_names:
+            
+            new_name = original_name + ' (' + str( i ) + ')'
+            
+            i += 1
+            
+        
+        self._name = new_name
+        
     
 class SerialisableDictionary( SerialisableBase, dict ):
     

@@ -852,7 +852,11 @@ class DialogInputLocalFiles( Dialog ):
         
         self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
         
+        self._delete_after_success_st = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
+        self._delete_after_success_st.SetForegroundColour( ( 127, 0, 0 ) )
+        
         self._delete_after_success = wx.CheckBox( self, label = 'delete original files after successful import' )
+        self._delete_after_success.Bind( wx.EVT_CHECKBOX, self.EventDeleteAfterSuccessCheck )
         
         self._add_button = wx.Button( self, label = 'import now' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -872,6 +876,11 @@ class DialogInputLocalFiles( Dialog ):
         gauge_sizer.AddF( self._progress_pause, CC.FLAGS_VCENTER )
         gauge_sizer.AddF( self._progress_cancel, CC.FLAGS_VCENTER )
         
+        delete_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        delete_hbox.AddF( self._delete_after_success_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        delete_hbox.AddF( self._delete_after_success, CC.FLAGS_VCENTER )
+        
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
         buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
@@ -882,9 +891,8 @@ class DialogInputLocalFiles( Dialog ):
         
         vbox.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._delete_after_success, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( ( 0, 5 ), CC.FLAGS_NONE )
         vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -1022,6 +1030,18 @@ class DialogInputLocalFiles( Dialog ):
         self._TidyUp()
         
         self.EndModal( wx.ID_CANCEL )
+        
+    
+    def EventDeleteAfterSuccessCheck( self, event ):
+        
+        if self._delete_after_success.GetValue():
+            
+            self._delete_after_success_st.SetLabelText( 'YOUR ORIGINAL FILES WILL BE DELETED' )
+            
+        else:
+            
+            self._delete_after_success_st.SetLabelText( '' )
+            
         
     
     def EventOK( self, event ):

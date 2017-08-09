@@ -7675,7 +7675,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._controller.pub( 'splash_set_status_text', status, print_to_log = False )
                 job_key.SetVariable( 'popup_text_1', status )
                 
-                stop_time = HydrusData.GetNow() + min( 5 + ( num_updates_to_do * 2 ), 30 )
+                stop_time = HydrusData.GetNow() + min( 5 + ( num_updates_to_do * 4 ), 30 )
                 
                 self._LoadIntoDiskCache( stop_time = stop_time )
                 

@@ -1777,7 +1777,7 @@ class ThumbnailCache( object ):
         
         self.Clear()
         
-        threading.Thread( target = self.DAEMONWaterfall, name = 'Waterfall Daemon' ).start()
+        self._controller.CallToThreadLongRunning( self.DAEMONWaterfall )
         
         self._controller.sub( self, 'Clear', 'thumbnail_resize' )
         

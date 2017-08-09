@@ -1020,8 +1020,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        threading.Thread( target = self._THREADWorkOnGallery, args = ( page_key, ) ).start()
-        threading.Thread( target = self._THREADWorkOnFiles, args = ( page_key, ) ).start()
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnGallery, page_key )
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnFiles, page_key )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IMPORT ] = GalleryImport
@@ -1271,7 +1271,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        threading.Thread( target = self._THREADWork, args = ( page_key, ) ).start()
+        HG.client_controller.CallToThreadLongRunning( self._THREADWork, page_key )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT ] = HDDImport
@@ -1309,9 +1309,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             actions = {}
             
-            actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_DELETE
-            actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_DELETE
-            actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_IGNORE
+            actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_IGNORE
+            actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_IGNORE
             actions[ CC.STATUS_FAILED ] = CC.IMPORT_FOLDER_IGNORE
             
         
@@ -2300,8 +2300,8 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        threading.Thread( target = self._THREADWorkOnQueue, args = ( page_key, ) ).start()
-        threading.Thread( target = self._THREADWorkOnFiles, args = ( page_key, ) ).start()
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnQueue, page_key )
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnFiles, page_key )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PAGE_OF_IMAGES_IMPORT ] = PageOfImagesImport
@@ -3047,9 +3047,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_nj = network_job_factory( 'GET', url )
             
-            p4 = not HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts() )
+            # just a little padding, to make sure we don't accidentally get into a long wait because we need to fetch file and tags independantly etc...
+            expected_requests = 3
+            expected_bytes = 1048576
+            
+            p4 = not HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests, expected_bytes )
             
             if p1 or p3 or p4:
+                
+                if p4:
+                    
+                    job_key.SetVariable( 'popup_text_1', 'no more bandwidth to download files, so stopping for now' )
+                    
+                    time.sleep( 2 )
+                    
                 
                 break
                 
@@ -3212,7 +3223,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         example_nj = network_job_factory( 'GET', url )
         
-        if HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts() ):
+        # just a little padding here
+        expected_requests = 3
+        expected_bytes = 1048576
+        
+        if HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests, expected_bytes ):
             
             return True
             
@@ -4151,8 +4166,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        threading.Thread( target = self._THREADWorkOnThread, args = ( page_key, ) ).start()
-        threading.Thread( target = self._THREADWorkOnFiles, args = ( page_key, ) ).start()
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnThread, page_key )
+        HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnFiles, page_key )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT ] = ThreadWatcherImport
@@ -4453,7 +4468,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        threading.Thread( target = self._THREADWork, args = ( page_key, ) ).start()
+        HG.client_controller.CallToThreadLongRunning( self._THREADWork, page_key )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT ] = URLsImport

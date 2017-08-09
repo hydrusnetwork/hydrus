@@ -390,7 +390,7 @@ class HTTPConnectionManager( object ):
         
         self._lock = threading.Lock()
         
-        threading.Thread( target = self.DAEMONMaintainConnections, name = 'Maintain Connections' ).start()
+        HG.client_controller.CallToThreadLongRunning( self.DAEMONMaintainConnections )
         
     
     def _DoRequest( self, method, location, path, query, request_headers, body, follow_redirects = True, report_hooks = None, temp_path = None, hydrus_network = False, num_redirects_permitted = 4 ):
@@ -1177,7 +1177,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanDoWork( self, network_contexts ):
+    def CanDoWork( self, network_contexts, expected_requests, expected_bytes ):
         
         with self._lock:
             
@@ -1187,7 +1187,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
-                if not bandwidth_rules.CanDoWork( bandwidth_tracker ):
+                if not bandwidth_rules.CanDoWork( bandwidth_tracker, expected_requests, expected_bytes ):
                     
                     return False
                     
@@ -1277,22 +1277,6 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetEstimateInfo( self, network_contexts ):
-        
-        with self._lock:
-            
-            # something that returns ( 'about a minute until you can request again', 60 )
-            
-            # figure out the longest estimate from the rules and trackers
-            
-            # make some pretty text out of that
-            
-            # return ( text, seconds )
-            
-            pass
-            
-        
-    
     def GetNetworkContextsForUser( self, history_time_delta_threshold = None ):
         
         with self._lock:
@@ -1340,6 +1324,32 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return HydrusNetworking.BandwidthTracker()
+                
+            
+        
+    
+    def GetWaitingEstimate( self, network_contexts ):
+        
+        with self._lock:
+            
+            estimates = []
+            
+            for network_context in network_contexts:
+                
+                bandwidth_rules = self._GetRules( network_context )
+                
+                bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
+                
+                estimates.append( bandwidth_rules.GetWaitingEstimate( bandwidth_tracker ) )
+                
+            
+            if len( estimates ) == 0:
+                
+                return 0
+                
+            else:
+                
+                return max( estimates )
                 
             
         
@@ -1619,8 +1629,6 @@ class NetworkEngine( object ):
                 return True
                 
             elif not job.BandwidthOK():
-                
-                job.SetStatus( u'waiting on bandwidth\u2026' )
                 
                 return True
                 
@@ -2026,10 +2034,33 @@ class NetworkJob( object ):
                 
                 if not result:
                     
-                    self._status_text = u'waiting on bandwidth\u2026' # add the 'waiting ~4 minutes' text stuff here
+                    waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
                     
-                    # if the time to wait > 10s:
-                        # self._Sleep( 10 )
+                    if waiting_duration <= 1:
+                        
+                        self._status_text = ''
+                        
+                    else:
+                        
+                        pending_timestamp = HydrusData.GetNow() + waiting_duration
+                        
+                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( pending_timestamp )
+                        
+                        self._status_text = u'bandwidth free ' + waiting_str + u'\u2026'
+                        
+                    
+                    if waiting_duration > 1200:
+                        
+                        self._Sleep( 30 )
+                        
+                    elif waiting_duration > 120:
+                        
+                        self._Sleep( 10 )
+                        
+                    elif waiting_duration > 10:
+                        
+                        self._Sleep( 1 )
+                        
                     
                 
                 return result

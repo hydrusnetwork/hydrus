@@ -89,7 +89,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self._splash is not None:
             
-            self._splash.Destroy()
+            wx.CallAfter( self._splash.Destroy )
             
             self._splash = None
             
@@ -294,7 +294,10 @@ class Controller( HydrusController.HydrusController ):
                 
                 while not image_renderer.IsReady():
                     
-                    if HydrusData.TimeHasPassed( start_time + 15 ): raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                    if HydrusData.TimeHasPassed( start_time + 15 ):
+                        
+                        raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                        
                     
                     time.sleep( 0.1 )
                     
@@ -448,9 +451,7 @@ class Controller( HydrusController.HydrusController ):
                         
                     
                 
-                exit_thread = threading.Thread( target = self.THREADExitEverything, name = 'Application Exit Thread' )
-                
-                exit_thread.start()
+                self.CallToThreadLongRunning( self.THREADExitEverything )
                 
             except:
                 
@@ -581,7 +582,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, login_manager )
         
-        self.CallToThread( self.network_engine.MainLoop )
+        self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
         #
         
@@ -809,7 +810,7 @@ class Controller( HydrusController.HydrusController ):
                 disk_cache_stop_time = HydrusData.GetNow() + 1
                 
             
-            HG.client_controller.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+            self.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
             
         
     
@@ -993,9 +994,7 @@ class Controller( HydrusController.HydrusController ):
                             HydrusData.RestartProcess()
                             
                         
-                        restart_thread = threading.Thread( target = THREADRestart, name = 'Application Restart Thread' )
-                        
-                        restart_thread.start()
+                        self.CallToThreadLongRunning( THREADRestart )
                         
                     
                 
@@ -1015,9 +1014,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._CreateSplash()
         
-        boot_thread = threading.Thread( target = self.THREADBootEverything, name = 'Application Boot Thread' )
-        
-        boot_thread.start()
+        self.CallToThreadLongRunning( self.THREADBootEverything )
         
         self._app.MainLoop()
         
@@ -1242,6 +1239,9 @@ class Controller( HydrusController.HydrusController ):
             self.pub( 'splash_set_title_text', u'shutting down db\u2026' )
             
             self.ShutdownModel()
+            
+            self.pub( 'splash_set_title_text', u'cleaning up\u2026' )
+            self.pub( 'splash_set_status_text', u'' )
             
             HydrusData.CleanRunningFile( self.db_dir, 'client' )
             

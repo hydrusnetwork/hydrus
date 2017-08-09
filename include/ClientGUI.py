@@ -1297,7 +1297,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'migrate database (under construction!)', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1655,6 +1655,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         return insertion_index
         
     
+    def _GetCurrentMediaPage( self ):
+        
+        page = self._notebook.GetCurrentPage()
+        
+        if page is not None:
+            
+            while isinstance( page, wx.Notebook ):
+                
+                page = page.GetCurrentPage()
+                
+            
+            return page
+            
+        
+    
+    def _GetMediaPages( self ):
+        
+        results = []
+        
+        for page in self._GetPages():
+            
+            if isinstance( page, wx.Notebook ):
+                
+                results.extend( page.GetMediaPages() )
+                
+            else:
+                
+                results.append( page )
+                
+            
+        
+    
     def _GetPageAndIndex( self, page_key ):
         
         for ( page, index ) in ( ( self._notebook.GetPage( index ), index ) for index in range( self._notebook.GetPageCount() ) ):
@@ -1666,6 +1698,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         raise HydrusExceptions.DataMissing()
+        
+    
+    def _GetPages( self ):
+        
+        return [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]
         
     
     def _ImportFiles( self, paths = None ):
@@ -1863,7 +1900,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _LoadGUISession( self, name ):
         
-        for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+        for page in self._GetPages():
             
             try:
                 
@@ -2138,6 +2175,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             return
             
         
+        if self._notebook.GetPageCount() == 120:
+            
+            HydrusData.ShowText( 'You have 120 pages open! You can only open a few more before system stability is affected! Please close some now!' )
+            
+        
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
         
@@ -2396,7 +2438,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _Refresh( self ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
         if page is not None:
             
@@ -2412,7 +2454,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         else:
             
-            page = self._notebook.GetCurrentPage()
+            page = self._GetCurrentMediaPage()
             
             if page is None:
                 
@@ -2607,9 +2649,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         session = ClientGUIPages.GUISession( name )
         
-        for i in range( self._notebook.GetPageCount() ):
-            
-            page = self._notebook.GetPage( i )
+        for page in self._GetPages():
             
             management_controller = page.GetManagementController()
             
@@ -2648,23 +2688,32 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetMediaFocus( self ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
-        if page is not None: page.SetMediaFocus()
+        if page is not None:
+            
+            page.SetMediaFocus()
+            
         
     
     def _SetSearchFocus( self ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
-        if page is not None: page.SetSearchFocus()
+        if page is not None:
+            
+            page.SetSearchFocus()
+            
         
     
     def _SetSynchronisedWait( self ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
-        if page is not None: page.SetSynchronisedWait()
+        if page is not None:
+            
+            page.SetSynchronisedWait()
+            
         
     
     def _SetupBackupPath( self ):
@@ -2749,15 +2798,35 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        
     
     def _ShowHideSplitters( self ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
         if page is not None:
             
             page.ShowHideSplit()
+            
+        
+    
+    def _ShowPage( self, showee ):
+        
+        for ( i, page ) in enumerate( self._GetPages() ):
+            
+            if isinstance( page, wx.Notebook ) and page.HasPage( page ):
+                
+                self._notebook.SetSelection( i )
+                
+                page.ShowPage( page )
+                
+                break
+                
+            elif page == showee:
+                
+                self._notebook.SetSelection( i )
+                
+                break
+                
             
         
     
@@ -3270,7 +3339,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFocus( self, event ):
         
-        page = self._notebook.GetCurrentPage()
+        page = self._GetCurrentMediaPage()
         
         if page is not None:
             
@@ -3467,7 +3536,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             try:
                 
-                for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]:
+                for page in self._GetPages():
                     
                     page.TestAbleToClose()
                     
@@ -3491,9 +3560,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._message_manager.Hide()
             
-            for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]: page.CleanBeforeDestroy()
+            for page in self._GetPages():
+                
+                page.CleanBeforeDestroy()
+                
             
-            page = self._notebook.GetCurrentPage()
+            page = self._GetCurrentMediaPage()
             
             if page is not None:
                 
@@ -3566,7 +3638,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def GetCurrentPage( self ):
         
-        return self._notebook.GetCurrentPage()
+        return self._GetCurrentMediaPage()
         
     
     def IShouldRegularlyUpdate( self, window ):
@@ -3605,19 +3677,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            if True not in ( page.IsURLImportPage() for page in [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ] ):
+            if True not in ( page.IsURLImportPage() for page in self._GetMediaPages() ):
                 
                 self._NewPageImportURLs()
                 
             
-            for ( page, i ) in [ ( self._notebook.GetPage( i ), i ) for i in range( self._notebook.GetPageCount() ) ]:
+            for page in self._GetMediaPages():
                 
                 if page.IsURLImportPage():
                     
-                    if page != self._notebook.GetCurrentPage():
-                        
-                        self._notebook.SetSelection( i )
-                        
+                    self._ShowPage( page )
                     
                     page_key = page.GetPageKey()
                     
@@ -3631,7 +3700,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def IsCurrentPage( self, page_key ):
         
-        result = self._notebook.GetCurrentPage()
+        result = self._GetCurrentMediaPage()
         
         if result is None:
             
@@ -4021,7 +4090,10 @@ class FrameSplash( wx.Frame ):
         event.Skip()
         
     
-    def EventEraseBackground( self, event ): pass
+    def EventEraseBackground( self, event ):
+        
+        pass
+        
     
     def EventPaint( self, event ):
         
@@ -4044,7 +4116,7 @@ class FrameSplash( wx.Frame ):
         
         self._dirty = True
         
-        self.Refresh()
+        wx.CallAfter( self.Refresh )
         
     
     def SetTitleText( self, text, print_to_log = True ):
@@ -4058,6 +4130,6 @@ class FrameSplash( wx.Frame ):
         
         self._dirty = True
         
-        self.Refresh()
+        wx.CallAfter( self.Refresh )
         
     

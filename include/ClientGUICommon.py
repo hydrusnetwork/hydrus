@@ -3,6 +3,7 @@ import ClientData
 import ClientConstants as CC
 import ClientGUIMenus
 import ClientGUITopLevelWindows
+import ClientMedia
 import ClientRatings
 import ClientThreading
 import HydrusConstants as HC
@@ -422,11 +423,15 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         self._page_key = page_key
         
-        popup = self._Popup()
+        self._collect_by = HC.options[ 'default_collect' ]
+        
+        popup = self._Popup( self._collect_by )
         
         #self.UseAltPopupWindow( True )
         
         self.SetPopupControl( popup )
+        
+        self.SetValue( 'no collections' )
         
     
     def GetChoice( self ):
@@ -445,14 +450,16 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
     
     class _Popup( wx.combo.ComboPopup ):
         
-        def __init__( self ):
+        def __init__( self, collect_by ):
             
             wx.combo.ComboPopup.__init__( self )
+            
+            self._initial_collect_by = collect_by
             
         
         def Create( self, parent ):
             
-            self._control = self._Control( parent, self.GetCombo() )
+            self._control = self._Control( parent, self.GetCombo(), self._initial_collect_by )
             
             return True
             
@@ -469,7 +476,7 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         
         class _Control( wx.CheckListBox ):
             
-            def __init__( self, parent, special_parent ):
+            def __init__( self, parent, special_parent, collect_by ):
                 
                 text_and_data_tuples = set()
                 
@@ -503,13 +510,11 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                 
                 self._special_parent = special_parent
                 
-                default = HC.options[ 'default_collect' ]
-                
-                self.SetValue( default )
-                
                 self.Bind( wx.EVT_CHECKLISTBOX, self.EventChanged )
                 
                 self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+                
+                wx.CallAfter( self.SetValue, collect_by )
                 
             
             def _BroadcastCollect( self ):
@@ -584,78 +589,140 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
                         
                     
                 
-                self.SetChecked( indices_to_check )
-                
-                self._BroadcastCollect()
+                if len( indices_to_check ) > 0:
+                    
+                    self.SetChecked( indices_to_check )
+                    
+                    self._BroadcastCollect()
+                    
                 
             
         
     
-class ChoiceSort( BetterChoice ):
+class ChoiceSort( wx.Panel ):
     
-    def __init__( self, parent, page_key = None, add_namespaces_and_ratings = True ):
+    def __init__( self, parent, management_controller = None ):
         
-        BetterChoice.__init__( self, parent )
+        wx.Panel.__init__( self, parent )
         
-        self._page_key = page_key
+        self._management_controller = management_controller
         
-        services_manager = HG.client_controller.services_manager
+        self._sort_type_choice = BetterChoice( self )
+        self._sort_asc_choice = BetterChoice( self )
         
-        sort_choices = ClientData.GetSortChoices( add_namespaces_and_ratings = add_namespaces_and_ratings )
+        asc_width = ClientData.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
         
-        for sort_by in sort_choices:
+        self._sort_asc_choice.SetMinSize( ( asc_width, -1 ) )
+        
+        sort_types = ClientData.GetSortTypeChoices()
+        
+        for sort_type in sort_types:
             
-            ( sort_by_type, sort_by_data ) = sort_by
+            example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
             
-            if sort_by_type == 'system':
-                
-                label = CC.sort_string_lookup[ sort_by_data ]
-                
-            elif sort_by_type == 'namespaces':
-                
-                label = '-'.join( sort_by_data )
-                
-            elif sort_by_type in ( 'rating_descend', 'rating_ascend' ):
-                
-                service_key = sort_by_data
-                
-                service = services_manager.GetService( service_key )
-                
-                if sort_by_type == 'rating_descend':
-                    
-                    label = service.GetName() + ' rating highest first'
-                    
-                elif sort_by_type == 'rating_ascend':
-                    
-                    label = service.GetName() + ' rating lowest first'
-                    
-                
-            
-            self.Append( 'sort by ' + label, sort_by )
+            self._sort_type_choice.Append( example_sort.GetSortTypeString(), sort_type )
             
         
-        self.Bind( wx.EVT_CHOICE, self.EventChoice )
+        type_width = ClientData.ConvertTextToPixelWidth( self._sort_type_choice, 10 )
+        
+        self._sort_type_choice.SetMinSize( ( type_width, -1 ) )
+        
+        self._sort_asc_choice.Append( '', CC.SORT_ASC )
+        
+        self._UpdateAscLabels()
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._sort_asc_choice, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        self._sort_type_choice.Bind( wx.EVT_CHOICE, self.EventSortTypeChoice )
+        self._sort_asc_choice.Bind( wx.EVT_CHOICE, self.EventSortAscChoice )
         
         HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
+        
+        if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
+            
+            media_sort = self._management_controller.GetVariable( 'media_sort' )
+            
+            try:
+                
+                self.SetSort( media_sort )
+                
+            except:
+                
+                default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+                
+                self.SetSort( default_sort )
+                
+            
         
     
     def _BroadcastSort( self ):
         
-        selection = self.GetSelection()
+        media_sort = self._GetCurrentSort()
         
-        if selection != wx.NOT_FOUND:
+        if self._management_controller is not None:
             
-            sort_by = self.GetClientData( selection )
+            self._management_controller.SetVariable( 'media_sort', media_sort )
             
-            HG.client_controller.pub( 'sort_media', self._page_key, sort_by )
+            page_key = self._management_controller.GetKey( 'page' )
+            
+            HG.client_controller.pub( 'sort_media', page_key, media_sort )
+            
+        
+    
+    def _GetCurrentSort( self ):
+        
+        sort_type = self._sort_type_choice.GetChoice()
+        sort_asc = self._sort_asc_choice.GetChoice()
+        
+        media_sort = ClientMedia.MediaSort( sort_type, sort_asc )
+        
+        return media_sort
+        
+    
+    def _UpdateAscLabels( self ):
+        
+        media_sort = self._GetCurrentSort()
+        
+        self._sort_asc_choice.Clear()
+        
+        if media_sort.CanAsc():
+            
+            ( asc_str, desc_str ) = media_sort.GetSortAscStrings()
+            
+            self._sort_asc_choice.Append( asc_str, CC.SORT_ASC )
+            self._sort_asc_choice.Append( desc_str, CC.SORT_DESC )
+            
+            self._sort_asc_choice.SelectClientData( media_sort.sort_asc )
+            
+            self._sort_asc_choice.Enable()
+            
+        else:
+            
+            self._sort_asc_choice.Append( '', CC.SORT_ASC )
+            
+            self._sort_asc_choice.SelectClientData( CC.SORT_ASC )
+            
+            self._sort_asc_choice.Disable()
             
         
     
     def ACollectHappened( self, page_key, collect_by ):
         
-        if page_key == self._page_key:
+        if self._management_controller is not None:
             
-            self._BroadcastSort()
+            my_page_key = self._management_controller.GetKey( 'page' )
+            
+            if page_key == my_page_key:
+                
+                self._BroadcastSort()
+                
             
         
     
@@ -664,12 +731,29 @@ class ChoiceSort( BetterChoice ):
         self._BroadcastSort()
         
     
-    def EventChoice( self, event ):
+    def EventSortAscChoice( self, event ):
         
-        if self._page_key is not None:
-            
-            self._BroadcastSort()
-            
+        self._BroadcastSort()
+        
+    
+    def EventSortTypeChoice( self, event ):
+        
+        self._UpdateAscLabels()
+        
+        self._BroadcastSort()
+        
+    
+    def GetSort( self ):
+        
+        return self._GetCurrentSort()
+        
+    
+    def SetSort( self, media_sort ):
+        
+        self._sort_type_choice.SelectClientData( media_sort.sort_type )
+        self._sort_asc_choice.SelectClientData( media_sort.sort_asc )
+        
+        self._UpdateAscLabels()
         
     
 class ExportPatternButton( wx.Button ):
@@ -827,6 +911,8 @@ class Gauge( wx.Gauge ):
                     
                     value = min( int( 1000 * ( float( value ) / self._actual_range ) ), 1000 )
                     
+                
+                value = min( value, self.GetRange() )
                 
                 if value != self.GetValue():
                     

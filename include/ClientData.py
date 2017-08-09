@@ -388,21 +388,17 @@ def GetSearchURLs( url ):
     
     return search_urls
     
-def GetSortChoices( add_namespaces_and_ratings = True ):
+def GetSortTypeChoices():
 
     sort_choices = list( CC.SORT_CHOICES )
     
-    if add_namespaces_and_ratings:
+    sort_choices.extend( HC.options[ 'sort_by' ] )
+    
+    service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
+    
+    for service_key in service_keys:
         
-        sort_choices.extend( HC.options[ 'sort_by' ] )
-        
-        service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
-        
-        for service_key in service_keys:
-            
-            sort_choices.append( ( 'rating_descend', service_key ) )
-            sort_choices.append( ( 'rating_ascend', service_key ) )
-            
+        sort_choices.append( ( 'rating', service_key ) )
         
     
     return sort_choices
@@ -977,6 +973,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'suggested_tags' ][ 'favourites' ] = {}
         
+        #
+        
+        import ClientMedia
+        
+        self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+        
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
@@ -1236,11 +1239,27 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultSort( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_sort' ]
+            
+        
+    
     def GetDuplicateActionOptions( self, duplicate_type ):
         
         with self._lock:
             
             return self._dictionary[ 'duplicate_action_options' ][ duplicate_type ]
+            
+        
+    
+    def GetFallbackSort( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'fallback_sort' ]
             
         
     
@@ -1443,11 +1462,27 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetDefaultSort( self, media_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_sort' ] = media_sort
+            
+        
+    
     def SetDuplicateActionOptions( self, duplicate_type, duplicate_action_options ):
         
         with self._lock:
             
             self._dictionary[ 'duplicate_action_options' ][ duplicate_type ] = duplicate_action_options
+            
+        
+    
+    def SetFallbackSort( self, media_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'fallback_sort' ] = media_sort
             
         
     

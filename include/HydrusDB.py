@@ -227,7 +227,7 @@ class HydrusDB( object ):
         
         self._CloseDBCursor()
         
-        threading.Thread( target = self.MainLoop, name = 'Database Main Loop' ).start()
+        self._controller.CallToThreadLongRunning( self.MainLoop )
         
         while not self._ready_to_serve_requests:
             

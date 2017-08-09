@@ -71,6 +71,10 @@ class Controller( object ):
         HG.server_controller = self
         HG.test_controller = self
         
+        self.gui = self
+        
+        self._call_to_threads = []
+        
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
         self._new_options = ClientData.ClientOptions( self.db_dir )
@@ -80,8 +84,6 @@ class Controller( object ):
         HydrusData.ShowText = show_text
         
         self._http = ClientNetworking.HTTPConnectionManager()
-        
-        self._call_to_threads = []
         
         self._reads = {}
         
@@ -193,6 +195,8 @@ class Controller( object ):
         call_to_thread.put( callable, *args, **kwargs )
         
     
+    CallToThreadLongRunning = CallToThread
+    
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
     def GetClientSessionManager( self ):
@@ -242,6 +246,11 @@ class Controller( object ):
         
     
     def IsFirstStart( self ):
+        
+        return True
+        
+    
+    def IShouldRegularlyUpdate( self, window ):
         
         return True
         

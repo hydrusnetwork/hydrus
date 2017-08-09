@@ -2746,7 +2746,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_sort = ClientGUICommon.ChoiceSort( self )
             
-            self._sort_fallback = ClientGUICommon.ChoiceSort( self )
+            self._fallback_sort = ClientGUICommon.ChoiceSort( self )
             
             self._default_collect = ClientGUICommon.CheckboxCollect( self )
             
@@ -2758,22 +2758,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._new_options = HG.client_controller.GetNewOptions()
+            
             try:
                 
-                self._default_sort.SetSelection( HC.options[ 'default_sort' ] )
+                self._default_sort.SetSort( self._new_options.GetDefaultSort() )
                 
             except:
                 
-                self._default_sort.SetSelection( 0 )
+                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+                
+                self._default_sort.SetSort( media_sort )
                 
             
             try:
                 
-                self._sort_fallback.SetSelection( HC.options[ 'sort_fallback' ] )
+                self._fallback_sort.SetSort( self._new_options.GetFallbackSort() )
                 
             except:
                 
-                self._sort_fallback.SetSelection( 0 )
+                media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+                
+                self._fallback_sort.SetSort( media_sort )
                 
             
             for ( sort_by_type, sort_by ) in HC.options[ 'sort_by' ]:
@@ -2786,7 +2792,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Default sort: ', self._default_sort ) )
-            rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._sort_fallback ) )
+            rows.append( ( 'Secondary sort (when primary gives two equal values): ', self._fallback_sort ) )
             rows.append( ( 'Default collect: ', self._default_collect ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -2845,8 +2851,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_sort' ] = self._default_sort.GetSelection() 
-            HC.options[ 'sort_fallback' ] = self._sort_fallback.GetSelection()
+            self._new_options.SetDefaultSort( self._default_sort.GetSort() )
+            self._new_options.SetFallbackSort( self._fallback_sort.GetSort() )
             HC.options[ 'default_collect' ] = self._default_collect.GetChoice()
             
             sort_by_choices = []
@@ -4641,9 +4647,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        columns = [ ( 'name', -1 ), ( 'site', 80 ), ( 'period', 80 ), ( 'last checked', 100 ), ( 'recent error?', 100 ), ( 'recent delay?', 100 ), ( 'urls', 60 ), ( 'failures', 60 ), ( 'paused', 80 ), ( 'check now?', 100 ) ]
+        columns = [ ( 'name', -1 ), ( 'site', 12 ), ( 'period', 9 ), ( 'last checked', 15 ), ( 'recent error?', 12 ), ( 'recent delay?', 12 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ), ( 'check now?', 10 ) ]
         
-        self._subscriptions = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 300, columns, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( self, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
         
@@ -4675,9 +4681,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for subscription in subscriptions:
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-            
-            self._subscriptions.Append( display_tuple, sort_tuple, subscription )
+            self._subscriptions.AddData( subscription )
             
         
         #
@@ -4714,7 +4718,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.SetSizer( vbox )
         
     
-    def _ConvertSubscriptionToTuples( self, subscription ):
+    def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
         
         ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
         
@@ -4778,11 +4782,20 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         return ( display_tuple, sort_tuple )
         
     
+    def _GetExistingNames( self ):
+        
+        subscriptions = self._subscriptions.GetData()
+        
+        names = { subscription.GetName() for subscription in subscriptions }
+        
+        return names
+        
+    
     def _GetExportObject( self ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        for subscription in self._subscriptions.GetObjects( only_selected = True ):
+        for subscription in self._subscriptions.GetData( only_selected = True ):
             
             to_export.append( subscription )
             
@@ -4816,11 +4829,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 subscription = obj
                 
-                self._subscriptions.SetNonDupeName( subscription )
+                subscription.SetNonDupeName( self._GetExistingNames() )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-                
-                self._subscriptions.Append( display_tuple, sort_tuple, subscription )
+                self._subscriptions.AddData( subscription )
                 
             else:
                 
@@ -4843,36 +4854,32 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 new_subscription = panel.GetValue()
                 
-                self._subscriptions.SetNonDupeName( new_subscription )
+                new_subscription.SetNonDupeName( self._GetExistingNames() )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( new_subscription )
-                
-                self._subscriptions.Append( display_tuple, sort_tuple, new_subscription )
+                self._subscriptions.AddData( new_subscription )
                 
             
         
     
     def CheckNow( self ):
         
-        for i in self._subscriptions.GetAllSelected():
-            
-            subscription = self._subscriptions.GetObject( i )
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
             
             subscription.CheckNow()
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-            
-            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
         
     
     def CommitChanges( self ):
         
-        subscriptions = self._subscriptions.GetObjects()
+        subscriptions = self._subscriptions.GetData()
         
         HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
         
-        # we pubsub changes outside, so it happens even on cancel
+        # we pubsub daemon wake outside, so not needed here--it happens even on cancel
         
     
     def Delete( self ):
@@ -4881,37 +4888,30 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._subscriptions.RemoveAllSelected()
+                self._subscriptions.DeleteSelected()
                 
             
         
     
     def Duplicate( self ):
         
-        subs_to_dupe = []
-        
-        for subscription in self._subscriptions.GetObjects( only_selected = True ):
-            
-            subs_to_dupe.append( subscription )
-            
+        subs_to_dupe = self._subscriptions.GetData( only_selected = True )
         
         for subscription in subs_to_dupe:
             
             dupe_subscription = subscription.Duplicate()
             
-            self._subscriptions.SetNonDupeName( dupe_subscription )
+            dupe_subscription.SetNonDupeName( self._GetExistingNames() )
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( dupe_subscription )
-            
-            self._subscriptions.Append( display_tuple, sort_tuple, dupe_subscription )
+            self._subscriptions.AddData( dupe_subscription )
             
         
     
     def Edit( self ):
         
-        for index in self._subscriptions.GetAllSelected():
-            
-            subscription = self._subscriptions.GetObject( index )
+        subs_to_edit = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subs_to_edit:
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
                 
@@ -4925,24 +4925,22 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if result == wx.ID_OK:
                     
+                    self._subscriptions.DeleteDatas( ( subscription, ) )
+                    
                     edited_subscription = panel.GetValue()
                     
-                    if edited_subscription.GetName() != original_name:
-                        
-                        self._subscriptions.SetNonDupeName( edited_subscription )
-                        
+                    edited_subscription.SetNonDupeName( self._GetExistingNames() )
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( edited_subscription )
-                    
-                    self._subscriptions.UpdateRow( index, display_tuple, sort_tuple, edited_subscription )
+                    self._subscriptions.AddData( edited_subscription )
                     
                 elif result == wx.ID_CANCEL:
                     
                     break
                     
                 
-                
             
+        
+        self._subscriptions.Sort()
         
     
     def ExportToClipboard( self ):
@@ -5038,16 +5036,14 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def PauseResume( self ):
         
-        for i in self._subscriptions.GetAllSelected():
-            
-            subscription = self._subscriptions.GetObject( i )
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
             
             subscription.PauseResume()
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-            
-            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
         
     
     def Reset( self ):
@@ -5058,25 +5054,23 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                for i in self._subscriptions.GetAllSelected():
-                    
-                    subscription = self._subscriptions.GetObject( i )
+                subscriptions = self._subscriptions.GetData( only_selected = True )
+                
+                for subscription in subscriptions:
                     
                     subscription.Reset()
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-                    
-                    self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
                 
             
         
     
     def RetryFailures( self ):
         
-        for i in self._subscriptions.GetAllSelected():
-            
-            subscription = self._subscriptions.GetObject( i )
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
             
             seed_cache = subscription.GetSeedCache()
             
@@ -5087,24 +5081,20 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
                 
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-            
-            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
         
     
     def ScrubDelays( self ):
         
-        for i in self._subscriptions.GetAllSelected():
-            
-            subscription = self._subscriptions.GetObject( i )
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
             
             subscription.ScrubDelay()
             
-            ( display_tuple, sort_tuple ) = self._ConvertSubscriptionToTuples( subscription )
-            
-            self._subscriptions.UpdateRow( i, display_tuple, sort_tuple, subscription )
-            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
         
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):

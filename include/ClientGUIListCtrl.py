@@ -551,7 +551,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         ( data, display_tuple, sort_tuple ) = data_info
         
-        index = wx.ListCtrl.Append( self, display_tuple )
+        index = self.Append( display_tuple )
         
         self._indices_to_data_info[ index ] = data_info
         self._data_to_indices[ data ] = index
@@ -578,6 +578,22 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         return indices
         
     
+    def _RecalculateIndicesAfterDelete( self ):
+        
+        sorted_data_info = self._SortDataInfo()
+        
+        self._indices_to_data_info = {}
+        self._data_to_indices = {}
+        
+        for ( index, data_info ) in enumerate( sorted_data_info ):
+            
+            ( data, display_tuple, sort_tuple ) = data_info
+            
+            self._data_to_indices[ data ] = index
+            self._indices_to_data_info[ index ] = data_info
+            
+        
+    
     def _SortDataInfo( self ):
         
         data_infos = list( self._indices_to_data_info.values() )
@@ -586,7 +602,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             ( data, display_tuple, sort_tuple ) = data_info
             
-            return sort_tuple[ self._sort_column ]
+            return ( sort_tuple[ self._sort_column ], sort_tuple ) # add the sort tuple to get secondary sorting
             
         
         data_infos.sort( key = sort_key, reverse = not self._sort_asc )
@@ -594,7 +610,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         return data_infos
         
     
-    def _SortAndUpdate( self ):
+    def _SortAndRefreshRows( self ):
         
         scroll_pos = self.GetScrollPos( wx.VERTICAL )
         
@@ -641,7 +657,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             del self._indices_to_data_info[ index ]
             
         
-        self._SortAndUpdate()
+        self._RecalculateIndicesAfterDelete()
         
     
     def DeleteSelected( self ):
@@ -661,7 +677,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             del self._indices_to_data_info[ index ]
             
         
-        self._SortAndUpdate()
+        self._RecalculateIndicesAfterDelete()
         
     
     def EventBeginColDrag( self, event ):
@@ -702,7 +718,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             self._sort_asc = True
             
         
-        self._SortAndUpdate()
+        self._SortAndRefreshRows()
         
     
     def EventItemActivated( self, event ):
@@ -785,21 +801,32 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def SetData( self, datas ):
         
-        old_selected_datas = self.GetData( only_selected = True )
+        datas = set( datas )
+        existing_datas = set( self._data_to_indices.keys() )
         
-        self._data_to_indices = {}
-        self._indices_to_data_info = {}
+        datas_to_add = datas.difference( existing_datas )
+        datas_to_update = datas.intersection( existing_datas )
+        datas_to_delete = existing_datas.difference( datas )
         
-        self.DeleteAllItems()
-        
-        for data in datas:
+        if len( datas_to_delete ) > 0:
             
-            select = data in old_selected_datas
-            
-            self.AddData( data, select = select )
+            self.DeleteDatas( datas_to_delete )
             
         
-        self._SortAndUpdate()
+        if len( datas_to_update ) > 0:
+            
+            self.UpdateDatas( datas_to_update )
+            
+        
+        if len( datas_to_add ) > 0:
+            
+            for data in datas_to_add:
+                
+                self.AddData( data )
+                
+            
+            self._SortAndRefreshRows()
+            
         
     
     def Sort( self, col = None, asc = None ):
@@ -814,6 +841,27 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             self._sort_asc = asc
             
         
-        self._SortAndUpdate()
+        self._SortAndRefreshRows()
         
     
+    def UpdateDatas( self, datas ):
+        
+        for data in datas:
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+            data_info = ( data, display_tuple, sort_tuple )
+            
+            index = self._data_to_indices[ data ]
+            
+            if data_info != self._indices_to_data_info[ index ]:
+                
+                self._indices_to_data_info[ index ] = data_info
+                
+                for ( column_index, value ) in enumerate( display_tuple ):
+                    
+                    self.SetStringItem( index, column_index, value )
+                    
+                
+            
+        

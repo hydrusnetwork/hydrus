@@ -408,7 +408,7 @@ def ParseImageboardThreadURL( thread_url ):
         
     except Exception as e:
         
-        raise Exception( 'Could not understand the board or thread id!' )
+        raise Exception( 'Could not understand that thread url! Either the board or the thread id components were malformed or missing.' )
         
     
     return ( thread_url, host, board, thread_id )

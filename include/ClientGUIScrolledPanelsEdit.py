@@ -12,6 +12,7 @@ import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
+import ClientGUISeedCache
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
@@ -1198,7 +1199,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._last_checked_st = wx.StaticText( self._info_panel )
         self._next_check_st = wx.StaticText( self._info_panel )
-        self._seed_info_st = wx.StaticText( self._info_panel )
+        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._info_panel, HG.client_controller )
         
         #
         
@@ -1264,9 +1265,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused = wx.CheckBox( self._control_panel )
         
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._control_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
-        self._seed_cache_button.SetToolTipString( 'open detailed url cache status' )
-        
         self._retry_failed = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailed )
         
         self._check_now_button = ClientGUICommon.BetterButton( self._control_panel, 'force check on dialog ok', self.CheckNow )
@@ -1328,6 +1326,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._check_now_button.Disable()
             
         
+        self._seed_cache = self._seed_cache.Duplicate() # so that if it is edited but we cancel, this doesn't screw up
+        
         self._UpdateCommandButtons()
         self._UpdateLastNextCheck()
         self._UpdateSeedInfo()
@@ -1336,7 +1336,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._info_panel.AddF( self._last_checked_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._info_panel.AddF( self._next_check_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._info_panel.AddF( self._seed_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._info_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1364,8 +1364,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
-        
-        self._control_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
         
         rows = []
         
@@ -1511,16 +1509,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateSeedInfo( self ):
         
-        seed_cache_text = HydrusData.ConvertIntToPrettyString( self._seed_cache.GetSeedCount() ) + ' urls in cache'
-        
-        num_failed = self._seed_cache.GetSeedCount( CC.STATUS_FAILED )
-        
-        if num_failed > 0:
-            
-            seed_cache_text += ', ' + HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed'
-            
-        
-        self._seed_info_st.SetLabelText( seed_cache_text )
+        self._seed_cache_control.SetSeedCache( self._seed_cache )
         
     
     def _PresentForSiteType( self ):
