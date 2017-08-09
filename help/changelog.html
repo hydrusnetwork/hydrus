@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 268</h3></li>
+				<ul>
+					<li>split the sort dropdown into two, splitting the sort type and sort order</li>
+					<li>file sorting works more intelligently behind the scenes in several ways</li>
+					<li>added 'sort by number of tags' to sort options</li>
+					<li>session pages now remember their sort status!</li>
+					<li>sessions also more reliably remember their actual thumbnail order for all pages (typically, this matters for importers atm)</li>
+					<li>network job controls now report an estimate of how long they will have to wait for bandwidth</li>
+					<li>subscriptions will now show some 'no more bandwidth to download files' text if they have to stop because of bandwidth rules</li>
+					<li>subscription 'should I start/continue' testing now has a little padding to forestall some potential unexpected long delays in operation due to edge cases</li>
+					<li>the edit subscription dialog now uses the new file import status control</li>
+					<li>fixed an issue with hentai foundry filters not applying (they added some categories since the downloader last worked, breaking the POST form), hence hiding most non-vanilla results</li>
+					<li>finished the 'database->migrate database' dialog and its help and removed the 'under construction' labels. the new help page is also now linked from the standard index.html</li>
+					<li>fixed an issue where pages would sometimes never initialise (due to being queued up after an infinite job like the network engine's mainloop!)</li>
+					<li>improved how all long-job threads are spawned</li>
+					<li>improved some more thread scheduling logic that meant some long-term jobs could be stacked undesirably</li>
+					<li>expanded how the new listctrl updates and deletes its data</li>
+					<li>reduced flicker on the new listctrl update events</li>
+					<li>the file import status window now uses the new listctrl</li>
+					<li>the manage subscriptions dialog now uses the new listctrl</li>
+					<li>collections now track their tags more accurately</li>
+					<li>moved the 'delete original files after success' checkbox up to reduce misclicks on ok'ing the file import dialog and added a bit of red warning text whenever it is on</li>
+					<li>sped up some behind-the-scenes content processing for large pages</li>
+					<li>improved how the program cleans some things up during exit</li>
+					<li>the issue with some clients not clearing their exit splash screen until a mouseover event should be fixed</li>
+					<li>at 120 open pages, the client will inform the user about the approaching max page limit</li>
+					<li>by default, import folders no longer delete anything. default is to ignore original files in all cases</li>
+					<li>deleted some old unusued code</li>
+					<li>misc cleanup</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 267</h3></li>
 				<ul>
 					<li>drag-and-dropping a 4chan or 8chan url onto the client will now automatically open a thread watcher for that url</li>
