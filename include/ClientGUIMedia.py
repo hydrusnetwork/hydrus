@@ -13,6 +13,7 @@ import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientMedia
+import ClientSearch
 import ClientTags
 import collections
 import HydrusExceptions
@@ -694,7 +695,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             hash = self._focussed_media.GetDisplayMedia().GetHash()
             
-            HG.client_controller.pub( 'new_similar_to', CC.LOCAL_FILE_SERVICE_KEY, hash, max_hamming )
+            initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, max_hamming ) ) ]
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = initial_predicates )
             
         
     

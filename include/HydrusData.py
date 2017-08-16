@@ -1165,7 +1165,7 @@ def ToUnicode( text_producing_object ):
                 
             except:
                 
-                text = repr( text ).decode( 'utf-8' )
+                text = unicode( repr( text ) )
                 
             
             

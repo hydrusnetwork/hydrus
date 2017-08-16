@@ -2846,7 +2846,9 @@ class DB( HydrusDB.HydrusDB ):
             self._SetJSONDump( shortcuts )
             
         
-        bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+        
+        ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
         
         self._SetJSONDump( bandwidth_manager )
         
@@ -4896,13 +4898,21 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetJSONDump( self, dump_type ):
         
-        ( version, dump ) = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) ).fetchone()
+        result = self._c.execute( 'SELECT version, dump FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) ).fetchone()
         
-        serialisable_info = json.loads( dump )
+        if result is None:
+            
+            return result
+            
+        else:
+            
+            ( version, dump ) = result
+            
+            serialisable_info = json.loads( dump )
+            
+            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
+            
         
-        return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
-        
-    
     
     def _GetJSONDumpNamed( self, dump_type, dump_name = None ):
         
@@ -9610,7 +9620,9 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+            bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            
+            ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager ) 
             
             self._SetJSONDump( bandwidth_manager )
             
@@ -9683,7 +9695,9 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 264:
             
-            default_bandwidth_manager = ClientDefaults.GetDefaultBandwidthManager()
+            default_bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            
+            ClientDefaults.SetDefaultBandwidthManagerRules( default_bandwidth_manager )
             
             bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
             

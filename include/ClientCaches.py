@@ -3362,7 +3362,7 @@ class WebSessionManagerClient( object ):
         
         if 'pixivAccount.postKey' not in j:
             
-            raise HydrusExceptions.ForbiddenException( 'When trying to log into Pixiv, I could not find the POST key!' )
+            raise HydrusExceptions.ForbiddenException( 'When trying to log into Pixiv, I could not find the POST key! This is a problem with hydrus\'s pixiv parsing, not your login! Please contact hydrus dev!' )
             
         
         post_key = j[ 'pixivAccount.postKey' ]
@@ -3386,3 +3386,80 @@ class WebSessionManagerClient( object ):
         r = session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
         
     
+    def TestPixiv( self, pixiv_id, password ):
+        
+        # this is just an ugly copy, but fuck it for the minute
+        # we'll figure out a proper testing engine later with the login engine and tie the manage gui into it as well
+        
+        session = requests.Session()
+        
+        response = session.get( 'https://accounts.pixiv.net/login' )
+        
+        soup = ClientDownloading.GetSoup( response.content )
+        
+        # some whocking 20kb bit of json tucked inside a hidden form input wew lad
+        i = soup.find( 'input', id = 'init-config' )
+        
+        raw_json = i['value']
+        
+        j = json.loads( raw_json )
+        
+        if 'pixivAccount.postKey' not in j:
+            
+            return ( False, 'When trying to log into Pixiv, I could not find the POST key! This is a problem with hydrus\'s pixiv parsing, not your login! Please contact hydrus dev!' )
+            
+        
+        post_key = j[ 'pixivAccount.postKey' ]
+        
+        form_fields = {}
+        
+        form_fields[ 'pixiv_id' ] = pixiv_id
+        form_fields[ 'password' ] = password
+        form_fields[ 'captcha' ] = ''
+        form_fields[ 'g_recaptcha_response' ] = ''
+        form_fields[ 'return_to' ] = 'https://www.pixiv.net'
+        form_fields[ 'lang' ] = 'en'
+        form_fields[ 'post_key' ] = post_key
+        form_fields[ 'source' ] = 'pc'
+        
+        headers = {}
+        
+        headers[ 'referer' ] = "https://accounts.pixiv.net/login?lang=en^source=pc&view_type=page&ref=wwwtop_accounts_index"
+        headers[ 'origin' ] = "https://accounts.pixiv.net"
+        
+        r = session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        
+        if not r.ok:
+            
+            HydrusData.ShowText( r.content )
+            
+            return ( False, 'Login request failed! Info printed to log.' )
+            
+        
+        cookies = session.cookies
+        
+        cookies.clear_expired_cookies()
+        
+        domains = cookies.list_domains()
+        
+        for domain in domains:
+            
+            if domain.endswith( 'pixiv.net' ):
+                
+                d = cookies.get_dict( domain )
+                
+                if 'PHPSESSID' not in d:
+                    
+                    HydrusData.ShowText( r.content )
+                    
+                    return ( False, 'Pixiv login failed to establish session! Info printed to log.' )
+                    
+                
+                return ( True, '' )
+                
+            
+        
+        HydrusData.ShowText( r.content )
+        
+        return ( False, 'Pixiv login failed to establish session! Info printed to log.' )
+        

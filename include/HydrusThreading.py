@@ -237,6 +237,8 @@ class THREADCallToThread( DAEMON ):
                 
             except Exception as e:
                 
+                HydrusData.Print( traceback.format_exc() )
+                
                 HydrusData.ShowException( e )
                 
             finally:

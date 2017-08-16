@@ -2105,7 +2105,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             sort_string_lookup[ CC.SORT_FILES_BY_FILESIZE ] = 'filesize'
             sort_string_lookup[ CC.SORT_FILES_BY_DURATION ] = 'duration'
-            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'age'
+            sort_string_lookup[ CC.SORT_FILES_BY_IMPORT_TIME ] = 'time imported'
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = 'mime'
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = 'random'
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = 'width'

@@ -1435,7 +1435,10 @@ class MenuBitmapButton( BetterBitmapButton ):
                 current_value = check_manager.GetCurrentValue()
                 func = check_manager.Invert
                 
-                ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
+                if current_value is not None:
+                    
+                    ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
+                    
                 
             elif item_type == 'separator':
                 
@@ -1474,6 +1477,7 @@ class MenuButton( BetterButton ):
                 initial_value = check_manager.GetInitialValue()
                 
                 ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, initial_value, check_manager.Invert )
+                
                 
             elif item_type == 'separator':
                 

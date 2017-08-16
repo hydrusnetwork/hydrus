@@ -73,7 +73,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
         
-        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 9 )
+        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 17 )
         idle_width = ClientData.ConvertTextToPixelWidth( self, 6 )
         system_busy_width = ClientData.ConvertTextToPixelWidth( self, 13 )
         db_width = ClientData.ConvertTextToPixelWidth( self, 14 )
@@ -86,17 +86,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
-        self._media_status_override = None
         self._closed_pages = []
         self._deleted_page_keys = set()
-        self._next_new_page_index = None
         self._lock = threading.Lock()
         
-        self._notebook = wx.Notebook( self )
-        self._notebook.Bind( wx.EVT_LEFT_DCLICK, self.EventNotebookLeftDoubleClick )
-        self._notebook.Bind( wx.EVT_MIDDLE_DOWN, self.EventNotebookMiddleClick )
-        self._notebook.Bind( wx.EVT_RIGHT_DOWN, self.EventNotebookMenu )
-        self.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventNotebookPageChanged )
+        self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         wx.GetApp().SetTopWindow( self )
         
@@ -112,24 +106,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
-        self._controller.sub( self, 'NewCompose', 'new_compose_frame' )
-        self._controller.sub( self, 'NewPageDuplicateFilter', 'new_duplicate_filter' )
-        self._controller.sub( self, 'NewPageImportBooru', 'new_import_booru' )
-        self._controller.sub( self, 'NewPageImportGallery', 'new_import_gallery' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
-        self._controller.sub( self, 'NewPageImportPageOfImages', 'new_page_import_page_of_images' )
-        self._controller.sub( self, 'NewPageImportThreadWatcher', 'new_page_import_thread_watcher' )
-        self._controller.sub( self, 'NewPageImportURLs', 'new_page_import_urls' )
-        self._controller.sub( self, 'NewPagePetitions', 'new_page_petitions' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
-        self._controller.sub( self, 'NewSimilarTo', 'new_similar_to' )
+        self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
-        self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self._statusbar_thread_updater, 'Update', 'refresh_status' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
@@ -154,9 +139,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         wx.CallAfter( self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
-        self._move_hide_timer = wx.Timer( self, id = ID_TIMER_GUI_BANDWIDTH )
+        self._bandwidth_timer = wx.Timer( self, id = ID_TIMER_GUI_BANDWIDTH )
         
-        self._move_hide_timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        self._bandwidth_timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
     
     def _AboutWindow( self ):
@@ -249,48 +234,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 self._controller.Write( 'analyze', force_reanalyze = True )
                 
-            
-        
-    
-    def _AppendGUISession( self, name ):
-        
-        try:
-            
-            session = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, name )
-            
-        except Exception as e:
-            
-            HydrusData.ShowText( 'While trying to load session ' + name + ', this error happened:' )
-            HydrusData.ShowException( e )
-            
-            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
-            
-            return
-            
-        
-        starting_index = self._GetDefaultPageInsertionIndex()
-        
-        try:
-            
-            forced_insertion_index = starting_index
-            
-            for ( management_controller, initial_hashes ) in session.IteratePages():
-                
-                try:
-                    
-                    self._NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index )
-                    
-                    forced_insertion_index += 1
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                
-            
-        finally:
-            
-            self._media_status_override = None
             
         
     
@@ -571,7 +514,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg_yn.ShowModal() == wx.ID_YES:
                 
-                self._SaveGUISession( 'last session' )
+                self._notebook.SaveGUISession( 'last session' )
                 
                 # session save causes a db read in the menu refresh, so let's put this off just a bit
                 wx.CallLater( 1500, self._controller.Write, 'backup', path )
@@ -683,16 +626,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ChooseNewPage( self, insertion_index = None ):
-        
-        self._next_new_page_index = insertion_index
-        
-        with ClientGUIDialogs.DialogPageChooser( self ) as dlg:
-            
-            dlg.ShowModal()
-            
-        
-    
     def _ClearOrphans( self ):
         
         text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
@@ -730,97 +663,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                 
             
-        
-    
-    def _CloseCurrentPage( self, polite = True ):
-        
-        selection = self._notebook.GetSelection()
-        
-        if selection != wx.NOT_FOUND:
-            
-            self._ClosePage( selection, polite = polite )
-            
-        
-    
-    def _CloseLeftPages( self, from_index ):
-        
-        closees = [ index for index in range( self._notebook.GetPageCount() ) if index < from_index ]
-        
-        self._ClosePages( closees )
-        
-    
-    def _CloseOtherPages( self, except_index ):
-        
-        closees = [ index for index in range( self._notebook.GetPageCount() ) if index != except_index ]
-        
-        self._ClosePages( closees )
-        
-    
-    def _ClosePage( self, index, polite = True ):
-        
-        self._controller.ResetIdleTimer()
-        self._controller.ResetPageChangeTimer()
-        
-        if index == -1 or index > self._notebook.GetPageCount() - 1:
-            
-            return False
-            
-        
-        name = self._notebook.GetPageText( index )
-        
-        page = self._notebook.GetPage( index )
-        
-        if polite:
-            
-            try:
-                
-                page.TestAbleToClose()
-                
-            except HydrusExceptions.PermissionException:
-                
-                return False
-                
-            
-        
-        page.PrepareToHide()
-        
-        with self._lock:
-            
-            self._closed_pages.append( ( HydrusData.GetNow(), index, name, page ) )
-            
-        
-        self._notebook.RemovePage( index )
-        
-        if self._notebook.GetPageCount() == 0:
-            
-            self._focus_holder.SetFocus()
-            
-        
-        self._controller.pub( 'notify_new_undo' )
-        
-        return True
-        
-    
-    def _ClosePages( self, indices ):
-        
-        indices.reverse() # so we are closing from the end first
-        
-        for index in indices:
-            
-            successful = self._ClosePage( index )
-            
-            if not successful:
-                
-                break
-                
-            
-        
-    
-    def _CloseRightPages( self, from_index ):
-        
-        closees = [ index for index in range( self._notebook.GetPageCount() ) if index > from_index ]
-        
-        self._ClosePages( closees )
         
     
     def _DebugMakeSomePopups( self ):
@@ -909,22 +751,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
-        
-    
-    def _DeleteAllClosedPages( self ):
-        
-        with self._lock:
-            
-            deletee_pages = [ page for ( time_closed, selection, name, page ) in self._closed_pages ]
-            
-            self._closed_pages = []
-            
-        
-        self._DestroyPages( deletee_pages )
-        
-        self._focus_holder.SetFocus()
-        
-        self._controller.pub( 'notify_new_undo' )
         
     
     def _DeleteGUISession( self, name ):
@@ -1081,7 +907,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     undo_pages = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( self, undo_pages, 'clear all', 'Remove all closed pages from memory.', self._DeleteAllClosedPages )
+                    ClientGUIMenus.AppendMenuItem( self, undo_pages, 'clear all', 'Remove all closed pages from memory.', self.DeleteAllClosedPages )
                     
                     undo_pages.AppendSeparator()
                     
@@ -1089,7 +915,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     with self._lock:
                         
-                        for ( i, ( time_closed, index, name, page ) ) in enumerate( self._closed_pages ):
+                        for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
+                            
+                            name = page.GetName()
                             
                             args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
                             
@@ -1130,7 +958,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    ClientGUIMenus.AppendMenuItem( self, load, name, 'Close all other pages and load this session.', self._LoadGUISession, name )
+                    ClientGUIMenus.AppendMenuItem( self, load, name, 'Close all other pages and load this session.', self._notebook.LoadGUISession, name )
                     
                 
                 ClientGUIMenus.AppendMenu( sessions, load, 'load' )
@@ -1139,13 +967,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for name in gui_session_names:
                     
-                    ClientGUIMenus.AppendMenuItem( self, append, name, 'Append this session to whatever pages are already open.', self._AppendGUISession, name )
+                    ClientGUIMenus.AppendMenuItem( self, append, name, 'Append this session to whatever pages are already open.', self._notebook.AppendGUISession, name )
                     
                 
                 ClientGUIMenus.AppendMenu( sessions, append, 'append' )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, sessions, 'save current', 'Save the existing open pages as a session.', self._SaveGUISession )
+            ClientGUIMenus.AppendMenuItem( self, sessions, 'save current', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
             
             if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
                 
@@ -1166,7 +994,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self._ChooseNewPage )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self._notebook.ChooseNewPageForDeepestNotebook )
             
             #
             
@@ -1182,12 +1010,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
             
-            ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
-            ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._NewPageQuery, CC.TRASH_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY )
             
             for service in file_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._NewPageQuery, service.GetServiceKey() )
+                ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey() )
                 
             
             ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
@@ -1200,7 +1028,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for service in petition_resolvable_repositories:
                     
-                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._NewPagePetitions, service.GetServiceKey() )
+                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey() )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
@@ -1210,23 +1038,23 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._NewPageImportURLs )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._NewPageImportThreadWatcher )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._NewPageImportPageOfImages )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._notebook.NewPageImportURLs )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportPageOfImages )
             
             gallery_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._NewPageImportBooru )
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._notebook.NewPageImportBooru )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
             
             hf_submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
             
             ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
             
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
@@ -1234,13 +1062,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 pixiv_submenu = wx.Menu()
                 
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
                 
                 ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
             
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
             ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
@@ -1264,7 +1092,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             special_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._NewPageDuplicateFilter )
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self._notebook.NewPagesNotebook )
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._notebook.NewPageDuplicateFilter )
             
             ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
             
@@ -1585,6 +1414,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             
@@ -1598,7 +1428,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._SaveGUISession, 'last session' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
             
@@ -1622,87 +1452,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _GenerateNewAccounts( self, service_key ):
         
         with ClientGUIDialogs.DialogGenerateNewAccounts( self, service_key ) as dlg: dlg.ShowModal()
-        
-    
-    def _GetDefaultPageInsertionIndex( self ):
-        
-        new_page_goes = self._new_options.GetInteger( 'default_new_page_goes' )
-        
-        current_index = self._notebook.GetSelection()
-        
-        if current_index == wx.NOT_FOUND:
-            
-            new_page_goes = CC.NEW_PAGE_GOES_FAR_LEFT
-            
-        
-        if new_page_goes == CC.NEW_PAGE_GOES_FAR_LEFT:
-            
-            insertion_index = 0
-            
-        elif new_page_goes == CC.NEW_PAGE_GOES_LEFT_OF_CURRENT:
-            
-            insertion_index = current_index
-            
-        elif new_page_goes == CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT:
-            
-            insertion_index = current_index + 1
-            
-        elif new_page_goes == CC.NEW_PAGE_GOES_FAR_RIGHT:
-            
-            insertion_index = self._notebook.GetPageCount()
-            
-        
-        return insertion_index
-        
-    
-    def _GetCurrentMediaPage( self ):
-        
-        page = self._notebook.GetCurrentPage()
-        
-        if page is not None:
-            
-            while isinstance( page, wx.Notebook ):
-                
-                page = page.GetCurrentPage()
-                
-            
-            return page
-            
-        
-    
-    def _GetMediaPages( self ):
-        
-        results = []
-        
-        for page in self._GetPages():
-            
-            if isinstance( page, wx.Notebook ):
-                
-                results.extend( page.GetMediaPages() )
-                
-            else:
-                
-                results.append( page )
-                
-            
-        
-    
-    def _GetPageAndIndex( self, page_key ):
-        
-        for ( page, index ) in ( ( self._notebook.GetPage( index ), index ) for index in range( self._notebook.GetPageCount() ) ):
-            
-            if page.GetPageKey() == page_key:
-                
-                return ( page, index )
-                
-            
-        
-        raise HydrusExceptions.DataMissing()
-        
-    
-    def _GetPages( self ):
-        
-        return [ self._notebook.GetPage( i ) for i in range( self._notebook.GetPageCount() ) ]
         
     
     def _ImportFiles( self, paths = None ):
@@ -1888,36 +1637,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if load_a_blank_page:
             
-            self._NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
             
         else:
             
-            self._LoadGUISession( default_gui_session )
+            self._notebook.LoadGUISession( default_gui_session )
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
-        
-    
-    def _LoadGUISession( self, name ):
-        
-        for page in self._GetPages():
-            
-            try:
-                
-                page.TestAbleToClose()
-                
-            except HydrusExceptions.PermissionException:
-                
-                return
-                
-            
-        
-        while self._notebook.GetPageCount() > 0:
-            
-            self._CloseCurrentPage( polite = False )
-            
-        
-        self._AppendGUISession( name )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -1965,8 +1692,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.pub( 'wake_daemons' )
         self._controller.pubimmediate( 'refresh_status' )
-        
-        wx.CallAfter( self.RefreshPageName )
+        self._controller.pub( 'refresh_page_name' )
         
     
     def _ManageParsingScripts( self ):
@@ -2129,183 +1855,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _MovePage( self, page_index, delta = None, new_index = None ):
-        
-        new_page_index = page_index
-        
-        if delta is not None:
-            
-            new_page_index = page_index + delta
-            
-        
-        if new_index is not None:
-            
-            new_page_index = new_index
-            
-        
-        if new_page_index == page_index:
-            
-            return
-            
-        
-        if 0 <= new_page_index and new_page_index <= self._notebook.GetPageCount() - 1:
-            
-            page_is_selected = self._notebook.GetSelection() == page_index
-            
-            page = self._notebook.GetPage( page_index )
-            name = self._notebook.GetPageText( page_index )
-            
-            self._notebook.RemovePage( page_index )
-            
-            self._notebook.InsertPage( new_page_index, page, name, page_is_selected )
-            
-        
-    
-    def _NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None ):
-        
-        if self._notebook.GetPageCount() + len( self._closed_pages ) >= 128:
-            
-            self._DeleteAllClosedPages()
-            
-        
-        if self._notebook.GetPageCount() >= 128:
-            
-            HydrusData.ShowText( 'The client cannot have more than 128 pages open! For system stability reasons, please close some now!' )
-            
-            return
-            
-        
-        if self._notebook.GetPageCount() == 120:
-            
-            HydrusData.ShowText( 'You have 120 pages open! You can only open a few more before system stability is affected! Please close some now!' )
-            
-        
-        self._controller.ResetIdleTimer()
-        self._controller.ResetPageChangeTimer()
-        
-        if initial_hashes is None:
-            
-            initial_hashes = []
-            
-        
-        page = ClientGUIPages.Page( self._notebook, self._controller, management_controller, initial_hashes )
-        
-        if forced_insertion_index is None:
-            
-            if self._next_new_page_index is None:
-                
-                insertion_index = self._GetDefaultPageInsertionIndex()
-                
-            else:
-                
-                insertion_index = self._next_new_page_index
-                
-                self._next_new_page_index = None
-                
-            
-        else:
-            
-            insertion_index = forced_insertion_index
-            
-        
-        page_name = 'page'
-        
-        self._notebook.InsertPage( insertion_index, page, page_name, select = True )
-        
-        wx.CallAfter( page.SetSearchFocus )
-        wx.CallAfter( self.RefreshPageName, page.GetPageKey() )
-        
-    
-    def _NewPageDuplicateFilter( self ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerDuplicateFilter()
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPageImportBooru( self ):
-
-        with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                gallery_identifier = dlg.GetGalleryIdentifier()
-                
-                self._NewPageImportGallery( gallery_identifier )
-                
-            
-        
-    
-    def _NewPageImportGallery( self, gallery_identifier ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPageImportPageOfImages( self ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPageImportThreadWatcher( self, thread_url = None ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher( thread_url )
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPageImportURLs( self ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportURLs()
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPagePetitions( self, service_key ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
-        
-        self._NewPage( management_controller )
-        
-    
-    def _NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
-        
-        if initial_hashes is None:
-            
-            initial_hashes = []
-            
-        
-        if initial_predicates is None:
-            
-            initial_predicates = []
-            
-        
-        if page_name is None:
-            
-            page_name = 'files'
-            
-        
-        search_enabled = len( initial_hashes ) == 0
-        
-        new_options = self._controller.GetNewOptions()
-        
-        tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
-        
-        if not self._controller.services_manager.ServiceExists( tag_service_key ):
-            
-            tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        file_search_context = ClientSearch.FileSearchContext( file_service_key = file_service_key, tag_service_key = tag_service_key, predicates = initial_predicates )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
-        
-        self._NewPage( management_controller, initial_hashes = initial_hashes )
-        
-    
     def _OpenDBFolder( self ):
         
         HydrusPaths.LaunchDirectory( self._controller.GetDBDir() )
@@ -2370,11 +1919,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             elif action == 'new_page':
                 
-                self._ChooseNewPage()
+                self._notebook.ChooseNewPageForDeepestNotebook()
                 
             if action == 'close_page':
                 
-                self._CloseCurrentPage()
+                self._notebook.CloseCurrentPage()
                 
             elif action == 'unclose_page':
                 
@@ -2438,7 +1987,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _Refresh( self ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
@@ -2448,22 +1997,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _RefreshStatusBar( self ):
         
-        if self._media_status_override is not None:
+        if not self._notebook or not self._statusbar:
             
-            media_status = self._media_status_override
+            return
+            
+        
+        page = self._notebook.GetCurrentMediaPage()
+        
+        if page is None:
+            
+            media_status = ''
             
         else:
             
-            page = self._GetCurrentMediaPage()
-            
-            if page is None:
-                
-                media_status = ''
-                
-            else:
-                
-                media_status = page.GetPrettyStatus()
-                
+            media_status = page.GetPrettyStatus()
             
         
         if self._controller.CurrentlyIdle():
@@ -2557,34 +2104,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _RenamePage( self, selection ):
-        
-        if selection == -1 or selection > self._notebook.GetPageCount() - 1:
-            
-            return
-            
-
-        page = self._notebook.GetPage( selection )
-        
-        management_controller = page.GetManagementController()
-        
-        current_name = management_controller.GetPageName()
-        
-        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                new_name = dlg.GetValue()
-                
-                new_name = self._notebook.EscapeMnemonics( new_name )
-                
-                management_controller.SetPageName( new_name )
-                
-                self.RefreshPageName( page.GetPageKey() )
-                
-            
-        
-    
     def _ReviewBandwidth( self ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
@@ -2601,66 +2120,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         panel = ClientGUIScrolledPanelsReview.ReviewServicesPanel( frame, self._controller )
         
         frame.SetPanel( panel )
-        
-    
-    def _SaveGUISession( self, name = None ):
-        
-        if name is None:
-            
-            while True:
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        name = dlg.GetValue()
-                        
-                        if name in ( 'just a blank page', 'last session' ):
-                            
-                            wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
-                            
-                        else:
-                            
-                            existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
-                            
-                            if name in existing_session_names:
-                                
-                                message = 'Session \'' + name + '\' already exists! Do you want to overwrite it?'
-                                
-                                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no, choose another name' ) as yn_dlg:
-                                    
-                                    if yn_dlg.ShowModal() != wx.ID_YES:
-                                        
-                                        continue
-                                        
-                                    
-                                
-                            
-                            break
-                            
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            
-        
-        session = ClientGUIPages.GUISession( name )
-        
-        for page in self._GetPages():
-            
-            management_controller = page.GetManagementController()
-            
-            hashes = list( page.GetHashes() )
-            
-            session.AddPage( management_controller, hashes )
-            
-        
-        self._controller.Write( 'serialisable', session )
-        
-        self._controller.pub( 'notify_new_sessions' )
         
     
     def _SetPassword( self ):
@@ -2688,7 +2147,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetMediaFocus( self ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
@@ -2698,7 +2157,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetSearchFocus( self ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
@@ -2708,7 +2167,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetSynchronisedWait( self ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
@@ -2801,32 +2260,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _ShowHideSplitters( self ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
             page.ShowHideSplit()
-            
-        
-    
-    def _ShowPage( self, showee ):
-        
-        for ( i, page ) in enumerate( self._GetPages() ):
-            
-            if isinstance( page, wx.Notebook ) and page.HasPage( page ):
-                
-                self._notebook.SetSelection( i )
-                
-                page.ShowPage( page )
-                
-                break
-                
-            elif page == showee:
-                
-                self._notebook.SetSelection( i )
-                
-                break
-                
             
         
     
@@ -2906,6 +2344,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.gui_report_mode = not HG.gui_report_mode
             
+        elif name == 'network_report_mode':
+            
+            HG.network_report_mode = not HG.network_report_mode
+            
         elif name == 'pubsub_profile_mode':
             
             HG.pubsub_profile_mode = not HG.pubsub_profile_mode
@@ -2930,14 +2372,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with self._lock:
             
-            ( time_closed, index, name, page ) = self._closed_pages.pop( closed_page_index )
+            ( time_closed, page ) = self._closed_pages.pop( closed_page_index )
             
         
-        page.Show()
-        
-        index = min( index, self._notebook.GetPageCount() )
-        
-        self._notebook.InsertPage( index, page, name, True )
+        self._controller.pub( 'notify_page_unclosed', page )
         
         self._controller.pub( 'notify_new_undo' )
         
@@ -3285,13 +2723,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._closed_pages = []
             
-            for ( time_closed, index, name, page ) in old_closed_pages:
+            for ( time_closed, page ) in old_closed_pages:
                 
-                if time_closed + timeout < now: deletee_pages.append( page )
-                else: self._closed_pages.append( ( time_closed, index, name, page ) )
+                if time_closed + timeout < now:
+                    
+                    deletee_pages.append( page )
+                    
+                else:
+                    
+                    self._closed_pages.append( ( time_closed, page ) )
+                    
                 
             
-            if len( old_closed_pages ) != len( self._closed_pages ): self._controller.pub( 'notify_new_undo' )
+            if len( old_closed_pages ) != len( self._closed_pages ):
+                
+                self._controller.pub( 'notify_new_undo' )
+                
             
         
         self._DestroyPages( deletee_pages )
@@ -3300,6 +2747,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def CurrentlyBusy( self ):
         
         return False
+        
+    
+    def DeleteAllClosedPages( self ):
+        
+        with self._lock:
+            
+            deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
+            
+            self._closed_pages = []
+            
+        
+        self._DestroyPages( deletee_pages )
+        
+        self._focus_holder.SetFocus()
+        
+        self._controller.pub( 'notify_new_undo' )
         
     
     def EventCharHook( self, event ):
@@ -3339,7 +2802,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFocus( self, event ):
         
-        page = self._GetCurrentMediaPage()
+        page = self._notebook.GetCurrentMediaPage()
         
         if page is not None:
             
@@ -3349,156 +2812,37 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFrameNewPage( self, event ):
         
-        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        screen_position = self.ClientToScreen( event.GetPosition() )
+        new_position = self._notebook.ScreenToClient( screen_position )
         
-        if flags == wx.NB_HITTEST_NOWHERE:
-            
-            self._ChooseNewPage()
-            
+        self._notebook.EventNewPageFromMousePosition( new_position )
         
     
     def EventFrameNotebookMenu( self, event ):
         
-        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
+        screen_position = self.ClientToScreen( event.GetPosition() )
+        new_position = self._notebook.ScreenToClient( screen_position )
         
-        if flags == wx.NB_HITTEST_NOWHERE:
-            
-            self.EventNotebookMenu( event )
-            
-        
-    
-    def EventNotebookLeftDoubleClick( self, event ):
-        
-        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
-        
-        if tab_index == wx.NOT_FOUND:
-            
-            self._ChooseNewPage()
-            
-        
-    
-    def EventNotebookMenu( self, event ):
-        
-        num_pages = self._notebook.GetPageCount()
-        
-        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
-        
-        click_over_tab = tab_index != -1
-        
-        end_index = num_pages - 1
-        
-        menu = wx.Menu()
-        
-        if tab_index != -1:
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
-            
-            if num_pages > 1:
-                
-                can_close_left = tab_index > 0
-                can_close_right = tab_index < end_index
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
-                
-                if can_close_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
-                    
-                
-                if can_close_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
-                    
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
-            
-            more_than_one_tab = num_pages > 1
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-        
-        ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
-        
-        if click_over_tab:
-            
-            if more_than_one_tab:
-                
-                can_home = tab_index > 1
-                can_move_left = tab_index > 0
-                can_move_right = tab_index < end_index
-                can_end = tab_index < end_index - 1
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
-                
-                ClientGUIMenus.AppendSeparator( menu )
-                
-                if can_home:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to left end', 'Move this page all the way to the left.', self._MovePage, tab_index, new_index = 0 )
-                    
-                
-                if can_move_left:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._MovePage, tab_index, delta = -1 )
-                    
-                
-                if can_move_right:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._MovePage, tab_index, 1 )
-                    
-                
-                if can_end:
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._MovePage, tab_index, new_index = end_index )
-                    
-                
-            
-        
-        self._controller.PopupMenu( self, menu )
-        
-    
-    def EventNotebookMiddleClick( self, event ):
-        
-        ( tab_index, flags ) = self._notebook.HitTest( ( event.GetX(), event.GetY() ) )
-        
-        if tab_index == wx.NOT_FOUND:
-            
-            self._ChooseNewPage()
-            
-        else:
-            
-            self._ClosePage( tab_index )
-            
-        
-    
-    def EventNotebookPageChanged( self, event ):
-        
-        old_selection = event.GetOldSelection()
-        selection = event.GetSelection()
-        
-        if old_selection != -1: self._notebook.GetPage( old_selection ).PageHidden()
-        
-        if selection != -1: self._notebook.GetPage( selection ).PageShown()
-        
-        self._RefreshStatusBar()
-        
-        event.Skip( True )
+        self._notebook.EventMenuFromMousePosition( new_position )
         
     
     def TIMEREventBandwidth( self, event ):
         
-        current_usage = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT ).GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT )
         
-        if current_usage == 0:
+        boot_time = self._controller.GetBootTime()
+        
+        time_since_boot = max( 1, HydrusData.GetNow() - boot_time )
+        
+        usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
+        
+        bandwidth_status = HydrusData.ConvertIntToBytes( usage_since_boot )
+        
+        current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        
+        if current_usage > 0:
             
-            bandwidth_status = ''
-            
-        else:
-            
-            bandwidth_status = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
+            bandwidth_status += ' (' + HydrusData.ConvertIntToBytes( current_usage ) + '/s)'
             
         
         self._statusbar.SetStatusText( bandwidth_status, number = 1 )
@@ -3536,10 +2880,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             try:
                 
-                for page in self._GetPages():
-                    
-                    page.TestAbleToClose()
-                    
+                self._notebook.TestAbleToClose()
                 
             except HydrusExceptions.PermissionException:
                 
@@ -3554,18 +2895,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         try:
             
-            self._SaveGUISession( 'last session' )
+            self._notebook.SaveGUISession( 'last session' )
             
             self._message_manager.CleanBeforeDestroy()
             
             self._message_manager.Hide()
             
-            for page in self._GetPages():
-                
-                page.CleanBeforeDestroy()
-                
+            self._notebook.CleanBeforeDestroy()
             
-            page = self._GetCurrentMediaPage()
+            page = self._notebook.GetCurrentMediaPage()
             
             if page is not None:
                 
@@ -3638,7 +2976,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def GetCurrentPage( self ):
         
-        return self._GetCurrentMediaPage()
+        return self._notebook.GetCurrentMediaPage()
+        
+    
+    def GetTotalPageCounts( self ):
+        
+        total_active_page_count = self._notebook.GetNumPages()
+        
+        total_closed_page_count = len( self._closed_pages )
+        
+        return ( total_active_page_count, total_closed_page_count )
         
     
     def IShouldRegularlyUpdate( self, window ):
@@ -3673,34 +3020,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             # change this when thread watchers can support multiple sub-pages etc...
             
-            self._NewPageImportThreadWatcher( url )
+            self._notebook.NewPageImportThreadWatcher( url )
             
         else:
             
-            if True not in ( page.IsURLImportPage() for page in self._GetMediaPages() ):
-                
-                self._NewPageImportURLs()
-                
+            page = self._notebook.GetOrMakeURLImportPage()
             
-            for page in self._GetMediaPages():
+            if page is not None:
                 
-                if page.IsURLImportPage():
-                    
-                    self._ShowPage( page )
-                    
-                    page_key = page.GetPageKey()
-                    
-                    HG.client_controller.pub( 'set_page_url_input', page_key, url )
-                    
-                    break
-                    
+                self._notebook.ShowPage( page )
+                
+                page_key = page.GetPageKey()
+                
+                HG.client_controller.pub( 'set_page_url_input', page_key, url )
                 
             
         
     
     def IsCurrentPage( self, page_key ):
         
-        result = self._GetCurrentMediaPage()
+        result = self._notebook.GetCurrentMediaPage()
         
         if result is None:
             
@@ -3712,37 +3051,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def NewPageDuplicateFilter( self ):
-        
-        self._NewPageDuplicateFilter()
-        
-    
-    def NewPageImportBooru( self ):
-        
-        self._NewPageImportBooru()
-        
-    
-    def NewPageImportGallery( self, site_type ):
-        
-        gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
-        
-        self._NewPageImportGallery( gallery_identifier )
-        
-    
     def NewPageImportHDD( self, paths, import_file_options, paths_to_tags, delete_after_success ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success )
         
-        self._NewPage( management_controller )
+        self._notebook.NewPage( management_controller )
         
-    
-    def NewPageImportPageOfImages( self ): self._NewPageImportPageOfImages()
-    
-    def NewPageImportThreadWatcher( self ): self._NewPageImportThreadWatcher()
-    
-    def NewPageImportURLs( self ): self._NewPageImportURLs()
-    
-    def NewPagePetitions( self, service_key ): self._NewPagePetitions( service_key )
     
     def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
         
@@ -3756,14 +3070,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name )
+        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name )
         
     
-    def NewSimilarTo( self, file_service_key, hash, hamming_distance ):
+    def NotifyClosedPage( self, page ):
         
-        initial_predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, ( hash, hamming_distance ) ) ]
+        close_time = HydrusData.GetNow()
         
-        self._NewPageQuery( file_service_key, initial_predicates = initial_predicates )
+        self._closed_pages.append( ( close_time, page ) )
+        
+        if self._notebook.GetNumPages() == 0:
+            
+            self._focus_holder.SetFocus()
+            
         
     
     def NotifyNewOptions( self ):
@@ -3822,13 +3141,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with self._lock:
             
-            for ( time_closed, index, name, page ) in self._closed_pages:
+            for ( time_closed, page ) in self._closed_pages:
                 
                 try:
                     
                     if page.GetPageKey() == page_key:
                         
                         return True
+                        
                     
                 except wx.PyDeadObjectError:
                     
@@ -3907,53 +3227,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._dirty_menus = set()
         
     
-    def RefreshPageName( self, page_key = None ):
-        
-        if page_key is None:
-            
-            pages_and_indices = [ ( self._notebook.GetPage( index ), index ) for index in range( self._notebook.GetPageCount() ) ]
-            
-        else:
-            
-            try:
-                
-                pages_and_indices = [ self._GetPageAndIndex( page_key ) ]
-                
-            except HydrusExceptions.DataMissing:
-                
-                return
-                
-            
-        
-        for ( page, index ) in pages_and_indices:
-            
-            management_controller = page.GetManagementController()
-            
-            page_name = management_controller.GetPageName()
-            
-            max_page_name_chars = self._new_options.GetInteger( 'max_page_name_chars' )
-            
-            if len( page_name ) > max_page_name_chars:
-                
-                page_name = page_name[ : max_page_name_chars ] + u'\u2026'
-                
-            
-            page_file_count_display = self._new_options.GetInteger( 'page_file_count_display' )
-            
-            if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and management_controller.IsImporter() ):
-                
-                num_files = page.GetNumFiles()
-                
-                page_name += ' (' + HydrusData.ConvertIntToPrettyString( num_files ) + ')'
-                
-            
-            if self._notebook.GetPageText( index ) != page_name:
-                
-                self._notebook.SetPageText( index, page_name )
-                
-            
-        
-    
     def RefreshStatusBar( self ):
         
         self._RefreshStatusBar()
@@ -3963,7 +3236,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if HC.options[ 'default_gui_session' ] == 'last session':
             
-            self._SaveGUISession( 'last session' )
+            self._notebook.SaveGUISession( 'last session' )
             
         
         wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )

@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientData
+import ClientDefaults
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIFrames
@@ -313,9 +314,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
         self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
         
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 14 ), ( 'this month', 14 ), ( 'has specific rules', 20 ) ], self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'this month', 12 ), ( 'has specific rules', 18 ), ( 'blocked?', 10 ) ], self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
         
         self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
+        
+        self._reset_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
         
         default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowDefaultRulesHelp )
         default_rules_help_button.SetToolTipString( 'Show help regarding default bandwidth rules.' )
@@ -347,6 +350,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         button_hbox.AddF( self._edit_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
+        button_hbox.AddF( self._reset_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( default_rules_help_button, CC.FLAGS_VCENTER )
         button_hbox.AddF( self._delete_record_button, CC.FLAGS_VCENTER )
         
@@ -393,7 +397,18 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_has_rules = ''
             
         
-        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules ) )
+        blocked = not self._controller.network_engine.bandwidth_manager.CanDoWork( [ network_context ] )
+        
+        if blocked:
+            
+            pretty_blocked = 'yes'
+            
+        else:
+            
+            pretty_blocked = ''
+            
+        
+        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules, pretty_blocked ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules, blocked ) )
         
     
     def _DeleteNetworkContexts( self ):
@@ -438,6 +453,19 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         self._controller.network_engine.bandwidth_manager.SetRules( network_context, bandwidth_rules )
                         
                     
+                
+            
+        
+    
+    def _ResetDefaultBandwidthRules( self ):
+        
+        message = 'Reset your \'default\' and \'global\' bandwidth rules to default?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                ClientDefaults.SetDefaultBandwidthManagerRules( self._controller.network_engine.bandwidth_manager )
                 
             
         

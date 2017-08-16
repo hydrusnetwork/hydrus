@@ -243,6 +243,11 @@ class HydrusController( object ):
             
         
     
+    def GetBootTime( self ):
+        
+        return self._timestamps[ 'boot' ]
+        
+    
     def GetDBDir( self ):
         
         return self.db_dir

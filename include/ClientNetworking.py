@@ -1112,6 +1112,23 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def _CanStartRequest( self, network_contexts ):
+        
+        for network_context in network_contexts:
+            
+            bandwidth_rules = self._GetRules( network_context )
+            
+            bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
+            
+            if not bandwidth_rules.CanStartRequest( bandwidth_tracker ):
+                
+                return False
+                
+            
+        
+        return True
+        
+    
     def _GetRules( self, network_context ):
         
         if network_context not in self._network_contexts_to_bandwidth_rules:
@@ -1152,6 +1169,16 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def _ReportRequestUsed( self, network_contexts ):
+        
+        for network_context in network_contexts:
+            
+            self._network_contexts_to_bandwidth_trackers[ network_context ].ReportRequestUsed()
+            
+        
+        self._SetDirty()
+        
+    
     def _SetDirty( self ):
         
         self._dirty = True
@@ -1177,7 +1204,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanDoWork( self, network_contexts, expected_requests, expected_bytes ):
+    def CanDoWork( self, network_contexts, expected_requests = 3, expected_bytes = 1048576 ):
         
         with self._lock:
             
@@ -1201,19 +1228,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            for network_context in network_contexts:
-                
-                bandwidth_rules = self._GetRules( network_context )
-                
-                bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
-                
-                if not bandwidth_rules.CanStartRequest( bandwidth_tracker ):
-                    
-                    return False
-                    
-                
-            
-            return True
+            return self._CanStartRequest( network_contexts )
             
         
     
@@ -1281,7 +1296,23 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            result = []
+            result = set()
+            
+            for ( network_context, bandwidth_rules ) in self._network_contexts_to_bandwidth_rules.items():
+                
+                if network_context.IsDefault() or network_context.IsEphemeral():
+                    
+                    continue
+                    
+                
+                # if a context has rules but no activity, list it so the user can edit the rules if needed
+                # in case they set too restrictive rules on an old context and now can't get it up again with activity because of the rules!
+                
+                if network_context not in self._network_contexts_to_bandwidth_trackers or self._network_contexts_to_bandwidth_trackers[ network_context ].GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None ) == 0:
+                    
+                    result.add( network_context )
+                    
+                
             
             for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
                 
@@ -1298,7 +1329,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                result.append( network_context )
+                result.add( network_context )
                 
             
             return result
@@ -1379,12 +1410,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            for network_context in network_contexts:
-                
-                self._network_contexts_to_bandwidth_trackers[ network_context ].ReportRequestUsed()
-                
-            
-            self._SetDirty()
+            self._ReportRequestUsed( network_contexts )
             
         
     
@@ -1413,6 +1439,23 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
             
             self._SetDirty()
+            
+        
+    
+    def TryToStartRequest( self, network_contexts ):
+        
+        # this wraps canstart and reportrequest in one transaction to stop 5/1 rq/s happening due to race condition
+        
+        with self._lock:
+            
+            if not self._CanStartRequest( network_contexts ):
+                
+                return False
+                
+            
+            self._ReportRequestUsed( network_contexts )
+            
+            return True
             
         
     
@@ -1715,6 +1758,8 @@ class NetworkEngine( object ):
                 
             else:
                 
+                job.SetStatus( u'waiting for download slot\u2026' )
+                
                 return True
                 
             
@@ -1771,6 +1816,11 @@ class NetworkJob( object ):
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
         
+        if HG.network_report_mode:
+            
+            HydrusData.ShowText( 'Network Job: ' + method + ' ' + url )
+            
+        
         self.engine = None
         
         self._lock = threading.Lock()
@@ -1781,6 +1831,8 @@ class NetworkJob( object ):
         self._referral_url = referral_url
         self._temp_path = temp_path
         self._for_login = for_login
+        
+        self._creation_time = HydrusData.GetNow()
         
         self._bandwidth_tracker = HydrusNetworking.BandwidthTracker()
         
@@ -1844,8 +1896,6 @@ class NetworkJob( object ):
             try:
                 
                 with self._lock:
-                    
-                    self._ReportRequestUsed()
                     
                     self._status_text = u'sending request\u2026'
                     
@@ -1984,13 +2034,6 @@ class NetworkJob( object ):
         self.engine.bandwidth_manager.ReportDataUsed( self._network_contexts, num_bytes )
         
     
-    def _ReportRequestUsed( self ):
-        
-        self._bandwidth_tracker.ReportRequestUsed()
-        
-        self.engine.bandwidth_manager.ReportRequestUsed( self._network_contexts )
-        
-    
     def _SetCancelled( self ):
         
         self._is_cancelled = True
@@ -2030,15 +2073,19 @@ class NetworkJob( object ):
             
             if self._ObeysBandwidth():
                 
-                result = self.engine.bandwidth_manager.CanStartRequest( self._network_contexts )
+                result = self.engine.bandwidth_manager.TryToStartRequest( self._network_contexts )
                 
-                if not result:
+                if result:
+                    
+                    self._bandwidth_tracker.ReportRequestUsed()
+                    
+                else:
                     
                     waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
                     
-                    if waiting_duration <= 1:
+                    if waiting_duration < 1:
                         
-                        self._status_text = ''
+                        self._status_text = u'bandwidth free imminently\u2026'
                         
                     else:
                         
@@ -2066,6 +2113,10 @@ class NetworkJob( object ):
                 return result
                 
             else:
+                
+                self._bandwidth_tracker.ReportRequestUsed()
+                
+                self.engine.bandwidth_manager.ReportRequestUsed( self._network_contexts )
                 
                 return True
                 
@@ -2119,6 +2170,14 @@ class NetworkJob( object ):
             self._stream_io.seek( 0 )
             
             return self._stream_io.read()
+            
+        
+    
+    def GetCreationTime( self ):
+        
+        with self._lock:
+            
+            return self._creation_time
             
         
     
@@ -2211,6 +2270,11 @@ class NetworkJob( object ):
     def NoEngineYet( self ):
         
         return self.engine is None
+        
+    
+    def ObeysBandwidth( self ):
+        
+        return self._ObeysBandwidth()
         
     
     def OverrideBandwidth( self ):

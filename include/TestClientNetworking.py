@@ -452,6 +452,8 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 job = self._GetJob()
                 
+                job.BandwidthOK()
+                
                 job.Start()
                 
                 bm = job.engine.bandwidth_manager

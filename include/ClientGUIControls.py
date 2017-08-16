@@ -350,6 +350,8 @@ class NetworkJobControl( wx.Panel ):
         self._network_job = None
         self._download_started = False
         
+        self._auto_override_bandwidth_rules = False
+        
         self._left_text = ClientGUICommon.BetterStaticText( self )
         self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
         
@@ -360,6 +362,25 @@ class NetworkJobControl( wx.Panel ):
         
         self._gauge = ClientGUICommon.Gauge( self )
         
+        menu_items = []
+        
+        invert_call = self.FlipOverrideBandwidthForCurrentJob
+        value_call = self.CurrentJobOverridesBandwidth
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
+        
+        menu_items.append( ( 'check', 'override bandwidth rules for this job', 'Tell the current job to ignore existing bandwidth rules and go ahead anyway.', check_manager ) )
+        
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
+        invert_call = self.FlipAutoOverrideBandwidth
+        value_call = self.AutoOverrideBandwidth
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
+        
+        menu_items.append( ( 'check', 'auto-override bandwidth rules for all jobs here after five seconds', 'Ignore existing bandwidth rules for all jobs under this control, instead waiting a flat five seconds.', check_manager ) )
+        
+        self._cog_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.cog, menu_items )
         self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.Cancel )
         
         #
@@ -381,6 +402,7 @@ class NetworkJobControl( wx.Panel ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.AddF( left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.AddF( self._cog_button, CC.FLAGS_VCENTER )
         hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
@@ -404,6 +426,11 @@ class NetworkJobControl( wx.Panel ):
             can_cancel = False
             
         else:
+            
+            if self._auto_override_bandwidth_rules and HydrusData.TimeHasPassed( self._network_job.GetCreationTime() + 5 ):
+                
+                self._network_job.OverrideBandwidth()
+                
             
             if self._network_job.IsDone():
                 
@@ -471,6 +498,11 @@ class NetworkJobControl( wx.Panel ):
             
         
     
+    def AutoOverrideBandwidth( self ):
+        
+        return self._auto_override_bandwidth_rules
+        
+    
     def Cancel( self ):
         
         if self._network_job is not None:
@@ -488,6 +520,31 @@ class NetworkJobControl( wx.Panel ):
             self._Update()
             
             self._update_timer.Stop()
+            
+        
+    
+    def CurrentJobOverridesBandwidth( self ):
+        
+        if self._network_job is None:
+            
+            return None
+            
+        else:
+            
+            return not self._network_job.ObeysBandwidth()
+            
+        
+    
+    def FlipAutoOverrideBandwidth( self ):
+        
+        self._auto_override_bandwidth_rules = not self._auto_override_bandwidth_rules
+        
+    
+    def FlipOverrideBandwidthForCurrentJob( self ):
+        
+        if self._network_job is not None:
+            
+            self._network_job.OverrideBandwidth()
             
         
     

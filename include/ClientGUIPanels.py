@@ -450,7 +450,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def __init__( self, parent, service ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'clientside network' )
+            ClientGUICommon.StaticBox.__init__( self, parent, 'this client\'s network use' )
             
             self._service = service
             
@@ -530,7 +530,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def __init__( self, parent, service ):
             
-            ClientGUICommon.StaticBox.__init__( self, parent, 'serverside hydrus account' )
+            ClientGUICommon.StaticBox.__init__( self, parent, 'hydrus service account' )
             
             self._service = service
             

@@ -624,74 +624,132 @@ class TestClientDB( unittest.TestCase ):
     
     def test_gui_sessions( self ):
         
-        session = ClientGUIPages.GUISession( 'test_session' )
+        test_frame = wx.Frame( None )
         
-        gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
-        
-        session.AddPage( management_controller, [] )
-        
-        service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
-        
-        session.AddPage( management_controller, [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
-        
-        session.AddPage( management_controller, [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
-        
-        session.AddPage( management_controller, [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerPetitions( CC.LOCAL_TAG_SERVICE_KEY ) # local because the controller wants to look up the service
-        
-        session.AddPage( management_controller, [] )
-        
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', HydrusData.GenerateKey(), fsc, True )
-        
-        session.AddPage( management_controller, [] )
-        
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), tag_service_key = HydrusData.GenerateKey(), predicates = [] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', HydrusData.GenerateKey(), fsc, False )
-        
-        session.AddPage( management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
-        
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', HydrusData.GenerateKey(), fsc, True )
-        
-        session.AddPage( management_controller, [] )
-        
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', HydrusData.GenerateKey(), fsc, True )
-        
-        session.AddPage( management_controller, [] )
-        
-        fsc = ClientSearch.FileSearchContext( file_service_key = HydrusData.GenerateKey(), predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, HydrusData.GenerateKey() ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, HydrusData.GenerateKey() ) ) ] )
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', HydrusData.GenerateKey(), fsc, True )
-        
-        session.AddPage( management_controller, [] )
-        
-        self._write( 'serialisable', session )
-        
-        result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
-        
-        page_names = []
-        
-        for ( management_controller, initial_hashes ) in result.IteratePages():
+        try:
             
-            page_names.append( management_controller.GetPageName() )
+            session = ClientGUIPages.GUISession( 'test_session' )
             
-        
-        self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'page download', u'local tags petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
+            #
+            
+            gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
+            
+            management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher()
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerPetitions( HG.test_controller.example_tag_repo_service_key )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [] )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, tag_service_key = CC.LOCAL_TAG_SERVICE_KEY, predicates = [] )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'search', CC.LOCAL_FILE_SERVICE_KEY, fsc, False )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [ HydrusData.GenerateKey() for i in range( 200 ) ] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.SYSTEM_PREDICATE_ARCHIVE ] )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, 'tag', min_current_count = 1, min_pending_count = 3 ) ] )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'wew lad', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            fsc = ClientSearch.FileSearchContext( file_service_key = CC.LOCAL_FILE_SERVICE_KEY, predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING, ( '>', 0.2, TestConstants.LOCAL_RATING_NUMERICAL_SERVICE_KEY ) ), ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( True, HC.CONTENT_STATUS_CURRENT, CC.LOCAL_FILE_SERVICE_KEY ) ) ] )
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerQuery( 'files', CC.LOCAL_FILE_SERVICE_KEY, fsc, True )
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            self._write( 'serialisable', session )
+            
+            result = self._read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION, 'test_session' )
+            
+            page_names = []
+            
+            for ( page_type, page_data ) in result.GetPages():
+                
+                if page_type == 'page':
+                    
+                    ( management_controller, initial_hashes ) = page_data
+                    
+                    page_names.append( management_controller.GetPageName() )
+                    
+                
+            
+            self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'page download', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
+            
+        finally:
+            
+            test_frame.Destroy()
+            
         
     
     def test_import( self ):

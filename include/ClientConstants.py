@@ -29,7 +29,7 @@ COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
 COLOUR_MESSAGE = wx.Colour( 230, 246, 255 )
 
-SHORTCUT_HELP = '''You can set up many custom shortcuts in file->options->shortcuts. Please check that to see your current mapping.
+SHORTCUT_HELP = '''You can set up many custom shortcuts in file->shortcuts. Please check that to see your current mapping.
 
 Some shortcuts remain hardcoded, however:
 

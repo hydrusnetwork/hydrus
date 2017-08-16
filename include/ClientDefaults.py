@@ -7,13 +7,11 @@ import HydrusNetworking
 import os
 import wx
 
-def GetDefaultBandwidthManager():
+def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     KB = 1024
     MB = 1024 ** 2
     GB = 1024 ** 3
-    
-    bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
     
     #
     
@@ -81,10 +79,6 @@ def GetDefaultBandwidthManager():
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ), rules )
-    
-    #
-    
-    return bandwidth_manager
     
 def GetClientDefaultOptions():
     

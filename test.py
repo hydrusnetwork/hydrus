@@ -92,6 +92,10 @@ class Controller( object ):
         self._reads[ 'messaging_sessions' ] = []
         self._reads[ 'tag_censorship' ] = []
         self._reads[ 'options' ] = ClientDefaults.GetClientDefaultOptions()
+        self._reads[ 'file_system_predicates' ] = []
+        self._reads[ 'media_results' ] = []
+        
+        self.example_tag_repo_service_key = HydrusData.GenerateKey()
         
         services = []
         
@@ -100,6 +104,8 @@ class Controller( object ):
         services.append( ClientServices.GenerateService( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, CC.LOCAL_FILE_SERVICE_KEY ) )
         services.append( ClientServices.GenerateService( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, CC.LOCAL_FILE_SERVICE_KEY ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, CC.LOCAL_TAG_SERVICE_KEY ) )
+        services.append( ClientServices.GenerateService( self.example_tag_repo_service_key, HC.TAG_REPOSITORY, 'example tag repo' ) )
+        services.append( ClientServices.GenerateService( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, CC.COMBINED_TAG_SERVICE_KEY ) )
         services.append( ClientServices.GenerateService( TestConstants.LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'example local rating like service' ) )
         services.append( ClientServices.GenerateService( TestConstants.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'example local rating numerical service' ) )
         
@@ -197,6 +203,11 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
+    def DBCurrentlyDoingJob( self ):
+        
+        return False
+        
+    
     def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
     
     def GetClientSessionManager( self ):
@@ -245,6 +256,11 @@ class Controller( object ):
         return True
         
     
+    def IsCurrentPage( self, page_key ):
+        
+        return False
+        
+    
     def IsFirstStart( self ):
         
         return True
@@ -258,6 +274,16 @@ class Controller( object ):
     def ModelIsShutdown( self ):
         
         return HG.model_shutdown
+        
+    
+    def PageCompletelyDestroyed( self, page_key ):
+        
+        return False
+        
+    
+    def PageClosedButNotDestroyed( self, page_key ):
+        
+        return False
         
     
     def Read( self, name, *args, **kwargs ):
@@ -313,11 +339,25 @@ class Controller( object ):
         runner.run( suite )
         
     
-    def SetHTTP( self, http ): self._http = http
+    def SetHTTP( self, http ):
+        
+        self._http = http
+        
     
-    def SetRead( self, name, value ): self._reads[ name ] = value
+    def SetRead( self, name, value ):
+        
+        self._reads[ name ] = value
+        
     
-    def SetWebCookies( self, name, value ): self._cookies[ name ] = value
+    def SetWebCookies( self, name, value ):
+        
+        self._cookies[ name ] = value
+        
+    
+    def StartFileQuery( self, page_key, job_key, search_context ):
+        
+        pass
+        
     
     def TidyUp( self ):
         
@@ -329,6 +369,11 @@ class Controller( object ):
     def ViewIsShutdown( self ):
         
         return HG.view_shutdown
+        
+    
+    def WaitUntilPubSubsEmpty( self ):
+        
+        pass
         
     
     def Write( self, name, *args, **kwargs ):

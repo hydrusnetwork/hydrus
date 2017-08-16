@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<ul>
+				<li><h3>version 269</h3></li>
+					<li>nested pages now supported!</li>
+					<li>moved all page management (session load/save, new/close page, page navigation, page name maintenance, etc...) code from the main gui to the new PagesNotebook object</li>
+					<li>expanded the session object to hold nested page information</li>
+					<li>added a 'page of pages' page to the 'special' new page entry!</li>
+					<li>numerous other gui-notebook page-related event fixes and improvements</li>
+					<li>figured out cross-platform menu and other mouse event support for nested notebooks, but there may still be holes--please let me know if your new pages ever appear in the wrong tier!</li>
+					<li>ways to move pages up and down rows will come in the coming weeks!</li>
+					<li>main gui status bar now shows total bandwidth this session as well as current speed</li>
+					<li>added a cog button to network job controls that allow for manual- and auto-bandwidth-override</li>
+					<li>added a 'blocked?' column to the review bandwidth panel to quickly see which network contexts are currently available to do work</li>
+					<li>added a button to reset 'default' and 'global' bandwidth rules to review bandwidth panel</li>
+					<li>merged the network request start test and consumption code into one transaction, stopping some accidental overconsumption when the engine was under heavy load</li>
+					<li>did some logic work to make sure unusual network context rule/usage situations are visible on the review bandwidth panel for editing</li>
+					<li>network jobs now report more information as they get ready to start, including while they are held up waiting for a download slot</li>
+					<li>added a simple 'network profile mode' to the debug menu that atm just prints a summary of new jobs</li>
+					<li>fixed an error that could sometimes be a crash when 'review services' was opened while no pages were open in the main gui</li>
+					<li>fixed the pixiv login test button with a hacky workaround--I will make extensive proper login testing gui when I move to the login engine</li>
+					<li>fixed an issue in the youtube downloader</li>
+					<li>if the bandwidth or session managers are missing on boot, empty defaults will be created in their stead</li>
+					<li>bumped the max page limit up to 150--I expect to increase it more in the coming months as I rejigger how some gui stuff is laid out</li>
+					<li>renamed 'sort by age' to 'time imported'</li>
+					<li>fixed and improved some test code</li>
+					<li>cleaned up some shutdown code</li>
+					<li>should have fixed a rare unicode conversion issue when printing to log</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 268</h3></li>
 				<ul>
 					<li>split the sort dropdown into two, splitting the sort type and sort order</li>

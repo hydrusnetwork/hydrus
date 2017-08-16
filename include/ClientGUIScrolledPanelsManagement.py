@@ -615,7 +615,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def __init__( self, parent, service_type, dictionary ):
                 
-                ClientGUICommon.StaticBox.__init__( self, parent, 'clientside network' )
+                ClientGUICommon.StaticBox.__init__( self, parent, 'network connection' )
                 
                 self._service_type = service_type
                 

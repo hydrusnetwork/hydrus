@@ -577,7 +577,25 @@ class Controller( HydrusController.HydrusController ):
         #
         
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+        
+        if bandwidth_manager is None:
+            
+            bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            
+            ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
+            
+            wx.MessageBox( 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
         session_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER )
+        
+        if session_manager is None:
+            
+            session_manager = ClientNetworking.NetworkSessionManager()
+            
+            wx.MessageBox( 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
         login_manager = ClientNetworking.NetworkLoginManager()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, login_manager )

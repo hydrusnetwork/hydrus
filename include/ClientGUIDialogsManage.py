@@ -2889,11 +2889,18 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
             
             manager = HG.client_controller.GetManager( 'web_sessions' )
             
-            cookies = manager.GetPixivCookies( pixiv_id, password )
+            ( result, message ) = manager.TestPixiv( pixiv_id, password )
             
-            self._status.SetLabelText( 'OK!' )
-            
-            wx.CallLater( 5000, self._status.SetLabel, '' )
+            if result:
+                
+                self._status.SetLabelText( 'OK!' )
+                
+                wx.CallLater( 5000, self._status.SetLabel, '' )
+                
+            else:
+                
+                self._status.SetLabelText( message )
+                
             
         except HydrusExceptions.ForbiddenException as e:
             
