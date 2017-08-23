@@ -205,7 +205,10 @@ def GetResolutionAndNumFrames( path ):
             except: break
             
         
-    except: num_frames = 1
+    except:
+        
+        num_frames = 1
+        
     
     return ( ( x, y ), num_frames )
     

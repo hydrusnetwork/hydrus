@@ -11,9 +11,14 @@ import os
 import re
 import stat
 
-def GenerateExportFilename( media, terms ):
+MAX_PATH_LENGTH = 245 # bit of padding from 255 for .txt neigbouring and other surprises
+
+def GenerateExportFilename( destination_directory, media, terms ):
     
-    mime = media.GetMime()
+    if len( destination_directory ) > ( MAX_PATH_LENGTH - 10 ):
+        
+        raise Exception( 'The destination directory is too long!' )
+        
     
     filename = ''
     
@@ -84,12 +89,27 @@ def GenerateExportFilename( media, terms ):
         filename = re.sub( '/', '_', filename, flags = re.UNICODE )
         
     
+    #
+    
+    mime = media.GetMime()
+    
     ext = HC.mime_ext_lookup[ mime ]
     
-    if not filename.endswith( ext ):
+    if filename.endswith( ext ):
         
-        filename += ext
+        filename = filename[ : - len( ext ) ]
         
+    
+    example_dest_path = os.path.join( destination_directory, filename + ext )
+    
+    excess_chars = len( example_dest_path ) - MAX_PATH_LENGTH
+    
+    if excess_chars > 0:
+        
+        filename = filename[ : - excess_chars ]
+        
+    
+    filename = filename + ext
     
     return filename
     
@@ -299,7 +319,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     source_path = client_files_manager.GetFilePath( hash, mime )
                     
-                    filename = GenerateExportFilename( media_result, terms )
+                    filename = GenerateExportFilename( folder_path, media_result, terms )
                     
                     dest_path = os.path.join( folder_path, filename )
                     

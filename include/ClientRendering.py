@@ -14,9 +14,9 @@ import threading
 import time
 import wx
 
-def GenerateHydrusBitmap( path, compressed = True ):
+def GenerateHydrusBitmap( path, mime, compressed = True ):
     
-    numpy_image = ClientImageHandling.GenerateNumpyImage( path )
+    numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
     
     return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
     
@@ -57,12 +57,12 @@ class ImageRenderer( object ):
         self._media = media
         self._numpy_image = None
         
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
+        self._hash = self._media.GetHash()
+        self._mime = self._media.GetMime()
         
         client_files_manager = HG.client_controller.client_files_manager
         
-        self._path = client_files_manager.GetFilePath( hash, mime )
+        self._path = client_files_manager.GetFilePath( self._hash, self._mime )
         
         HG.client_controller.CallToThread( self._Initialise )
         
@@ -71,7 +71,7 @@ class ImageRenderer( object ):
         
         time.sleep( 0.00001 )
         
-        self._numpy_image = ClientImageHandling.GenerateNumpyImage( self._path )
+        self._numpy_image = ClientImageHandling.GenerateNumpyImage( self._path, self._mime )
         
     
     def GetEstimatedMemoryFootprint( self ):

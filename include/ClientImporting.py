@@ -365,7 +365,7 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WE_CAN_PHASH:
             
-            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path )
+            self._phashes = ClientImageHandling.GenerateShapePerceptualHashes( self._temp_path, mime )
             
         
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )

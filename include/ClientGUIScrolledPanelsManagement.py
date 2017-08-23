@@ -1220,12 +1220,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listbook = ClientGUICommon.ListBook( self )
         
+        self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
         self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
-        self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) )
         #self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook ) )
         self._listbook.AddPage( 'default file system predicates', 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
@@ -1663,6 +1663,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._external_host = wx.TextCtrl( self )
             self._external_host.SetToolTipString( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
+            self._network_timeout = wx.SpinCtrl( self, min = 3, max = 300 )
+            self._network_timeout.SetToolTipString( 'If a network connection experiences any uninterrupted inactivity for this duration, it will throw an error.' )
+            
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
             self._proxy_type = ClientGUICommon.BetterChoice( proxy_panel )
@@ -1679,6 +1682,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._external_host.SetValue( HC.options[ 'external_host' ] )
                 
+            
+            self._new_options = HG.client_controller.GetNewOptions()
+            
+            self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
             
             self._proxy_type.Append( 'http', 'http' )
             self._proxy_type.Append( 'socks4', 'socks4' )
@@ -1730,11 +1737,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             proxy_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
+            proxy_panel.Hide() # proxy settings no longer in use for new engine
+            
             #
             
             rows = []
             
             rows.append( ( 'external ip/host override: ', self._external_host ) )
+            rows.append( ( 'network timeout (seconds): ', self._network_timeout ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -1774,6 +1784,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             HC.options[ 'external_host' ] = external_host
+            
+            self._new_options.SetInteger( 'network_timeout', self._network_timeout.GetValue() )
             
         
     
@@ -1871,7 +1883,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
-            self._processing_panel = ClientGUICommon.StaticBox( self, 'processing' )
             
             self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
             self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
@@ -1904,11 +1915,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._processing_phase = wx.SpinCtrl( self._processing_panel, min = 0, max = 100000 )
-            self._processing_phase.SetToolTipString( 'how long this client will delay processing updates after they are due. useful if you have multiple clients and do not want them to process at the same time' )
-            
-            #
-            
             self._idle_normal.SetValue( HC.options[ 'idle_normal' ] )
             self._idle_period.SetValue( HC.options[ 'idle_period' ] )
             self._idle_mouse_period.SetValue( HC.options[ 'idle_mouse_period' ] )
@@ -1918,8 +1924,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._idle_shutdown_max_minutes.SetValue( HC.options[ 'idle_shutdown_max_minutes' ] )
             
             self._maintenance_vacuum_period_days.SetValue( self._new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' ) )
-            
-            self._processing_phase.SetValue( HC.options[ 'processing_phase' ] )
             
             #
             
@@ -1975,21 +1979,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'Delay repository update processing by (s): ', self._processing_phase ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self._processing_panel, rows )
-            
-            self._processing_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            #
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2045,8 +2038,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetChoice()
             HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.GetValue()
-            
-            HC.options[ 'processing_phase' ] = self._processing_phase.GetValue()
             
             self._new_options.SetNoneableInteger( 'maintenance_vacuum_period_days', self._maintenance_vacuum_period_days.GetValue() )
             
@@ -2563,7 +2554,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_cv_for_gifs.SetToolTipString( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead.' )
             
             self._load_images_with_pil = wx.CheckBox( self )
-            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but the current release crashes on certain images. You can try turning this off, but switch it back on if you have any problems.' )
+            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images.' )
             
             self._use_system_ffmpeg = wx.CheckBox( self )
             self._use_system_ffmpeg.SetToolTipString( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
@@ -6093,13 +6084,29 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
+        self._only_thumbs = True
+        
+        for ( incorrect_location, prefix ) in missing_locations:
+            
+            if prefix.startswith( 'f' ):
+                
+                self._only_thumbs = False
+                
+            
+        
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
         text += os.linesep * 2
         text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will likely be a simple ctrl+a->correct, but if you have a more complicated system or store your thumbnails different to your files, make sure you skim the whole list. Check everything reports _ok!_'
         text += os.linesep * 2
-        text += 'Then hit \'apply\', and the client will launch. You should double-check your \'preferred\' file storage locations under options->file storage locations immediately.'
+        text += 'Then hit \'apply\', and the client will launch. You should double-check your \'preferred\' file storage locations under database->migrate database immediately.'
         text += os.linesep * 2
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help.'
+        
+        if self._only_thumbs:
+            
+            text += os.linesep * 2
+            text += 'SPECIAL NOTE FOR YOUR SITUATION: The only paths missing are thumbnail paths. If you cannot recover these folders, you can hit apply to create empty paths at the original or corrected locations and then run a maintenance routine to regenerate the thumbnails from their originals.'
+            
         
         st = ClientGUICommon.BetterStaticText( self, text )
         
@@ -6119,6 +6126,8 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._locations.Append( t, t )
             
+        
+        # sort by prefix
         
         #self._locations.SortListItems( 1 ) # subdirs secondary
         #self._locations.SortListItems( 0 ) # missing location primary
@@ -6170,27 +6179,65 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        user_was_warned = False
-        
         correct_rows = []
         
-        for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
+        if self._only_thumbs:
             
-            if correct_location == '':
+            problems = False
+            
+            for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
                 
-                wx.MessageBox( 'You did not correct all the locations!' )
-                
-                raise HydrusExceptions.VetoException()
-                
-            elif ok != 'ok!':
-                
-                wx.MessageBox( 'You did not find all the correct locations!' )
-                
-                raise HydrusExceptions.VetoException()
-                
-            else:
+                if correct_location == '':
+                    
+                    problems = True
+                    
+                    correct_location = incorrect_location
+                    
+                elif ok != 'ok!':
+                    
+                    problems = True
+                    
                 
                 correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+                
+            
+            if problems:
+                
+                message = 'Some or all of your incorrect paths have not been corrected, but they are all thumbnail paths.'
+                message += os.linesep * 2
+                message += 'Would you like instead to create new empty folders at the previous (or corrected, if you have entered them) locations?'
+                message += os.linesep * 2
+                message += 'You can run database->regenerate->all thumbnails to fill them up again.'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        raise HydrusExceptions.VetoException()
+                        
+                    
+                
+            
+        else:
+            
+            for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
+                
+                if correct_location == '':
+                    
+                    wx.MessageBox( 'You did not correct all the locations!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                elif ok != 'ok!':
+                    
+                    wx.MessageBox( 'You did not find all the correct locations!' )
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                else:
+                    
+                    correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+                    
                 
             
         

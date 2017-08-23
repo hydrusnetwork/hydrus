@@ -196,8 +196,6 @@ def GetClientDefaultOptions():
     options[ 'pause_repo_sync' ] = False
     options[ 'pause_subs_sync' ] = False
     
-    options[ 'processing_phase' ] = 0
-    
     options[ 'rating_dialog_position' ] = ( False, None )
     
     return options

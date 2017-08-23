@@ -4027,9 +4027,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
-        HG.client_controller.sub( self, 'Skip', 'canvas_show_next' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
-        HG.client_controller.sub( self, 'Back', 'canvas_show_previous' )
         
         wx.CallAfter( self.SetMedia, self._GetFirst() ) # don't set this until we have a size > (20, 20)!
         
@@ -5418,10 +5416,11 @@ class EmbedButton( wx.Window ):
         if needs_thumb:
             
             hash = self._media.GetHash()
+            mime = self._media.GetMime()
             
             thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
             
-            self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
+            self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
             self._SetDirty()
             
@@ -5446,10 +5445,11 @@ class OpenExternallyPanel( wx.Panel ):
         if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
             
             hash = self._media.GetHash()
+            mime = self._media.GetMime()
             
             thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
             
-            bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path ).GetWxBitmap()
+            bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
             thumbnail = ClientGUICommon.BufferedWindowIcon( self, bmp )
             

@@ -8,8 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 270</h3></li>
 				<ul>
+					<li>?added page tab drag and drop (windows only, have to iron out critical bugs for linux/os x).</li>
+					<li>dragging onto the middle of a normal tab will put the source tab there</li>
+					<li>dragging onto the edge of a tab will try to insert the tab there</li>
+					<li>dragging onto the middle of a page of pages tab will insert the tab onto the end of that page's list</li>
+					<li>dragging a page up a notebook level will work ok</li>
+					<li>dragging a notebook into itself will do nothing and not crash the client :^)</li>
+					<li>new pages that come from the main gui level (such as from pages menu or file import) now open in the deepest open notebook (previously, they would always appear in the top row)</li>
+					<li>fixed some misc page of pages bugs</li>
+					<li>fixed a bandwidth calculation that meant 1s time delta rules were working at 50% capacity (e.g. 1rq per 1s rule for domains were actually running at 1rq per 2s)</li>
+					<li>improved a bandwidth estimate calculation that was cutting out early in some situations for large time deltas</li>
+					<li>tag manager's page up/down shortcuts no longer mistakenly navigate the archive/delete filter</li>
+					<li>added a network timeout option to the 'connection' options page</li>
+					<li>reduced some hover window show/hide flicker when the media viewer is fullscreen and the OS has a taskbar that pops in for non-fullscreen windows (this mostly affected Linux)</li>
+					<li>fixed a long-time issue with yes/no dialog layout</li>
+					<li>improved some rendering of EXIF-rotated and -flipped jpegs. I expect to add more support for this (and retroactive image metadata-parsing to figure out correct reversed resolution--atm rotated images remain stretched) in the coming weeks</li>
+					<li>fixed an error when cancelling the booru-picker dialog from the page chooser dialog</li>
+					<li>if no files or all files are selected, the 'invert' select choice will no longer be shown (in this case, it redundantly does the same job as 'all' and 'none')</li>
+					<li>fixed an issue where setting namespace sort as default would persist through a client reboot</li>
+					<li>fixed an issue where force idle debug mode was not waking sleeping daemons</li>
+					<li>increased frequency of mappings processing reporting</li>
+					<li>wrote an exception and the needed maintenance code for the 'repairfilesystem' dialog to allow a proceed action if the only remaining incorrect paths are thumbnail paths--in this case, the client will create empty prefix folders and prompt the user to regen thumbnails</li>
+					<li>export filenames are now clipped to make <255 total characters in path</li>
+					<li>removed the old 'processing phase' option, which was no longer in use</li>
+					<li>removed the proxy settings from the 'connection' options page--the new engine does not use this old system, but if there is demand, a more flexible system will return</li>
+					<li>misc image rendering pipeline updates</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 269</h3></li>
+				<ul>
 					<li>nested pages now supported!</li>
 					<li>moved all page management (session load/save, new/close page, page navigation, page name maintenance, etc...) code from the main gui to the new PagesNotebook object</li>
 					<li>expanded the session object to hold nested page information</li>

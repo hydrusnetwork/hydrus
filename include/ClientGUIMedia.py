@@ -1730,7 +1730,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.SetScrollRate( 0, thumbnail_span_height )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventSelection )
-        self.Bind( wx.EVT_MOTION, self.EventDragTest )
+        self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseFullScreen )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseFullScreen )
@@ -2342,7 +2342,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def EventDragTest( self, event ):
+    def EventDrag( self, event ):
         
         if event.LeftIsDown() and self._drag_init_coordinates is not None:
             
@@ -2656,8 +2656,11 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
                     
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
+                    if len( self._selected_media ) > 0:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
+                        
+                    
                 
                 if media_has_archive and media_has_inbox:
                     
@@ -3297,8 +3300,11 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
                         
-                    
-                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
+                        if len( self._selected_media ) > 0:
+                            
+                            ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
+                            
+                        
                     
                     if media_has_archive and media_has_inbox:
                         

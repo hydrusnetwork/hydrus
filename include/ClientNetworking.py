@@ -1793,7 +1793,14 @@ class NetworkEngine( object ):
                 self._jobs_downloading = filter( ProcessDownloadingJob, self._jobs_downloading )
                 
             
-            self._new_work_to_do.wait( 1 )
+            # we want to catch the rollover of the second for bandwidth jobs
+            
+            now_with_subsecond = time.time()
+            subsecond_part = now_with_subsecond % 1
+            
+            time_until_next_second = 1.0 - subsecond_part
+            
+            self._new_work_to_do.wait( time_until_next_second )
             
             self._new_work_to_do.clear()
             
@@ -1900,7 +1907,9 @@ class NetworkJob( object ):
                     self._status_text = u'sending request\u2026'
                     
                 
-                response = session.request( method, url, data = data, headers = headers, stream = True, timeout = 10 )
+                timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
+                
+                response = session.request( method, url, data = data, headers = headers, stream = True, timeout = timeout )
                 
                 connection_successful = True
                 
@@ -2083,7 +2092,7 @@ class NetworkJob( object ):
                     
                     waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
                     
-                    if waiting_duration < 1:
+                    if waiting_duration < 2:
                         
                         self._status_text = u'bandwidth free imminently\u2026'
                         

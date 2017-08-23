@@ -1502,7 +1502,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             try:
                                 
-                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path )
+                                phashes = ClientImageHandling.GenerateShapePerceptualHashes( path, mime )
                                 
                             except Exception as e:
                                 
@@ -7315,7 +7315,7 @@ class DB( HydrusDB.HydrusDB ):
     def _ProcessRepositoryContentUpdate( self, job_key, service_id, content_update ):
         
         FILES_CHUNK_SIZE = 20
-        MAPPINGS_CHUNK_SIZE = 10000
+        MAPPINGS_CHUNK_SIZE = 1000
         NEW_TAG_PARENTS_CHUNK_SIZE = 5
         
         total_rows = content_update.GetNumRows()
@@ -8053,6 +8053,10 @@ class DB( HydrusDB.HydrusDB ):
             
             portable_incorrect_location = HydrusPaths.ConvertAbsPathToPortablePath( incorrect_location )
             portable_correct_location = HydrusPaths.ConvertAbsPathToPortablePath( correct_location )
+            
+            full_abs_correct_location = os.path.join( correct_location, prefix )
+            
+            HydrusPaths.MakeSureDirectoryExists( full_abs_correct_location )
             
             self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE location = ? AND prefix = ?;', ( portable_correct_location, portable_incorrect_location, prefix ) )
             

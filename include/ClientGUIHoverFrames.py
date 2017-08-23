@@ -108,11 +108,30 @@ class FullscreenHoverFrame( wx.Frame ):
                 
                 ( should_resize, ( my_ideal_width, my_ideal_height ), ( my_ideal_x, my_ideal_y ) ) = self._GetIdealSizeAndPosition()
                 
-                if my_ideal_width == -1: my_ideal_width = my_width
-                if my_ideal_height == -1: my_ideal_height = my_height
+                if my_ideal_width == -1:
+                    
+                    my_ideal_width = max( my_width, 50 )
+                    
                 
-                in_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
-                in_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
+                if my_ideal_height == -1:
+                    
+                    my_ideal_height = max( my_height, 50 )
+                    
+                
+                ( my_x, my_y ) = self.GetPosition()
+                
+                in_ideal_x = my_ideal_x <= mouse_x and mouse_x <= my_ideal_x + my_ideal_width
+                in_ideal_y = my_ideal_y <= mouse_y and mouse_y <= my_ideal_y + my_ideal_height
+                
+                in_actual_x = my_x <= mouse_x and mouse_x <= my_x + my_width
+                in_actual_y = my_y <= mouse_y and mouse_y <= my_y + my_height
+                
+                # we test both ideal and actual here because setposition is not always honoured by the OS
+                # for instance, in Linux on a fullscreen view, the top taskbar is hidden, but when hover window is shown, it takes focus and causes taskbar to reappear
+                # the reappearance shuffles the screen coordinates down a bit so the hover sits +20px y despite wanting to be lined up with the underlying fullscreen viewer
+                # wew lad
+                
+                in_position = ( in_ideal_x or in_actual_x ) and ( in_ideal_y or in_actual_y )
                 
                 menu_open = HG.client_controller.MenuIsOpen()
                 
@@ -129,8 +148,6 @@ class FullscreenHoverFrame( wx.Frame ):
                     
                 
                 mime = self._current_media.GetMime()
-                
-                in_position = in_x and in_y
                 
                 mouse_is_over_interactable_media = mime == HC.APPLICATION_FLASH and self.GetParent().MouseIsOverMedia()
                 

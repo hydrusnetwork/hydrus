@@ -184,6 +184,8 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                             
                             self.EndModal( wx.ID_CANCEL )
                             
+                            return
+                            
                         
                     
                 elif entry_type == 'page_import_gallery':
@@ -719,6 +721,8 @@ class PagesNotebook( wx.Notebook ):
         
         self._next_new_page_index = None
         
+        self._potential_drag_page = None
+        
         self._closed_pages = []
         
         self._page_key = HydrusData.GenerateKey()
@@ -726,6 +730,12 @@ class PagesNotebook( wx.Notebook ):
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
         
+        if HC.PLATFORM_WINDOWS:
+            
+            self.Bind( wx.EVT_MOTION, self.EventDrag )
+            
+        
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDoubleClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMiddleClick )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMenu )
@@ -819,9 +829,13 @@ class PagesNotebook( wx.Notebook ):
         
         page.PrepareToHide()
         
-        self._closed_pages.append( ( index, page.GetPageKey() ) )
+        page_key = page.GetPageKey()
+        
+        self._closed_pages.append( ( index, page_key ) )
         
         self.RemovePage( index )
+        
+        self._controller.pub( 'refresh_page_name', self._page_key )
         
         self._controller.pub( 'notify_closed_page', page )
         self._controller.pub( 'notify_new_undo' )
@@ -916,35 +930,6 @@ class PagesNotebook( wx.Notebook ):
         return results
         
     
-    def _GetNotebookFromMousePosition( self, position ):
-        
-        current_page = self.GetCurrentPage()
-        
-        if current_page is None or not isinstance( current_page, PagesNotebook ):
-            
-            return ( self, position )
-            
-        else:
-            
-            ( tab_index, flags ) = self.HitTest( position )
-            
-            if tab_index != wx.NOT_FOUND:
-                
-                return ( self, position )
-                
-            
-            if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE: # not on a label but inside my client area
-                
-                screen_position = self.ClientToScreen( position )
-                new_position = current_page.ScreenToClient( screen_position )
-                
-                return current_page._GetNotebookFromMousePosition( new_position )
-                
-            
-        
-        return ( self, position )
-        
-    
     def _GetIndex( self, page_key ):
         
         for ( page, index ) in ( ( self.GetPage( index ), index ) for index in range( self.GetPageCount() ) ):
@@ -958,9 +943,58 @@ class PagesNotebook( wx.Notebook ):
         raise HydrusExceptions.DataMissing()
         
     
+    def _GetNotebookFromScreenPosition( self, screen_position ):
+        
+        current_page = self.GetCurrentPage()
+        
+        if current_page is None or not isinstance( current_page, PagesNotebook ):
+            
+            return self
+            
+        else:
+            
+            position = self.ScreenToClient( screen_position )
+            
+            ( tab_index, flags ) = self.HitTest( position )
+            
+            if tab_index != wx.NOT_FOUND:
+                
+                return self
+                
+            
+            if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE: # not on a label but inside my client area
+                
+                return current_page._GetNotebookFromScreenPosition( screen_position )
+                
+            
+        
+        return self
+        
+    
     def _GetPages( self ):
         
         return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
+        
+    
+    def _GetPageFromPageKey( self, page_key ):
+        
+        for page in self._GetPages():
+            
+            if page.GetPageKey() == page_key:
+                
+                return page
+                
+            
+            if isinstance( page, PagesNotebook ):
+                
+                if page.HasPageKey( page_key ):
+                    
+                    return page._GetPageFromPageKey( page_key )
+                    
+                
+            
+        
+        return None
         
     
     def _MovePage( self, page_index, delta = None, new_index = None ):
@@ -1056,7 +1090,9 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def _ShowMenu( self, position ):
+    def _ShowMenu( self, screen_position ):
+        
+        position = self.ScreenToClient( screen_position )
         
         ( tab_index, flags ) = self.HitTest( position )
         
@@ -1258,6 +1294,50 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def EventDrag( self, event ):
+        
+        if event.LeftIsDown() and self._potential_drag_page is not None:
+            
+            drop_source = wx.DropSource( self )
+            
+            data_object = wx.DataObjectComposite()
+            
+            #
+            
+            hydrus_page_tab_data_object = wx.CustomDataObject( 'application/hydrus-page-tab' )
+            
+            data = self._potential_drag_page.GetPageKey()
+            
+            hydrus_page_tab_data_object.SetData( data )
+            
+            data_object.Add( hydrus_page_tab_data_object, True )
+            
+            #
+            
+            drop_source.SetData( data_object )
+            
+            drop_source.DoDragDrop()
+            
+            self._potential_drag_page = None
+            
+        
+    
+    def EventLeftDown( self, event ):
+        
+        position = event.GetPosition()
+        
+        ( tab_index, flags ) = self.HitTest( position )
+        
+        if tab_index != -1:
+            
+            page = self.GetPage( tab_index )
+            
+            self._potential_drag_page = page
+            
+        
+        event.Skip()
+        
+    
     def EventLeftDoubleClick( self, event ):
         
         position = event.GetPosition()
@@ -1268,9 +1348,11 @@ class PagesNotebook( wx.Notebook ):
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                ( notebook, new_position ) = self._GetNotebookFromMousePosition( position )
+                screen_position = self.ClientToScreen( position )
                 
-                notebook.EventNewPageMousePosition( new_position )
+                notebook = self._GetNotebookFromScreenPosition( screen_position )
+                
+                notebook.EventNewPageFromScreenPosition( screen_position )
                 
             else:
                 
@@ -1281,27 +1363,33 @@ class PagesNotebook( wx.Notebook ):
     
     def EventMenu( self, event ):
         
-        self._ShowMenu( event.GetPosition() )
+        screen_position = self.ClientToScreen( event.GetPosition() )
+        
+        self._ShowMenu( screen_position )
         
     
-    def EventMenuFromMousePosition( self, position ):
+    def EventMenuFromScreenPosition( self, position ):
         
-        ( notebook, new_position ) = self._GetNotebookFromMousePosition( position )
+        notebook = self._GetNotebookFromScreenPosition( position )
         
         notebook._ShowMenu( position )
         
     
     def EventMiddleClick( self, event ):
         
-        ( tab_index, flags ) = self.HitTest( event.GetPosition() )
+        position = event.GetPosition()
+        
+        ( tab_index, flags ) = self.HitTest( position )
         
         if tab_index == wx.NOT_FOUND:
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                ( notebook, new_position ) = self._GetNotebookFromMousePosition( event.GetPosition() )
+                screen_position = self.ClientToScreen( position )
                 
-                notebook.EventNewPageFromMousePosition( new_position )
+                notebook = self._GetNotebookFromScreenPosition( screen_position )
+                
+                notebook.EventNewPageFromScreenPosition( screen_position )
                 
             else:
                 
@@ -1314,9 +1402,9 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def EventNewPageFromMousePosition( self, position ):
+    def EventNewPageFromScreenPosition( self, position ):
         
-        ( notebook, new_position ) = self._GetNotebookFromMousePosition( position )
+        notebook = self._GetNotebookFromScreenPosition( position )
         
         notebook._ChooseNewPage()
         
@@ -1421,7 +1509,7 @@ class PagesNotebook( wx.Notebook ):
         
         # import page does not exist
         
-        return self.NewPageImportURLs()
+        return self.NewPageImportURLs( on_deepest_notebook = True )
         
     
     def GetPageKey( self ):
@@ -1500,27 +1588,39 @@ class PagesNotebook( wx.Notebook ):
         self.AppendGUISession( name )
         
     
-    def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None ):
+    def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False ):
         
-        MAX_TOTAL_PAGES = 150
+        current_page = self.GetCurrentPage()
         
-        ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
-        
-        if total_active_page_count + total_closed_page_count >= MAX_TOTAL_PAGES:
+        if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
-            self._controller.gui.DeleteAllClosedPages()
-            
-        
-        if total_active_page_count >= MAX_TOTAL_PAGES:
-            
-            HydrusData.ShowText( 'The client cannot have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open! For system stability reasons, please close some now!' )
+            current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
             return
             
         
-        if total_active_page_count == MAX_TOTAL_PAGES - 5:
+        if not HG.no_page_limit_mode:
             
-            HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before system stability is affected! Please close some now!' )
+            MAX_TOTAL_PAGES = 150
+            
+            ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
+            
+            if total_active_page_count + total_closed_page_count >= MAX_TOTAL_PAGES:
+                
+                self._controller.gui.DeleteAllClosedPages()
+                
+            
+            if total_active_page_count >= MAX_TOTAL_PAGES:
+                
+                HydrusData.ShowText( 'The client cannot have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open! For system stability reasons, please close some now!' )
+                
+                return
+                
+            
+            if total_active_page_count == MAX_TOTAL_PAGES - 5:
+                
+                HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before system stability is affected! Please close some now!' )
+                
             
         
         self._controller.ResetIdleTimer()
@@ -1563,14 +1663,14 @@ class PagesNotebook( wx.Notebook ):
         return page
         
     
-    def NewPageDuplicateFilter( self ):
+    def NewPageDuplicateFilter( self, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerDuplicateFilter()
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportBooru( self ):
+    def NewPageImportBooru( self, on_deepest_notebook = False ):
         
         with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
             
@@ -1578,47 +1678,47 @@ class PagesNotebook( wx.Notebook ):
                 
                 gallery_identifier = dlg.GetGalleryIdentifier()
                 
-                return self.NewPageImportGallery( gallery_identifier )
+                return self.NewPageImportGallery( gallery_identifier, on_deepest_notebook = on_deepest_notebook )
                 
             
         
     
-    def NewPageImportGallery( self, gallery_identifier ):
+    def NewPageImportGallery( self, gallery_identifier, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportPageOfImages( self ):
+    def NewPageImportPageOfImages( self, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportThreadWatcher( self, thread_url = None ):
+    def NewPageImportThreadWatcher( self, thread_url = None, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher( thread_url )
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportURLs( self ):
+    def NewPageImportURLs( self, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportURLs()
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPagePetitions( self, service_key ):
+    def NewPagePetitions( self, service_key, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerPetitions( service_key )
         
-        return self.NewPage( management_controller )
+        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
+    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False ):
         
         if initial_hashes is None:
             
@@ -1650,10 +1750,19 @@ class PagesNotebook( wx.Notebook ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
         
-        return self.NewPage( management_controller, initial_hashes = initial_hashes )
+        return self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None ):
+    def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False ):
+        
+        current_page = self.GetCurrentPage()
+        
+        if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
+            
+            current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
+            
+            return
+            
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()
@@ -1730,6 +1839,135 @@ class PagesNotebook( wx.Notebook ):
             
             result.PageShown()
             
+        
+    
+    def PageDragAndDropDropped( self, page_key ):
+        
+        page = self._GetPageFromPageKey( page_key )
+        
+        if page is None:
+            
+            return
+            
+        
+        source_notebook = page.GetParent()
+        
+        screen_position = wx.GetMousePosition()
+        
+        dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
+        
+        ( x, y ) = dest_notebook.ScreenToClient( screen_position )
+        
+        ( tab_index, flags ) = dest_notebook.HitTest( ( x, y ) )
+        
+        EDGE_PADDING = 10
+        
+        ( left_tab_index, gumpf ) = dest_notebook.HitTest( ( x - EDGE_PADDING, y ) )
+        ( right_tab_index, gumpf ) = dest_notebook.HitTest( ( x + EDGE_PADDING, y ) )
+        
+        landed_near_left_edge = left_tab_index != tab_index
+        landed_near_right_edge = right_tab_index != tab_index
+        
+        landed_on_edge = landed_near_right_edge or landed_near_left_edge
+        landed_in_middle = not landed_on_edge
+        
+        there_is_a_page_to_the_left = tab_index > 0
+        there_is_a_page_to_the_right = tab_index < dest_notebook.GetPageCount() - 1
+        
+        page_on_left_is_source = there_is_a_page_to_the_left and dest_notebook.GetPage( tab_index - 1 ) == page
+        page_on_right_is_source = there_is_a_page_to_the_right and dest_notebook.GetPage( tab_index + 1 ) == page
+        
+        if tab_index == wx.NOT_FOUND:
+            
+            # if it isn't dropped on anything, put it on the end
+            
+            tab_index = dest_notebook.GetPageCount()
+            
+            if tab_index > 0:
+                
+                if dest_notebook.GetPage( tab_index - 1 ) == page:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            # dropped on source and not on the right edge: do nothing
+            
+            landee_page = dest_notebook.GetPage( tab_index )
+            
+            if landee_page == page:
+                
+                if landed_near_right_edge and there_is_a_page_to_the_right:
+                    
+                    tab_index += 1
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            # dropped just to the left of source: do nothing
+            
+            if landed_near_right_edge and page_on_right_is_source:
+                
+                return
+                
+            
+            # dropped on left side of an edge: insert on right side
+            
+            if landed_near_right_edge:
+                
+                tab_index += 1
+                
+            
+            if landed_in_middle and isinstance( landee_page, PagesNotebook ):
+                
+                dest_notebook = landee_page
+                tab_index = dest_notebook.GetPageCount()
+                
+            
+        
+        if dest_notebook == page or ClientGUICommon.IsWXAncestor( dest_notebook, page ):
+            
+            # can't drop a notebook beneath itself!
+            return
+            
+        
+        #
+        
+        insertion_tab_index = tab_index
+        
+        for ( index, p ) in enumerate( source_notebook._GetPages() ):
+            
+            if p == page:
+                
+                if source_notebook == dest_notebook and index + 1 < insertion_tab_index:
+                    
+                    # we are just about to remove it from earlier in the same list, which shuffles the inserting index up one
+                    
+                    insertion_tab_index -= 1
+                    
+                
+                source_notebook.RemovePage( index )
+                
+                break
+                
+            
+        
+        if source_notebook != dest_notebook:
+            
+            page.Reparent( dest_notebook )
+            
+        
+        dest_notebook.InsertPage( insertion_tab_index, page, 'page' )
+        
+        self.ShowPage( page )
+        
+        self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         
     
     def PrepareToHide( self ):

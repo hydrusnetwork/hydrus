@@ -1840,9 +1840,11 @@ class ThumbnailCache( object ):
                 
             
         
+        mime = display_media.GetMime()
+        
         try:
             
-            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
+            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
             
         except Exception as e:
             
@@ -1854,7 +1856,7 @@ class ThumbnailCache( object ):
                 
                 try:
                     
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
                     
                 except Exception as e:
                     
@@ -1887,7 +1889,7 @@ class ThumbnailCache( object ):
             
             self._controller.client_files_manager.RegenerateResizedThumbnail( hash )
             
-            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path )
+            hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
             
         
         return hydrus_bitmap
@@ -1937,7 +1939,7 @@ class ThumbnailCache( object ):
                         f.write( thumbnail )
                         
                     
-                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_PNG )
                     
                     self._special_thumbs[ name ] = hydrus_bitmap
                     

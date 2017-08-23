@@ -429,14 +429,35 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         ( window, counter ) = self._GetWindowAndCounter( bandwidth_type, time_delta )
         
-        # we need the 'window' because this tracks brackets from the first timestamp and we want to include if 'since' lands anywhere in the bracket
-        # e.g. if it is 1200 and we want the past 1,000, we also need the bracket starting at 0, which will include 200-999
-        
-        time_delta += window
-        
-        since = HydrusData.GetNow() - time_delta
-        
-        return sum( ( value for ( key, value ) in counter.items() if key >= since ) )
+        if time_delta == 1:
+            
+            # the case of 1 poses a problem as our min block width is also 1. we can't have a window of 0.1s to make the transition smooth
+            # if we include the last second's data in an effort to span the whole previous 1000ms, we end up not doing anything until the next second rolls over
+            # this causes 50% consumption as we consume in the second after the one we verified was clear
+            # so, let's just check the current second and be happy with it
+            
+            now = HydrusData.GetNow()
+            
+            if now in counter:
+                
+                return counter[ now ]
+                
+            else:
+                
+                return 0
+                
+            
+        else:
+            
+            # we need the 'window' because this tracks brackets from the first timestamp and we want to include if 'since' lands anywhere in the bracket
+            # e.g. if it is 1200 and we want the past 1,000, we also need the bracket starting at 0, which will include 200-999
+            
+            search_time_delta = time_delta + window
+            
+            since = HydrusData.GetNow() - search_time_delta
+            
+            return sum( ( value for ( timestamp, value ) in counter.items() if timestamp >= since ) )
+            
         
     
     def _GetTimes( self, dt ):
@@ -615,6 +636,8 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 ( window, counter ) = self._GetWindowAndCounter( bandwidth_type, time_delta )
                 
+                time_delta_in_which_bandwidth_counts = time_delta + window
+                
                 time_and_values = counter.items()
                 
                 time_and_values.sort( reverse = True )
@@ -626,7 +649,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                     
                     current_search_time_delta = now - timestamp
                     
-                    if current_search_time_delta > time_delta: # we are searching beyond our time delta. no need to wait
+                    if current_search_time_delta > time_delta_in_which_bandwidth_counts: # we are searching beyond our time delta. no need to wait
                         
                         break
                         
@@ -635,7 +658,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                     
                     if usage >= max_allowed:
                         
-                        return time_delta - current_search_time_delta
+                        return time_delta_in_which_bandwidth_counts - current_search_time_delta
                         
                     
                 

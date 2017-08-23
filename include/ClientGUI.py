@@ -71,8 +71,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL ) )
-        
         bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 17 )
         idle_width = ClientData.ConvertTextToPixelWidth( self, 6 )
         system_busy_width = ClientData.ConvertTextToPixelWidth( self, 13 )
@@ -91,6 +89,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._lock = threading.Lock()
         
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
+        
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL, self._notebook.PageDragAndDropDropped ) )
         
         wx.GetApp().SetTopWindow( self )
         
@@ -278,7 +278,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._controller.SetServices( all_services )
             
-            HydrusData.ShowText( 'Auto repo setup done! Check services->review services to see your new services.' )
+            message = 'Auto repo setup done! Check services->review services to see your new services.'
+            message += os.linesep * 2
+            message += 'The PTR has a lot of tags and will sync a little bit at a time when you are not using the client. Expect it to take a few weeks to sync fully.'
+            
+            HydrusData.ShowText( message )
             
         
         text = 'This will attempt to set up your client with my repositories\' credentials, letting you tag on the public tag repository and see some files.'
@@ -1010,12 +1014,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             petition_resolvable_repositories = [ repository for repository in repositories if True in ( repository.HasPermission( content_type, action ) for ( content_type, action ) in petition_permissions ) ]
             
-            ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY )
-            ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'my files', 'Open a new search tab for your files.', self._notebook.NewPageQuery, CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, search_menu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, CC.TRASH_SERVICE_KEY, on_deepest_notebook = True )
             
             for service in file_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey() )
+                ClientGUIMenus.AppendMenuItem( self, search_menu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, service.GetServiceKey(), on_deepest_notebook = True )
                 
             
             ClientGUIMenus.AppendMenu( menu, search_menu, 'new search page' )
@@ -1028,7 +1032,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 for service in petition_resolvable_repositories:
                     
-                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey() )
+                    ClientGUIMenus.AppendMenuItem( self, petition_menu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook = True )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, petition_menu, 'new petition page' )
@@ -1038,23 +1042,23 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._notebook.NewPageImportURLs )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportPageOfImages )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._notebook.NewPageImportURLs, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportPageOfImages, on_deepest_notebook = True )
             
             gallery_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._notebook.NewPageImportBooru )
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._notebook.NewPageImportBooru, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ), on_deepest_notebook = True )
             
             hf_submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ), on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ), on_deepest_notebook = True )
             
             ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
             
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
@@ -1062,13 +1066,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 pixiv_submenu = wx.Menu()
                 
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ) )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ), on_deepest_notebook = True )
+                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ), on_deepest_notebook = True )
                 
                 ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ) )
+            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ), on_deepest_notebook = True )
             
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
             ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
@@ -1092,8 +1096,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             special_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self._notebook.NewPagesNotebook )
-            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._notebook.NewPageDuplicateFilter )
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self._notebook.NewPagesNotebook, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._notebook.NewPageDuplicateFilter, on_deepest_notebook = True )
             
             ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
             
@@ -1417,6 +1421,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
             
             ClientGUIMenus.AppendMenu( debug, debug_modes, 'modes' )
             
@@ -1637,7 +1642,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if load_a_blank_page:
             
-            self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            self._notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, on_deepest_notebook = True )
             
         else:
             
@@ -2356,6 +2361,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.force_idle_mode = not HG.force_idle_mode
             
+            self._controller.pub( 'wake_daemons' )
+            self._controller.pubimmediate( 'refresh_status' )
+            
+        elif name == 'no_page_limit_mode':
+            
+            HG.no_page_limit_mode = not HG.no_page_limit_mode
+            
         
     
     def _UnclosePage( self, closed_page_index = None ):
@@ -2813,17 +2825,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def EventFrameNewPage( self, event ):
         
         screen_position = self.ClientToScreen( event.GetPosition() )
-        new_position = self._notebook.ScreenToClient( screen_position )
         
-        self._notebook.EventNewPageFromMousePosition( new_position )
+        self._notebook.EventNewPageFromScreenPosition( screen_position )
         
     
     def EventFrameNotebookMenu( self, event ):
         
         screen_position = self.ClientToScreen( event.GetPosition() )
-        new_position = self._notebook.ScreenToClient( screen_position )
         
-        self._notebook.EventMenuFromMousePosition( new_position )
+        self._notebook.EventMenuFromScreenPosition( screen_position )
         
     
     def TIMEREventBandwidth( self, event ):
@@ -3020,7 +3030,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             # change this when thread watchers can support multiple sub-pages etc...
             
-            self._notebook.NewPageImportThreadWatcher( url )
+            self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
             
         else:
             
@@ -3055,7 +3065,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success )
         
-        self._notebook.NewPage( management_controller )
+        self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
     
     def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
@@ -3070,7 +3080,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name )
+        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True )
         
     
     def NotifyClosedPage( self, page ):

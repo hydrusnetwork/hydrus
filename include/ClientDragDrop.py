@@ -3,20 +3,23 @@ import wx
 
 class FileDropTarget( wx.PyDropTarget ):
     
-    def __init__( self, filenames_callable = None, url_callable = None ):
+    def __init__( self, filenames_callable = None, url_callable = None, page_callable = None ):
         
         wx.PyDropTarget.__init__( self )
         
         self._filenames_callable = filenames_callable
         self._url_callable = url_callable
+        self._page_callable = page_callable
         
         self._receiving_data_object = wx.DataObjectComposite()
         
         self._hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
+        self._hydrus_page_tab_data_object = wx.CustomDataObject( 'application/hydrus-page-tab' )
         self._file_data_object = wx.FileDataObject()
         self._text_data_object = wx.TextDataObject()
         
         self._receiving_data_object.Add( self._hydrus_media_data_object, True )
+        self._receiving_data_object.Add( self._hydrus_page_tab_data_object )
         self._receiving_data_object.Add( self._file_data_object )
         self._receiving_data_object.Add( self._text_data_object )
         
@@ -57,6 +60,13 @@ class FileDropTarget( wx.PyDropTarget ):
                 if format_id == 'application/hydrus-media':
                     
                     pass
+                    
+                
+                if format_id == 'application/hydrus-page-tab' and self._page_callable is not None:
+                    
+                    page_key = self._hydrus_page_tab_data_object.GetData()
+                    
+                    self._page_callable( page_key )
                     
                 
             

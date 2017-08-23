@@ -466,14 +466,6 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def ForceIdle( self ):
-        
-        HG.force_idle_mode = not HG.force_idle_mode
-        
-        self.pub( 'wake_daemons' )
-        self.pubimmediate( 'refresh_status' )
-        
-    
     def GetApp( self ):
         
         return self._app

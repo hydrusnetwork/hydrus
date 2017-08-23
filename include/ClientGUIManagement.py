@@ -436,7 +436,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             with open( temp_path, 'wb' ) as f: f.write( jpeg )
             
-            self._bitmap = ClientRendering.GenerateHydrusBitmap( temp_path )
+            self._bitmap = ClientRendering.GenerateHydrusBitmap( temp_path, HC.IMAGE_JPEG )
             
         finally:
             

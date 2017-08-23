@@ -14,6 +14,7 @@ gui_report_mode = False
 network_report_mode = False
 pubsub_profile_mode = False
 force_idle_mode = False
+no_page_limit_mode = False
 server_busy = False
 
 do_idle_shutdown_work = False

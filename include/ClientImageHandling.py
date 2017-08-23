@@ -1,16 +1,19 @@
 import numpy.core.multiarray # important this comes before cv!
 import ClientConstants as CC
 import cv2
+import HydrusConstants as HC
 import HydrusImageHandling
 import HydrusGlobals as HG
 
 if cv2.__version__.startswith( '2' ):
     
-    IMREAD_UNCHANGED = cv2.CV_LOAD_IMAGE_UNCHANGED
+    CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.CV_LOAD_IMAGE_UNCHANGED
+    CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.CV_LOAD_IMAGE_ANYDEPTH | cv2.CV_LOAD_IMAGE_ANYCOLOR
     
 else:
     
-    IMREAD_UNCHANGED = cv2.IMREAD_UNCHANGED
+    CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.IMREAD_UNCHANGED
+    CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR # this preserves colour info but does EXIF reorientation and flipping
     
 cv_interpolation_enum_lookup = {}
 
@@ -41,7 +44,7 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     return cv2.resize( numpy_image, ( target_x, target_y ), interpolation = cv2.INTER_AREA )
     
-def GenerateNumpyImage( path ):
+def GenerateNumpyImage( path, mime ):
     
     if HG.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
         
@@ -54,7 +57,16 @@ def GenerateNumpyImage( path ):
         
     else:
         
-        numpy_image = cv2.imread( path, flags = IMREAD_UNCHANGED )
+        if mime == HC.IMAGE_JPEG:
+            
+            flags = CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION
+            
+        else:
+            
+            flags = CV_IMREAD_FLAGS_SUPPORTS_ALPHA
+            
+        
+        numpy_image = cv2.imread( path, flags = flags )
         
         if numpy_image is None: # doesn't support static gifs and some random other stuff
             
@@ -109,9 +121,9 @@ def GenerateNumPyImageFromPILImage( pil_image ):
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
     
-def GenerateShapePerceptualHashes( path ):
+def GenerateShapePerceptualHashes( path, mime ):
     
-    numpy_image = GenerateNumpyImage( path )
+    numpy_image = GenerateNumpyImage( path, mime )
     
     ( y, x, depth ) = numpy_image.shape
     

@@ -830,7 +830,7 @@ class DialogInputLocalFiles( Dialog ):
         
         Dialog.__init__( self, parent, 'importing files' )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self._AddPathsToList, None ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( filenames_callable = self._AddPathsToList ) )
         
         listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
         
@@ -3229,7 +3229,7 @@ class DialogSetupExport( Dialog ):
         
         directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
         
-        filename = ClientExporting.GenerateExportFilename( media, terms )
+        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
         
         return os.path.join( directory, filename )
         
@@ -3595,7 +3595,7 @@ class DialogYesNo( Dialog ):
         
         text.Wrap( 480 )
         
-        vbox.AddF( text, CC.FLAGS_BIG_INDENT )
+        vbox.AddF( text, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )

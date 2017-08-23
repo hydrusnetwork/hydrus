@@ -392,7 +392,10 @@ def GetSortTypeChoices():
 
     sort_choices = list( CC.SORT_CHOICES )
     
-    sort_choices.extend( HC.options[ 'sort_by' ] )
+    for ( namespaces_text, namespaces_list ) in HC.options[ 'sort_by' ]:
+        
+        sort_choices.append( ( namespaces_text, tuple( namespaces_list ) ) )
+        
     
     service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) )
     
@@ -851,6 +854,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'max_page_name_chars' ] = 20
         self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
+        
+        self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
         
         #
         
