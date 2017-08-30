@@ -2824,14 +2824,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def EventFrameNewPage( self, event ):
         
-        screen_position = self.ClientToScreen( event.GetPosition() )
+        if self._controller.MenuIsOpen():
+            
+            return
+            
+        
+        screen_position = wx.GetMousePosition()
         
         self._notebook.EventNewPageFromScreenPosition( screen_position )
         
     
     def EventFrameNotebookMenu( self, event ):
         
-        screen_position = self.ClientToScreen( event.GetPosition() )
+        screen_position = wx.GetMousePosition()
         
         self._notebook.EventMenuFromScreenPosition( screen_position )
         
@@ -2848,7 +2853,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         bandwidth_status = HydrusData.ConvertIntToBytes( usage_since_boot )
         
-        current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
         if current_usage > 0:
             
@@ -3343,7 +3348,7 @@ class FrameSplash( wx.Frame ):
             
             ( old_x, old_y ) = self._last_drag_coordinates
             
-            ( x, y ) = event.GetPosition()
+            ( x, y ) = wx.GetMousePosition()
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
@@ -3361,7 +3366,7 @@ class FrameSplash( wx.Frame ):
     
     def EventDragBegin( self, event ):
         
-        self._last_drag_coordinates = event.GetPosition()
+        self._last_drag_coordinates = wx.GetMousePosition()
         
         event.Skip()
         

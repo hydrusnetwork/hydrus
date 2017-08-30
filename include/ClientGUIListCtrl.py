@@ -547,7 +547,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self.Bind( wx.EVT_LIST_COL_CLICK, self.EventColumnClick )
         
     
-    def _AddDataInfo( self, data_info, select = False ):
+    def _AddDataInfo( self, data_info ):
         
         ( data, display_tuple, sort_tuple ) = data_info
         
@@ -555,11 +555,6 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._indices_to_data_info[ index ] = data_info
         self._data_to_indices[ data ] = index
-        
-        if select:
-            
-            self.Select( index )
-            
         
     
     def _GetSelected( self ):
@@ -580,12 +575,14 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def _RecalculateIndicesAfterDelete( self ):
         
-        sorted_data_info = self._SortDataInfo()
+        indices_and_data_info = list( self._indices_to_data_info.items() )
+        
+        indices_and_data_info.sort()
         
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        for ( index, data_info ) in enumerate( sorted_data_info ):
+        for ( index, ( old_index, data_info ) ) in enumerate( indices_and_data_info ):
             
             ( data, display_tuple, sort_tuple ) = data_info
             
@@ -612,34 +609,53 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def _SortAndRefreshRows( self ):
         
-        scroll_pos = self.GetScrollPos( wx.VERTICAL )
-        
         selected_data = self.GetData( only_selected = True )
         
-        self.DeleteAllItems()
+        selected_indices = self._GetSelected()
+        
+        for selected_index in selected_indices:
+            
+            self.Select( selected_index, False )
+            
         
         sorted_data_info = self._SortDataInfo()
         
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        for data_info in sorted_data_info:
+        for ( index, data_info ) in enumerate( sorted_data_info ):
+            
+            self._indices_to_data_info[ index ] = data_info
             
             ( data, display_tuple, sort_tuple ) = data_info
             
-            select = data in selected_data
+            self._data_to_indices[ data ] = index
             
-            self._AddDataInfo( data_info, select = select )
+            self._UpdateRow( index, display_tuple )
             
-        
-        self.SetScrollPos( wx.VERTICAL, scroll_pos )
+            if data in selected_data:
+                
+                self.Select( index )
+                
+            
         
     
-    def AddData( self, data, select = False ):
+    def _UpdateRow( self, index, display_tuple ):
         
-        ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+        for ( column_index, value ) in enumerate( display_tuple ):
+            
+            self.SetStringItem( index, column_index, value )
+            
         
-        self._AddDataInfo( ( data, display_tuple, sort_tuple ), select = select )
+    
+    def AddDatas( self, datas ):
+        
+        for data in datas:
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+            self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
+            
         
     
     def DeleteDatas( self, datas ):
@@ -658,6 +674,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
         self._RecalculateIndicesAfterDelete()
+        
         
     
     def DeleteSelected( self ):
@@ -820,10 +837,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         if len( datas_to_add ) > 0:
             
-            for data in datas_to_add:
-                
-                self.AddData( data )
-                
+            self.AddDatas( datas_to_add )
             
             self._SortAndRefreshRows()
             
@@ -858,10 +872,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
                 self._indices_to_data_info[ index ] = data_info
                 
-                for ( column_index, value ) in enumerate( display_tuple ):
-                    
-                    self.SetStringItem( index, column_index, value )
-                    
+                self._UpdateRow( index, display_tuple )
                 
             
         

@@ -730,11 +730,7 @@ class PagesNotebook( wx.Notebook ):
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
         
-        if HC.PLATFORM_WINDOWS:
-            
-            self.Bind( wx.EVT_MOTION, self.EventDrag )
-            
-        
+        self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDoubleClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMiddleClick )
@@ -962,7 +958,21 @@ class PagesNotebook( wx.Notebook ):
                 return self
                 
             
-            if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE: # not on a label but inside my client area
+            not_on_my_label = flags & wx.NB_HITTEST_NOWHERE
+            
+            if HC.PLATFORM_OSX:
+                
+                ( x, y ) = screen_position
+                ( child_x, child_y ) = current_page.GetPosition()
+                
+                on_child_notebook_somewhere = y > child_y # wew lad, OSX not delivering onpage maybe?
+                
+            else:
+                
+                on_child_notebook_somewhere = flags & wx.NB_HITTEST_ONPAGE
+                
+            
+            if not_on_my_label and on_child_notebook_somewhere:
                 
                 return current_page._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1212,7 +1222,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 try:
                     
-                    page = self.NewPagesNotebook( name, forced_insertion_index )
+                    page = self.NewPagesNotebook( name, forced_insertion_index = forced_insertion_index, give_it_a_blank_page = False )
                     
                     page.AppendSessionPageTuples( subpage_tuples )
                     
@@ -1298,9 +1308,7 @@ class PagesNotebook( wx.Notebook ):
         
         if event.LeftIsDown() and self._potential_drag_page is not None:
             
-            drop_source = wx.DropSource( self )
-            
-            data_object = wx.DataObjectComposite()
+            drop_source = wx.DropSource( self._controller.gui )
             
             #
             
@@ -1310,16 +1318,16 @@ class PagesNotebook( wx.Notebook ):
             
             hydrus_page_tab_data_object.SetData( data )
             
-            data_object.Add( hydrus_page_tab_data_object, True )
-            
             #
             
-            drop_source.SetData( data_object )
+            drop_source.SetData( hydrus_page_tab_data_object )
             
             drop_source.DoDragDrop()
             
             self._potential_drag_page = None
             
+        
+        event.Skip()
         
     
     def EventLeftDown( self, event ):
@@ -1376,6 +1384,11 @@ class PagesNotebook( wx.Notebook ):
         
     
     def EventMiddleClick( self, event ):
+        
+        if self._controller.MenuIsOpen():
+            
+            return
+            
         
         position = event.GetPosition()
         
@@ -1753,13 +1766,13 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False ):
+    def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False, give_it_a_blank_page = True ):
         
         current_page = self.GetCurrentPage()
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
-            current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
+            current_page.NewPagesNotebook( name = name, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook, give_it_a_blank_page = give_it_a_blank_page )
             
             return
             
@@ -1792,6 +1805,11 @@ class PagesNotebook( wx.Notebook ):
         self.InsertPage( insertion_index, page, page_name, select = True )
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        
+        if give_it_a_blank_page:
+            
+            page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY )
+            
         
         return page
         
@@ -1854,9 +1872,24 @@ class PagesNotebook( wx.Notebook ):
         
         screen_position = wx.GetMousePosition()
         
+        if HC.PLATFORM_OSX:
+            
+            # idk why os x is giving problems here
+            # something about the coordinates of notebook stuff is all off, like the tab area is not included as part of the client area for HitTest calc, so all screentoclient calcs are wrong
+            # in the mouse events, going self.ClientToScreen( event.GetPosition() ) gives a different value to wx.GetMousePosition(), wew lad
+            # and yet other mouse->client comparisons are ok with other widgets, so this is presumably an OS X notebook issue
+            # this is a fuzzy fix for now, just filling in the different amounts I discovered with that
+            
+            ( x, y ) = screen_position
+            
+            screen_position = ( x + 10, y + 33 )
+            
+        
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
         
-        ( x, y ) = dest_notebook.ScreenToClient( screen_position )
+        position = dest_notebook.ScreenToClient( screen_position )
+        
+        ( x, y ) = position
         
         ( tab_index, flags ) = dest_notebook.HitTest( ( x, y ) )
         

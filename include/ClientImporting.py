@@ -37,12 +37,35 @@ def THREADDownloadURL( job_key, url, url_string ):
     
     try:
         
-        response = ClientNetworking.RequestsGet( url, stream = True )
+        network_job = ClientNetworking.NetworkJob( 'GET', url, temp_path = temp_path )
         
-        with open( temp_path, 'wb' ) as f:
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        job_key.SetVariable( 'popup_network_job', network_job )
+        
+        while not network_job.IsDone():
             
-            ClientNetworking.StreamResponseToFile( job_key, response, f )
+            time.sleep( 0.1 )
             
+        
+        if HG.view_shutdown:
+            
+            raise HydrusExceptions.ShutdownException()
+            
+        elif network_job.HasError():
+            
+            job_key.Cancel()
+            
+            raise network_job.GetErrorException()
+            
+        elif network_job.IsCancelled():
+            
+            return
+            
+        
+        job_key.DeleteVariable( 'popup_network_job' )
         
         job_key.SetVariable( 'popup_text_1', 'importing' )
         
@@ -51,16 +74,6 @@ def THREADDownloadURL( job_key, url, url_string ):
         client_files_manager = HG.client_controller.client_files_manager
         
         ( result, hash ) = client_files_manager.ImportFile( file_import_job )
-        
-    except HydrusExceptions.CancelledException:
-        
-        return
-        
-    except HydrusExceptions.NetworkException:
-        
-        job_key.Cancel()
-        
-        raise
         
     finally:
         
@@ -115,24 +128,30 @@ def THREADDownloadURLs( job_key, urls, title ):
         
         try:
             
-            try:
+            network_job = ClientNetworking.NetworkJob( 'GET', url, temp_path = temp_path )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            job_key.SetVariable( 'popup_network_job', network_job )
+            
+            while not network_job.IsDone():
                 
-                response = ClientNetworking.RequestsGet( url, stream = True )
+                time.sleep( 0.1 )
                 
-                with open( temp_path, 'wb' ) as f:
-                    
-                    ClientNetworking.StreamResponseToFile( job_key, response, f )
-                    
+            
+            if HG.view_shutdown:
                 
-            except HydrusExceptions.CancelledException:
+                raise HydrusExceptions.ShutdownException()
                 
-                return
+            elif network_job.HasError():
                 
-            except HydrusExceptions.NetworkException:
+                raise network_job.GetErrorException()
                 
-                job_key.Cancel()
+            elif network_job.IsCancelled():
                 
-                raise
+                break
                 
             
             try:
@@ -180,6 +199,8 @@ def THREADDownloadURLs( job_key, urls, title ):
             num_deleted += 1
             
         
+    
+    job_key.DeleteVariable( 'popup_network_job' )
     
     text_components = []
     
@@ -2318,6 +2339,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         self._seeds_ordered = []
         self._seeds_to_info = {}
         
+        self._seeds_to_indices = {}
+        
         self._seed_cache_key = HydrusData.GenerateKey()
         
         self._status_cache = None
@@ -2356,8 +2379,9 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         status = ', '.join( status_strings )
         
-        total_processed = len( self._seeds_ordered ) - num_unknown
         total = len( self._seeds_ordered )
+        
+        total_processed = total - num_unknown
         
         self._status_cache = ( status, ( total_processed, total ) )
         
@@ -2366,6 +2390,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _GetSeedTuple( self, seed ):
         
+        seed_index = self._seeds_to_indices[ seed ]
+        
         seed_info = self._seeds_to_info[ seed ]
         
         status = seed_info[ 'status' ]
@@ -2373,7 +2399,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         last_modified_timestamp = seed_info[ 'last_modified_timestamp' ]
         note = seed_info[ 'note' ]
         
-        return ( seed, status, added_timestamp, last_modified_timestamp, note )
+        return ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note )
         
     
     def _GetSerialisableInfo( self ):
@@ -2403,6 +2429,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 self._seeds_to_info[ seed ] = seed_info
                 
+            
+            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
             
         
     
@@ -2575,6 +2603,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 self._seeds_ordered.append( seed )
                 
+                self._seeds_to_indices[ seed ] = len( self._seeds_ordered ) - 1
+                
                 now = HydrusData.GetNow()
                 
                 seed_info = {}
@@ -2599,7 +2629,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             if seed in self._seeds_to_info:
                 
-                index = self._seeds_ordered.index( seed )
+                index = self._seeds_to_indices[ seed ]
                 
                 if index > 0:
                     
@@ -2607,6 +2637,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     
                     self._seeds_ordered.insert( index - 1, seed )
                     
+                
+                self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
                 
             
         
@@ -2619,7 +2651,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             if seed in self._seeds_to_info:
                 
-                index = self._seeds_ordered.index( seed )
+                index = self._seeds_to_indices[ seed ]
                 
                 if index < len( self._seeds_ordered ) - 1:
                     
@@ -2627,6 +2659,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     
                     self._seeds_ordered.insert( index + 1, seed )
                     
+                
+                self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
                 
             
         
@@ -2710,23 +2744,6 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSeedsWithInfo( self ):
-        
-        with self._lock:
-            
-            all_info = []
-            
-            for seed in self._seeds_ordered:
-                
-                seed_tuple = self._GetSeedTuple( seed )
-                
-                all_info.append( seed_tuple )
-                
-            
-            return all_info
-            
-        
-    
     def GetSeedInfo( self, seed ):
         
         with self._lock:
@@ -2787,6 +2804,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
+            
             self._SetDirty()
             
         
@@ -2813,6 +2832,8 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 self._seeds_ordered.remove( seed )
                 
+            
+            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
             
             self._SetDirty()
             

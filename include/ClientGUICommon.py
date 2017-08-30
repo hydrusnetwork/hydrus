@@ -756,57 +756,32 @@ class ChoiceSort( wx.Panel ):
         self._UpdateAscLabels()
         
     
-class ExportPatternButton( wx.Button ):
-    
-    ID_HASH = 0
-    ID_TAGS = 1
-    ID_NN_TAGS = 2
-    ID_NAMESPACE = 3
-    ID_TAG = 4
+class ExportPatternButton( BetterButton ):
     
     def __init__( self, parent ):
         
-        wx.Button.__init__( self, parent, label = 'pattern shortcuts' )
-        
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_MENU, self.EventMenu )
+        BetterButton.__init__( self, parent, 'pattern shortcuts', self._Hit )
         
     
-    def EventMenu( self, event ):
-        
-        id = event.GetId()
-        
-        phrase = None
-        
-        if id == self.ID_HASH: phrase = '{hash}'
-        if id == self.ID_TAGS: phrase = '{tags}'
-        if id == self.ID_NN_TAGS: phrase = '{nn tags}'
-        if id == self.ID_NAMESPACE: phrase = u'[\u2026]'
-        if id == self.ID_TAG: phrase = u'(\u2026)'
-        else: event.Skip()
-        
-        if phrase is not None: HG.client_controller.pub( 'clipboard', 'text', phrase )
-        
-    
-    def EventButton( self, event ):
+    def _Hit( self ):
         
         menu = wx.Menu()
         
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        menu.Append( self.ID_HASH, 'the file\'s hash - {hash}' )
-        menu.Append( self.ID_TAGS, 'all the file\'s tags - {tags}' )
-        menu.Append( self.ID_NN_TAGS, 'all the file\'s non-namespaced tags - {nn tags}' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'the file\'s hash - {hash}', 'copy "{hash}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{hash}' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'all the file\'s tags - {tags}', 'copy "{tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{tags}' )
+        ClientGUIMenus.AppendMenuItem( self, menu, 'all the file\'s non-namespaced tags - {nn tags}', 'copy "{nn tags}" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '{nn tags}' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        menu.Append( self.ID_NAMESPACE, u'all instances of a particular namespace - [\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, menu, u'all instances of a particular namespace - [\u2026]', u'copy "[\u2026]" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[\u2026]' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        menu.Append( self.ID_TAG, u'a particular tag, if the file has it - (\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, menu, u'a particular tag, if the file has it - (\u2026)', u'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(\u2026)' )
         
         HG.client_controller.PopupMenu( self, menu )
         
@@ -2174,7 +2149,7 @@ class RatingNumericalCanvas( RatingNumerical ):
     
 class RegexButton( wx.Button ):
     
-    ID_REGEX_WHITESPACE = 0
+    ID_REGEX_WHITESPACE = 9001 # temp fix, 0 is buggy
     ID_REGEX_NUMBER = 1
     ID_REGEX_ALPHANUMERIC = 2
     ID_REGEX_ANY = 3
@@ -2213,7 +2188,7 @@ class RegexButton( wx.Button ):
         
         menu = wx.Menu()
         
-        menu.Append( -1, 'click on a phrase to copy to clipboard' )
+        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         

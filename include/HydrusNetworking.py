@@ -291,6 +291,8 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     
     CACHE_MAINTENANCE_TIME_DELTA = 120
     
+    MIN_TIME_DELTA_FOR_USER = 10
+    
     def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
@@ -481,9 +483,9 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         return ( month_time, day_time, hour_time, minute_time, second_time )
         
     
-    def _GetUsage( self, bandwidth_type, time_delta ):
+    def _GetUsage( self, bandwidth_type, time_delta, for_user ):
         
-        if time_delta is not None and bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta <= 5:
+        if for_user and time_delta is not None and bandwidth_type == HC.BANDWIDTH_TYPE_DATA and time_delta <= self.MIN_TIME_DELTA_FOR_USER:
             
             usage = self._GetWeightedApproximateUsage( time_delta )
             
@@ -499,12 +501,9 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     
     def _GetWeightedApproximateUsage( self, time_delta ):
         
-        SEARCH_DELTA = time_delta * 5
+        SEARCH_DELTA = self.MIN_TIME_DELTA_FOR_USER
         
-        window = 0
         counter = self._seconds_bytes
-        
-        SEARCH_DELTA += window
         
         now = HydrusData.GetNow()
         
@@ -526,9 +525,9 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         total_bytes = sum( ( counter[ key ] for key in valid_keys ) )
         
-        time_delta_average = total_bytes / SAMPLE_DELTA
+        time_delta_average_per_sec = total_bytes / SAMPLE_DELTA
         
-        return time_delta_average
+        return time_delta_average_per_sec * time_delta
         
     
     def _MaintainCache( self ):
@@ -569,8 +568,8 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
-            num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
+            num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None, True )
+            num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None, True )
             
             return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ConvertIntToPrettyString( num_requests ) + ' requests this month'
             
@@ -599,7 +598,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetUsage( self, bandwidth_type, time_delta ):
+    def GetUsage( self, bandwidth_type, time_delta, for_user = False ):
         
         with self._lock:
             
@@ -608,7 +607,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 return 0
                 
             
-            return self._GetUsage( bandwidth_type, time_delta )
+            return self._GetUsage( bandwidth_type, time_delta, for_user )
             
         
     

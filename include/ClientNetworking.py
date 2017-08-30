@@ -180,6 +180,7 @@ def RequestsGet( url, params = None, stream = False, headers = None ):
     
     return response
     
+# this is an old redirect thing to figure out redirected gallery page destinations without hitting them now. note the allow_redirects param
 def RequestsGetRedirectURL( url, session  = None ):
     
     if session is None:
@@ -1926,6 +1927,8 @@ class NetworkJob( object ):
                     
                     self._status_text = u'connection failed--retrying'
                     
+                
+                time.sleep( 3 )
                 
             
         

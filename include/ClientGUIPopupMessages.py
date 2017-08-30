@@ -686,6 +686,8 @@ class PopupMessageManager( wx.Frame ):
                         
                         self.Layout()
                         
+                        self.Refresh()
+                        
                     
                 
             else:

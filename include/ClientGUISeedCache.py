@@ -24,13 +24,15 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on seed add/remove
         
-        columns = [ ( 'source', -1 ), ( 'status', 12 ), ( 'added', 20 ), ( 'last modified', 20 ), ( 'note', 30 ) ]
+        columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 20 ), ( 'last modified', 20 ), ( 'note', 30 ) ]
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'seed_cache', 30, 30, columns, self._ConvertSeedToListCtrlTuples )
         
         #
         
         self._AddSeeds( self._seed_cache.GetSeeds() )
+        
+        self._list_ctrl.Sort( 0 )
         
         #
         
@@ -50,25 +52,23 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddSeeds( self, seeds ):
         
-        for seed in seeds:
-            
-            self._list_ctrl.AddData( seed )
-            
+        self._list_ctrl.AddDatas( seeds )
         
     
     def _ConvertSeedToListCtrlTuples( self, seed ):
         
         sort_tuple = self._seed_cache.GetSeedInfo( seed )
         
-        ( seed, status, added_timestamp, last_modified_timestamp, note ) = sort_tuple
+        ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note ) = sort_tuple
         
+        pretty_seed_index = HydrusData.ConvertIntToPrettyString( seed_index )
         pretty_seed = HydrusData.ToUnicode( seed )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
         pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
         pretty_note = note.split( os.linesep )[0]
         
-        display_tuple = ( pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
+        display_tuple = ( pretty_seed_index, pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
         
         return ( display_tuple, sort_tuple )
         
@@ -79,7 +79,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for seed in self._list_ctrl.GetData( only_selected = True ):
             
-            ( seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
+            ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
             
             if note != '':
                 
@@ -266,14 +266,30 @@ class SeedCacheStatusControl( wx.Panel ):
     
     def _ShowSeedCacheFrame( self ):
         
-        title = 'file import status'
-        frame_key = 'file_import_status'
+        tlp = ClientGUICommon.GetTLP( self )
         
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = EditSeedCachePanel( frame, self._controller, self._seed_cache )
-        
-        frame.SetPanel( panel )
+        if isinstance( tlp, wx.Dialog ):
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'file import status' ) as dlg:
+                
+                panel = EditSeedCachePanel( dlg, self._controller, self._seed_cache )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        else:
+            
+            title = 'file import status'
+            frame_key = 'file_import_status'
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+            
+            panel = EditSeedCachePanel( frame, self._controller, self._seed_cache )
+            
+            frame.SetPanel( panel )
+            
         
     
     def _Update( self ):

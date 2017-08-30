@@ -13,11 +13,13 @@ import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import os
 import threading
+import time
 import webbrowser
 import wx
 
@@ -1141,28 +1143,45 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
     def EventTestFetchResult( self, event ):
         
-        try:
+        # this should be published to a job key panel or something so user can see it and cancel if needed
+        
+        network_job = ClientNetworking.NetworkJob( 'GET', self._my_example_url, referral_url = self._referral_url )
+        
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        while not network_job.IsDone():
             
-            headers = { 'Referer' : self._referral_url }
+            time.sleep( 0.1 )
             
-            response = ClientNetworking.RequestsGet( self._my_example_url, headers = headers )
+        
+        if HG.view_shutdown:
             
-            example_data = response.text
+            raise HydrusExceptions.ShutdownException()
             
-            try:
-                
-                self._example_data.SetValue( example_data )
-                
-            except UnicodeDecodeError:
-                
-                self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
-                
-            
-        except Exception as e:
+        elif network_job.HasError():
             
             self._my_example_data.SetValue( 'fetch failed' )
             
-            raise
+            raise network_job.GetErrorException()
+            
+        elif network_job.IsCancelled():
+            
+            self._my_example_data.SetValue( 'fetch cancelled' )
+            
+            return
+            
+        
+        example_data = network_job.GetContent()
+        
+        try:
+            
+            self._example_data.SetValue( example_data )
+            
+        except UnicodeDecodeError:
+            
+            self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
             
         
     

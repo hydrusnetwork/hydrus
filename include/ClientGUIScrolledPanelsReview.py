@@ -369,7 +369,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         sortable_network_context = ( network_context.context_type, network_context.context_data )
         sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
-        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         day_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
         month_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
         
@@ -688,7 +688,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Update( self ):
         
-        current_usage = self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1 )
+        current_usage = self._bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         
         pretty_current_usage = 'current usage: ' + HydrusData.ConvertIntToBytes( current_usage ) + '/s'
         

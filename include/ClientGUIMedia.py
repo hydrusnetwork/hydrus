@@ -1034,6 +1034,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._Archive()
                 
+            elif action == 'delete_file':
+                
+                self._Delete()
+                
             elif action == 'inbox_file':
                 
                 self._Inbox()
@@ -2348,7 +2352,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( old_x, old_y ) = self._drag_init_coordinates
             
-            ( x, y ) = event.GetPosition()
+            ( x, y ) = wx.GetMousePosition()
             
             ( delta_x, delta_y ) = ( x - old_x, y - old_y )
             
@@ -2399,7 +2403,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-    def EventEraseBackground( self, event ): pass
+    def EventEraseBackground( self, event ):
+        
+        pass
+        
     
     def EventKeyDown( self, event ):
         
@@ -2596,7 +2603,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventSelection( self, event ):
         
-        self._drag_init_coordinates = event.GetPosition()
+        self._drag_init_coordinates = wx.GetMousePosition()
         
         self._HitMedia( self._GetThumbnailUnderMouse( event ), event.CmdDown(), event.ShiftDown() )
         

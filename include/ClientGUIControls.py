@@ -414,6 +414,21 @@ class NetworkJobControl( wx.Panel ):
         self._update_timer = wx.Timer( self )
         
     
+    def _OverrideBandwidthIfAppropriate( self ):
+        
+        if self._network_job is None or self._network_job.NoEngineYet():
+            
+            return
+            
+        else:
+            
+            if self._auto_override_bandwidth_rules and HydrusData.TimeHasPassed( self._network_job.GetCreationTime() + 5 ):
+                
+                self._network_job.OverrideBandwidth()
+                
+            
+        
+    
     def _Update( self ):
         
         if self._network_job is None or self._network_job.NoEngineYet():
@@ -426,11 +441,6 @@ class NetworkJobControl( wx.Panel ):
             can_cancel = False
             
         else:
-            
-            if self._auto_override_bandwidth_rules and HydrusData.TimeHasPassed( self._network_job.GetCreationTime() + 5 ):
-                
-                self._network_job.OverrideBandwidth()
-                
             
             if self._network_job.IsDone():
                 
@@ -560,6 +570,8 @@ class NetworkJobControl( wx.Panel ):
         
     
     def TIMEREventUpdate( self, event ):
+        
+        self._OverrideBandwidthIfAppropriate()
         
         if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
             

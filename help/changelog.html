@@ -8,9 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 271</h3></li>
+				<ul>
+					<li>fixed an issue where the notebook 'motion' event was being consumed, disallowing the regular OS 'highlighting' on tab mouseover</li>
+					<li>fixed page tab drag and drop crash for Linux</li>
+					<li>fixed page tab drag and drop coordinate calculation for OS X</li>
+					<li>page tab drag and drop should now work for all platforms</li>
+					<li>new 'page of pages' pages now start with a blank file search page</li>
+					<li>fixed several issues with row display in the new listctrl</li>
+					<li>added a # index column to the file import status window, so you can resort the 'to be imported' order reliably</li>
+					<li>fixed an issue where the 'delete_file' application command was not firing on an appropriately mapped shortcut</li>
+					<li>fixed an issue where automatic bandwidth override would only fire if its page was in view. it now occurs at all times</li>
+					<li>fixed an issue where the file import status frame, as launched from manage subscriptions, would sometimes be non-responsive (typically for Linux)</li>
+					<li>fixed the 'pattern shortcuts' button on the export files dialog, which was misbehaving for certain choices for some window managers</li>
+					<li>fixed an unusual error where middle-clicking to create a new page while a menu was open would lock the application from receiving new key/mouse events until program focus was lost, wew lad</li>
+					<li>updated some old network code to the new engine</li>
+					<li>added some delay to network connection error reattempts so that instant fails due to local network disconnect (e.g. while computer is waking from sleep) do not consume all the reattempts too quickly</li>
+					<li>greatly simplified low-time-delta bandwidth testing and reporting, improving essential accuracy and overall feel</li>
+					<li>gallery download errors will now print additional info to the log--let's see if we can gather more info on the gelbooru 404s</li>
+					<li>wrote a patch for users of 2.X opencv who were running from source, who were unable to boot</li>
+					<li>due to hardware failure, had to make a new Linux build computer. some libraries are updated, but build _should_ be the same--let me know if not</li>
+					<li>updated to opencv 3.3 for all releases</li>
+					<li>misc old menu code updates</li>
+				</ul>
 				<li><h3>version 270</h3></li>
 				<ul>
-					<li>?added page tab drag and drop (windows only, have to iron out critical bugs for linux/os x).</li>
+					<li>added page tab drag and drop (windows only, have to iron out critical bugs for linux/os x).</li>
 					<li>dragging onto the middle of a normal tab will put the source tab there</li>
 					<li>dragging onto the edge of a tab will try to insert the tab there</li>
 					<li>dragging onto the middle of a page of pages tab will insert the tab onto the end of that page's list</li>

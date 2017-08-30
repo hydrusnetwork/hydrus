@@ -4670,10 +4670,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        for subscription in subscriptions:
-            
-            self._subscriptions.AddData( subscription )
-            
+        self._subscriptions.AddDatas( subscriptions )
         
         #
         
@@ -4822,7 +4819,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 subscription.SetNonDupeName( self._GetExistingNames() )
                 
-                self._subscriptions.AddData( subscription )
+                self._subscriptions.AddDatas( ( subscription, ) )
                 
             else:
                 
@@ -4847,7 +4844,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 new_subscription.SetNonDupeName( self._GetExistingNames() )
                 
-                self._subscriptions.AddData( new_subscription )
+                self._subscriptions.AddDatas( ( new_subscription, ) )
                 
             
         
@@ -4894,7 +4891,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             dupe_subscription.SetNonDupeName( self._GetExistingNames() )
             
-            self._subscriptions.AddData( dupe_subscription )
+            self._subscriptions.AddDatas( ( dupe_subscription, ) )
             
         
     
@@ -4922,7 +4919,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     edited_subscription.SetNonDupeName( self._GetExistingNames() )
                     
-                    self._subscriptions.AddData( edited_subscription )
+                    self._subscriptions.AddDatas( ( edited_subscription, ) )
                     
                 elif result == wx.ID_CANCEL:
                     

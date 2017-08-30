@@ -1673,6 +1673,10 @@ class Canvas( wx.Window ):
                 
                 self._Archive()
                 
+            elif action == 'delete_file':
+                
+                self._Delete()
+                
             elif action == 'inbox_file':
                 
                 self._Inbox()
@@ -4717,7 +4721,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             for line in self._current_media.GetPrettyInfoLines():
                 
-                menu.Append( CC.ID_NULL, line )
+                ClientGUIMenus.AppendMenuLabel( menu, line )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -4772,12 +4776,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete_file', CC.LOCAL_FILE_SERVICE_KEY ), '&delete' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Send this file to the trash.', self._Delete, CC.LOCAL_FILE_SERVICE_KEY )
                 
             elif CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'delete_file', CC.TRASH_SERVICE_KEY ), '&delete from trash now' )
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'undelete' ), '&undelete' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'delete from trash now', 'Delete this file immediately. This cannot be undone.', self._Delete, CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
                 
             
             ClientGUIMenus.AppendSeparator( menu )

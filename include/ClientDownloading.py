@@ -155,9 +155,27 @@ def GetImageboardFileURL( thread_url, filename, ext ):
                     
                     html_url = 'https://8ch.net/' + board + '/res/' + thread_id + '.html'
                     
-                    response = ClientNetworking.RequestsGet( html_url )
+                    network_job = ClientNetworking.NetworkJob( 'GET', html_url )
                     
-                    thread_html = response.content
+                    network_job.OverrideBandwidth()
+                    
+                    HG.client_controller.network_engine.AddJob( network_job )
+                    
+                    while not network_job.IsDone():
+                        
+                        time.sleep( 0.1 )
+                        
+                    
+                    if HG.view_shutdown:
+                        
+                        raise HydrusExceptions.ShutdownException()
+                        
+                    elif network_job.HasError():
+                        
+                        raise network_job.GetErrorException()
+                        
+                    
+                    thread_html = network_job.GetContent()
                     
                     soup = GetSoup( thread_html )
                     
@@ -539,6 +557,9 @@ class Gallery( object ):
             
             e = network_job.GetErrorException()
             
+            HydrusData.Print( 'The url ' + url + ' gave the following problem:' )
+            HydrusData.PrintException( e )
+            
             raise e
             
         elif network_job.IsCancelled():
@@ -756,13 +777,7 @@ class GalleryBooru( Gallery ):
             
             for bad_url in bad_urls:
                 
-                # turns out the garbage after the redirect is the redirect in base64, so let's not waste time doing this
-                
-                #url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
-                #
-                #urls.append( url )
-                #
-                #time.sleep( 0.5 )
+                # the garbage after the redirect.php is the redirect in base64
                 
                 # https://gelbooru.com/redirect.php?s=Ly9nZWxib29ydS5jb20vaW5kZXgucGhwP3BhZ2U9cG9zdCZzPXZpZXcmaWQ9MzY5NDEyMg==
                 
@@ -783,11 +798,9 @@ class GalleryBooru( Gallery ):
                         HydrusData.ShowText( 'gelbooru parsing problem!' )
                         HydrusData.ShowException( e )
                         
-                        url = ClientNetworking.RequestsGetRedirectURL( bad_url, session )
+                        time.sleep( 2 )
                         
-                        urls.append( url )
-                        
-                        time.sleep( 0.5 )
+                        break
                         
                     
                 else:

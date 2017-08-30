@@ -579,35 +579,57 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         
         for search_url in search_urls:
             
-            try:
+            job_key.SetVariable( 'script_status', 'fetching ' + search_url )
+            
+            network_job = ClientNetworking.NetworkJob( 'GET', search_url, referral_url = referral_url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            while not network_job.IsDone():
                 
-                job_key.SetVariable( 'script_status', 'fetching ' + search_url )
-                
-                headers = { 'Referer' : referral_url }
-                
-                response = ClientNetworking.RequestsGet( search_url, headers = headers )
-                
-            except HydrusExceptions.NotFoundException:
-                
-                job_key.SetVariable( 'script_status', '404 - nothing found' )
-                
-                time.sleep( 2 )
-                
-                continue
-                
-            except HydrusExceptions.NetworkException as e:
-                
-                job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
-                
-                HydrusData.Print( 'Problem fetching ' + search_url + ':' )
-                HydrusData.PrintException( e )
-                
-                time.sleep( 2 )
-                
-                continue
+                time.sleep( 0.1 )
                 
             
-            linked_data = response.text
+            if HG.view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException()
+                
+            elif network_job.HasError():
+                
+                e = network_job.GetErrorException()
+                
+                if isinstance( e, HydrusExceptions.NotFoundException ):
+                    
+                    job_key.SetVariable( 'script_status', '404 - nothing found' )
+                    
+                    time.sleep( 2 )
+                    
+                    continue
+                    
+                elif isinstance( e, HydrusExceptions.NetworkException ):
+                    
+                    job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
+                    
+                    HydrusData.Print( 'Problem fetching ' + search_url + ':' )
+                    HydrusData.PrintException( e )
+                    
+                    time.sleep( 2 )
+                    
+                    continue
+                    
+                else:
+                    
+                    raise e
+                    
+                
+            elif network_job.IsCancelled():
+                
+                break
+                
+            
+            linked_data = network_job.GetContent()
             
             children_content = GetChildrenContent( job_key, self._children, linked_data, search_url, desired_content )
             
