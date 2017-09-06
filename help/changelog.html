@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 272</h3></li>
+				<ul>
+					<li>finished moving the last misc network consumers to the new networking engine</li>
+					<li>greatly simplified and harmonised some of the new network job response processing</li>
+					<li>the gelbooru 404 issue should be fixed!</li>
+					<li>added a parsing patch for rule34hentai.net's mp4 links, which was causing 'link not found' failures on the hydrus parsing end. please tell your R34 subs to retry their fails</li>
+					<li>wrote a patch (actually updated an existing patch that had fallen to bitrot) for the danbooru booru (and extended it to anything else with 'Running Danbooru' in its html) to try to fetch the full-size image if one exists. this may not last long, so I do not recommend regular users rely on it, but feel free to play with it until I have a better fix in the new downloader engine</li>
+					<li>you can now add 'thread watcher' to the default import tag options. it has 'filename' and explicit tags options. unlike gallery downloaders, thread watchers will not inherit from the 'default' import tag options entry--you need to set the specific entry</li>
+					<li>added regular number key support to the new shortcut system</li>
+					<li>fixed the borked splash screen drag coordinate calculation</li>
+					<li>heavy session loads should be more polite to CPUs and window managers</li>
+					<li>pages should generally spawn with their proper name (rather than a flicker of 'page') no matter their spawning context</li>
+					<li>fixed osx page tab drag-and-drop coordinate calculations</li>
+					<li>figured a way to make os x page tab drag-and-drop start on a single left-mouse-down event</li>
+					<li>in an effort to improve popup display on systems with virtual desktops, the popup message parent window will now not go from hidden to shown while the mouse is on a display screen other than the main gui</li>
+					<li>fixed a wacky bug where clicking on a page tab, then on its sort dropdown, then on a different tab, would invoke the Deep Ones to commence a page tab drag and drop event</li>
+					<li>fixed an index issue when unclosing some pages in certain orders</li>
+					<li>increased pre-processing disk cache population time</li>
+					<li>tweaked regular memory maintenance disk cache population timings</li>
+					<li>fixed shortcut-driven tag petition events when the tag has a sibling (e.g. if you have sibling pair (a->b) and a shortcut (key->flip a), hitting 'key' will now correctly flip a (appearing as b) on and off in the media viewer)</li>
+					<li>fixed some ugly layout sizing calculations on the path tagging dialog</li>
+					<li>updated the path tagging listctrl to the new control</li>
+					<li>updated the quick namespaces listctrl to the new control</li>
+					<li>updated the regexbutton's menu to the new menu system</li>
+					<li>fixed some typo errors with the regexbutton's entries!</li>
+					<li>removed the old gallery downloader unit tests, as these operated on the old network and downloader engine--new, granular tests will be reintroduced for the new parsing components as they are written</li>
+					<li>cleaned up some shortcut key code</li>
+					<li>misc refactoring</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 271</h3></li>
 				<ul>
 					<li>fixed an issue where the notebook 'motion' event was being consumed, disallowing the regular OS 'highlighting' on tab mouseover</li>

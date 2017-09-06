@@ -11,6 +11,7 @@ import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusNetworking
 import HydrusSerialisable
+import json
 import os
 import threading
 import time
@@ -1499,9 +1500,17 @@ class ServiceIPFS( ServiceRemote ):
         
         links_url = api_base_url + 'object/links/' + multihash
         
-        response = ClientNetworking.RequestsGet( links_url )
+        network_job = ClientNetworking.NetworkJob( 'GET', links_url )
         
-        links_json = response.json()
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        data = network_job.GetContent()
+        
+        links_json = json.loads( data )
         
         is_directory = False
         
@@ -1562,9 +1571,17 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'version'
         
-        response = ClientNetworking.RequestsGet( url )
+        network_job = ClientNetworking.NetworkJob( 'GET', url )
         
-        j = response.json()
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        data = network_job.GetContent()
+        
+        j = json.loads( data )
         
         return j[ 'Version' ]
         
@@ -1680,7 +1697,17 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'object/new?arg=unixfs-dir'
             
-            response = ClientNetworking.RequestsGet( url )
+            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
+            
+            data = network_job.GetContent()
+            
+            response_json = json.loads( data )
             
             for ( i, ( hash, mime, multihash ) ) in enumerate( file_info ):
                 
@@ -1694,20 +1721,36 @@ class ServiceIPFS( ServiceRemote ):
                 job_key.SetVariable( 'popup_text_1', 'creating directory: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_info ) ) )
                 job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
                 
-                object_multihash = response.json()[ 'Hash' ]
+                object_multihash = response_json[ 'Hash' ]
                 
                 filename = hash.encode( 'hex' ) + HC.mime_ext_lookup[ mime ]
                 
                 url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
                 
-                response = ClientNetworking.RequestsGet( url )
+                network_job = ClientNetworking.NetworkJob( 'GET', url )
+                
+                network_job.OverrideBandwidth()
+                
+                HG.client_controller.network_engine.AddJob( network_job )
+                
+                network_job.WaitUntilDone()
+                
+                data = network_job.GetContent()
+                
+                response_json = json.loads( data )
                 
             
-            directory_multihash = response.json()[ 'Hash' ]
+            directory_multihash = response_json[ 'Hash' ]
             
             url = api_base_url + 'pin/add?arg=' + directory_multihash
             
-            response = ClientNetworking.RequestsGet( url )
+            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
             
             content_update_row = ( hashes, directory_multihash, note )
             
@@ -1757,9 +1800,17 @@ class ServiceIPFS( ServiceRemote ):
         
         files = { 'path' : ( hash.encode( 'hex' ), open( path, 'rb' ), mime_string ) }
         
-        response = ClientNetworking.RequestsPost( url, files = files )
+        network_job = ClientNetworking.NetworkJob( 'GET', url, files = files )
         
-        j = response.json()
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        data = network_job.GetContent()
+        
+        j = json.loads( data )
         
         multihash = j[ 'Hash' ]
         
@@ -1785,7 +1836,13 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'pin/rm/' + multihash
         
-        ClientNetworking.RequestsGet( url )
+        network_job = ClientNetworking.NetworkJob( 'GET', url )
+        
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
         
         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
         
@@ -1803,7 +1860,13 @@ class ServiceIPFS( ServiceRemote ):
         
         try:
             
-            ClientNetworking.RequestsGet( url )
+            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
             
         except HydrusExceptions.NetworkException as e:
             

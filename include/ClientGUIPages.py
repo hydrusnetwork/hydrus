@@ -629,7 +629,7 @@ class Page( wx.SplitterWindow ):
         self._initialised = True
         self._initial_hashes = []
         
-        self._management_panel.Start()
+        wx.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
         
     
     def SetName( self, name ):
@@ -668,7 +668,7 @@ class Page( wx.SplitterWindow ):
             
             self._initialised = True
             
-            self._management_panel.Start()
+            wx.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
             
         
     
@@ -732,6 +732,7 @@ class PagesNotebook( wx.Notebook ):
         
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
+        self.Bind( wx.EVT_LEFT_UP, self.EventLeftUp )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventLeftDoubleClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMiddleClick )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMenu )
@@ -949,9 +950,7 @@ class PagesNotebook( wx.Notebook ):
             
         else:
             
-            position = self.ScreenToClient( screen_position )
-            
-            ( tab_index, flags ) = self.HitTest( position )
+            ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( self, screen_position )
             
             if tab_index != wx.NOT_FOUND:
                 
@@ -1102,9 +1101,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _ShowMenu( self, screen_position ):
         
-        position = self.ScreenToClient( screen_position )
-        
-        ( tab_index, flags ) = self.HitTest( position )
+        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( self, screen_position )
         
         num_pages = self.GetPageCount()
         
@@ -1306,7 +1303,7 @@ class PagesNotebook( wx.Notebook ):
     
     def EventDrag( self, event ):
         
-        if event.LeftIsDown() and self._potential_drag_page is not None:
+        if event.Dragging() and self._potential_drag_page is not None:
             
             drop_source = wx.DropSource( self._controller.gui )
             
@@ -1332,6 +1329,8 @@ class PagesNotebook( wx.Notebook ):
     
     def EventLeftDown( self, event ):
         
+        event_skip_ok = True
+        
         position = event.GetPosition()
         
         ( tab_index, flags ) = self.HitTest( position )
@@ -1340,10 +1339,21 @@ class PagesNotebook( wx.Notebook ):
             
             page = self.GetPage( tab_index )
             
+            if HC.PLATFORM_OSX and page == self.GetCurrentPage():
+                
+                # drag doesn't work if we allow the event to go ahead
+                # but we do want the event to go ahead if it is a 'select different page' event
+                
+                event_skip_ok = False
+                
+            
             self._potential_drag_page = page
             
         
-        event.Skip()
+        if event_skip_ok:
+            
+            event.Skip()
+            
         
     
     def EventLeftDoubleClick( self, event ):
@@ -1367,6 +1377,17 @@ class PagesNotebook( wx.Notebook ):
                 self.ChooseNewPage()
                 
             
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def EventLeftUp( self, event ):
+        
+        self._potential_drag_page = None
+        
+        event.Skip()
         
     
     def EventMenu( self, event ):
@@ -1664,7 +1685,7 @@ class PagesNotebook( wx.Notebook ):
             insertion_index = forced_insertion_index
             
         
-        page_name = 'page'
+        page_name = page.GetName()
         
         self.InsertPage( insertion_index, page, page_name, select = True )
         
@@ -1800,7 +1821,7 @@ class PagesNotebook( wx.Notebook ):
             insertion_index = forced_insertion_index
             
         
-        page_name = 'pages'
+        page_name = page.GetName()
         
         self.InsertPage( insertion_index, page, page_name, select = True )
         
@@ -1824,11 +1845,11 @@ class PagesNotebook( wx.Notebook ):
                 
                 page.Show()
                 
-                index = min( index, self.GetPageCount() )
+                insert_index = min( index, self.GetPageCount() )
                 
                 name = page.GetName()
                 
-                self.InsertPage( index, page, name, True )
+                self.InsertPage( insert_index, page, name, True )
                 
                 self._controller.pub( 'refresh_page_name', page.GetPageKey() )
                 
@@ -1872,31 +1893,16 @@ class PagesNotebook( wx.Notebook ):
         
         screen_position = wx.GetMousePosition()
         
-        if HC.PLATFORM_OSX:
-            
-            # idk why os x is giving problems here
-            # something about the coordinates of notebook stuff is all off, like the tab area is not included as part of the client area for HitTest calc, so all screentoclient calcs are wrong
-            # in the mouse events, going self.ClientToScreen( event.GetPosition() ) gives a different value to wx.GetMousePosition(), wew lad
-            # and yet other mouse->client comparisons are ok with other widgets, so this is presumably an OS X notebook issue
-            # this is a fuzzy fix for now, just filling in the different amounts I discovered with that
-            
-            ( x, y ) = screen_position
-            
-            screen_position = ( x + 10, y + 33 )
-            
-        
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
         
-        position = dest_notebook.ScreenToClient( screen_position )
+        ( x, y ) = screen_position
         
-        ( x, y ) = position
-        
-        ( tab_index, flags ) = dest_notebook.HitTest( ( x, y ) )
+        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
         
         EDGE_PADDING = 10
         
-        ( left_tab_index, gumpf ) = dest_notebook.HitTest( ( x - EDGE_PADDING, y ) )
-        ( right_tab_index, gumpf ) = dest_notebook.HitTest( ( x + EDGE_PADDING, y ) )
+        ( left_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
+        ( right_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
         
         landed_near_left_edge = left_tab_index != tab_index
         landed_near_right_edge = right_tab_index != tab_index
@@ -1995,7 +2001,7 @@ class PagesNotebook( wx.Notebook ):
             page.Reparent( dest_notebook )
             
         
-        dest_notebook.InsertPage( insertion_tab_index, page, 'page' )
+        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName() )
         
         self.ShowPage( page )
         

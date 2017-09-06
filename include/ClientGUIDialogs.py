@@ -1869,9 +1869,6 @@ class DialogPathsToTags( Dialog ):
         
         ( width, height ) = self.GetMinSize()
         
-        width = max( width, 930 )
-        height = max( height, 680 )
-        
         self.SetInitialSize( ( width, height ) )
         
     
@@ -1898,7 +1895,7 @@ class DialogPathsToTags( Dialog ):
             self._service_key = service_key
             self._paths = paths
             
-            self._paths_list = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '#', 50 ), ( 'path', 400 ), ( 'tags', -1 ) ] )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 25, 40, [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ], self._ConvertDataToListCtrlTuples )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -1915,25 +1912,34 @@ class DialogPathsToTags( Dialog ):
             
             #
             
-            for ( index, path ) in enumerate( self._paths ):
-                
-                pretty_num = HydrusData.ConvertIntToPrettyString( index + 1 )
-                
-                tags = self._GetTags( index, path )
-                
-                tags_string = ', '.join( tags )
-                
-                self._paths_list.Append( ( pretty_num, path, tags_string ), ( index, path, tags ) )
-                
+            # i.e. ( index, path )
+            self._paths_list.AddDatas( list( enumerate( self._paths ) ) )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
+            
+        
+        def _ConvertDataToListCtrlTuples( self, data ):
+            
+            ( index, path ) = data
+            
+            tags = self._GetTags( index, path )
+            
+            pretty_index = HydrusData.ConvertIntToPrettyString( index + 1 )
+            
+            pretty_path = path
+            pretty_tags = ', '.join( tags )
+            
+            display_tuple = ( pretty_index, pretty_path, pretty_tags )
+            sort_tuple = ( index, path, tags )
+            
+            return ( display_tuple, sort_tuple )
             
         
         def _GetTags( self, index, path ):
@@ -1960,7 +1966,7 @@ class DialogPathsToTags( Dialog ):
         
         def EventItemSelected( self, event ):
             
-            paths = [ path for ( index, path, tags ) in self._paths_list.GetSelectedClientData() ]
+            paths = [ path for ( index, path ) in self._paths_list.GetData( only_selected = True ) ]
             
             self._simple_panel.SetSelectedPaths( paths )
             
@@ -1969,28 +1975,14 @@ class DialogPathsToTags( Dialog ):
         
         def GetInfo( self ):
             
-            paths_to_tags = { path : tags for ( index, path, tags ) in self._paths_list.GetClientData() }
+            paths_to_tags = { path : self._GetTags( index, path ) for ( index, path ) in self._paths_list.GetData() }
             
             return ( self._service_key, paths_to_tags )
             
         
         def RefreshFileList( self ):
             
-            for ( list_index, ( index, path, old_tags ) ) in enumerate( self._paths_list.GetClientData() ):
-                
-                # when doing regexes, make sure not to include '' results, same for system: and - started tags.
-                
-                tags = self._GetTags( index, path )
-                
-                if tags != old_tags:
-                    
-                    pretty_num = HydrusData.ConvertIntToPrettyString( index + 1 )
-                    
-                    tags_string = ', '.join( tags )
-                    
-                    self._paths_list.UpdateRow( list_index, ( pretty_num, path, tags_string ), ( index, path, tags ) )
-                    
-                
+            self._paths_list.UpdateDatas()
             
         
         def SetTagBoxFocus( self ):
@@ -2011,7 +2003,7 @@ class DialogPathsToTags( Dialog ):
                 
                 self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
                 
-                self._quick_namespaces_list = ClientGUIListCtrl.SaneListCtrl( self._quick_namespaces_panel, 200, [ ( 'namespace', 80 ), ( 'regex', -1 ) ], delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
+                self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, [ ( 'namespace', 12 ), ( 'regex', -1 ) ], self._ConvertQuickRegexDataToListCtrlTuples, delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
                 
                 self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
                 self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -2106,13 +2098,23 @@ class DialogPathsToTags( Dialog ):
                 self.SetSizer( hbox )
                 
             
+            def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
+                
+                ( namespace, regex ) = data
+                
+                display_tuple = ( namespace, regex )
+                sort_tuple = ( namespace, regex )
+                
+                return ( display_tuple, sort_tuple )
+                
+            
             def DeleteQuickNamespaces( self ):
                 
                 with DialogYesNo( self, 'Remove all selected?' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_YES:
                         
-                        self._quick_namespaces_list.RemoveAllSelected()
+                        self._quick_namespaces_list.DeleteSelected()
                         
                         self._refresh_callable()
                         
@@ -2121,17 +2123,26 @@ class DialogPathsToTags( Dialog ):
             
             def EditQuickNamespaces( self ):
                 
-                for index in self._quick_namespaces_list.GetAllSelected():
+                data_to_edit = self._quick_namespaces_list.GetData( only_selected = True )
+                
+                for old_data in data_to_edit:
                     
-                    ( namespace, regex ) = self._quick_namespaces_list.GetClientData( index = index )
+                    ( namespace, regex ) = old_data
                     
                     with DialogInputNamespaceRegex( self, namespace = namespace, regex = regex ) as dlg:
                         
                         if dlg.ShowModal() == wx.ID_OK:
                             
-                            ( namespace, regex ) = dlg.GetInfo()
+                            ( new_namespace, new_regex ) = dlg.GetInfo()
                             
-                            self._quick_namespaces_list.UpdateRow( index, ( namespace, regex ), ( namespace, regex ) )
+                            new_data = ( new_namespace, new_regex )
+                            
+                            if new_data != old_data:
+                                
+                                self._quick_namespaces_list.DeleteDatas( ( old_data, ) )
+                                
+                                self._quick_namespaces_list.AddDatas( ( new_data, ) )
+                                
                             
                         
                     
@@ -2176,7 +2187,9 @@ class DialogPathsToTags( Dialog ):
                         
                         ( namespace, regex ) = dlg.GetInfo()
                         
-                        self._quick_namespaces_list.Append( ( namespace, regex ), ( namespace, regex ) )
+                        data = ( namespace, regex )
+                        
+                        self._quick_namespaces_list.AddDatas( ( data, ) )
                         
                         self._refresh_callable()
                         
@@ -2245,7 +2258,7 @@ class DialogPathsToTags( Dialog ):
                     except: pass
                     
                 
-                for ( namespace, regex ) in self._quick_namespaces_list.GetClientData():
+                for ( namespace, regex ) in self._quick_namespaces_list.GetData():
                     
                     try:
                         
@@ -2330,24 +2343,28 @@ class DialogPathsToTags( Dialog ):
                 
                 self._filename_namespace = wx.TextCtrl( self._checkboxes_panel )
                 self._filename_namespace.Bind( wx.EVT_TEXT, self.EventRefresh )
+                self._filename_namespace.SetMinSize( ( 100, -1 ) )
                 
                 self._filename_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'add filename? [namespace]' )
                 self._filename_checkbox.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
                 
                 self._dir_namespace_1 = wx.TextCtrl( self._checkboxes_panel )
                 self._dir_namespace_1.Bind( wx.EVT_TEXT, self.EventRefresh )
+                self._dir_namespace_1.SetMinSize( ( 100, -1 ) )
                 
                 self._dir_checkbox_1 = wx.CheckBox( self._checkboxes_panel, label = 'add first directory? [namespace]' )
                 self._dir_checkbox_1.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
                 
                 self._dir_namespace_2 = wx.TextCtrl( self._checkboxes_panel )
                 self._dir_namespace_2.Bind( wx.EVT_TEXT, self.EventRefresh )
+                self._dir_namespace_2.SetMinSize( ( 100, -1 ) )
                 
                 self._dir_checkbox_2 = wx.CheckBox( self._checkboxes_panel, label = 'add second directory? [namespace]' )
                 self._dir_checkbox_2.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
                 
                 self._dir_namespace_3 = wx.TextCtrl( self._checkboxes_panel )
                 self._dir_namespace_3.Bind( wx.EVT_TEXT, self.EventRefresh )
+                self._dir_namespace_3.SetMinSize( ( 100, -1 ) )
                 
                 self._dir_checkbox_3 = wx.CheckBox( self._checkboxes_panel, label = 'add third directory? [namespace]' )
                 self._dir_checkbox_3.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
@@ -2367,22 +2384,22 @@ class DialogPathsToTags( Dialog ):
                 
                 filename_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                filename_hbox.AddF( self._filename_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+                filename_hbox.AddF( self._filename_checkbox, CC.FLAGS_VCENTER )
                 filename_hbox.AddF( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 dir_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
                 
-                dir_hbox_1.AddF( self._dir_checkbox_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_1.AddF( self._dir_checkbox_1, CC.FLAGS_VCENTER )
                 dir_hbox_1.AddF( self._dir_namespace_1, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 dir_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
                 
-                dir_hbox_2.AddF( self._dir_checkbox_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_2.AddF( self._dir_checkbox_2, CC.FLAGS_VCENTER )
                 dir_hbox_2.AddF( self._dir_namespace_2, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 dir_hbox_3 = wx.BoxSizer( wx.HORIZONTAL )
                 
-                dir_hbox_3.AddF( self._dir_checkbox_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+                dir_hbox_3.AddF( self._dir_checkbox_3, CC.FLAGS_VCENTER )
                 dir_hbox_3.AddF( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self._checkboxes_panel.AddF( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -2395,7 +2412,7 @@ class DialogPathsToTags( Dialog ):
                 
                 hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( self._checkboxes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.AddF( self._checkboxes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self.SetSizer( hbox )
                 

@@ -7,7 +7,7 @@ import unittest
 import HydrusData
 import ClientConstants as CC
 
-class TestClientDownloadingFunctions( unittest.TestCase ):
+class TestFunctions( unittest.TestCase ):
     
     def test_dict_to_content_updates( self ):
         

@@ -3243,16 +3243,59 @@ class WebSessionManagerClient( object ):
         return True
         
     
-    def EnsureLoggedIn( self, name ):
-        
-        if name in self._error_names:
-            
-            raise Exception( name + ' could not establish a session! This ugly error is temporary due to the network engine rewrite. Please restart the client to reattempt this network context.' )
-            
-        
-        now = HydrusData.GetNow()
+    def EnsureHydrusSessionIsOK( self, service_key ):
         
         with self._lock:
+            
+            if not self._controller.services_manager.ServiceExists( service_key ):
+                
+                raise HydrusExceptions.DataMissing( 'Service does not exist!' )
+                
+            
+            name = self._controller.services_manager.GetService( service_key ).GetName()
+            
+            if service_key in self._error_names:
+                
+                raise Exception( 'Could not establish a hydrus network session for ' + name + '! This ugly error is temporary due to the network engine rewrite. Please restart the client to reattempt this network context.' )
+                
+            
+            network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, service_key )
+            
+            required_cookies = [ 'session_key' ]
+            
+            if self._IsLoggedIn( network_context, required_cookies ):
+                
+                return
+                
+            
+            try:
+                
+                self.SetupHydrusSession( service_key )
+                
+                if not self._IsLoggedIn( network_context, required_cookies ):
+                    
+                    return
+                    
+                
+                HydrusData.Print( 'Successfully logged into ' + name + '.' )
+                
+            except:
+                
+                self._error_names.add( service_key )
+                
+                raise
+                
+            
+        
+    
+    def EnsureLoggedIn( self, name ):
+        
+        with self._lock:
+            
+            if name in self._error_names:
+                
+                raise Exception( name + ' could not establish a session! This ugly error is temporary due to the network engine rewrite. Please restart the client to reattempt this network context.' )
+                
             
             if name == 'hentai foundry':
                 
@@ -3386,6 +3429,32 @@ class WebSessionManagerClient( object ):
         headers[ 'origin' ] = "https://accounts.pixiv.net"
         
         r = session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        
+    
+    def SetupHydrusSession( self, service_key ):
+        
+        # nah, replace this with a proper login script
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        if not service.HasAccessKey():
+            
+            raise HydrusExceptions.DataMissing( 'No access key for this service, so cannot set up session!' )
+            
+        
+        access_key = service.GetAccessKey()
+        
+        url = 'blah'
+        
+        network_job = ClientNetworking.NetworkJobHydrus( service_key, 'GET', url )
+        
+        network_job.SetForLogin( True )
+        
+        network_job.AddAdditionalHeader( 'Hydrus-Key', access_key.encode( 'hex' ) )
+        
+        self._controller.network_engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
         
     
     def TestPixiv( self, pixiv_id, password ):

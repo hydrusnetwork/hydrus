@@ -28,6 +28,8 @@ import urlparse
 import wx
 import HydrusThreading
 
+DID_FILE_WORK_MINIMUM_SLEEP_TIME = 0.25
+
 def THREADDownloadURL( job_key, url, url_string ):
     
     job_key.SetVariable( 'popup_title', url_string )
@@ -45,24 +47,21 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         job_key.SetVariable( 'popup_network_job', network_job )
         
-        while not network_job.IsDone():
+        try:
             
-            time.sleep( 0.1 )
+            network_job.WaitUntilDone()
             
-        
-        if HG.view_shutdown:
-            
-            raise HydrusExceptions.ShutdownException()
-            
-        elif network_job.HasError():
+        except HydrusExceptions.CancelledException:
             
             job_key.Cancel()
             
-            raise network_job.GetErrorException()
+            raise
             
-        elif network_job.IsCancelled():
+        except HydrusExceptions.NetworkException:
             
-            return
+            job_key.Cancel()
+            
+            raise
             
         
         job_key.DeleteVariable( 'popup_network_job' )
@@ -136,20 +135,11 @@ def THREADDownloadURLs( job_key, urls, title ):
             
             job_key.SetVariable( 'popup_network_job', network_job )
             
-            while not network_job.IsDone():
+            try:
                 
-                time.sleep( 0.1 )
+                network_job.WaitUntilDone()
                 
-            
-            if HG.view_shutdown:
-                
-                raise HydrusExceptions.ShutdownException()
-                
-            elif network_job.HasError():
-                
-                raise network_job.GetErrorException()
-                
-            elif network_job.IsCancelled():
+            except HydrusExceptions.CancelledException:
                 
                 break
                 
@@ -812,7 +802,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                     if did_work:
                         
-                        time.sleep( 0.1 )
+                        time.sleep( DID_FILE_WORK_MINIMUM_SLEEP_TIME )
                         
                     else:
                         
@@ -1849,22 +1839,41 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     network_job = ClientNetworking.NetworkJob( 'GET', file_url, temp_path = temp_path )
                     
+                    HG.client_controller.network_engine.AddJob( network_job )
+                    
+                    with self._lock:
+                        
+                        if self._download_control_file_set is not None:
+                            
+                            wx.CallAfter( self._download_control_file_set, network_job )
+                            
+                        
+                    
                     try:
                         
-                        HG.client_controller.network_engine.AddJob( network_job )
+                        network_job.WaitUntilDone()
                         
-                        with self._lock:
-                            
-                            if self._download_control_file_set is not None:
-                                
-                                wx.CallAfter( self._download_control_file_set, network_job )
-                                
-                            
+                    except HydrusExceptions.ShutdownException:
                         
-                        while not network_job.IsDone():
-                            
-                            time.sleep( 0.1 )
-                            
+                        return True
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        status = CC.STATUS_SKIPPED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
+                        
+                        return True
+                        
+                    except HydrusExceptions.NetworkException:
+                        
+                        status = CC.STATUS_FAILED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
+                        
+                        time.sleep( 2 )
+                        
+                        return True
                         
                     finally:
                         
@@ -1874,43 +1883,22 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    if HG.view_shutdown:
+                    with self._lock:
                         
-                        return True
+                        self._current_action = 'importing file'
                         
-                    elif network_job.HasError():
+                    
+                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    
+                    ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+                    
+                    self._urls_cache.UpdateSeedStatus( file_url, status )
+                    
+                    if url_not_known_beforehand and hash is not None:
                         
-                        status = CC.STATUS_FAILED
+                        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
                         
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
-                        
-                        time.sleep( 2 )
-                        
-                    elif network_job.IsCancelled():
-                        
-                        status = CC.STATUS_SKIPPED
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
-                        
-                    else:
-                        
-                        with self._lock:
-                            
-                            self._current_action = 'importing file'
-                            
-                        
-                        file_import_job = FileImportJob( temp_path, self._import_file_options )
-                        
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status )
-                        
-                        if url_not_known_beforehand and hash is not None:
-                            
-                            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                            
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                         
                     
                 finally:
@@ -1942,10 +1930,12 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
-        
-        with self._lock:
+        finally:
             
-            self._current_action = ''
+            with self._lock:
+                
+                self._current_action = ''
+                
             
         
         return True
@@ -1970,22 +1960,19 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 
                 network_job.OverrideBandwidth()
                 
+                HG.client_controller.network_engine.AddJob( network_job )
+                
+                with self._lock:
+                    
+                    if self._download_control_page_set is not None:
+                        
+                        wx.CallAfter( self._download_control_page_set, network_job )
+                        
+                    
+                
                 try:
                     
-                    HG.client_controller.network_engine.AddJob( network_job )
-                    
-                    with self._lock:
-                        
-                        if self._download_control_page_set is not None:
-                            
-                            wx.CallAfter( self._download_control_page_set, network_job )
-                            
-                        
-                    
-                    while not network_job.IsDone():
-                        
-                        time.sleep( 0.1 )
-                        
+                    network_job.WaitUntilDone()
                     
                 finally:
                     
@@ -1995,72 +1982,55 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                if HG.view_shutdown:
+                html = network_job.GetContent()
+                
+                soup = ClientDownloading.GetSoup( html )
+                
+                #
+                
+                all_links = soup.find_all( 'a' )
+                
+                links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
+                
+                all_linked_images = []
+                
+                for link in all_links:
                     
-                    raise HydrusExceptions.ShutdownException()
+                    images = link.find_all( 'img' )
                     
-                elif network_job.HasError():
+                    all_linked_images.extend( images )
                     
-                    e = network_job.GetErrorException()
+                
+                all_images = soup.find_all( 'img' )
+                
+                unlinked_images = [ image for image in all_images if image not in all_linked_images ]
+                
+                #
+                
+                file_urls = []
+                
+                if self._download_image_links:
                     
-                    raise e
+                    file_urls.extend( [ urlparse.urljoin( page_url, link[ 'href' ] ) for link in links_with_images if link.has_attr( 'href' ) ] )
                     
-                elif network_job.IsCancelled():
+                
+                if self._download_unlinked_images:
                     
-                    raise Exception( 'Page download cancelled!' )
+                    file_urls.extend( [ urlparse.urljoin( page_url, image[ 'src' ] ) for image in unlinked_images if image.has_attr( 'src' ) ] )
                     
-                else:
+                
+                new_urls = [ file_url for file_url in file_urls if not self._urls_cache.HasSeed( file_url ) ]
+                
+                self._urls_cache.AddSeeds( new_urls )
+                
+                num_new = len( new_urls )
+                
+                if num_new > 0:
                     
-                    html = network_job.GetContent()
+                    self._new_files_event.set()
                     
-                    soup = ClientDownloading.GetSoup( html )
-                    
-                    #
-                    
-                    all_links = soup.find_all( 'a' )
-                    
-                    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
-                    
-                    all_linked_images = []
-                    
-                    for link in all_links:
-                        
-                        images = link.find_all( 'img' )
-                        
-                        all_linked_images.extend( images )
-                        
-                    
-                    all_images = soup.find_all( 'img' )
-                    
-                    unlinked_images = [ image for image in all_images if image not in all_linked_images ]
-                    
-                    #
-                    
-                    file_urls = []
-                    
-                    if self._download_image_links:
-                        
-                        file_urls.extend( [ urlparse.urljoin( page_url, link[ 'href' ] ) for link in links_with_images if link.has_attr( 'href' ) ] )
-                        
-                    
-                    if self._download_unlinked_images:
-                        
-                        file_urls.extend( [ urlparse.urljoin( page_url, image[ 'src' ] ) for image in unlinked_images if image.has_attr( 'src' ) ] )
-                        
-                    
-                    new_urls = [ file_url for file_url in file_urls if not self._urls_cache.HasSeed( file_url ) ]
-                    
-                    self._urls_cache.AddSeeds( new_urls )
-                    
-                    num_new = len( new_urls )
-                    
-                    if num_new > 0:
-                        
-                        self._new_files_event.set()
-                        
-                    
-                    parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
-                    
+                
+                parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
                 
             except HydrusExceptions.NotFoundException:
                 
@@ -2117,7 +2087,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                     if did_work:
                         
-                        time.sleep( 0.1 )
+                        time.sleep( DID_FILE_WORK_MINIMUM_SLEEP_TIME )
                         
                     else:
                         
@@ -2853,7 +2823,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 note += os.linesep
                 note += HydrusData.ToUnicode( traceback.format_exc() )
                 
-                HydrusData.Print( 'Error when processing ' + seed + '!' )
+                HydrusData.Print( 'Error when processing ' + seed + ' !' )
                 HydrusData.Print( traceback.format_exc() )
                 
             
@@ -3586,6 +3556,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         import_file_options = ClientDefaults.GetDefaultImportFileOptions()
         
+        new_options = HG.client_controller.GetNewOptions()
+        
+        import_tag_options = new_options.GetDefaultImportTagOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
+        
         ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
         
         self._thread_url = ''
@@ -3593,7 +3567,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._urls_to_filenames = {}
         self._urls_to_md5_base64 = {}
         self._import_file_options = import_file_options
-        self._import_tag_options = ClientData.ImportTagOptions()
+        self._import_tag_options = import_tag_options
         self._times_to_check = times_to_check
         self._check_period = check_period
         self._last_time_checked = 0
@@ -3695,22 +3669,41 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', file_url, temp_path = temp_path )
                     
+                    HG.client_controller.network_engine.AddJob( network_job )
+                    
+                    with self._lock:
+                        
+                        if self._download_control_file_set is not None:
+                            
+                            wx.CallAfter( self._download_control_file_set, network_job )
+                            
+                        
+                    
                     try:
                         
-                        HG.client_controller.network_engine.AddJob( network_job )
+                        network_job.WaitUntilDone()
                         
-                        with self._lock:
-                            
-                            if self._download_control_file_set is not None:
-                                
-                                wx.CallAfter( self._download_control_file_set, network_job )
-                                
-                            
+                    except HydrusExceptions.ShutdownException:
                         
-                        while not network_job.IsDone():
-                            
-                            time.sleep( 0.1 )
-                            
+                        return True
+                        
+                    except HydrusExceptions.CancelledException:
+                        
+                        status = CC.STATUS_SKIPPED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
+                        
+                        return True
+                        
+                    except HydrusExceptions.NetworkException:
+                        
+                        status = CC.STATUS_FAILED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
+                        
+                        time.sleep( 2 )
+                        
+                        return True
                         
                     finally:
                         
@@ -3720,43 +3713,22 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    if HG.view_shutdown:
+                    with self._lock:
                         
-                        return
+                        self._current_action = 'importing file'
                         
-                    elif network_job.HasError():
+                    
+                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    
+                    ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+                    
+                    self._urls_cache.UpdateSeedStatus( file_url, status )
+                    
+                    if url_not_known_beforehand and hash is not None:
                         
-                        status = CC.STATUS_FAILED
+                        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
                         
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
-                        
-                        time.sleep( 2 )
-                        
-                    elif network_job.IsCancelled():
-                        
-                        status = CC.STATUS_SKIPPED
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
-                        
-                    else:
-                        
-                        with self._lock:
-                            
-                            self._current_action = 'importing file'
-                            
-                        
-                        file_import_job = FileImportJob( temp_path, self._import_file_options )
-                        
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status )
-                        
-                        if url_not_known_beforehand and hash is not None:
-                            
-                            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                            
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                         
                     
                 finally:
@@ -3798,10 +3770,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
-        
-        with self._lock:
+        finally:
             
-            self._current_action = ''
+            with self._lock:
+                
+                self._current_action = ''
+                
             
         
         return True
@@ -3832,22 +3806,19 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 network_job.OverrideBandwidth()
                 
+                HG.client_controller.network_engine.AddJob( network_job )
+                
+                with self._lock:
+                    
+                    if self._download_control_thread_set is not None:
+                        
+                        wx.CallAfter( self._download_control_thread_set, network_job )
+                        
+                    
+                
                 try:
                     
-                    HG.client_controller.network_engine.AddJob( network_job )
-                    
-                    with self._lock:
-                        
-                        if self._download_control_thread_set is not None:
-                            
-                            wx.CallAfter( self._download_control_thread_set, network_job )
-                            
-                        
-                    
-                    while not network_job.IsDone():
-                        
-                        time.sleep( 0.1 )
-                        
+                    network_job.WaitUntilDone()
                     
                 finally:
                     
@@ -3857,53 +3828,36 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-                if HG.view_shutdown:
+                raw_json = network_job.GetContent()
+                
+                file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
+                
+                new_urls = []
+                
+                for ( file_url, file_md5_base64, file_original_filename ) in file_infos:
                     
-                    raise HydrusExceptions.ShutdownException()
-                    
-                elif network_job.HasError():
-                    
-                    e = network_job.GetErrorException()
-                    
-                    raise e
-                    
-                elif network_job.IsCancelled():
-                    
-                    raise Exception( 'Page download cancelled!' )
-                    
-                else:
-                    
-                    raw_json = network_job.GetContent()
-                    
-                    file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
-                    
-                    new_urls = []
-                    
-                    for ( file_url, file_md5_base64, file_original_filename ) in file_infos:
+                    if not self._urls_cache.HasSeed( file_url ):
                         
-                        if not self._urls_cache.HasSeed( file_url ):
+                        new_urls.append( file_url )
+                        
+                        self._urls_to_filenames[ file_url ] = file_original_filename
+                        
+                        if file_md5_base64 is not None:
                             
-                            new_urls.append( file_url )
-                            
-                            self._urls_to_filenames[ file_url ] = file_original_filename
-                            
-                            if file_md5_base64 is not None:
-                                
-                                self._urls_to_md5_base64[ file_url ] = file_md5_base64
-                                
+                            self._urls_to_md5_base64[ file_url ] = file_md5_base64
                             
                         
                     
-                    self._urls_cache.AddSeeds( new_urls )
+                
+                self._urls_cache.AddSeeds( new_urls )
+                
+                num_new = len( new_urls )
+                
+                watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
+                
+                if num_new > 0:
                     
-                    num_new = len( new_urls )
-                    
-                    watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
-                    
-                    if num_new > 0:
-                        
-                        self._new_files_event.set()
-                        
+                    self._new_files_event.set()
                     
                 
             except HydrusExceptions.NotFoundException:
@@ -4004,7 +3958,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                         if did_work:
                             
-                            time.sleep( 0.1 )
+                            time.sleep( DID_FILE_WORK_MINIMUM_SLEEP_TIME )
                             
                         else:
                             
@@ -4279,23 +4233,39 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     
                     network_job = ClientNetworking.NetworkJob( 'GET', file_url, temp_path = temp_path )
                     
+                    HG.client_controller.network_engine.AddJob( network_job )
+                    
+                    with self._lock:
+                        
+                        if self._download_control_file_set is not None:
+                            
+                            wx.CallAfter( self._download_control_file_set, network_job )
+                            
+                        
+                    
                     try:
                         
-                        HG.client_controller.network_engine.AddJob( network_job )
+                        network_job.WaitUntilDone()
                         
-                        with self._lock:
-                            
-                            if self._download_control_file_set is not None:
-                                
-                                wx.CallAfter( self._download_control_file_set, network_job )
-                                
-                            
+                    except HydrusExceptions.CancelledException:
                         
-                        while not network_job.IsDone():
-                            
-                            time.sleep( 0.1 )
-                            
+                        status = CC.STATUS_SKIPPED
                         
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
+                        
+                        return True
+                        
+                    except HydrusExceptions.NetworkException:
+                        
+                        status = CC.STATUS_FAILED
+                        
+                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
+                        
+                        time.sleep( 2 )
+                        
+                        return True
+                        
+                    
                     finally:
                         
                         if self._download_control_file_clear is not None:
@@ -4304,38 +4274,17 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    if HG.view_shutdown:
+                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    
+                    ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+                    
+                    self._urls_cache.UpdateSeedStatus( file_url, status )
+                    
+                    if url_not_known_beforehand and hash is not None:
                         
-                        raise HydrusExceptions.ShutdownException()
+                        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
                         
-                    elif network_job.HasError():
-                        
-                        status = CC.STATUS_FAILED
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = network_job.GetErrorText() )
-                        
-                        time.sleep( 2 )
-                        
-                    elif network_job.IsCancelled():
-                        
-                        status = CC.STATUS_SKIPPED
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status, note = 'cancelled during download!' )
-                        
-                    else:
-                        
-                        file_import_job = FileImportJob( temp_path, self._import_file_options )
-                        
-                        ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
-                        
-                        self._urls_cache.UpdateSeedStatus( file_url, status )
-                        
-                        if url_not_known_beforehand and hash is not None:
-                            
-                            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, ( file_url, ) ) ) ] }
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                            
+                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                         
                     
                 finally:
@@ -4367,10 +4316,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             self._urls_cache.UpdateSeedStatus( file_url, status, exception = e )
             
-        
-        with self._lock:
+        finally:
             
-            self._RegenerateSeedCacheStatus()
+            with self._lock:
+                
+                self._RegenerateSeedCacheStatus()
+                
             
         
         return True
@@ -4397,7 +4348,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     
                     if did_work:
                         
-                        time.sleep( 0.1 )
+                        time.sleep( DID_FILE_WORK_MINIMUM_SLEEP_TIME )
                         
                     else:
                         

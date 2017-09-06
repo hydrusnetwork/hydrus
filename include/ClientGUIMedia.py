@@ -2348,7 +2348,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventDrag( self, event ):
         
-        if event.LeftIsDown() and self._drag_init_coordinates is not None:
+        if event.Dragging() and self._drag_init_coordinates is not None:
             
             ( old_x, old_y ) = self._drag_init_coordinates
             

@@ -18,7 +18,7 @@ class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent, min_height = 250 ):
+    def __init__( self, parent, min_height = 150 ):
         
         wx.ScrolledWindow.__init__( self, parent, style = wx.VSCROLL | wx.BORDER_DOUBLE )
         

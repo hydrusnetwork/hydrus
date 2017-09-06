@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 271
+SOFTWARE_VERSION = 272
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -616,6 +616,7 @@ SITE_TYPE_HENTAI_FOUNDRY_TAGS = 12
 SITE_TYPE_PIXIV_ARTIST_ID = 13
 SITE_TYPE_PIXIV_TAG = 14
 SITE_TYPE_DEFAULT = 15
+SITE_TYPE_THREAD_WATCHER = 16
 
 site_type_string_lookup = {}
 
@@ -635,6 +636,7 @@ site_type_string_lookup[ SITE_TYPE_PIXIV ] = 'pixiv'
 site_type_string_lookup[ SITE_TYPE_PIXIV_ARTIST_ID ] = 'pixiv artist id'
 site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
+site_type_string_lookup[ SITE_TYPE_THREAD_WATCHER ] = 'thread watcher'
 
 # default options
 

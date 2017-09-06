@@ -587,18 +587,15 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             HG.client_controller.network_engine.AddJob( network_job )
             
-            while not network_job.IsDone():
+            try:
                 
-                time.sleep( 0.1 )
+                network_job.WaitUntilDone()
                 
-            
-            if HG.view_shutdown:
+            except HydrusExceptions.CancelledException:
                 
-                raise HydrusExceptions.ShutdownException()
+                break
                 
-            elif network_job.HasError():
-                
-                e = network_job.GetErrorException()
+            except HydrusExceptions.NetworkException as e:
                 
                 if isinstance( e, HydrusExceptions.NotFoundException ):
                     
@@ -621,12 +618,8 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    raise e
+                    raise
                     
-                
-            elif network_job.IsCancelled():
-                
-                break
                 
             
             linked_data = network_job.GetContent()
@@ -783,60 +776,59 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def FetchData( self, job_key, file_identifier ):
         
+        # add gauge report hook and in-stream cancel support to the get/post calls
+        
+        request_args = dict( self._static_args )
+        
+        if self._file_identifier_type != FILE_IDENTIFIER_TYPE_FILE:
+            
+            request_args[ self._file_identifier_arg_name ] = HydrusData.EncodeBytes( self._file_identifier_encoding, file_identifier )
+            
+        
+        if self._query_type == HC.GET:
+            
+            if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+                
+                raise Exception( 'Cannot have a file as an argument on a GET query!' )
+                
+            
+            full_request_url = ClientNetworking.CombineGETURLWithParameters( self._url, request_args )
+            
+            job_key.SetVariable( 'script_status', 'fetching ' + full_request_url )
+            
+            job_key.AddURL( full_request_url )
+            
+            network_job = ClientNetworking.NetworkJob( 'GET', full_request_url )
+            
+        elif self._query_type == HC.POST:
+            
+            if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
+                
+                job_key.SetVariable( 'script_status', 'uploading file' )
+                
+                path  = file_identifier
+                
+                files = { self._file_identifier_arg_name : open( path, 'rb' ) }
+                
+            else:
+                
+                job_key.SetVariable( 'script_status', 'uploading identifier' )
+                
+                files = None
+                
+            
+            network_job = ClientNetworking.NetworkJob( 'POST', self._url, body = request_args, files = files )
+            
+        
+        # send nj to nj control on this panel here
+        
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
         try:
             
-            # add gauge report hook and in-stream cancel support to the get/post calls
-            
-            request_args = dict( self._static_args )
-            
-            if self._file_identifier_type != FILE_IDENTIFIER_TYPE_FILE:
-                
-                request_args[ self._file_identifier_arg_name ] = HydrusData.EncodeBytes( self._file_identifier_encoding, file_identifier )
-                
-            
-            if self._query_type == HC.GET:
-                
-                if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
-                    
-                    raise Exception( 'Cannot have a file as an argument on a GET query!' )
-                    
-                
-                rendered_url = self._url + '?' + '&'.join( ( HydrusData.ToByteString( key ) + '=' + HydrusData.ToByteString( value ) for ( key, value ) in request_args.items() ) )
-                
-                job_key.SetVariable( 'script_status', 'fetching ' + rendered_url )
-                
-                job_key.AddURL( rendered_url )
-                
-                response = ClientNetworking.RequestsGet( self._url, params = request_args )
-                
-            elif self._query_type == HC.POST:
-                
-                if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
-                    
-                    job_key.SetVariable( 'script_status', 'uploading file' )
-                    
-                    path  = file_identifier
-                    
-                    files = { self._file_identifier_arg_name : open( path, 'rb' ) }
-                    
-                else:
-                    
-                    job_key.SetVariable( 'script_status', 'uploading identifier' )
-                    
-                    files = None
-                    
-                
-                response = ClientNetworking.RequestsPost( self._url, data = request_args, files = files )
-                
-            
-            if job_key.IsCancelled():
-                
-                raise HydrusExceptions.CancelledException()
-                
-            
-            data = response.text
-            
-            return data
+            network_job.WaitUntilDone()
             
         except HydrusExceptions.NotFoundException:
             
@@ -852,6 +844,15 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             raise
             
+        
+        if job_key.IsCancelled():
+            
+            raise HydrusExceptions.CancelledException()
+            
+        
+        data = network_job.GetContent()
+        
+        return data
         
     
     def GetParsableContent( self ):

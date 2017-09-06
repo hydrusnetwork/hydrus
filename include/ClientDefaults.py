@@ -328,6 +328,11 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         namespaces = [ '' ]
         search_value = 'username'
         
+    elif site_type == HC.SITE_TYPE_THREAD_WATCHER:
+        
+        namespaces = [ 'filename' ]
+        search_value = 'thread url'
+        
     
     return ( namespaces, search_value )
     
@@ -336,7 +341,7 @@ def GetDefaultBoorus():
     boorus = {}
     
     name = 'gelbooru'
-    search_url = 'http://gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://gelbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '+'
     advance_by_page_num = False
     thumb_classname = 'thumb'
@@ -388,7 +393,7 @@ def GetDefaultBoorus():
     image_data = None
     tag_classnames_to_namespaces = { 'category-0' : '', 'category-4' : 'character', 'category-3' : 'series', 'category-1' : 'creator' }
     
-    #boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'mishimmie'
     search_url = 'http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'

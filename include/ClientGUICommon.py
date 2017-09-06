@@ -24,6 +24,86 @@ ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
 
+def GetFocusTLP():
+    
+    focus = wx.Window.FindFocus()
+    
+    return GetTLP( focus )
+    
+def GetTLP( window ):
+    
+    if window is None:
+        
+        return None
+        
+    elif isinstance( window, wx.TopLevelWindow ):
+        
+        return window
+        
+    else:
+        
+        return window.GetTopLevelParent()
+        
+    
+def IsWXAncestor( child, ancestor ):
+    
+    parent = child
+    
+    while not isinstance( parent, wx.TopLevelWindow ):
+        
+        if parent == ancestor:
+            
+            return True
+            
+        
+        parent = parent.GetParent()
+        
+    
+    return False
+    
+def NotebookScreenToHitTest( notebook, screen_position ):
+    
+    if HC.PLATFORM_OSX:
+        
+        # OS X has some unusual coordinates for its notebooks
+        # the notebook tabs are not considered to be in the client area (they are actually negative on getscreenposition())
+        # its hittest works on window coords, not client coords
+        # hence to get hittest position, we get our parent's client position and adjust by our given position in that
+        
+        # this also seems to cause menus popped on notebooks to spawn high and left, wew
+        
+        ( my_x, my_y ) = notebook.GetPosition()
+        
+        ( p_x, p_y ) = notebook.GetParent().ScreenToClient( wx.GetMousePosition() )
+        
+        position = ( p_x - my_x, p_y - my_y )
+        
+    else:
+        
+        position = notebook.ScreenToClient( screen_position )
+        
+    
+    return notebook.HitTest( position )
+    
+def TLPHasFocus( window ):
+    
+    focus_tlp = GetFocusTLP()
+    
+    window_tlp = GetTLP( window )
+    
+    return window_tlp == focus_tlp
+    
+def WindowHasFocus( window ):
+    
+    focus = wx.Window.FindFocus()
+    
+    if focus is None:
+        
+        return False
+        
+    
+    return window == focus
+    
 def WindowOrAnyTLPChildHasFocus( window ):
     
     focus = wx.Window.FindFocus()
@@ -57,62 +137,6 @@ def WindowOrSameTLPChildHasFocus( window ):
             
         
         focus = focus.GetParent()
-        
-    
-    return False
-    
-def GetFocusTLP():
-    
-    focus = wx.Window.FindFocus()
-    
-    return GetTLP( focus )
-    
-def GetTLP( window ):
-    
-    if window is None:
-        
-        return None
-        
-    elif isinstance( window, wx.TopLevelWindow ):
-        
-        return window
-        
-    else:
-        
-        return window.GetTopLevelParent()
-        
-    
-def TLPHasFocus( window ):
-    
-    focus_tlp = GetFocusTLP()
-    
-    window_tlp = GetTLP( window )
-    
-    return window_tlp == focus_tlp
-    
-def WindowHasFocus( window ):
-    
-    focus = wx.Window.FindFocus()
-    
-    if focus is None:
-        
-        return False
-        
-    
-    return window == focus
-    
-def IsWXAncestor( child, ancestor ):
-    
-    parent = child
-    
-    while not isinstance( parent, wx.TopLevelWindow ):
-        
-        if parent == ancestor:
-            
-            return True
-            
-        
-        parent = parent.GetParent()
         
     
     return False
@@ -2147,155 +2171,83 @@ class RatingNumericalCanvas( RatingNumerical ):
             
         
     
-class RegexButton( wx.Button ):
-    
-    ID_REGEX_WHITESPACE = 9001 # temp fix, 0 is buggy
-    ID_REGEX_NUMBER = 1
-    ID_REGEX_ALPHANUMERIC = 2
-    ID_REGEX_ANY = 3
-    ID_REGEX_BEGINNING = 4
-    ID_REGEX_END = 5
-    ID_REGEX_0_OR_MORE_GREEDY = 6
-    ID_REGEX_1_OR_MORE_GREEDY = 7
-    ID_REGEX_0_OR_1_GREEDY = 8
-    ID_REGEX_0_OR_MORE_MINIMAL = 9
-    ID_REGEX_1_OR_MORE_MINIMAL = 10
-    ID_REGEX_0_OR_1_MINIMAL = 11
-    ID_REGEX_EXACTLY_M = 12
-    ID_REGEX_M_TO_N_GREEDY = 13
-    ID_REGEX_M_TO_N_MINIMAL = 14
-    ID_REGEX_LOOKAHEAD = 15
-    ID_REGEX_NEGATIVE_LOOKAHEAD = 16
-    ID_REGEX_LOOKBEHIND = 17
-    ID_REGEX_NEGATIVE_LOOKBEHIND = 18
-    ID_REGEX_NUMBER_WITHOUT_ZEROES = 19
-    ID_REGEX_BACKSPACE = 22
-    ID_REGEX_SET = 23
-    ID_REGEX_NOT_SET = 24
-    ID_REGEX_FILENAME = 25
-    ID_REGEX_MANAGE_FAVOURITES = 26
-    ID_REGEX_FAVOURITES = range( 100, 200 )
+class RegexButton( BetterButton ):
     
     def __init__( self, parent ):
         
-        wx.Button.__init__( self, parent, label = 'regex shortcuts' )
-        
-        self.Bind( wx.EVT_BUTTON, self.EventButton )
-        self.Bind( wx.EVT_MENU, self.EventMenu )
+        BetterButton.__init__( self, parent, 'regex shortcuts', self._ShowMenu )
         
     
-    def EventButton( self, event ):
+    def _ShowMenu( self ):
         
         menu = wx.Menu()
         
-        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy to clipboard' )
+        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy it to the clipboard' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
         submenu = wx.Menu()
         
-        submenu.Append( self.ID_REGEX_WHITESPACE, r'whitespace character - \s' )
-        submenu.Append( self.ID_REGEX_NUMBER, r'number character - \d' )
-        submenu.Append( self.ID_REGEX_ALPHANUMERIC, r'alphanumeric or backspace character - \w' )
-        submenu.Append( self.ID_REGEX_ANY, r'any character - .' )
-        submenu.Append( self.ID_REGEX_BACKSPACE, r'backspace character - \\' )
-        submenu.Append( self.ID_REGEX_BEGINNING, r'beginning of line - ^' )
-        submenu.Append( self.ID_REGEX_END, r'end of line - $' )
-        submenu.Append( self.ID_REGEX_SET, u'any of these - [\u2026]' )
-        submenu.Append( self.ID_REGEX_NOT_SET, u'anything other than these - [^\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\s' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'number character - \d', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\d' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'alphanumeric or backspace character - \w', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\w' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'any character - .', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'.' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'backslash character - \\', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\\' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'^' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'end of line - $', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'$' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'any of these - [\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[\u2026]' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'anything other than these - [^\u2026]', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'[^\u2026]' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        submenu.Append( self.ID_REGEX_0_OR_MORE_GREEDY, r'0 or more matches, consuming as many as possible - *' )
-        submenu.Append( self.ID_REGEX_1_OR_MORE_GREEDY, r'1 or more matches, consuming as many as possible - +' )
-        submenu.Append( self.ID_REGEX_0_OR_1_GREEDY, r'0 or 1 matches, preferring 1 - ?' )
-        submenu.Append( self.ID_REGEX_0_OR_MORE_MINIMAL, r'0 or more matches, consuming as few as possible - *?' )
-        submenu.Append( self.ID_REGEX_1_OR_MORE_MINIMAL, r'1 or more matches, consuming as few as possible - +?' )
-        submenu.Append( self.ID_REGEX_0_OR_1_MINIMAL, r'0 or 1 matches, preferring 0 - *' )
-        submenu.Append( self.ID_REGEX_EXACTLY_M, r'exactly m matches - {m}' )
-        submenu.Append( self.ID_REGEX_M_TO_N_GREEDY, r'm to n matches, consuming as many as possible - {m,n}' )
-        submenu.Append( self.ID_REGEX_M_TO_N_MINIMAL, r'm to n matches, consuming as few as possible - {m,n}?' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or more matches, consuming as many as possible - *', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'1 or more matches, consuming as many as possible - +', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or 1 matches, preferring 1 - ?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'?' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or more matches, consuming as few as possible - *?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'*?' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'1 or more matches, consuming as few as possible - +?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'+?' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'0 or 1 matches, preferring 0 - ??', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'??' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'exactly m matches - {m}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m}' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'm to n matches, consuming as many as possible - {m,n}', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'm to n matches, consuming as few as possible - {m,n}?', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'{m,n}?' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        submenu.Append( self.ID_REGEX_LOOKAHEAD, u'the next characters are: (non-consuming) - (?=\u2026)' )
-        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKAHEAD, u'the next characters are not: (non-consuming) - (?!\u2026)' )
-        submenu.Append( self.ID_REGEX_LOOKBEHIND, u'the previous characters are: (non-consuming) - (?<=\u2026)' )
-        submenu.Append( self.ID_REGEX_NEGATIVE_LOOKBEHIND, u'the previous characters are not: (non-consuming) - (?<!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'the next characters are: (non-consuming) - (?=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'the next characters are not: (non-consuming) - (?!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?!\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'the previous characters are: (non-consuming) - (?<=\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?<=\u2026)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, u'the previous characters are not: (non-consuming) - (?<!\u2026)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(?<!\u2026)' )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        submenu.Append( self.ID_REGEX_NUMBER_WITHOUT_ZEROES, r'0074 -> 74 - [1-9]+\d*' )
-        submenu.Append( self.ID_REGEX_FILENAME, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'0074 -> 74 - [1-9]+\d*', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, r'filename - (?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)' )
         
-        menu.AppendMenu( -1, 'regex components', submenu )
+        ClientGUIMenus.AppendMenu( menu, submenu, 'regex components' )
         
         submenu = wx.Menu()
         
-        submenu.Append( self.ID_REGEX_MANAGE_FAVOURITES, 'manage favourites' )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        for ( index, ( regex_phrase, description ) ) in enumerate( HC.options[ 'regex_favourites' ] ):
+        for ( regex_phrase, description ) in HC.options[ 'regex_favourites' ]:
             
-            menu_id = index + 100
-            
-            submenu.Append( menu_id, description )
+            ClientGUIMenus.AppendMenuItem( self, submenu, description, 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', regex_phrase )
             
         
-        menu.AppendMenu( -1, 'favourites', submenu )
+        ClientGUIMenus.AppendMenu( menu, submenu, 'favourites' )
         
         HG.client_controller.PopupMenu( self, menu )
         
     
-    def EventMenu( self, event ):
+    def _ManageFavourites( self ):
         
-        id = event.GetId()
+        import ClientGUIDialogsManage
         
-        phrase = None
-        
-        if id == self.ID_REGEX_WHITESPACE: phrase = r'\s'
-        elif id == self.ID_REGEX_NUMBER: phrase = r'\d'
-        elif id == self.ID_REGEX_ALPHANUMERIC: phrase = r'\w'
-        elif id == self.ID_REGEX_ANY: phrase = r'.'
-        elif id == self.ID_REGEX_BACKSPACE: phrase = r'\\'
-        elif id == self.ID_REGEX_BEGINNING: phrase = r'^'
-        elif id == self.ID_REGEX_END: phrase = r'$'
-        elif id == self.ID_REGEX_SET: phrase = u'[\u2026]'
-        elif id == self.ID_REGEX_NOT_SET: phrase = u'[^\u2026]'
-        elif id == self.ID_REGEX_0_OR_MORE_GREEDY: phrase = r'*'
-        elif id == self.ID_REGEX_1_OR_MORE_GREEDY: phrase = r'+'
-        elif id == self.ID_REGEX_0_OR_1_GREEDY: phrase = r'?'
-        elif id == self.ID_REGEX_0_OR_MORE_MINIMAL: phrase = r'*?'
-        elif id == self.ID_REGEX_1_OR_MORE_MINIMAL: phrase = r'+?'
-        elif id == self.ID_REGEX_0_OR_1_MINIMAL: phrase = r'*'
-        elif id == self.ID_REGEX_EXACTLY_M: phrase = r'{m}'
-        elif id == self.ID_REGEX_M_TO_N_GREEDY: phrase = r'{m,n}'
-        elif id == self.ID_REGEX_M_TO_N_MINIMAL: phrase = r'{m,n}?'
-        elif id == self.ID_REGEX_LOOKAHEAD: phrase = u'(?=\u2026)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKAHEAD: phrase = u'(?!\u2026)'
-        elif id == self.ID_REGEX_LOOKBEHIND: phrase = u'(?<=\u2026)'
-        elif id == self.ID_REGEX_NEGATIVE_LOOKBEHIND: phrase = u'(?<!\u2026)'
-        elif id == self.ID_REGEX_NUMBER_WITHOUT_ZEROES: phrase = r'[1-9]+\d*'
-        elif id == self.ID_REGEX_FILENAME: phrase = '(?<=' + os.path.sep.encode( 'string_escape' ) + r')[^' + os.path.sep.encode( 'string_escape' ) + r']*?(?=\..*$)'
-        elif id == self.ID_REGEX_MANAGE_FAVOURITES:
+        with ClientGUIDialogsManage.DialogManageRegexFavourites( self.GetTopLevelParent() ) as dlg:
             
-            import ClientGUIDialogsManage
+            dlg.ShowModal()
             
-            with ClientGUIDialogsManage.DialogManageRegexFavourites( self.GetTopLevelParent() ) as dlg:
-                
-                dlg.ShowModal()
-                
-            
-        elif id in self.ID_REGEX_FAVOURITES:
-            
-            index = id - 100
-            
-            ( phrase, description ) = HC.options[ 'regex_favourites' ][ index ]
-            
-        else: event.Skip()
-        
-        if phrase is not None: HG.client_controller.pub( 'clipboard', 'text', phrase )
         
     
 class SaneMultilineTextCtrl( wx.TextCtrl ):

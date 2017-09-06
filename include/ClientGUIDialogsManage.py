@@ -41,7 +41,6 @@ import re
 import string
 import time
 import traceback
-import urllib
 import wx
 import yaml
 

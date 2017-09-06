@@ -1539,28 +1539,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
-    def _SeedCache( self ):
-        
-        dupe_seed_cache = self._seed_cache.Duplicate()
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
-            
-            import ClientGUISeedCache
-            
-            panel = ClientGUISeedCache.EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._seed_cache = panel.GetValue()
-                
-                self._UpdateCommandButtons()
-                self._UpdateSeedInfo()
-                
-            
-        
-    
     def CheckNow( self ):
         
         self._check_now = True

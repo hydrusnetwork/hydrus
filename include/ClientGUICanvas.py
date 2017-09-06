@@ -1756,9 +1756,9 @@ class Canvas( wx.Window ):
                 
                 tags_manager = self._current_media.GetTagsManager()
                 
-                current = tags_manager.GetCurrent()
-                pending = tags_manager.GetPending()
-                petitioned = tags_manager.GetPetitioned()
+                current = tags_manager.GetCurrent( service_key )
+                pending = tags_manager.GetPending( service_key )
+                petitioned = tags_manager.GetPetitioned( service_key )
                 
                 if service_type == HC.LOCAL_TAG:
                     

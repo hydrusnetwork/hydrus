@@ -1151,26 +1151,21 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         HG.client_controller.network_engine.AddJob( network_job )
         
-        while not network_job.IsDone():
+        try:
             
-            time.sleep( 0.1 )
+            network_job.WaitUntilDone()
             
-        
-        if HG.view_shutdown:
-            
-            raise HydrusExceptions.ShutdownException()
-            
-        elif network_job.HasError():
-            
-            self._my_example_data.SetValue( 'fetch failed' )
-            
-            raise network_job.GetErrorException()
-            
-        elif network_job.IsCancelled():
+        except HydrusExceptions.CancelledException:
             
             self._my_example_data.SetValue( 'fetch cancelled' )
             
             return
+            
+        except HydrusExceptions.NetworkException as e:
+            
+            self._my_example_data.SetValue( 'fetch failed' )
+            
+            raise
             
         
         example_data = network_job.GetContent()

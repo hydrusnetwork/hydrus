@@ -590,7 +590,11 @@ class PopupMessageManager( wx.Frame ):
             parent = self.GetParent()
             
             # changing show status while parent iconised in Windows leads to grey window syndrome
-            going_to_bug_out_at_hide_or_show = HC.PLATFORM_WINDOWS and parent.IsIconized()
+            windows_and_iconised = HC.PLATFORM_WINDOWS and parent.IsIconized()
+            
+            possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
+            
+            going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
             
             new_options = HG.client_controller.GetNewOptions()
             

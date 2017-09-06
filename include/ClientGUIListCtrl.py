@@ -858,7 +858,12 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._SortAndRefreshRows()
         
     
-    def UpdateDatas( self, datas ):
+    def UpdateDatas( self, datas = None ):
+        
+        if datas is None:
+            
+            datas = list( self._data_to_indices.keys() )
+            
         
         for data in datas:
             

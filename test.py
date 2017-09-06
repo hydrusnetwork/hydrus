@@ -17,7 +17,6 @@ from include import HydrusTags
 from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
-from include import TestClientDownloading
 from include import TestClientListBoxes
 from include import TestClientNetworking
 from include import TestConstants
@@ -82,8 +81,6 @@ class Controller( object ):
         def show_text( text ): pass
         
         HydrusData.ShowText = show_text
-        
-        self._http = ClientNetworking.HTTPConnectionManager()
         
         self._reads = {}
         
@@ -208,8 +205,6 @@ class Controller( object ):
         return False
         
     
-    def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
-    
     def GetClientSessionManager( self ):
         
         return self._client_session_manager
@@ -219,8 +214,6 @@ class Controller( object ):
         
         return self._server_files_dir
         
-    
-    def GetHTTP( self ): return self._http
     
     def GetNewOptions( self ):
         
@@ -312,36 +305,50 @@ class Controller( object ):
         if only_run is None: run_all = True
         else: run_all = False
         
-        if run_all or only_run == 'daemons': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
+        if run_all or only_run == 'daemons':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
+            
         if run_all or only_run == 'data':
+            
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusTags ) )
-        if run_all or only_run == 'db': suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
-        if run_all or only_run == 'downloading':
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDownloading ) )
+            
+        if run_all or only_run == 'db':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestDB ) )
+            
         if run_all or only_run == 'networking':
+            
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientNetworking ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
+            
         if run_all or only_run == 'gui':
+            
             suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
-        if run_all or only_run == 'image': suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
-        if run_all or only_run == 'nat': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
-        if run_all or only_run == 'server': suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
+            
+        if run_all or only_run == 'image':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
+            
+        if run_all or only_run == 'nat':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNATPunch ) )
+            
+        if run_all or only_run == 'server':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusServer ) )
+            
         
         suite = unittest.TestSuite( suites )
         
         runner = unittest.TextTestRunner( verbosity = 1 )
         
         runner.run( suite )
-        
-    
-    def SetHTTP( self, http ):
-        
-        self._http = http
         
     
     def SetRead( self, name, value ):

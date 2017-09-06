@@ -32,7 +32,6 @@ import os
 import threading
 import time
 import traceback
-import urllib
 import urlparse
 import webbrowser
 import wx
@@ -203,7 +202,10 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     for ( name, field_type, value ) in fields:
         
-        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ): m.field( name, HydrusData.ToByteString( value ) )
+        if field_type in ( CC.FIELD_TEXT, CC.FIELD_COMMENT, CC.FIELD_PASSWORD, CC.FIELD_VERIFICATION_RECAPTCHA, CC.FIELD_THREAD_ID ):
+            
+            m.field( name, HydrusData.ToByteString( value ) )
+            
         elif field_type == CC.FIELD_CHECKBOX:
             
             if value:

@@ -11,7 +11,6 @@ import sys
 import threading
 import time
 import traceback
-import urllib
 import HydrusData
 import HydrusGlobals as HG
 

@@ -131,6 +131,14 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
             SlideOffScreenTLWUpAndLeft( tlw )
         
     
+def MouseIsOnMyDisplay( window ):
+    
+    window_display_index = wx.Display.GetFromWindow( window )
+    
+    mouse_display_index = wx.Display.GetFromPoint( wx.GetMousePosition() )
+    
+    return window_display_index == mouse_display_index
+    
 def PostSizeChangedEvent( window ):
     
     event = CC.SizeChangedEvent( -1 )

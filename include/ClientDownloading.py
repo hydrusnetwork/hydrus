@@ -161,19 +161,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
                     
                     HG.client_controller.network_engine.AddJob( network_job )
                     
-                    while not network_job.IsDone():
-                        
-                        time.sleep( 0.1 )
-                        
-                    
-                    if HG.view_shutdown:
-                        
-                        raise HydrusExceptions.ShutdownException()
-                        
-                    elif network_job.HasError():
-                        
-                        raise network_job.GetErrorException()
-                        
+                    network_job.WaitUntilDone()
                     
                     thread_html = network_job.GetContent()
                     
@@ -544,36 +532,22 @@ class Gallery( object ):
         
         HG.client_controller.network_engine.AddJob( network_job )
         
-        while not network_job.IsDone():
+        try:
             
-            time.sleep( 0.1 )
+            network_job.WaitUntilDone()
             
-        
-        if HG.view_shutdown:
-            
-            raise HydrusExceptions.ShutdownException()
-            
-        elif network_job.HasError():
-            
-            e = network_job.GetErrorException()
+        except Exception as e:
             
             HydrusData.Print( 'The url ' + url + ' gave the following problem:' )
             HydrusData.PrintException( e )
             
-            raise e
-            
-        elif network_job.IsCancelled():
-            
-            raise HydrusExceptions.CancelledException( 'Download cancelled!' )
-            
-        else:
-            
-            if temp_path is None:
-                
-                return network_job.GetContent()
-                
+            raise
             
         
+        if temp_path is None:
+            
+            return network_job.GetContent()
+            
         
     
     def _GetGalleryPageURL( self, query, page_index ):
@@ -809,6 +783,9 @@ class GalleryBooru( Gallery ):
                     
                 
             
+            # giving 404 on some content servers for http, no redirect for some reason
+            urls = [ ClientData.ConvertHTTPToHTTPS( url ) for url in urls ]
+            
         
         return ( urls, definitely_no_more_pages )
         
@@ -818,8 +795,6 @@ class GalleryBooru( Gallery ):
         ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
         
         soup = GetSoup( html )
-        
-        image_base = None
         
         image_url = None
         
@@ -833,7 +808,10 @@ class GalleryBooru( Gallery ):
                     
                     image_string = soup.find( text = re.compile( 'Save this file' ) )
                     
-                    if image_string is None: image_string = soup.find( text = re.compile( 'Save this video' ) )
+                    if image_string is None:
+                        
+                        image_string = soup.find( text = re.compile( 'Save this video' ) )
+                        
                     
                     if image_string is None:
                         
@@ -859,6 +837,22 @@ class GalleryBooru( Gallery ):
                                 
                             
                         
+                        # catchall for rule34hentai.net's mp4s, which are loaded in a mickey-mouse flv player
+                        
+                        if image_url is None:
+                            
+                            magic_phrase = 'document.write("<source src=\''
+                            
+                            if magic_phrase in html:
+                                
+                                # /image/252605' type='video/mp4...
+                                
+                                image_url_and_gumpf = html.split( magic_phrase, 1 )[1]
+                                
+                                image_url = image_url_and_gumpf.split( '\'', 1 )[0]
+                                
+                            
+                        
                     else:
                         
                         image = image_string.parent
@@ -872,13 +866,16 @@ class GalleryBooru( Gallery ):
                         
                         image_url = image[ 'src' ]
                         
-                        if 'sample/sample-' in image_url:
+                        if 'Running Danbooru' in html:
                             
-                            # danbooru resized image
+                            # possible danbooru resized image
                             
-                            image = soup.find( id = 'image-resize-link' )
+                            possible_better_image = soup.find( id = 'image-resize-link' )
                             
-                            image_url = image[ 'href' ]
+                            if possible_better_image is not None:
+                                
+                                image_url = possible_better_image[ 'href' ]
+                                
                             
                         
                     elif image.name == 'a':

@@ -225,8 +225,8 @@ def ConvertShortcutToPrettyShortcut( modifier, key ):
     elif modifier == wx.ACCEL_CTRL: modifier = 'ctrl'
     elif modifier == wx.ACCEL_SHIFT: modifier = 'shift'
     
-    if key in range( 65, 91 ): key = chr( key + 32 ) # + 32 for converting ascii A -> a
-    elif key in range( 97, 123 ): key = chr( key )
+    if OrdIsAlphaUpper( key ): key = chr( key + 32 ) # + 32 for converting ascii A -> a
+    elif OrdIsAlphaLower( key ) or OrdIsNumber( key ): key = chr( key )
     else: key = CC.wxk_code_string_lookup[ key ]
     
     return ( modifier, key )
@@ -495,6 +495,22 @@ def MergePredicates( predicates, add_namespaceless = False ):
         
     
     return master_predicate_dict.values()
+    
+def OrdIsAlphaLower( o ):
+    
+    return 97 <= o and o <= 122
+    
+def OrdIsAlphaUpper( o ):
+    
+    return 65 <= o and o <= 90
+    
+def OrdIsAlpha( o ):
+    
+    return OrdIsAlphaLower( o ) or OrdIsAlphaUpper( o )
+    
+def OrdIsNumber( o ):
+    
+    return 48 <= o and o <= 57
     
 def ReportShutdownException():
     
@@ -817,7 +833,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
         
-        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
+        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = False
         
         self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
         
@@ -1194,6 +1210,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     guidance_import_tag_options = None
                     
                     site_type = gallery_identifier.GetSiteType()
+                    
+                    if site_type == HC.SITE_TYPE_THREAD_WATCHER:
+                        
+                        return ImportTagOptions() # if nothing set, do nothing in this special case
+                        
                     
                     if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
                         
@@ -2297,11 +2318,11 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         if self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD:
             
-            if self._shortcut_key in range( 65, 91 ):
+            if OrdIsAlphaUpper( self._shortcut_key ):
                 
                 components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
                 
-            elif self._shortcut_key in range( 97, 123 ):
+            elif OrdIsAlphaLower( self._shortcut_key ) or OrdIsNumber( self._shortcut_key ):
                 
                 components.append( chr( self._shortcut_key ) )
                 
@@ -2455,7 +2476,7 @@ def ConvertKeyEventToShortcut( event ):
     
     key = event.KeyCode
     
-    if key in range( 65, 91 ) or key in CC.wxk_code_string_lookup.keys():
+    if OrdIsAlpha( key ) or OrdIsNumber( key ) or key in CC.wxk_code_string_lookup.keys():
         
         modifiers = []
         

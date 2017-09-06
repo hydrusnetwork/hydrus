@@ -320,7 +320,9 @@ class TestNetworkingJob( unittest.TestCase ):
     
     def _GetJob( self, for_login = False ):
         
-        job = ClientNetworking.NetworkJob( 'GET', MOCK_URL, for_login = for_login )
+        job = ClientNetworking.NetworkJob( 'GET', MOCK_URL )
+        
+        job.SetForLogin( for_login )
         
         mock_controller = TestConstants.MockController()
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
@@ -526,7 +528,9 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
     
     def _GetJob( self, for_login = False ):
         
-        job = ClientNetworking.NetworkJobHydrus( MOCK_HYDRUS_SERVICE_KEY, 'GET', MOCK_HYDRUS_URL, for_login = for_login )
+        job = ClientNetworking.NetworkJobHydrus( MOCK_HYDRUS_SERVICE_KEY, 'GET', MOCK_HYDRUS_URL )
+        
+        job.SetForLogin( for_login )
         
         mock_controller = TestConstants.MockController()
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()

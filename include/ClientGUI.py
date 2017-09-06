@@ -3287,8 +3287,8 @@ class FrameSplash( wx.Frame ):
         
         self.Center()
         
-        self._last_drag_coordinates = None
-        self._total_drag_delta = ( 0, 0 )
+        self._drag_init_click_coordinates = None
+        self._drag_init_position = None
         self._initial_position = self.GetPosition()
         
         # this is 124 x 166
@@ -3344,21 +3344,19 @@ class FrameSplash( wx.Frame ):
     
     def EventDrag( self, event ):
         
-        if event.Dragging() and self._last_drag_coordinates is not None:
+        if event.Dragging() and self._drag_init_click_coordinates is not None:
             
-            ( old_x, old_y ) = self._last_drag_coordinates
+            ( init_x, init_y ) = self._drag_init_click_coordinates
             
             ( x, y ) = wx.GetMousePosition()
             
-            ( delta_x, delta_y ) = ( x - old_x, y - old_y )
+            total_drag_delta = ( x - init_x, y - init_y )
             
-            ( old_delta_x, old_delta_y ) = self._total_drag_delta
+            #
             
-            self._total_drag_delta = ( old_delta_x + delta_x, old_delta_y + delta_y )
+            ( init_x, init_y ) = self._drag_init_position
             
-            ( init_x, init_y ) = self._initial_position
-            
-            ( total_delta_x, total_delta_y ) = self._total_drag_delta
+            ( total_delta_x, total_delta_y ) = total_drag_delta
             
             self.SetPosition( ( init_x + total_delta_x, init_y + total_delta_y ) )
             
@@ -3366,14 +3364,15 @@ class FrameSplash( wx.Frame ):
     
     def EventDragBegin( self, event ):
         
-        self._last_drag_coordinates = wx.GetMousePosition()
+        self._drag_init_click_coordinates = wx.GetMousePosition()
+        self._drag_init_position = self.GetPosition()
         
         event.Skip()
         
     
     def EventDragEnd( self, event ):
         
-        self._last_drag_coordinates = None
+        self._drag_init_click_coordinates = None
         
         event.Skip()
         

@@ -381,7 +381,10 @@ class Controller( HydrusController.HydrusController ):
         return False
         
     
-    def DoHTTP( self, *args, **kwargs ): return self._http.Request( *args, **kwargs )
+    def DoHTTP( self, *args, **kwargs ):
+        
+        return self._http.Request( *args, **kwargs )
+        
     
     def DoIdleShutdownWork( self ):
         
@@ -809,18 +812,26 @@ class Controller( HydrusController.HydrusController ):
             
             if self.CurrentlyVeryIdle():
                 
-                disk_cache_stop_time = HydrusData.GetNow() + 5
+                cache_period = 3600
+                disk_cache_stop_time = HydrusData.GetNow() + 30
                 
             elif self.CurrentlyIdle():
                 
-                disk_cache_stop_time = HydrusData.GetNow() + 2
+                cache_period = 1800
+                disk_cache_stop_time = HydrusData.GetNow() + 10
                 
             else:
                 
-                disk_cache_stop_time = HydrusData.GetNow() + 1
+                cache_period = 240
+                disk_cache_stop_time = HydrusData.GetNow() + 2
                 
             
-            self.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+            if HydrusData.TimeHasPassed( self._timestamps[ 'last_disk_cache_population' ] + cache_period ):
+                
+                self.Read( 'load_into_disk_cache', stop_time = disk_cache_stop_time, caller_limit = disk_cache_maintenance_mb * 1024 * 1024 )
+                
+                self._timestamps[ 'last_disk_cache_population' ] = HydrusData.GetNow()
+                
             
         
     

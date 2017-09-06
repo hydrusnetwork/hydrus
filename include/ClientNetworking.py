@@ -84,6 +84,20 @@ def CheckHydrusVersion( service_key, service_type, response_headers ):
         raise HydrusExceptions.NetworkVersionException( 'Network version mismatch! The server\'s network version was ' + str( network_version ) + ', whereas your client\'s is ' + str( HC.NETWORK_VERSION ) + '! ' + message )
         
     
+def CombineGETURLWithParameters( url, params_dict ):
+    
+    def make_safe( text ):
+        
+        # convert unicode to raw bytes
+        # quote that to be url-safe, ignoring the default '/' 'safe' character
+        
+        return urllib.quote( HydrusData.ToByteString( text ), '' )
+        
+    
+    request_string = '&'.join( ( make_safe( key ) + '=' + make_safe( value ) for ( key, value ) in params_dict.items() ) )
+    
+    return url + '?' + request_string
+    
 def ConvertDomainIntoAllApplicableDomains( domain ):
     
     domains = []
@@ -1822,7 +1836,7 @@ class NetworkJob( object ):
     
     MAX_CONNECTION_ATTEMPTS = 5
     
-    def __init__( self, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, method, url, body = None, files = None, referral_url = None, temp_path = None ):
         
         if HG.network_report_mode:
             
@@ -1836,9 +1850,13 @@ class NetworkJob( object ):
         self._method = method
         self._url = url
         self._body = body
+        self._files = files
         self._referral_url = referral_url
         self._temp_path = temp_path
-        self._for_login = for_login
+        
+        self._for_login = False
+        
+        self._additional_headers = {}
         
         self._creation_time = HydrusData.GetNow()
         
@@ -1850,6 +1868,8 @@ class NetworkJob( object ):
         
         self._error_exception = None
         self._error_text = None
+        
+        self._is_done_event = threading.Event()
         
         self._is_done = False
         self._is_cancelled = False
@@ -1887,12 +1907,18 @@ class NetworkJob( object ):
             method = self._method
             url = self._url
             data = self._body
+            files = self._files
             
             headers = {}
             
             if self._referral_url is not None:
                 
                 headers = { 'referer' : self._referral_url }
+                
+            
+            for ( key, value ) in self._additional_headers.items():
+                
+                headers[ key ] = value
                 
             
         
@@ -1910,7 +1936,7 @@ class NetworkJob( object ):
                 
                 timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
                 
-                response = session.request( method, url, data = data, headers = headers, stream = True, timeout = timeout )
+                response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = timeout )
                 
                 connection_successful = True
                 
@@ -2036,7 +2062,11 @@ class NetworkJob( object ):
             self._ReportDataUsed( chunk_length )
             self._WaitOnOngoingBandwidth()
             
-        
+            if HG.view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException()
+                
+            
         
     
     def _ReportDataUsed( self, num_bytes ):
@@ -2065,6 +2095,8 @@ class NetworkJob( object ):
         
         self._is_done = True
         
+        self._is_done_event.set()
+        
     
     def _Sleep( self, seconds ):
         
@@ -2076,6 +2108,14 @@ class NetworkJob( object ):
         while not self._OngoingBandwidthOK() and not self._IsCancelled():
             
             time.sleep( 0.1 )
+            
+        
+    
+    def AddAdditionalHeader( self, key, value ):
+        
+        with self._lock:
+            
+            self._additional_headers[ key ] = value
             
         
     
@@ -2299,6 +2339,14 @@ class NetworkJob( object ):
             
         
     
+    def SetForLogin( self, for_login ):
+        
+        with self._lock:
+            
+            self._for_login = for_login
+            
+        
+    
     def SetStatus( self, text ):
         
         with self._lock:
@@ -2396,13 +2444,43 @@ class NetworkJob( object ):
             
         
     
+    def WaitUntilDone( self ):
+        
+        self._is_done_event.wait()
+        
+        with self._lock:
+            
+            if self.engine.controller.ModelIsShutdown():
+                
+                raise HydrusExceptions.ShutdownException()
+                
+            elif self._error_exception is not None:
+                
+                raise self._error_exception
+                
+            elif self._IsCancelled():
+                
+                if self._method == 'POST':
+                    
+                    message = 'Upload cancelled!'
+                    
+                else:
+                    
+                    message = 'Download cancelled!'
+                    
+                
+                raise HydrusExceptions.CancelledException( message )
+                
+            
+        
+    
 class NetworkJobDownloader( NetworkJob ):
     
-    def __init__( self, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, downloader_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._downloader_key = downloader_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2421,11 +2499,11 @@ class NetworkJobDownloader( NetworkJob ):
     
 class NetworkJobDownloaderQuery( NetworkJobDownloader ):
     
-    def __init__( self, downloader_page_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, downloader_page_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._downloader_page_key = downloader_page_key
         
-        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2444,11 +2522,11 @@ class NetworkJobDownloaderQuery( NetworkJobDownloader ):
     
 class NetworkJobDownloaderQueryTemporary( NetworkJob ):
     
-    def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, downloader_page_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._downloader_page_key = downloader_page_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2467,11 +2545,11 @@ class NetworkJobDownloaderQueryTemporary( NetworkJob ):
     
 class NetworkJobSubscription( NetworkJobDownloader ):
     
-    def __init__( self, subscription_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, subscription_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._subscription_key = subscription_key
         
-        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJobDownloader.__init__( self, downloader_key, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2490,11 +2568,11 @@ class NetworkJobSubscription( NetworkJobDownloader ):
     
 class NetworkJobSubscriptionTemporary( NetworkJob ):
     
-    def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._subscription_key = subscription_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2513,11 +2591,11 @@ class NetworkJobSubscriptionTemporary( NetworkJob ):
     
 class NetworkJobHydrus( NetworkJob ):
     
-    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._service_key = service_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2531,11 +2609,11 @@ class NetworkJobHydrus( NetworkJob ):
     
 class NetworkJobThreadWatcher( NetworkJob ):
     
-    def __init__( self, thread_key, method, url, body = None, referral_url = None, temp_path = None, for_login = False ):
+    def __init__( self, thread_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._thread_key = thread_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, for_login = for_login )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
     
     def _GenerateNetworkContexts( self ):
@@ -2603,9 +2681,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         # look up the logins
           # login_process = Login.GenerateLoginProcess
-          # say CallToThread( login_process.start, engine, credentials )
           # return login_process
-          # the login can update itself if there are problems. it should also inform the user
         
         raise NotImplementedError()
         

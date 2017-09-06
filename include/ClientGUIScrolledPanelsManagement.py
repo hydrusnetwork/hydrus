@@ -15,6 +15,7 @@ import ClientGUIScrolledPanelsReview
 import ClientGUISerialisable
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
+import ClientNetworking
 import ClientImporting
 import ClientMedia
 import ClientRatings
@@ -679,9 +680,15 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 url = scheme + host + ':' + str( port ) + '/' + request
                 
+                network_job = ClientNetworking.NetworkJob( 'GET', url )
+                
+                network_job.OverrideBandwidth()
+                
+                HG.client_controller.network_engine.AddJob( network_job )
+                
                 try:
                     
-                    result = HG.client_controller.DoHTTP( HC.GET, url, hydrus_network = hydrus_network )
+                    network_job.WaitUntilDone()
                     
                     wx.MessageBox( 'Got an ok response!' )
                     
@@ -2163,7 +2170,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_identifiers = []
             
-            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR ]:
+            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_THREAD_WATCHER ]:
                 
                 gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
                 
