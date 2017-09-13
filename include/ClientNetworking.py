@@ -2456,7 +2456,14 @@ class NetworkJob( object ):
                 
             elif self._error_exception is not None:
                 
-                raise self._error_exception
+                if isinstance( self._error_exception, Exception ):
+                    
+                    raise self._error_exception
+                    
+                else:
+                    
+                    raise Exception( 'Problem in network error handling.' )
+                    
                 
             elif self._IsCancelled():
                 

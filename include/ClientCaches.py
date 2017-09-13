@@ -1263,10 +1263,11 @@ class ClientFilesManager( object ):
     
 class DataCache( object ):
     
-    def __init__( self, controller, cache_size ):
+    def __init__( self, controller, cache_size, timeout = 1200 ):
         
         self._controller = controller
         self._cache_size = cache_size
+        self._timeout = timeout
         
         self._keys_to_data = {}
         self._keys_fifo = collections.OrderedDict()
@@ -1392,7 +1393,7 @@ class DataCache( object ):
                     
                     ( key, last_access_time ) = next( self._keys_fifo.iteritems() )
                     
-                    if HydrusData.TimeHasPassed( last_access_time + 1200 ):
+                    if HydrusData.TimeHasPassed( last_access_time + self._timeout ):
                         
                         self._DeleteItem()
                         
@@ -1720,7 +1721,7 @@ class RenderedImageCache( object ):
         
         cache_size = options[ 'fullscreen_cache_size' ]
         
-        self._data_cache = DataCache( self._controller, cache_size )
+        self._data_cache = DataCache( self._controller, cache_size, timeout = 600 )
         
     
     def Clear( self ): self._data_cache.Clear()
@@ -1764,7 +1765,7 @@ class ThumbnailCache( object ):
         
         cache_size = options[ 'thumbnail_cache_size' ]
         
-        self._data_cache = DataCache( self._controller, cache_size )
+        self._data_cache = DataCache( self._controller, cache_size, timeout = 86400 )
         
         self._lock = threading.Lock()
         
@@ -1801,43 +1802,25 @@ class ThumbnailCache( object ):
         
         locations_manager = display_media.GetLocationsManager()
         
-        if locations_manager.IsLocal():
+        try:
             
-            try:
+            if full_size:
                 
-                if full_size:
-                    
-                    path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
-                    
-                else:
-                    
-                    path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
-                    
+                path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
                 
-            except HydrusExceptions.FileMissingException as e:
+            else:
+                
+                path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
+                
+            
+        except HydrusExceptions.FileMissingException as e:
+            
+            if locations_manager.IsLocal():
                 
                 HydrusData.ShowException( e )
                 
-                return self._special_thumbs[ 'hydrus' ]
-                
             
-        else:
-            
-            try:
-                
-                if full_size:
-                    
-                    path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
-                    
-                else:
-                    
-                    path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
-                    
-                
-            except HydrusExceptions.FileMissingException:
-                
-                return self._special_thumbs[ 'hydrus' ]
-                
+            return self._special_thumbs[ 'hydrus' ]
             
         
         mime = display_media.GetMime()
@@ -1896,10 +1879,17 @@ class ThumbnailCache( object ):
         
     
     def _RecalcWaterfallQueueRandom( self ):
-    
+        
+        # here we sort by the hash since this is both breddy random and more likely to access faster on a well defragged hard drive!
+        
+        def sort_by_hash_key( ( page_key, media ) ):
+            
+            return media.GetDisplayMedia().GetHash()
+            
+        
         self._waterfall_queue_random = list( self._waterfall_queue_quick )
         
-        random.shuffle( self._waterfall_queue_random )
+        self._waterfall_queue_random.sort( key = sort_by_hash_key )
         
     
     def CancelWaterfall( self, page_key, medias ):

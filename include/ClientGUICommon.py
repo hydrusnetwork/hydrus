@@ -2417,6 +2417,8 @@ class ShortcutMouse( wx.Button ):
     
     def EventMouse( self, event ):
         
+        self.SetFocus()
+        
         shortcut = ClientData.ConvertMouseEventToShortcut( event )
         
         if shortcut is not None:

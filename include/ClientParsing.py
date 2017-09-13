@@ -7,6 +7,7 @@ import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import os
+import re
 import time
 import urlparse
 
@@ -933,3 +934,189 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ] = ParseRootFileLookup
+
+STRING_TRANSFORMATION_CUT_TEXT_FROM_BEGINNING = 0
+STRING_TRANSFORMATION_CUT_TEXT_FROM_END = 1
+STRING_TRANSFORMATION_PREPEND_TEXT = 2
+STRING_TRANSFORMATION_APPEND_TEXT = 3
+STRING_TRANSFORMATION_ENCODE = 4
+STRING_TRANSFORMATION_DECODE = 5
+STRING_TRANSFORMATION_SELECT_TEXT_FROM_BEGINNING = 6
+STRING_TRANSFORMATION_SELECT_TEXT_FROM_END = 7
+STRING_TRANSFORMATION_REVERSE = 8
+
+# make this serialisable
+class StringConverter( object ):
+    
+    def __init__( self ):
+        
+        # write the gui to edit this and update the 'culling_and_adding' stuff above to be one of these
+        
+        self._transformations = [] # type | data
+        
+        self._example_input = None
+        
+        pass
+        
+
+    def Convert( self, s ):
+        
+        for ( transformation_type, data ) in self._transformations:
+            
+            if transformation_type == STRING_TRANSFORMATION_CUT_TEXT_FROM_BEGINNING:
+                
+                num_chars = data
+                
+                s = s[ num_chars : ]
+                
+            elif transformation_type == STRING_TRANSFORMATION_CUT_TEXT_FROM_END:
+                
+                num_chars = data
+                
+                s = s[ : - num_chars ]
+                
+            elif transformation_type == STRING_TRANSFORMATION_SELECT_TEXT_FROM_BEGINNING:
+                
+                num_chars = data
+                
+                s = s[ : num_chars ]
+                
+            elif transformation_type == STRING_TRANSFORMATION_SELECT_TEXT_FROM_END:
+                
+                num_chars = data
+                
+                s = s[ - num_chars : ]
+                
+            elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
+                
+                text = data
+                
+                s = text + s
+                
+            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+                
+                text = data
+                
+                s = s + text
+                
+            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+                
+                encode_type = data
+                
+                s = s.encode( encode_type )
+                
+            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+                
+                encode_type = data
+                
+                s = s.decode( encode_type )
+                
+            elif transformation_type == STRING_TRANSFORMATION_REVERSE:
+                
+                s = s[::-1]
+                
+            
+        
+
+STRING_MATCH_FIXED = 0
+STRING_MATCH_FLEXIBLE = 1
+STRING_MATCH_REGEX = 2
+STRING_MATCH_ANY = 3
+
+ALPHA = 0
+ALPHANUMERIC = 1
+NUMERIC = 2
+# make it serialisable as well
+class StringMatch( object ):
+    
+    def __init__( self, match_type = STRING_MATCH_FIXED, match_value = 'post' ):
+        
+        # make a gui control that accepts one of these. displays expected input on the right and colours red/green (and does isvalid) based on current input
+        # think about replacing the veto stuff above with this.
+        
+        self._match_type = match_type
+        self._match_value = match_value
+        
+        self._min_chars = None
+        self._max_chars = None
+        
+    
+    def SetMaxChars( self, max_chars ):
+        
+        self._max_chars = max_chars
+        
+    
+    def SetMinChars( self, min_chars ):
+        
+        self._min_chars = min_chars
+        
+    
+    def Test( self, text ):
+        
+        text_len = len( text )
+        
+        presentation_text = '"' + text + '"'
+        
+        if self._min_chars is not None and text_len < self._min_chars:
+            
+            return ( False, presentation_text + ' had too few characters' )
+            
+        
+        if self._max_chars is not None and text_len > self._max_chars:
+            
+            return ( False, presentation_text + ' had too many characters' )
+            
+        
+        if self._match_type == STRING_MATCH_FIXED:
+            
+            if text == self._match_value:
+                
+                return ( True, 'good' )
+                
+            else:
+                
+                return ( False, presentation_text + ' did not exactly match "' + self._match_value + '"' )
+                
+            
+        elif self._match_type in ( STRING_MATCH_FLEXIBLE, STRING_MATCH_REGEX ):
+            
+            if self._match_type == STRING_MATCH_FLEXIBLE:
+                
+                if self._match_value == ALPHA:
+                    
+                    r = '^[a-zA-Z]+$'
+                    fail_reason = ' had non-alpha characters'
+                    
+                elif self._match_value == ALPHANUMERIC:
+                    
+                    r = '^[a-zA-Z\d]+$'
+                    fail_reason = ' had non-alphanumeric characters'
+                    
+                elif self._match_value == NUMERIC:
+                    
+                    r = '^\d+$'
+                    fail_reason = ' had non-numeric characters'
+                    
+                
+            elif self._match_type == STRING_MATCH_REGEX:
+                
+                r = self._match_value
+                
+                fail_reason = ' did not match "' + r + '"'
+                
+            
+            if re.search( r, text ) is None:
+                
+                return ( False, presentation_text + fail_reason )
+                
+            else:
+                
+                return ( True, 'good' )
+                
+            
+        elif self._match_type == STRING_MATCH_ANY:
+            
+            return ( True, 'good' )
+            
+        
+    

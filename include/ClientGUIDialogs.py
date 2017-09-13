@@ -11,6 +11,7 @@ import ClientGUIACDropdown
 import ClientGUIFrames
 import ClientGUICommon
 import ClientGUICollapsible
+import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIPredicates
@@ -52,12 +53,6 @@ import HydrusGlobals as HG
 ID_NULL = wx.NewId()
 
 ID_TIMER_UPDATE = wx.NewId()
-
-# Hue is generally 200, Sat and Lum changes based on need
-
-COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
-COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
-COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
 def SelectServiceKey( service_types = HC.ALL_SERVICES, service_keys = None, unallowed = None ):
     
@@ -850,7 +845,9 @@ class DialogInputLocalFiles( Dialog ):
         self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.StopProgress )
         self._progress_cancel.Disable()
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
+        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self, file_import_options )
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
         self._delete_after_success_st.SetForegroundColour( ( 127, 0, 0 ) )
@@ -892,7 +889,7 @@ class DialogInputLocalFiles( Dialog ):
         vbox.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._file_import_options, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -1050,13 +1047,13 @@ class DialogInputLocalFiles( Dialog ):
         
         if len( self._current_paths ) > 0:
             
-            import_file_options = self._import_file_options.GetOptions()
+            file_import_options = self._file_import_options.GetValue()
             
             paths_to_tags = {}
             
             delete_after_success = self._delete_after_success.GetValue()
             
-            HG.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+            HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
             
         
         self.EndModal( wx.ID_OK )
@@ -1066,7 +1063,7 @@ class DialogInputLocalFiles( Dialog ):
         
         if len( self._current_paths ) > 0:
             
-            import_file_options = self._import_file_options.GetOptions()
+            file_import_options = self._file_import_options.GetValue()
             
             with DialogPathsToTags( self, self._current_paths ) as dlg:
                 
@@ -1076,7 +1073,7 @@ class DialogInputLocalFiles( Dialog ):
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
-                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, import_file_options, paths_to_tags, delete_after_success )
+                    HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
                     
                     self.EndModal( wx.ID_OK )
                     

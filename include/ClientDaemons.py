@@ -119,9 +119,9 @@ def DAEMONDownloadFiles( controller ):
                                 min_size = None
                                 min_resolution = None
                                 
-                                import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                                file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
                                 
-                                file_import_job = ClientImporting.FileImportJob( temp_path, import_file_options )
+                                file_import_job = ClientImporting.FileImportJob( temp_path, file_import_options )
                                 
                                 client_files_manager.ImportFile( file_import_job )
                                 

@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientData
+import ClientImporting
 import ClientNetworking
 import HydrusConstants as HC
 import HydrusGlobals as HG
@@ -158,24 +159,6 @@ def GetClientDefaultOptions():
     
     options[ 'namespace_colours' ] = default_namespace_colours
     
-    default_gui_colours = {}
-    
-    default_gui_colours[ 'thumb_background' ] = ( 255, 255, 255 )
-    default_gui_colours[ 'thumb_background_selected' ] = ( 217, 242, 255 ) # light blue
-    default_gui_colours[ 'thumb_background_remote' ] = ( 32, 32, 36 ) # 50% Payne's Gray
-    default_gui_colours[ 'thumb_background_remote_selected' ] = ( 64, 64, 72 ) # Payne's Gray
-    default_gui_colours[ 'thumb_border' ] = ( 223, 227, 230 ) # light grey
-    default_gui_colours[ 'thumb_border_selected' ] = ( 1, 17, 26 ) # dark grey
-    default_gui_colours[ 'thumb_border_remote' ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
-    default_gui_colours[ 'thumb_border_remote_selected' ] = ( 227, 66, 52 ) # Vermillion, lol
-    default_gui_colours[ 'thumbgrid_background' ] = ( 255, 255, 255 )
-    default_gui_colours[ 'autocomplete_background' ] = ( 235, 248, 255 ) # very light blue
-    default_gui_colours[ 'media_background' ] = ( 255, 255, 255 )
-    default_gui_colours[ 'media_text' ] = ( 0, 0, 0 )
-    default_gui_colours[ 'tags_box' ] = ( 255, 255, 255 )
-    
-    options[ 'gui_colours' ] = default_gui_colours
-    
     default_sort_by_choices = []
     
     default_sort_by_choices.append( ( 'namespaces', [ 'series', 'creator', 'title', 'volume', 'chapter', 'page' ] ) )
@@ -233,7 +216,7 @@ def GetDefaultHentaiFoundryInfo():
     
     return info
     
-def GetDefaultImportFileOptions():
+def GetDefaultFileImportOptions():
     
     options = HG.client_controller.GetOptions()
     
@@ -242,9 +225,9 @@ def GetDefaultImportFileOptions():
     min_size = None
     min_resolution = None
     
-    import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+    file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
     
-    return import_file_options
+    return file_import_options
     
 def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
     

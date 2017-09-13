@@ -228,15 +228,15 @@ def THREADDownloadURLs( job_key, urls, title ):
     
 class FileImportJob( object ):
     
-    def __init__( self, temp_path, import_file_options = None ):
+    def __init__( self, temp_path, file_import_options = None ):
         
-        if import_file_options is None:
+        if file_import_options is None:
             
-            import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+            file_import_options = ClientDefaults.GetDefaultFileImportOptions()
             
         
         self._temp_path = temp_path
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         
         self._hash = None
         self._pre_import_status = None
@@ -252,9 +252,9 @@ class FileImportJob( object ):
         return self._extra_hashes
         
     
-    def GetImportFileOptions( self ):
+    def GetFileImportOptions( self ):
         
-        return self._import_file_options
+        return self._file_import_options
         
     
     def GetFileInfo( self ):
@@ -293,7 +293,7 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_REDUNDANT:
             
-            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
             
             if automatic_archive:
                 
@@ -306,7 +306,7 @@ class FileImportJob( object ):
     
     def IsGoodToImport( self ):
         
-        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
         
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
@@ -343,7 +343,7 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_DELETED:
             
-            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._import_file_options.ToTuple()
+            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
             
             if not exclude_deleted:
                 
@@ -419,7 +419,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_paused = False
         self._files_paused = False
         
-        self._import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
         self._import_tag_options = new_options.GetDefaultImportTagOptions( self._gallery_identifier )
         
@@ -461,7 +461,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_pending_gallery_stream_identifiers = [ pending_gallery_stream_identifier.GetSerialisableTuple() for pending_gallery_stream_identifier in self._pending_gallery_stream_identifiers ]
         
-        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
@@ -492,7 +492,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._current_gallery_stream_identifier_found_urls = set( serialisable_current_gallery_stream_identifier_found_urls )
         
         self._pending_gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pending_gallery_stream_identifier ) for serialisable_pending_gallery_stream_identifier in serialisable_pending_gallery_stream_identifier ]
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
         self._seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_seed_cache )
         
@@ -530,7 +530,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._import_file_options.GetExcludeDeleted():
+                if not self._file_import_options.GetExcludeDeleted():
                     
                     status = CC.STATUS_NEW
                     
@@ -565,7 +565,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         gallery.GetFile( temp_path, url )
                         
                     
-                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    file_import_job = FileImportJob( temp_path, self._file_import_options )
                     
                     client_files_manager = HG.client_controller.client_files_manager
                     
@@ -925,7 +925,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._import_file_options, self._import_tag_options, self._file_limit )
+            return ( self._file_import_options, self._import_tag_options, self._file_limit )
             
         
     
@@ -1013,11 +1013,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportFileOptions( self, import_file_options ):
+    def SetFileImportOptions( self, file_import_options ):
         
         with self._lock:
             
-            self._import_file_options = import_file_options
+            self._file_import_options = file_import_options
             
         
     
@@ -1037,12 +1037,112 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IMPORT ] = GalleryImport
 
+class FileImportOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_file_import_options
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, automatic_archive = None, exclude_deleted = None, min_size = None, min_resolution = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._automatic_archive = automatic_archive
+        self._exclude_deleted = exclude_deleted
+        self._min_size = min_size
+        self._min_resolution = min_resolution
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution ) = serialisable_info
+        
+    
+    def FileIsValid( self, size, resolution = None ):
+        
+        if self._min_size is not None and size < self._min_size:
+            
+            return False
+            
+        
+        if resolution is not None and self._min_resolution is not None:
+            
+            ( x, y ) = resolution
+            
+            ( min_x, min_y ) = self._min_resolution
+            
+            if x < min_x or y < min_y:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def GetAutomaticArchive( self ):
+        
+        return self._automatic_archive
+        
+    
+    def GetExcludeDeleted( self ):
+        
+        return self._exclude_deleted
+        
+    
+    def GetSummary( self ):
+        
+        statements = []
+        
+        if self._automatic_archive:
+            
+            statements.append( 'automatically archiving' )
+            
+        
+        if self._exclude_deleted:
+            
+            statements.append( 'excluding previously deleted' )
+            
+        
+        if self._min_size is not None:
+            
+            statements.append( 'excluding < ' + HydrusData.ConvertIntToBytes( self._min_size ) )
+            
+        
+        if self._min_resolution is not None:
+            
+            ( width, height ) = self._min_resolution
+            
+            statements.append( 'excluding < ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
+            
+        
+        if len( statements ) == 0:
+            
+            statements.append( 'no options set' )
+            
+        
+        summary = ', '.join( statements )
+        
+        return summary
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_file_import_options ] = FileImportOptions
+
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, paths = None, import_file_options = None, paths_to_tags = None, delete_after_success = None ):
+    def __init__( self, paths = None, file_import_options = None, paths_to_tags = None, delete_after_success = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -1057,7 +1157,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             self._paths_cache.AddSeeds( paths )
             
         
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._paths_to_tags = paths_to_tags
         self._delete_after_success = delete_after_success
         
@@ -1072,7 +1172,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._paths_cache.GetSerialisableTuple()
-        serialisable_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_options = self._file_import_options.GetSerialisableTuple()
         serialisable_paths_to_tags = { path : { service_key.encode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in self._paths_to_tags.items() }
         
         return ( serialisable_url_cache, serialisable_options, serialisable_paths_to_tags, self._delete_after_success, self._paused )
@@ -1083,7 +1183,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         ( serialisable_url_cache, serialisable_options, serialisable_paths_to_tags, self._delete_after_success, self._paused ) = serialisable_info
         
         self._paths_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options )
         self._paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in serialisable_paths_to_tags.items() }
         
     
@@ -1136,7 +1236,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     self._current_action = 'importing'
                     
                 
-                file_import_job = FileImportJob( temp_path, self._import_file_options )
+                file_import_job = FileImportJob( temp_path, self._file_import_options )
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -1292,16 +1392,16 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, name, path = '', import_file_options = None, import_tag_options = None, txt_parse_tag_service_keys = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
+    def __init__( self, name, path = '', file_import_options = None, import_tag_options = None, txt_parse_tag_service_keys = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
         
         if mimes is None:
             
             mimes = HC.ALLOWED_MIMES
             
         
-        if import_file_options is None:
+        if file_import_options is None:
             
-            import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+            file_import_options = ClientDefaults.GetDefaultFileImportOptions()
             
         
         if import_tag_options is None:
@@ -1335,7 +1435,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._path = path
         self._mimes = mimes
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._import_tag_options = import_tag_options
         self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
         self._actions = actions
@@ -1461,7 +1561,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_import_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_import_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_txt_parse_tag_service_keys = [ service_key.encode( 'hex' ) for service_key in self._txt_parse_tag_service_keys ]
         serialisable_path_cache = self._path_cache.GetSerialisableTuple()
@@ -1470,17 +1570,17 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
+        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
+        ( self._path, self._mimes, serialisable_file_import_options, serialisable_import_tag_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_tag_options )
         self._txt_parse_tag_service_keys = [ service_key.decode( 'hex' ) for service_key in serialisable_txt_parse_service_keys ]
         self._path_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_cache )
@@ -1490,7 +1590,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if version == 1:
             
-            ( path, mimes, serialisable_import_file_options, action_pairs, action_location_pairs, period, open_popup, tag, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
+            ( path, mimes, serialisable_file_import_options, action_pairs, action_location_pairs, period, open_popup, tag, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
             
             service_keys_to_explicit_tags = {}
             
@@ -1503,18 +1603,18 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             serialisable_import_tag_options = import_tag_options.GetSerialisableTuple()
             
-            new_serialisable_info = ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
+            new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
+            ( path, mimes, serialisable_file_import_options, serialisable_import_tag_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
             
             serialisable_txt_parse_tag_service_keys = []
             
-            new_serialisable_info = ( path, mimes, serialisable_import_file_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
+            new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_import_tag_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused )
             
             return ( 3, new_serialisable_info )
             
@@ -1586,7 +1686,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                     raise Exception( 'File failed to copy--see log for error.' )
                                     
                                 
-                                file_import_job = FileImportJob( temp_path, self._import_file_options )
+                                file_import_job = FileImportJob( temp_path, self._file_import_options )
                                 
                                 client_files_manager = HG.client_controller.client_files_manager
                                 
@@ -1715,7 +1815,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._import_file_options, self._import_tag_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
+        return ( self._name, self._path, self._mimes, self._file_import_options, self._import_tag_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
         
     
     def SetSeedCache( self, seed_cache ):
@@ -1723,7 +1823,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_cache = seed_cache
         
     
-    def SetTuple( self, name, path, mimes, import_file_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ):
+    def SetTuple( self, name, path, mimes, file_import_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ):
         
         if path != self._path:
             
@@ -1738,7 +1838,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._name = name
         self._path = path
         self._mimes = mimes
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._import_tag_options = import_tag_options
         self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
         self._actions = actions
@@ -1759,11 +1859,11 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
         self._pending_page_urls = []
         self._urls_cache = SeedCache()
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._download_image_links = True
         self._download_unlinked_images = False
         self._paused = False
@@ -1785,7 +1885,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
-        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         
         return ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._paused )
         
@@ -1795,7 +1895,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._paused ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         
     
     def _WorkOnFiles( self, page_key ):
@@ -1820,7 +1920,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._import_file_options.GetExcludeDeleted():
+                if not self._file_import_options.GetExcludeDeleted():
                     
                     status = CC.STATUS_NEW
                     
@@ -1888,7 +1988,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         self._current_action = 'importing file'
                         
                     
-                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    file_import_job = FileImportJob( temp_path, self._file_import_options )
                     
                     ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                     
@@ -2211,7 +2311,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._import_file_options, self._download_image_links, self._download_unlinked_images )
+            return ( self._file_import_options, self._download_image_links, self._download_unlinked_images )
             
         
     
@@ -2281,11 +2381,11 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportFileOptions( self, import_file_options ):
+    def SetFileImportOptions( self, file_import_options ):
         
         with self._lock:
             
-            self._import_file_options = import_file_options
+            self._file_import_options = file_import_options
             
         
     
@@ -2554,7 +2654,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             for seed in seeds:
                 
-                if seed.startswith( 'http' ):
+                if seed.startswith( 'http' ): # i.e. it is an url, either http or https, rather than a local file path
                     
                     search_seeds = ClientData.GetSearchURLs( seed )
                     
@@ -2563,12 +2663,11 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     search_seeds = [ seed ]
                     
                 
-                for search_seed in search_seeds:
+                already_in_cache = True in ( search_seed in self._seeds_to_info for search_seed in search_seeds )
+                
+                if already_in_cache:
                     
-                    if search_seed in self._seeds_to_info:
-                        
-                        continue
-                        
+                    continue
                     
                 
                 self._seeds_ordered.append( seed )
@@ -2910,7 +3009,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = 50
         self._paused = False
         
-        self._import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
         new_options = HG.client_controller.GetNewOptions()
         
@@ -2944,7 +3043,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_gallery_identifier = self._gallery_identifier.GetSerialisableTuple()
         serialisable_gallery_stream_identifiers = [ gallery_stream_identifier.GetSerialisableTuple() for gallery_stream_identifier in self._gallery_stream_identifiers ]
-        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         
@@ -2957,7 +3056,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
         self._gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_stream_identifier ) for serialisable_gallery_stream_identifier in serialisable_gallery_stream_identifiers ]
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
         self._seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_seed_cache )
         
@@ -3067,7 +3166,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if status == CC.STATUS_DELETED:
                     
-                    if not self._import_file_options.GetExcludeDeleted():
+                    if not self._file_import_options.GetExcludeDeleted():
                         
                         status = CC.STATUS_NEW
                         
@@ -3103,7 +3202,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
                         
-                        file_import_job = FileImportJob( temp_path, self._import_file_options )
+                        file_import_job = FileImportJob( temp_path, self._file_import_options )
                         
                         ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                         
@@ -3447,7 +3546,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._seed_cache = SeedCache()
         
     
-    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ):
+    def SetTuple( self, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, last_checked, last_error, check_now, seed_cache ):
         
         self._gallery_identifier = gallery_identifier
         self._gallery_stream_identifiers = gallery_stream_identifiers
@@ -3458,7 +3557,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = periodic_file_limit
         self._paused = paused
         
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._import_tag_options = import_tag_options
         
         self._last_checked = last_checked
@@ -3538,7 +3637,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_url_known_and_file_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._import_file_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        return ( self._name, self._gallery_identifier, self._gallery_stream_identifiers, self._query, self._period, self._get_tags_if_url_known_and_file_redundant, self._initial_file_limit, self._periodic_file_limit, self._paused, self._file_import_options, self._import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ] = Subscription
@@ -3554,7 +3653,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
         new_options = HG.client_controller.GetNewOptions()
         
@@ -3566,7 +3665,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._urls_cache = SeedCache()
         self._urls_to_filenames = {}
         self._urls_to_md5_base64 = {}
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._import_tag_options = import_tag_options
         self._times_to_check = times_to_check
         self._check_period = check_period
@@ -3594,7 +3693,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
-        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._import_tag_options.GetSerialisableTuple()
         
         return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, self._times_to_check, self._check_period, self._last_time_checked, self._paused )
@@ -3605,7 +3704,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, self._times_to_check, self._check_period, self._last_time_checked, self._paused ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._import_tag_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
         
     
@@ -3650,7 +3749,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._import_file_options.GetExcludeDeleted():
+                if not self._file_import_options.GetExcludeDeleted():
                     
                     status = CC.STATUS_NEW
                     
@@ -3718,7 +3817,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                         self._current_action = 'importing file'
                         
                     
-                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    file_import_job = FileImportJob( temp_path, self._file_import_options )
                     
                     ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                     
@@ -3833,12 +3932,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
                 
                 new_urls = []
+                new_urls_set = set()
                 
                 for ( file_url, file_md5_base64, file_original_filename ) in file_infos:
                     
-                    if not self._urls_cache.HasSeed( file_url ):
+                    if not self._urls_cache.HasSeed( file_url ) and not file_url in new_urls_set:
                         
                         new_urls.append( file_url )
+                        new_urls_set.add( file_url )
                         
                         self._urls_to_filenames[ file_url ] = file_original_filename
                         
@@ -4044,7 +4145,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._thread_url, self._import_file_options, self._import_tag_options, self._times_to_check, self._check_period )
+            return ( self._thread_url, self._file_import_options, self._import_tag_options, self._times_to_check, self._check_period )
             
         
     
@@ -4103,11 +4204,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportFileOptions( self, import_file_options ):
+    def SetFileImportOptions( self, file_import_options ):
         
         with self._lock:
             
-            self._import_file_options = import_file_options
+            self._file_import_options = file_import_options
             
         
     
@@ -4156,10 +4257,10 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        import_file_options = ClientDefaults.GetDefaultImportFileOptions()
+        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
         self._urls_cache = SeedCache()
-        self._import_file_options = import_file_options
+        self._file_import_options = file_import_options
         self._paused = False
         
         self._seed_cache_status = ( 'initialising', ( 0, 1 ) )
@@ -4174,7 +4275,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
-        serialisable_file_options = self._import_file_options.GetSerialisableTuple()
+        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         
         return ( serialisable_url_cache, serialisable_file_options, self._paused )
         
@@ -4184,7 +4285,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         ( serialisable_url_cache, serialisable_file_options, self._paused ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
-        self._import_file_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         
     
     def _RegenerateSeedCacheStatus( self ):
@@ -4219,7 +4320,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._import_file_options.GetExcludeDeleted():
+                if not self._file_import_options.GetExcludeDeleted():
                     
                     status = CC.STATUS_NEW
                     
@@ -4274,7 +4375,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    file_import_job = FileImportJob( temp_path, self._import_file_options )
+                    file_import_job = FileImportJob( temp_path, self._file_import_options )
                     
                     ( status, hash ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
                     
@@ -4382,7 +4483,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._import_file_options
+            return self._file_import_options
             
         
     
@@ -4430,11 +4531,11 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportFileOptions( self, import_file_options ):
+    def SetFileImportOptions( self, file_import_options ):
         
         with self._lock:
             
-            self._import_file_options = import_file_options
+            self._file_import_options = file_import_options
             
         
     

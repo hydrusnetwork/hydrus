@@ -365,7 +365,9 @@ class Animation( wx.Window ):
     
     def _DrawWhite( self, dc ):
         
-        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         dc.Clear()
         
@@ -1185,7 +1187,7 @@ class Canvas( wx.Window ):
         self._last_motion_coordinates = ( 0, 0 )
         self._total_drag_delta = ( 0, 0 )
         
-        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
+        self.SetBackgroundColour( self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
         
         self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
@@ -1433,7 +1435,7 @@ class Canvas( wx.Window ):
     
     def _GetBackgroundColour( self ):
         
-        return wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] )
+        return self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
     
     def _GetShowAction( self, media ):
@@ -1920,11 +1922,20 @@ class Canvas( wx.Window ):
         
         ( new_size, new_position ) = self._GetMediaContainerSizeAndPosition()
         
-        if new_size != self._media_container.GetSize(): self._media_container.SetSize( new_size )
+        if new_size != self._media_container.GetSize():
+            
+            self._media_container.SetSize( new_size )
+            
         
-        if HC.PLATFORM_OSX and new_position == self._media_container.GetPosition(): self._media_container.Refresh()
+        if HC.PLATFORM_OSX and new_position == self._media_container.GetPosition():
+            
+            self._media_container.Refresh()
+            
         
-        if new_position != self._media_container.GetPosition(): self._media_container.SetPosition( new_position )
+        if new_position != self._media_container.GetPosition():
+            
+            self._media_container.SetPosition( new_position )
+            
         
     
     def _TryToChangeZoom( self, new_zoom ):
@@ -2679,7 +2690,7 @@ class CanvasWithDetails( Canvas ):
                 current_y += y
                 
             
-            dc.SetTextForeground( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_text' ] ) )
+            dc.SetTextForeground( self._new_options.GetColour( CC.COLOUR_MEDIA_TEXT ) )
             
             # top right
             
@@ -3259,7 +3270,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetBackgroundColour( self ):
         
-        normal_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] )
+        normal_colour = self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
         
         if self._current_media is None:
             
@@ -4786,7 +4797,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'open_file_in_external_program' ), '&open externally' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'open externally', 'Open this file in the default external program.', self._OpenExternally )
             
             urls = self._current_media.GetLocationsManager().GetURLs()
             
@@ -4817,56 +4828,56 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             copy_menu = wx.Menu()
             
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_files' ), 'file' )
+            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
             copy_hash_menu = wx.Menu()
             
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha256' ) , 'sha256 (hydrus default)' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'md5' ) , 'md5' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha1' ) , 'sha1' )
-            copy_hash_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_hash', 'sha512' ) , 'sha512' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha256 (hydrus default)', 'Copy this file\'s SHA256 hash to your clipboard.', self._CopyHashToClipboard, 'sha256' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard.', self._CopyHashToClipboard, 'sha1' )
+            ClientGUIMenus.AppendMenuItem( self, copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )
             
-            copy_menu.AppendMenu( CC.ID_NULL, 'hash', copy_hash_menu )
+            ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
                 
-                copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_bmp' ), 'image' )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
                 
             
-            copy_menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_path' ), 'path' )
+            ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
             
-            share_menu.AppendMenu( CC.ID_NULL, 'copy', copy_menu )
+            ClientGUIMenus.AppendMenu( share_menu, copy_menu, 'copy' )
             
-            menu.AppendMenu( CC.ID_NULL, 'share', share_menu )
+            ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
             slideshow = wx.Menu()
             
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 1000 ), '1 second' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 5000 ), '5 seconds' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 10000 ), '10 seconds' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 30000 ), '30 seconds' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 60000 ), '60 seconds' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow', 80 ), 'william gibson' )
-            slideshow.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow' ), 'custom interval' )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1000 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5000 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10000 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30000 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60000 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 80 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
             
-            menu.AppendMenu( CC.ID_NULL, 'start slideshow', slideshow )
+            ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             
             if self._timer_slideshow.IsRunning():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'slideshow_pause_play' ), 'stop slideshow' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
             
             if self.GetParent().IsFullScreen():
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'switch_between_fullscreen_borderless_and_regular_framed_window' ), 'exit fullscreen' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.GetParent().FullscreenSwitch )
                 
             else:
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'switch_between_fullscreen_borderless_and_regular_framed_window' ), 'go fullscreen' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.GetParent().FullscreenSwitch )
                 
             
             HG.client_controller.PopupMenu( self, menu )
@@ -5288,7 +5299,9 @@ class EmbedButton( wx.Window ):
         center_y = y / 2
         radius = min( 50, center_x, center_y ) - 5
         
-        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         dc.Clear()
         
@@ -5440,7 +5453,9 @@ class OpenExternallyPanel( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
         
         self._media = media
         
@@ -5517,7 +5532,9 @@ class StaticImage( wx.Window ):
     
     def _DrawBackground( self, dc ):
         
-        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'media_background' ] ) ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         dc.Clear()
         

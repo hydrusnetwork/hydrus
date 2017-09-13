@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 273</h3></li>
+				<ul>
+					<li>converted the gui colour options to the new options system</li>
+					<li>added a 'darkmode' colour set and extended the colour options page to support it!</li>
+					<li>added a secret discord-compatible drag and drop mode. start a file transfer drag and drop with ctrl held down to initiate. keep ctrl held down, as this is secretly a 'move' drag and drop, and you want to keep it a 'copy' one. it should work for discord dnd, at least to the web version. I have an idea on how to do this better, but feedback on this would be appreciated.</li>
+					<li>converted 'import options - files' collapsible panel to a button that launches a dialog. this reduces total gui object count when many importers are open and reduces overall ui lag and limits. the button shows a summary of its current options as its tooltip. furthermore, all of this sometimes confusing nomenclature is now uniformly presented as 'file import options'</li>
+					<li>added a BUGFIX option to gui options page to force hover windows to display at all times</li>
+					<li>improved last week's gelbooru 404 fix--page urls generated pre-v272 should now be more reliable</li>
+					<li>in a further attempt to improve workspace support, popup messages will no longer update in any way if the mouse is not on the same display as the main gui</li>
+					<li>fixed an issue where dupe import urls could be queued up in a file import queue if they came in the same batch. this was essentially harmless but lead to some mixed x/y progress counts and row indices</li>
+					<li>fixed an issue where url drops were not filling in the url entry when a new raw url page had to be created on a currently selected page of pages. this may have affected a couple of other page spawning situations</li>
+					<li>may have fixed an issue with the mouse shortcut-setting button, where for some users scroll events were not registering</li>
+					<li>manage subs dialog now has the new help button up top</li>
+					<li>manage subs dialog's sub verbs are now wrapping into a single menu button that I can expand more easily in future</li>
+					<li>sped up thumbnail access a bit on certain well-defragged hard disk drives</li>
+					<li>made thumbnail fading a little smoother in some situations</li>
+					<li>rendered images that aren't otherwise pushing any memory limits will now stay cached for less time (10 mins) while thumbnails will hang around for longer (24 hours)--this was previously 20 mins for both. you should now see less thumbnail page 'refreshing' after returning to the client after inactivity</li>
+					<li>sketched out basic classes for login and domain engines</li>
+					<li>sketched out basic class for url matching</li>
+					<li>sketched out basic classes for matching and transforming strings in certain login/domain situations</li>
+					<li>updated the manage export folders dialog's listctrl to the new control</li>
+					<li>updated the last media viewer menu code to the new system</li>
+					<li>removed some old proxy code that was sometimes intruding on the new networking engine. proper proxy support will come in a later version</li>
+					<li>fixed some test code</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 272</h3></li>
 				<ul>
 					<li>finished moving the last misc network consumers to the new networking engine</li>

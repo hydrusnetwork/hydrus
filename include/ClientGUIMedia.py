@@ -104,7 +104,9 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetDoubleBuffered( True ) # This seems to stop some bad scroll draw logic, where top/bottom row is auto-drawn undrawn and then paint event called
         
-        self.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) )
         
         self.SetScrollRate( 0, 50 )
         
@@ -1824,7 +1826,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         dc = wx.MemoryDC( bmp )
         
-        dc.SetBackground( wx.Brush( wx.Colour( *HC.options[ 'gui_colours' ][ 'thumbgrid_background' ] ) ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) ) )
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
@@ -2395,7 +2399,17 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     drop_source.SetData( data_object )
                     
-                    drop_source.DoDragDrop()
+                    if event.CmdDown():
+                        
+                        # secret dangerous discord compat mode
+                        flags = wx.Drag_AllowMove
+                        
+                    else:
+                        
+                        flags = wx.Drag_CopyOnly
+                        
+                    
+                    drop_source.DoDragDrop( flags )
                     
                 
                 self._drag_init_coordinates = None
@@ -3594,6 +3608,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             random.shuffle( hashes )
             
+            changes_made = False
+            
             dcs = {}
             
             for hash in hashes:
@@ -3671,6 +3687,8 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                             dc.DrawBitmap( bmp_to_use, x, y, True )
                             
+                            changes_made = True
+                            
                         
                     
                     if delete_entry:
@@ -3693,7 +3711,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
                 
             
-            self.Refresh()
+            if changes_made:
+                
+                self.Refresh()
+                
             
         except wx.PyDeadObjectError:
             
@@ -3751,18 +3772,32 @@ class Thumbnail( Selectable ):
         
         dc = wx.MemoryDC( bmp )
         
+        new_options = HG.client_controller.GetNewOptions()
+        
         if not local:
             
-            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_remote_selected' ]
-            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_remote' ]
+            if self._selected:
+                
+                colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED
+                
+            else:
+                
+                colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE
+                
             
         else:
             
-            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_background_selected' ]
-            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_background' ]
+            if self._selected:
+                
+                colour_type = CC.COLOUR_THUMB_BACKGROUND_SELECTED
+                
+            else:
+                
+                colour_type = CC.COLOUR_THUMB_BACKGROUND
+                
             
         
-        dc.SetBackground( wx.Brush( wx.Colour( *rgb ) ) )
+        dc.SetBackground( wx.Brush( new_options.GetColour( colour_type ) ) )
         
         dc.Clear()
         
@@ -3915,16 +3950,28 @@ class Thumbnail( Selectable ):
         
         if not local:
             
-            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_remote_selected' ]
-            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_remote' ]
+            if self._selected:
+                
+                colour_type = CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED
+                
+            else:
+                
+                colour_type = CC.COLOUR_THUMB_BORDER_REMOTE
+                
             
         else:
             
-            if self._selected: rgb = HC.options[ 'gui_colours' ][ 'thumb_border_selected' ]
-            else: rgb = HC.options[ 'gui_colours' ][ 'thumb_border' ]
+            if self._selected:
+                
+                colour_type = CC.COLOUR_THUMB_BORDER_SELECTED
+                
+            else:
+                
+                colour_type = CC.COLOUR_THUMB_BORDER
+                
             
         
-        dc.SetPen( wx.Pen( wx.Colour( *rgb ), style=wx.SOLID ) )
+        dc.SetPen( wx.Pen( new_options.GetColour( colour_type ), style=wx.SOLID ) )
         
         dc.DrawRectangle( 0, 0, width, height )
         

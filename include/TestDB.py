@@ -644,7 +644,7 @@ class TestClientDB( unittest.TestCase ):
             
             service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
             
-            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientData.ImportFileOptions(), { 'paths' : service_keys_to_tags }, True )
+            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImporting.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
             
             management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
             

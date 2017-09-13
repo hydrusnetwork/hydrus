@@ -46,7 +46,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
         
-        self._text_ctrl.SetBackgroundColour( wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] ) )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self._text_ctrl.SetBackgroundColour( new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND ) )
         
         self._last_attempted_dropdown_width = 0
         self._last_attempted_dropdown_position = ( None, None )
@@ -290,7 +292,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             
-            colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'autocomplete_background' ] )
+            new_options = HG.client_controller.GetNewOptions()
+            
+            colour = new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
             
             if self._intercept_key_events:
                 

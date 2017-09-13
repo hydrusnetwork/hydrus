@@ -37,6 +37,7 @@ import os
 import random
 import traceback
 import urlparse
+import webbrowser
 import wx
 
 class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -1537,15 +1538,87 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
+            self._new_options = HG.client_controller.GetNewOptions()
+            
+            self._current_colourset = ClientGUICommon.BetterChoice( self )
+            
+            self._current_colourset.Append( 'default', 'default' )
+            self._current_colourset.Append( 'darkmode', 'darkmode' )
+            
+            self._current_colourset.SelectClientData( self._new_options.GetString( 'current_colourset' ) )
+            
+            self._notebook = wx.Notebook( self )
+            
             self._gui_colours = {}
             
-            for ( name, rgb ) in HC.options[ 'gui_colours' ].items():
+            for colourset in ( 'default', 'darkmode' ):
                 
-                ctrl = wx.ColourPickerCtrl( self )
+                self._gui_colours[ colourset ] = {}
                 
-                ctrl.SetMaxSize( ( 20, -1 ) )
+                colour_panel = wx.Panel( self._notebook )
                 
-                self._gui_colours[ name ] = ctrl
+                colour_types = []
+                
+                colour_types.append( CC.COLOUR_THUMB_BACKGROUND )
+                colour_types.append( CC.COLOUR_THUMB_BACKGROUND_SELECTED )
+                colour_types.append( CC.COLOUR_THUMB_BACKGROUND_REMOTE )
+                colour_types.append( CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED )
+                colour_types.append( CC.COLOUR_THUMB_BORDER )
+                colour_types.append( CC.COLOUR_THUMB_BORDER_SELECTED )
+                colour_types.append( CC.COLOUR_THUMB_BORDER_REMOTE )
+                colour_types.append( CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED )
+                colour_types.append( CC.COLOUR_THUMBGRID_BACKGROUND )
+                colour_types.append( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
+                colour_types.append( CC.COLOUR_MEDIA_BACKGROUND )
+                colour_types.append( CC.COLOUR_MEDIA_TEXT )
+                colour_types.append( CC.COLOUR_TAGS_BOX )
+                
+                for colour_type in colour_types:
+                    
+                    ctrl = wx.ColourPickerCtrl( colour_panel )
+                    
+                    ctrl.SetMaxSize( ( 20, -1 ) )
+                    
+                    ctrl.SetColour( self._new_options.GetColour( colour_type, colourset ) )
+                    
+                    self._gui_colours[ colourset ][ colour_type ] = ctrl
+                    
+                
+                #
+                
+                rows = []
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
+                
+                rows.append( ( 'thumbnail background (local: normal/selected, remote: normal/selected): ', hbox ) )
+                
+                hbox = wx.BoxSizer( wx.HORIZONTAL )
+                
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE ], CC.FLAGS_VCENTER )
+                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
+                
+                rows.append( ( 'thumbnail border (local: normal/selected, remote: normal/selected): ', hbox ) )
+                
+                rows.append( ( 'thumbnail grid background: ', self._gui_colours[ colourset ][ CC.COLOUR_THUMBGRID_BACKGROUND ] ) )
+                rows.append( ( 'autocomplete background: ', self._gui_colours[ colourset ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] ) )
+                rows.append( ( 'media viewer background: ', self._gui_colours[ colourset ][ CC.COLOUR_MEDIA_BACKGROUND ] ) )
+                rows.append( ( 'media viewer text: ', self._gui_colours[ colourset ][ CC.COLOUR_MEDIA_TEXT ] ) )
+                rows.append( ( 'tags box background: ', self._gui_colours[ colourset ][ CC.COLOUR_TAGS_BOX ] ) )
+                
+                gridbox = ClientGUICommon.WrapInGrid( colour_panel, rows )
+                
+                colour_panel.SetSizer( gridbox )
+                
+                select = colourset == 'default'
+                
+                self._notebook.AddPage( colour_panel, colourset, select = select )
                 
             
             self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( self, HC.options[ 'namespace_colours' ] )
@@ -1558,41 +1631,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            for ( name, rgb ) in HC.options[ 'gui_colours' ].items(): self._gui_colours[ name ].SetColour( wx.Colour( *rgb ) )
-            
-            #
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            rows = []
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._gui_colours[ 'thumb_background' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_background_selected' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_background_remote_selected' ], CC.FLAGS_VCENTER )
-            
-            rows.append( ( 'thumbnail background (local: normal/selected, remote: normal/selected): ', hbox ) )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._gui_colours[ 'thumb_border' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_border_selected' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote' ], CC.FLAGS_VCENTER )
-            hbox.AddF( self._gui_colours[ 'thumb_border_remote_selected' ], CC.FLAGS_VCENTER )
-            
-            rows.append( ( 'thumbnail border (local: normal/selected, remote: normal/selected): ', hbox ) )
-            
-            rows.append( ( 'thumbnail grid background: ', self._gui_colours[ 'thumbgrid_background' ] ) )
-            rows.append( ( 'autocomplete background: ', self._gui_colours[ 'autocomplete_background' ] ) )
-            rows.append( ( 'media viewer background: ', self._gui_colours[ 'media_background' ] ) )
-            rows.append( ( 'media viewer text: ', self._gui_colours[ 'media_text' ] ) )
-            rows.append( ( 'tags box background: ', self._gui_colours[ 'tags_box' ] ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( ClientGUICommon.WrapInText( self._current_colourset, self, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.AddF( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1648,14 +1690,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            for ( name, ctrl ) in self._gui_colours.items():
+            for colourset in self._gui_colours:
                 
-                colour = ctrl.GetColour()
+                for ( colour_type, ctrl ) in self._gui_colours[ colourset ].items():
+                    
+                    colour = ctrl.GetColour()
+                    
+                    self._new_options.SetColour( colour_type, colourset, colour )
+                    
                 
-                rgb = ( colour.Red(), colour.Green(), colour.Blue() )
-                
-                HC.options[ 'gui_colours' ][ name ] = rgb
-                
+            
+            self._new_options.SetString( 'current_colourset', self._current_colourset.GetChoice() )
             
             HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             
@@ -2367,6 +2412,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_thumbnail_title_banner = wx.CheckBox( self )
             self._show_thumbnail_page = wx.CheckBox( self )
             
+            self._always_show_hover_windows = wx.CheckBox( self )
+            self._always_show_hover_windows.SetToolTipString( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
+            
             self._hide_message_manager_on_gui_iconise = wx.CheckBox( self )
             self._hide_message_manager_on_gui_iconise.SetToolTipString( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
             
@@ -2417,6 +2465,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
             
+            self._always_show_hover_windows.SetValue( self._new_options.GetBoolean( 'always_show_hover_windows' ) )
+            
             self._hide_message_manager_on_gui_iconise.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
             self._hide_message_manager_on_gui_deactive.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ) )
             
@@ -2447,6 +2497,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
+            rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
             
@@ -2535,6 +2586,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
             
+            self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.GetValue() )
             
@@ -4645,6 +4697,14 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
+        menu_items = []
+        
+        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' )
+        
+        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browesr.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
         columns = [ ( 'name', -1 ), ( 'site', 12 ), ( 'period', 9 ), ( 'last checked', 15 ), ( 'recent error?', 12 ), ( 'recent delay?', 12 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ), ( 'check now?', 10 ) ]
         
         self._subscriptions = ClientGUIListCtrl.BetterListCtrl( self, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
@@ -4669,11 +4729,17 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._edit = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
         self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
         
-        self._retry_failures = ClientGUICommon.BetterButton( self, 'retry failures', self.RetryFailures )
-        self._scrub_delays = ClientGUICommon.BetterButton( self, 'scrub delays', self.ScrubDelays )
-        self._pause_resume = ClientGUICommon.BetterButton( self, 'pause/resume', self.PauseResume )
-        self._check_now = ClientGUICommon.BetterButton( self, 'check now', self.CheckNow )
-        self._reset = ClientGUICommon.BetterButton( self, 'reset', self.Reset )
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'pause/resume', 'Tell all the selected subscriptions to reattempt any failed files.', self.PauseResume ) )
+        menu_items.append( ( 'separator', None, None, None ) )
+        menu_items.append( ( 'normal', 'retry failures', 'Tell all the selected subscriptions to reattempt any failed files.', self.RetryFailures ) )
+        menu_items.append( ( 'normal', 'scrub delays', 'Tell all the selected subscriptions to reattempt any failed files.', self.ScrubDelays ) )
+        menu_items.append( ( 'normal', 'check for new files now', 'Tell all the selected subscriptions to reattempt any failed files.', self.CheckNow ) )
+        menu_items.append( ( 'separator', None, None, None ) )
+        menu_items.append( ( 'normal', 'reset completely', 'Tell all the selected subscriptions to reset their url cache, as if they were created from new.', self.Reset ) )
+        
+        self._affect_all_selected_button = ClientGUICommon.MenuButton( self, 'affect all selected', menu_items )
         
         #
         
@@ -4681,18 +4747,14 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        text_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        text_hbox.AddF( ClientGUICommon.BetterStaticText( self, 'For more information about subscriptions, please check' ), CC.FLAGS_VCENTER )
-        text_hbox.AddF( wx.HyperlinkCtrl( self, id = -1, label = 'here', url = 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' ), CC.FLAGS_VCENTER )
+        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
         
-        action_box = wx.BoxSizer( wx.HORIZONTAL )
+        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
         
-        action_box.AddF( self._retry_failures, CC.FLAGS_VCENTER )
-        action_box.AddF( self._scrub_delays, CC.FLAGS_VCENTER )
-        action_box.AddF( self._pause_resume, CC.FLAGS_VCENTER )
-        action_box.AddF( self._check_now, CC.FLAGS_VCENTER )
-        action_box.AddF( self._reset, CC.FLAGS_VCENTER )
+        help_hbox.AddF( st, CC.FLAGS_VCENTER )
+        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
         
         button_box = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -4705,9 +4767,9 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( text_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( self._subscriptions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( action_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( self._affect_all_selected_button, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -4715,7 +4777,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
         
         pretty_site = gallery_identifier.ToString()
         

@@ -37,11 +37,6 @@ class CollapsibleOptions( ClientGUICommon.StaticBox ):
         self._options_panel.SetOptions( options )
         
     
-class CollapsibleOptionsImportFiles( CollapsibleOptions ):
-    
-    options_panel_class = ClientGUIOptionsPanels.OptionsPanelImportFiles
-    staticbox_title = 'import options - files'
-    
 class CollapsibleOptionsTags( CollapsibleOptions ):
     
     options_panel_class = ClientGUIOptionsPanels.OptionsPanelTags

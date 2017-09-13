@@ -814,6 +814,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'advanced_mode' ] = False
         
+        self._dictionary[ 'booleans' ][ 'always_show_hover_windows' ] = False
+        
         self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
@@ -844,6 +846,40 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
         
         #
+        
+        self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'default' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ] = ( 217, 242, 255 ) # light blue
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ] = ( 32, 32, 36 ) # 50% Payne's Gray
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ] = ( 64, 64, 72 ) # Payne's Gray
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER ] = ( 223, 227, 230 ) # light grey
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_SELECTED ] = ( 1, 17, 26 ) # dark grey
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_REMOTE ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ] = ( 227, 66, 52 ) # Vermillion, lol
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMBGRID_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] = ( 235, 248, 255 ) # very light blue
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_MEDIA_TEXT ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_TAGS_BOX ] = ( 255, 255, 255 )
+        
+        self._dictionary[ 'colours' ][ 'darkmode' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND ] = ( 64, 64, 72 ) # Payne's Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ] = ( 112, 128, 144 ) # Slate Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ] = ( 64, 13, 2 ) # Black Bean
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ] = ( 171, 39, 79 ) # Amaranth Purple
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER ] = ( 145, 163, 176 ) # Cadet Grey
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_SELECTED ] = ( 223, 227, 230 ) # light grey
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_REMOTE ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ] = ( 227, 66, 52 ) # Vermillion, lol
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMBGRID_BACKGROUND ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] = ( 83, 98, 103 ) # Gunmetal
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_TEXT ] = ( 112, 128, 144 ) # Slate Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_TAGS_BOX ] = ( 0, 0, 0 )
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
@@ -911,6 +947,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
+        self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -1181,6 +1218,21 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             return ( paths_to_weights, resized_thumbnail_override, full_size_thumbnail_override )
+            
+        
+    
+    def GetColour( self, colour_type, colourset = None ):
+        
+        with self._lock:
+            
+            if colourset is None:
+                
+                colourset = self._dictionary[ 'strings' ][ 'current_colourset' ]
+                
+            
+            ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
+            
+            return wx.Colour( r, g, b )
             
         
     
@@ -1477,6 +1529,23 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
             
             self._dictionary[ 'client_files_locations_ideal_weights' ].append( ( portable_location, weight ) )
+            
+        
+    
+    def SetColour( self, colour_type, colourset, colour ):
+        
+        with self._lock:
+            
+            if isinstance( colour, wx.Colour ):
+                
+                ( r, g, b ) = colour.Get()
+                
+            else:
+                
+                ( r, g, b ) = colour
+                
+            
+            self._dictionary[ 'colours' ][ colourset ][ colour_type ] = ( r, g, b )
             
         
     
@@ -2029,70 +2098,6 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     def GetName( self ): return self._name
     
 sqlite3.register_adapter( Imageboard, yaml.safe_dump )
-
-class ImportFileOptions( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, automatic_archive = None, exclude_deleted = None, min_size = None, min_resolution = None ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self._automatic_archive = automatic_archive
-        self._exclude_deleted = exclude_deleted
-        self._min_size = min_size
-        self._min_resolution = min_resolution
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution ) = serialisable_info
-        
-    
-    def FileIsValid( self, size, resolution = None ):
-        
-        if self._min_size is not None and size < self._min_size:
-            
-            return False
-            
-        
-        if resolution is not None and self._min_resolution is not None:
-            
-            ( x, y ) = resolution
-            
-            ( min_x, min_y ) = self._min_resolution
-            
-            if x < min_x or y < min_y:
-                
-                return False
-                
-            
-        
-        return True
-        
-    
-    def GetAutomaticArchive( self ):
-        
-        return self._automatic_archive
-        
-    
-    def GetExcludeDeleted( self ):
-        
-        return self._exclude_deleted
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FILE_OPTIONS ] = ImportFileOptions
 
 class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
     

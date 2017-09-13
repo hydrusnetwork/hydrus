@@ -84,6 +84,17 @@ class FullscreenHoverFrame( wx.Frame ):
         
         try:
             
+            new_options = HG.client_controller.GetNewOptions()
+            
+            if new_options.GetBoolean( 'always_show_hover_windows' ):
+                
+                self._SizeAndPosition()
+                
+                self.Show()
+                
+                return
+                
+            
             if self._hide_until is not None:
                 
                 if HydrusData.TimeHasPassed( self._hide_until ):

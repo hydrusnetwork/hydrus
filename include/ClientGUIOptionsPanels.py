@@ -23,68 +23,6 @@ class OptionsPanel( wx.Panel ):
     
     def SetValue( self, info ): raise NotImplementedError()
     
-class OptionsPanelImportFiles( OptionsPanel ):
-    
-    def __init__( self, parent ):
-        
-        OptionsPanel.__init__( self, parent )
-        
-        self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
-        self._auto_archive.Bind( wx.EVT_CHECKBOX, self.EventChanged )
-        self._auto_archive.SetToolTipString( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
-        
-        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
-        self._exclude_deleted.Bind( wx.EVT_CHECKBOX, self.EventChanged )
-        self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
-        
-        self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
-        self._min_size.SetValue( 5120 )
-        self._min_size.Bind( wx.EVT_SPINCTRL, self.EventChanged )
-        
-        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'resolution', num_dimensions = 2 )
-        self._min_resolution.SetValue( ( 50, 50 ) )
-        self._min_resolution.Bind( wx.EVT_SPINCTRL, self.EventChanged )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        self.SetOptions( ClientDefaults.GetDefaultImportFileOptions() )
-        
-    
-    def EventChanged( self, event ):
-        
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_file_options_changed' ) ) )
-        
-        event.Skip()
-        
-    
-    def GetOptions( self ):
-        
-        automatic_archive = self._auto_archive.GetValue()
-        exclude_deleted = self._exclude_deleted.GetValue()
-        min_size = self._min_size.GetValue()
-        min_resolution = self._min_resolution.GetValue()
-        
-        return ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
-        
-    
-    def SetOptions( self, import_file_options ):
-        
-        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = import_file_options.ToTuple()
-        
-        self._auto_archive.SetValue( automatic_archive )
-        self._exclude_deleted.SetValue( exclude_deleted )
-        self._min_size.SetValue( min_size )
-        self._min_resolution.SetValue( min_resolution )
-        
-    
 class OptionsPanelMimes( OptionsPanel ):
     
     def __init__( self, parent, selectable_mimes ):

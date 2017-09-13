@@ -6313,9 +6313,9 @@ class DB( HydrusDB.HydrusDB ):
             
             self._c.execute( 'INSERT OR IGNORE INTO local_hashes ( hash_id, md5, sha1, sha512 ) VALUES ( ?, ?, ?, ? );', ( hash_id, sqlite3.Binary( md5 ), sqlite3.Binary( sha1 ), sqlite3.Binary( sha512 ) ) )
             
-            import_file_options = file_import_job.GetImportFileOptions()
+            file_import_options = file_import_job.GetFileImportOptions()
             
-            ( archive, exclude_deleted_files, min_size, min_resolution ) = import_file_options.ToTuple()
+            ( archive, exclude_deleted_files, min_size, min_resolution ) = file_import_options.ToTuple()
             
             if archive:
                 
@@ -9713,6 +9713,39 @@ class DB( HydrusDB.HydrusDB ):
         if version == 266:
             
             self._c.execute( 'DROP TABLE IF EXISTS web_sessions;' )
+            
+        
+        if version == 272:
+            
+            try:
+                
+                options = self._GetOptions()
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND, 'default', options[ 'gui_colours' ][ 'thumb_background' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_background_selected' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_REMOTE, 'default', options[ 'gui_colours' ][ 'thumb_background_remote' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_background_remote_selected' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BORDER, 'default', options[ 'gui_colours' ][ 'thumb_border' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BORDER_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_border_selected' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BORDER_REMOTE, 'default', options[ 'gui_colours' ][ 'thumb_border_remote' ] )
+                new_options.SetColour( CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED, 'default', options[ 'gui_colours' ][ 'thumb_border_remote_selected' ] )
+                new_options.SetColour( CC.COLOUR_THUMBGRID_BACKGROUND, 'default', options[ 'gui_colours' ][ 'thumbgrid_background' ] )
+                new_options.SetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND, 'default', options[ 'gui_colours' ][ 'autocomplete_background' ] )
+                new_options.SetColour( CC.COLOUR_MEDIA_BACKGROUND, 'default', options[ 'gui_colours' ][ 'media_background' ] )
+                new_options.SetColour( CC.COLOUR_MEDIA_TEXT, 'default', options[ 'gui_colours' ][ 'media_text' ] )
+                new_options.SetColour( CC.COLOUR_TAGS_BOX, 'default', options[ 'gui_colours' ][ 'tags_box' ] )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Your colour options failed to update, so they have reset to default. The error has been written to your log--please send this information to hydrus dev!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

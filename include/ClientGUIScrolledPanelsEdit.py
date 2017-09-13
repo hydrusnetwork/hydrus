@@ -8,6 +8,7 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIMenus
@@ -706,6 +707,56 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
+class EditImportOptionsFiles( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, file_import_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
+        self._auto_archive.SetToolTipString( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
+        
+        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
+        self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
+        
+        self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
+        self._min_size.SetValue( 5120 )
+        
+        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'resolution', num_dimensions = 2 )
+        self._min_resolution.SetValue( ( 50, 50 ) )
+        
+        #
+        
+        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = file_import_options.ToTuple()
+        
+        self._auto_archive.SetValue( automatic_archive )
+        self._exclude_deleted.SetValue( exclude_deleted )
+        self._min_size.SetValue( min_size )
+        self._min_resolution.SetValue( min_resolution )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        automatic_archive = self._auto_archive.GetValue()
+        exclude_deleted = self._exclude_deleted.GetValue()
+        min_size = self._min_size.GetValue()
+        min_resolution = self._min_resolution.GetValue()
+        
+        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+        
+    
 class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, info ):
@@ -1273,13 +1324,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self, file_import_options )
+        
         self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self )
-        
         #
-        
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
         
         self._name.SetValue( name )
         
@@ -1311,8 +1362,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
         self._paused.SetValue( paused )
-        
-        self._import_file_options.SetOptions( import_file_options )
         
         self._import_tag_options.SetOptions( import_tag_options )
         
@@ -1385,8 +1434,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -1582,11 +1631,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         paused = self._paused.GetValue()
         
-        import_file_options = self._import_file_options.GetOptions()
+        file_import_options = self._file_import_options.GetValue()
         
         import_tag_options = self._import_tag_options.GetOptions()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, import_file_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
         return subscription
         

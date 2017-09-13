@@ -610,13 +610,6 @@ class Controller( HydrusController.HydrusController ):
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         self._managers[ 'web_sessions' ] = ClientCaches.WebSessionManagerClient( self )
         
-        if HC.options[ 'proxy' ] is not None:
-            
-            ( proxytype, host, port, username, password ) = HC.options[ 'proxy' ]
-            
-            ClientNetworking.SetProxy( proxytype, host, port, username, password )
-            
-        
         def wx_code():
             
             self._caches[ 'images' ] = ClientCaches.RenderedImageCache( self )

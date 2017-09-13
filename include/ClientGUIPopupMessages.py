@@ -525,7 +525,7 @@ class PopupMessageManager( wx.Frame ):
         
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
         
-        if len( self._pending_job_keys ) > 0 and num_messages_displayed < self._max_messages_to_display:
+        while len( self._pending_job_keys ) > 0 and num_messages_displayed < self._max_messages_to_display:
             
             job_key = self._pending_job_keys.pop( 0 )
             
@@ -758,7 +758,10 @@ class PopupMessageManager( wx.Frame ):
             
             self._pending_job_keys.append( job_key )
             
-            self._CheckPending()
+            if ClientGUITopLevelWindows.MouseIsOnMyDisplay( self.GetParent() ):
+                
+                self._CheckPending()
+                
             
         except:
             
@@ -839,7 +842,12 @@ class PopupMessageManager( wx.Frame ):
         
         try:
             
-            self._Update()
+            if ClientGUITopLevelWindows.MouseIsOnMyDisplay( self.GetParent() ):
+                
+                self._Update()
+                
+                self._CheckPending()
+                
             
         except wx.PyDeadObjectError:
             

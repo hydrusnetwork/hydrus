@@ -620,7 +620,9 @@ class ListBoxTags( ListBox ):
         
         self._get_current_predicates_callable = None
         
-        self._background_colour = wx.Colour( *HC.options[ 'gui_colours' ][ 'tags_box' ] )
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )

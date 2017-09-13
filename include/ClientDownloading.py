@@ -299,7 +299,7 @@ def ParseImageboardFileURLFromPost( thread_url, post ):
     return ( file_url, file_md5_base64, file_original_filename )
     
 def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
-
+    
     json_dict = json.loads( raw_json )
     
     posts_list = json_dict[ 'posts' ]
@@ -931,6 +931,12 @@ class GalleryBooru( Gallery ):
             
         
         image_url = urlparse.urljoin( url_base, image_url )
+        
+        if 'gelbooru.com' in url_base:
+            
+            # giving 404 on some content servers for http, no redirect for some reason
+            image_url = ClientData.ConvertHTTPToHTTPS( image_url )
+            
         
         tags = []
         

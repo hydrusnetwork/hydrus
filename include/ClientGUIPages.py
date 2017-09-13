@@ -1319,7 +1319,7 @@ class PagesNotebook( wx.Notebook ):
             
             drop_source.SetData( hydrus_page_tab_data_object )
             
-            drop_source.DoDragDrop()
+            drop_source.DoDragDrop( wx.Drag_DefaultMove )
             
             self._potential_drag_page = None
             
@@ -1628,9 +1628,7 @@ class PagesNotebook( wx.Notebook ):
         
         if on_deepest_notebook and isinstance( current_page, PagesNotebook ):
             
-            current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
-            
-            return
+            return current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
         
         if not HG.no_page_limit_mode:

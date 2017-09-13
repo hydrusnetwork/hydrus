@@ -16,6 +16,7 @@ import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIMedia
 import ClientGUIMenus
@@ -107,11 +108,11 @@ def CreateManagementControllerImportPageOfImages():
     
     return management_controller
     
-def CreateManagementControllerImportHDD( paths, import_file_options, paths_to_tags, delete_after_success ):
+def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_tags, delete_after_success ):
     
     management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
     
-    hdd_import = ClientImporting.HDDImport( paths = paths, import_file_options = import_file_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+    hdd_import = ClientImporting.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
     
     management_controller.SetVariable( 'hdd_import', hdd_import )
     
@@ -627,11 +628,11 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 min_size = advanced_import_options[ 'min_size' ]
                 min_resolution = advanced_import_options[ 'min_resolution' ]
                 
-                import_file_options = ClientData.ImportFileOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
                 
                 paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
                 
-                hdd_import = ClientImporting.HDDImport( paths = paths, import_file_options = import_file_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                hdd_import = ClientImporting.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
                 serialisable_serialisables[ 'hdd_import' ] = hdd_import.GetSerialisableTuple()
                 
@@ -1414,7 +1415,11 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
         self._file_limit.SetToolTipString( 'per query, stop searching the gallery once this many files has been reached' )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._gallery_downloader_panel )
+        self._gallery_import.SetDownloadControls( self._file_download_control, self._gallery_download_control )
+        
+        ( file_import_options, import_tag_options, file_limit ) = self._gallery_import.GetOptions()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._gallery_downloader_panel, file_import_options, self._gallery_import.SetFileImportOptions )
         self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._gallery_downloader_panel )
         
         #
@@ -1461,7 +1466,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.AddF( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._cog_button, CC.FLAGS_LONE_BUTTON )
         self._gallery_downloader_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -1493,11 +1498,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._import_tag_options.SetNamespaces( namespaces )
         self._query_input.SetValue( search_value )
         
-        self._gallery_import.SetDownloadControls( self._file_download_control, self._gallery_download_control )
-        
-        ( import_file_options, import_tag_options, file_limit ) = self._gallery_import.GetOptions()
-        
-        self._import_file_options.SetOptions( import_file_options )
         self._import_tag_options.SetOptions( import_tag_options )
         
         self._file_limit.SetValue( file_limit )
@@ -1706,12 +1706,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
             
             ( command, data ) = action
             
-            if command == 'import_file_options_changed':
-                
-                import_file_options = self._import_file_options.GetOptions()
-                
-                self._gallery_import.SetImportFileOptions( import_file_options )
-                
             if command == 'import_tag_options_changed':
                 
                 import_tag_options = self._import_tag_options.GetOptions()
@@ -1930,7 +1924,11 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._download_unlinked_images.Bind( wx.EVT_CHECKBOX, self.EventDownloadUnlinkedImages )
         self._download_unlinked_images.SetToolTipString( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._page_of_images_panel )
+        self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
+        
+        ( file_import_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._page_of_images_panel, file_import_options, self._page_of_images_import.SetFileImportOptions )
         
         #
         
@@ -1966,7 +1964,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._page_of_images_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1984,20 +1982,12 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         #
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
-        
         seed_cache = self._page_of_images_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
         
         self._page_of_images_import.SetDownloadControlFile( self._file_download_control )
         self._page_of_images_import.SetDownloadControlPage( self._page_download_control )
-        
-        ( import_file_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
-        
-        self._import_file_options.SetOptions( import_file_options )
         
         self._download_image_links.SetValue( download_image_links )
         self._download_unlinked_images.SetValue( download_unlinked_images )
@@ -2142,24 +2132,6 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'import_file_options_changed':
-                
-                import_file_options = self._import_file_options.GetOptions()
-                
-                self._page_of_images_import.SetImportFileOptions( import_file_options )
-                
-            else: event.Skip()
-            
-        
-    
     def EventPaste( self, event ):
     
         if wx.TheClipboard.Open():
@@ -2274,7 +2246,11 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         #
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._thread_watcher_panel )
+        self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
+        
+        ( thread_url, file_import_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
         self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
         #
@@ -2305,7 +2281,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_watcher_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._thread_watcher_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -2328,8 +2304,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._controller.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
         
-        self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
-        
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
@@ -2337,11 +2311,8 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._thread_watcher_import.SetDownloadControlFile( self._file_download_control )
         self._thread_watcher_import.SetDownloadControlThread( self._thread_download_control )
         
-        ( thread_url, import_file_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
-        
         self._thread_input.SetValue( thread_url )
         
-        self._import_file_options.SetOptions( import_file_options )
         self._import_tag_options.SetOptions( import_tag_options )
         
         self._thread_times_to_check.SetValue( times_to_check )
@@ -2484,13 +2455,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             ( command, data ) = action
             
-            if command == 'import_file_options_changed':
-                
-                import_file_options = self._import_file_options.GetOptions()
-                
-                self._thread_watcher_import.SetImportFileOptions( import_file_options )
-                
-            elif command == 'import_tag_options_changed':
+            if command == 'import_tag_options_changed':
                 
                 import_tag_options = self._import_tag_options.GetOptions()
                 
@@ -2576,7 +2541,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._url_paste = wx.Button( self._url_panel, label = 'paste urls' )
         self._url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
         
-        self._import_file_options = ClientGUICollapsible.CollapsibleOptionsImportFiles( self._url_panel )
+        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
+        
+        file_import_options = self._urls_import.GetOptions()
+        
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
         
         #
         
@@ -2592,7 +2561,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._url_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._url_panel.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2610,15 +2579,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
-        
         self._urls_import.SetDownloadControlFile( self._file_download_control )
-        
-        import_file_options = self._urls_import.GetOptions()
-        
-        self._import_file_options.SetOptions( import_file_options )
         
         self._UpdateStatus()
         
@@ -2708,27 +2669,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         else:
             
             event.Skip()
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'import_file_options_changed':
-                
-                import_file_options = self._import_file_options.GetOptions()
-                
-                self._urls_import.SetImportFileOptions( import_file_options )
-                
-            else:
-                
-                event.Skip()
-                
             
         
     

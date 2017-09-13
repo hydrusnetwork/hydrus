@@ -2,6 +2,7 @@ import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
+import ClientDownloading
 import ClientDragDrop
 import ClientExporting
 import ClientFiles
@@ -11,7 +12,7 @@ import ClientGUICommon
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIDialogs
-import ClientDownloading
+import ClientGUIImport
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientGUIScrolledPanelsEdit
@@ -49,12 +50,6 @@ import yaml
 ID_NULL = wx.NewId()
 
 ID_TIMER_UPDATE = wx.NewId()
-
-# Hue is generally 200, Sat and Lum changes based on need
-
-COLOUR_SELECTED = wx.Colour( 217, 242, 255 )
-COLOUR_SELECTED_DARK = wx.Colour( 1, 17, 26 )
-COLOUR_UNSELECTED = wx.Colour( 223, 227, 230 )
 
 def GenerateMultipartFormDataCTAndBodyFromDict( fields ):
     
@@ -1068,18 +1063,11 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        self._export_folders = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'type', 120 ), ( 'query', 120 ), ( 'period', 120 ), ( 'phrase', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ], self._ConvertExportFolderToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         export_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
-        for export_folder in export_folders:
-            
-            path = export_folder.GetName()
-            
-            ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
-            
-            self._export_folders.Append( display_tuple, sort_tuple, export_folder )
-            
+        self._export_folders.AddDatas( export_folders )
         
         self._add_button = wx.Button( self, label = 'add' )
         self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -1149,16 +1137,14 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
                 
                 export_folder = dlg.GetInfo()
                 
-                self._export_folders.SetNonDupeName( export_folder )
+                export_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
-                
-                self._export_folders.Append( display_tuple, sort_tuple, export_folder )
+                self._export_folders.AddDatas( ( export_folder, ) )
                 
             
         
     
-    def _ConvertExportFolderToTuples( self, export_folder ):
+    def _ConvertExportFolderToListCtrlTuples( self, export_folder ):
         
         ( name, path, export_type, file_search_context, period, phrase ) = export_folder.ToTuple()
         
@@ -1184,41 +1170,45 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         return ( display_tuple, sort_tuple )
         
     
+    def _GetExistingNames( self ):
+        
+        existing_names = { export_folder.GetName() for export_folder in self._export_folders.GetData() }
+        
+        return existing_names
+        
+    
     def Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._export_folders.RemoveAllSelected()
+                self._export_folders.DeleteSelected()
                 
             
         
     
     def Edit( self ):
         
-        indices = self._export_folders.GetAllSelected()
+        export_folders = self._export_folders.GetData( only_selected = True )
         
-        for index in indices:
-            
-            export_folder = self._export_folders.GetObject( index )
-            
-            original_name = export_folder.GetName()
+        for export_folder in export_folders:
             
             with DialogManageExportFoldersEdit( self, export_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
+                    self._export_folders.DeleteDatas( ( export_folder, ) )
+                    
                     export_folder = dlg.GetInfo()
                     
-                    if export_folder.GetName() != original_name:
-                        
-                        self._export_folders.SetNonDupeName( export_folder )
-                        
+                    export_folder.SetNonDupeName( self._GetExistingNames() )
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertExportFolderToTuples( export_folder )
+                    self._export_folders.AddDatas( ( export_folder, ) )
                     
-                    self._export_folders.UpdateRow( index, display_tuple, sort_tuple, export_folder )
+                else:
+                    
+                    return
                     
                 
             
@@ -1243,7 +1233,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         existing_db_names = set( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER ) )
         
-        export_folders = self._export_folders.GetObjects()
+        export_folders = self._export_folders.GetData()
         
         good_names = set()
         
@@ -2357,7 +2347,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, import_file_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
+        ( name, path, mimes, file_import_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2408,7 +2398,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._action_failed = create_choice()
         self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
         
-        self._import_file_options = ClientGUIOptionsPanels.OptionsPanelImportFiles( self._file_box )
+        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._file_box, file_import_options )
         
         #
         
@@ -2475,7 +2465,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             self._location_failed.SetPath( action_locations[ CC.STATUS_FAILED ] )
             
         
-        self._import_file_options.SetOptions( import_file_options )
         self._import_tag_options.SetOptions( import_tag_options )
         
         #
@@ -2523,7 +2512,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._file_box.AddF( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._file_box.AddF( self._import_file_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_box.AddF( self._file_import_options, CC.FLAGS_LONE_BUTTON )
         
         #
         
@@ -2730,7 +2719,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         name = self._name.GetValue()
         path = HydrusData.ToUnicode( self._path.GetPath() )
         mimes = self._mimes.GetValue()
-        import_file_options = self._import_file_options.GetOptions()
+        file_import_options = self._file_import_options.GetValue()
         import_tag_options = self._import_tag_options.GetOptions()
         
         actions = {}
@@ -2765,7 +2754,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         paused = self._paused.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, import_file_options, import_tag_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, import_tag_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
         
         return self._import_folder
         
