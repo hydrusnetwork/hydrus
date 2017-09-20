@@ -5,6 +5,8 @@ import ClientCaches
 import ClientData
 import ClientDefaults
 import ClientGUIDialogs
+import ClientImporting
+import ClientTags
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -190,7 +192,7 @@ class OptionsPanelTags( OptionsPanel ):
     
     def EventChecked( self, event ):
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_tag_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
         
         event.Skip()
         
@@ -217,7 +219,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'import_tag_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
         
     
     def GetOptions( self ):
@@ -233,9 +235,9 @@ class OptionsPanelTags( OptionsPanel ):
         
         service_keys_to_explicit_tags = { service_key : explicit_tags for ( service_key, ( explicit_tags, explicit_button ) ) in self._service_keys_to_explicit_button_info.items() }
         
-        import_tag_options = ClientData.ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+        tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
         
-        return import_tag_options
+        return tag_import_options
         
     
     def SetNamespaces( self, namespaces ):
@@ -268,14 +270,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 for namespace in namespaces:
                     
-                    if namespace == '':
-                        
-                        label = 'unnamespaced'
-                        
-                    else:
-                        
-                        label = namespace
-                        
+                    label = ClientTags.RenderNamespaceForUser( namespace )
                     
                     namespace_checkbox = wx.CheckBox( self, label = label )
                     
@@ -307,9 +302,9 @@ class OptionsPanelTags( OptionsPanel ):
             
         
     
-    def SetOptions( self, import_tag_options ):
+    def SetOptions( self, tag_import_options ):
         
-        service_keys_to_namespaces = import_tag_options.GetServiceKeysToNamespaces()
+        service_keys_to_namespaces = tag_import_options.GetServiceKeysToNamespaces()
         
         for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
             
@@ -335,7 +330,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
             
         
-        service_keys_to_explicit_tags = import_tag_options.GetServiceKeysToExplicitTags()
+        service_keys_to_explicit_tags = tag_import_options.GetServiceKeysToExplicitTags()
         
         new_service_keys_to_explicit_button_info = {}
         

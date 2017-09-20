@@ -1201,9 +1201,18 @@ class ListBook( wx.Panel ):
             
             ( command, data ) = action
             
-            if command == 'select_down': self.SelectDown()
-            elif command == 'select_up': self.SelectUp()
-            else: event.Skip()
+            if command == 'select_down':
+                
+                self.SelectDown()
+                
+            elif command == 'select_up':
+                
+                self.SelectUp()
+                
+            else:
+                
+                event.Skip()
+                
             
         
     

@@ -820,6 +820,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         
+        self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
+        
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
         self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
         
@@ -979,6 +981,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
         self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        
+        #
+        
+        self._dictionary[ 'media_launch' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
+        
+        for mime in HC.SEARCHABLE_MIMES:
+            
+            self._dictionary[ 'media_launch' ][ mime ] = None
+            
         
         #
         
@@ -1173,7 +1184,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ClearDefaultImportTagOptions( self ):
+    def ClearDefaultTagImportOptions( self ):
         
         with self._lock:
             
@@ -1236,21 +1247,21 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultImportTagOptions( self, gallery_identifier = None ):
+    def GetDefaultTagImportOptions( self, gallery_identifier = None ):
         
         with self._lock:
             
-            default_import_tag_options = self._dictionary[ 'default_import_tag_options' ]
+            default_tag_import_options = self._dictionary[ 'default_import_tag_options' ]
             
             if gallery_identifier is None:
                 
-                return default_import_tag_options
+                return default_tag_import_options
                 
             else:
                 
-                if gallery_identifier in default_import_tag_options:
+                if gallery_identifier in default_tag_import_options:
                     
-                    import_tag_options = default_import_tag_options[ gallery_identifier ]
+                    tag_import_options = default_tag_import_options[ gallery_identifier ]
                     
                 else:
                     
@@ -1259,40 +1270,42 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     default_pixiv_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV )
                     default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
                     
-                    guidance_import_tag_options = None
+                    guidance_tag_import_options = None
                     
                     site_type = gallery_identifier.GetSiteType()
                     
                     if site_type == HC.SITE_TYPE_THREAD_WATCHER:
                         
-                        return ImportTagOptions() # if nothing set, do nothing in this special case
+                        import ClientImporting
+                        
+                        return ClientImporting.TagImportOptions() # if nothing set, do nothing in this special case
                         
                     
-                    if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_import_tag_options:
+                    if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_tag_import_options:
                         
-                        guidance_import_tag_options = default_import_tag_options[ default_booru_gallery_identifier ]
+                        guidance_tag_import_options = default_tag_import_options[ default_booru_gallery_identifier ]
                         
-                    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) and default_hentai_foundry_gallery_identifier in default_import_tag_options:
+                    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) and default_hentai_foundry_gallery_identifier in default_tag_import_options:
                         
-                        guidance_import_tag_options = default_import_tag_options[ default_hentai_foundry_gallery_identifier ]
+                        guidance_tag_import_options = default_tag_import_options[ default_hentai_foundry_gallery_identifier ]
                         
-                    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ) and default_pixiv_gallery_identifier in default_import_tag_options:
+                    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ) and default_pixiv_gallery_identifier in default_tag_import_options:
                         
-                        guidance_import_tag_options = default_import_tag_options[ default_pixiv_gallery_identifier ]
+                        guidance_tag_import_options = default_tag_import_options[ default_pixiv_gallery_identifier ]
                         
-                    elif default_gallery_identifier in default_import_tag_options:
+                    elif default_gallery_identifier in default_tag_import_options:
                         
-                        guidance_import_tag_options = default_import_tag_options[ default_gallery_identifier ]
+                        guidance_tag_import_options = default_tag_import_options[ default_gallery_identifier ]
                         
                     
                     service_keys_to_namespaces = {}
                     service_keys_to_explicit_tags = {}
                     
-                    if guidance_import_tag_options is not None:
+                    if guidance_tag_import_options is not None:
                         
                         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
                         
-                        guidance_service_keys_to_namespaces = guidance_import_tag_options.GetServiceKeysToNamespaces()
+                        guidance_service_keys_to_namespaces = guidance_tag_import_options.GetServiceKeysToNamespaces()
                         
                         for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
                             
@@ -1306,13 +1319,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                                 
                             
                         
-                        service_keys_to_explicit_tags = guidance_import_tag_options.GetServiceKeysToExplicitTags()
+                        service_keys_to_explicit_tags = guidance_tag_import_options.GetServiceKeysToExplicitTags()
                         
                     
-                    import_tag_options = ImportTagOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+                    import ClientImporting
+                    
+                    tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
                     
                 
-                return import_tag_options
+                return tag_import_options
                 
             
         
@@ -1424,6 +1439,19 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             ( media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._dictionary[ 'media_view' ][ mime ]
             
             return ( scale_up_quality, scale_down_quality )
+            
+        
+    
+    def GetMimeLaunch( self, mime ):
+        
+        with self._lock:
+            
+            if mime not in self._dictionary[ 'media_launch' ]:
+                
+                self._dictionary[ 'media_launch' ][ mime ] = None
+                
+            
+            return self._dictionary[ 'media_launch' ][ mime ]
             
         
     
@@ -1549,11 +1577,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultImportTagOptions( self, gallery_identifier, import_tag_options ):
+    def SetDefaultTagImportOptions( self, gallery_identifier, tag_import_options ):
         
         with self._lock:
             
-            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = import_tag_options
+            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = tag_import_options
             
         
     
@@ -1637,6 +1665,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetMimeLaunch( self, mime, launch_path ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_launch' ][ mime ] = launch_path
+            
+        
+    
     def SetNoneableInteger( self, name, value ):
         
         with self._lock:
@@ -1665,9 +1701,21 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            it_changed = False
+            
             if value is not None and value != '':
                 
-                self._dictionary[ 'strings' ][ name ] = value
+                if self._dictionary[ 'strings' ][ name ] != value:
+                    
+                    self._dictionary[ 'strings' ][ name ] = value
+                    
+                    it_changed = True
+                    
+                
+            
+            if name == 'current_colourset' and it_changed:
+                
+                HG.client_controller.pub( 'notify_new_colourset' )
                 
             
         
@@ -2098,143 +2146,6 @@ class Imageboard( HydrusData.HydrusYAMLBase ):
     def GetName( self ): return self._name
     
 sqlite3.register_adapter( Imageboard, yaml.safe_dump )
-
-class ImportTagOptions( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS
-    SERIALISABLE_VERSION = 2
-    
-    def __init__( self, service_keys_to_namespaces = None, service_keys_to_explicit_tags = None ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        if service_keys_to_namespaces is None:
-            
-            service_keys_to_namespaces = {}
-            
-        
-        if service_keys_to_explicit_tags is None:
-            
-            service_keys_to_explicit_tags = {}
-            
-        
-        self._service_keys_to_namespaces = service_keys_to_namespaces
-        self._service_keys_to_explicit_tags = service_keys_to_explicit_tags
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        if HG.client_controller.IsBooted():
-            
-            services_manager = HG.client_controller.services_manager
-            
-            test_func = services_manager.ServiceExists
-            
-        else:
-            
-            def test_func( service_key ):
-                
-                return True
-                
-            
-        
-        safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() if test_func( service_key ) }
-        safe_service_keys_to_explicit_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_explicit_tags.items() if test_func( service_key ) }
-        
-        return ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags ) = serialisable_info
-        
-        self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
-        self._service_keys_to_explicit_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_explicit_tags.items() }
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            safe_service_keys_to_namespaces = old_serialisable_info
-            
-            safe_service_keys_to_explicit_tags = {}
-            
-            new_serialisable_info = ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-    
-    def GetServiceKeysToExplicitTags( self ):
-        
-        return dict( self._service_keys_to_explicit_tags )
-        
-    
-    def GetServiceKeysToNamespaces( self ):
-        
-        return dict( self._service_keys_to_namespaces )
-        
-    
-    def GetServiceKeysToContentUpdates( self, hash, tags ):
-        
-        tags = [ tag for tag in tags if tag is not None ]
-        
-        service_keys_to_tags = collections.defaultdict( set )
-        
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
-        
-        for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
-            
-            tags_to_add_here = []
-            
-            if len( namespaces ) > 0:
-                
-                for namespace in namespaces:
-                    
-                    if namespace == '': tags_to_add_here.extend( [ tag for tag in tags if not ':' in tag ] )
-                    else: tags_to_add_here.extend( [ tag for tag in tags if tag.startswith( namespace + ':' ) ] )
-                    
-                
-            
-            tags_to_add_here = HydrusTags.CleanTags( tags_to_add_here )
-            
-            if len( tags_to_add_here ) > 0:
-                
-                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
-                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
-                
-                service_keys_to_tags[ service_key ].update( tags_to_add_here )
-                
-            
-        
-        for ( service_key, explicit_tags ) in self._service_keys_to_explicit_tags.items():
-            
-            tags_to_add_here = HydrusTags.CleanTags( explicit_tags )
-            
-            if len( tags_to_add_here ) > 0:
-                
-                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
-                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
-                
-                service_keys_to_tags[ service_key ].update( tags_to_add_here )
-                
-            
-        
-        service_keys_to_content_updates = ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-        
-        return service_keys_to_content_updates
-        
-    
-    def InterestedInTags( self ):
-        
-        i_am_interested = len( self._service_keys_to_namespaces ) > 0
-        
-        return i_am_interested
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_TAG_OPTIONS ] = ImportTagOptions
 
 class Shortcut( HydrusSerialisable.SerialisableBase ):
     

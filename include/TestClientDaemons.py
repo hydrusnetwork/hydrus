@@ -21,7 +21,7 @@ class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
         
-        test_dir = tempfile.mkdtemp()
+        test_dir = HydrusPaths.GetTempDir()
         
         try:
             

@@ -4832,35 +4832,43 @@ class DB( HydrusDB.HydrusDB ):
             
             hash = self._GetHash( hash_id )
             
-            return ( CC.STATUS_DELETED, hash )
+            return ( CC.STATUS_DELETED, hash, '' )
             
         
-        result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._trash_service_id, hash_id ) ).fetchone()
-        
-        if result is not None:
-            
-            hash = self._GetHash( hash_id )
-            
-            return ( CC.STATUS_DELETED, hash )
-            
-        
-        result = self._c.execute( 'SELECT 1 FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
+        result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._trash_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
             hash = self._GetHash( hash_id )
             
-            return ( CC.STATUS_REDUNDANT, hash )
+            ( timestamp, ) = result
+            
+            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
+            
+            return ( CC.STATUS_DELETED, hash, note )
             
         
-        return ( CC.STATUS_NEW, None )
+        result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
+        
+        if result is not None:
+            
+            hash = self._GetHash( hash_id )
+            
+            ( timestamp, ) = result
+            
+            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
+            
+            return ( CC.STATUS_REDUNDANT, hash, note )
+            
+        
+        return ( CC.STATUS_NEW, None, '' )
         
     
     def _GetHashStatus( self, hash ):
         
         hash_id = self._GetHashId( hash )
         
-        ( status, hash ) = self._GetHashIdStatus( hash_id )
+        ( status, hash, note ) = self._GetHashIdStatus( hash_id )
         
         return status
         
@@ -4970,7 +4978,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if result is None:
             
-            return ( CC.STATUS_NEW, None )
+            return ( CC.STATUS_NEW, None, '' )
             
         else:
             
@@ -6206,7 +6214,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return ( CC.STATUS_NEW, None )
+        return ( CC.STATUS_NEW, None, '' )
         
     
     def _GetYAMLDump( self, dump_type, dump_name = None ):
@@ -6284,7 +6292,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( hash )
         
-        ( status, status_hash ) = self._GetHashIdStatus( hash_id )
+        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id )
         
         if status != CC.STATUS_REDUNDANT:
             

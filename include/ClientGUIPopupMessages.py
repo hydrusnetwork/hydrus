@@ -521,11 +521,9 @@ class PopupMessageManager( wx.Frame ):
         
         size_and_position_needed = False
         
-        num_messages_displayed = self._message_vbox.GetItemCount()
-        
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
         
-        while len( self._pending_job_keys ) > 0 and num_messages_displayed < self._max_messages_to_display:
+        while len( self._pending_job_keys ) > 0 and self._message_vbox.GetItemCount() < self._max_messages_to_display:
             
             job_key = self._pending_job_keys.pop( 0 )
             

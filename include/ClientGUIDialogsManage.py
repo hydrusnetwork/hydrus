@@ -2347,7 +2347,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, file_import_options, import_tag_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
+        ( name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2398,14 +2398,13 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._action_failed = create_choice()
         self._location_failed = wx.DirPickerCtrl( self._file_box, style = wx.DIRP_USE_TEXTCTRL )
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._file_box, file_import_options )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._file_box, file_import_options )
         
         #
         
         self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
         
-        self._import_tag_options = ClientGUIOptionsPanels.OptionsPanelTags( self._tag_box )
-        self._import_tag_options.SetNamespaces( [] )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, [], tag_import_options )
         
         self._txt_parse_st = wx.StaticText( self._tag_box, label = '' )
         
@@ -2465,8 +2464,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             self._location_failed.SetPath( action_locations[ CC.STATUS_FAILED ] )
             
         
-        self._import_tag_options.SetOptions( import_tag_options )
-        
         #
         
         rows = []
@@ -2521,7 +2518,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         txt_hbox.AddF( self._txt_parse_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         txt_hbox.AddF( txt_files_help_button, CC.FLAGS_VCENTER )
         
-        self._tag_box.AddF( self._import_tag_options, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._tag_box.AddF( self._tag_import_options, CC.FLAGS_LONE_BUTTON )
         self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._tag_box.AddF( txt_hbox, CC.FLAGS_SIZER_VCENTER )
         
@@ -2720,7 +2717,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         path = HydrusData.ToUnicode( self._path.GetPath() )
         mimes = self._mimes.GetValue()
         file_import_options = self._file_import_options.GetValue()
-        import_tag_options = self._import_tag_options.GetOptions()
+        tag_import_options = self._tag_import_options.GetValue()
         
         actions = {}
         action_locations = {}
@@ -2754,7 +2751,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         paused = self._paused.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, file_import_options, import_tag_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
         
         return self._import_folder
         
@@ -3655,8 +3652,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
-            self._tag_parents = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'child', 160 ), ( 'parent', -1 ) ] )
-            self._tag_parents.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self, 'tag_parents', 30, 25, [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
@@ -3900,12 +3896,30 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             if len( affected_pairs ) > 0:
                 
-                for pair in affected_pairs:
+                def in_current( pair ):
                     
-                    self._RefreshPair( pair )
+                    for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
+                        
+                        if pair in self._current_statuses_to_pairs[ status ]:
+                            
+                            return True
+                            
+                        
+                        return False
+                        
                     
                 
-                #self._tag_parents.SortListItems()
+                affected_pairs = [ ( self._tag_parents.HasData( pair ), in_current( pair ), pair ) for pair in affected_pairs ]
+                
+                to_add = [ pair for ( exists, current, pair ) in affected_pairs if not exists ]
+                to_update = [ pair for ( exists, current, pair ) in affected_pairs if exists and current ]
+                to_delete = [ pair for ( exists, current, pair ) in affected_pairs if exists and not current ]
+                
+                self._tag_parents.AddDatas( to_add )
+                self._tag_parents.UpdateDatas( to_update )
+                self._tag_parents.DeleteDatas( to_delete )
+                
+                self._tag_parents.Sort()
                 
             
         
@@ -3936,43 +3950,51 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             return True
             
         
-        def _RefreshPair( self, pair ):
+        def _ListCtrlActivated( self ):
+            
+            parents_to_children = collections.defaultdict( set )
+            
+            pairs = self._tag_parents.GetData( only_selected = True )
+            
+            for ( child, parent ) in pairs:
+                
+                parents_to_children[ parent ].add( child )
+                
+            
+            if len( parents_to_children ) > 0:
+                
+                for ( parent, children ) in parents_to_children.items():
+                    
+                    self._AddPairs( children, parent )
+                    
+                
+            
+        
+        def _ConvertPairToListCtrlTuples( self, pair ):
             
             ( child, parent ) = pair
             
-            for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_DELETED, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
-                
-                if self._tag_parents.HasClientData( ( status, child, parent ) ):
-                    
-                    index = self._tag_parents.GetIndexFromClientData( ( status, child, parent ) )
-                    
-                    self._tag_parents.DeleteItem( index )
-                    
-                    break
-                    
-                
-            
-            new_status = None
-            
             if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                 
-                new_status = HC.CONTENT_STATUS_PENDING
+                status = HC.CONTENT_STATUS_PENDING
                 
             elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                 
-                new_status = HC.CONTENT_STATUS_PETITIONED
+                status = HC.CONTENT_STATUS_PETITIONED
                 
             elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                new_status = HC.CONTENT_STATUS_CURRENT
+                status = HC.CONTENT_STATUS_CURRENT
                 
             
-            if new_status is not None:
-                
-                sign = HydrusData.ConvertStatusToPrefix( new_status )
-                
-                self._tag_parents.Append( ( sign, child, parent ), ( new_status, child, parent ) )
-                
+            sign = HydrusData.ConvertStatusToPrefix( status )
+            
+            pretty_status = sign
+            
+            display_tuple = ( pretty_status, child, parent )
+            sort_tuple = ( status, child, parent )
+            
+            return ( display_tuple, sort_tuple )
             
         
         def _SetButtonStatus( self ):
@@ -4002,28 +4024,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._parents.EnterTags( tags )
                 
                 self._SetButtonStatus()
-                
-            
-        
-        def EventActivated( self, event ):
-            
-            parents_to_children = collections.defaultdict( set )
-            
-            all_selected = self._tag_parents.GetAllSelected()
-            
-            for selection in all_selected:
-                
-                ( status, child, parent ) = self._tag_parents.GetClientData( selection )
-                
-                parents_to_children[ parent ].add( child )
-                
-            
-            if len( parents_to_children ) > 0:
-                
-                for ( parent, children ) in parents_to_children.items():
-                    
-                    self._AddPairs( children, parent )
-                    
                 
             
         
@@ -4100,27 +4100,21 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._child_input.Enable()
                 self._parent_input.Enable()
                 
-                petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                all_pairs = set()
                 
                 for ( status, pairs ) in self._original_statuses_to_pairs.items():
                     
-                    if status != HC.CONTENT_STATUS_DELETED:
+                    if status == HC.CONTENT_STATUS_DELETED:
                         
-                        sign = HydrusData.ConvertStatusToPrefix( status )
-                        
-                        for ( child, parent ) in pairs:
-                            
-                            if status == HC.CONTENT_STATUS_CURRENT and ( child, parent ) in petitioned_pairs:
-                                
-                                continue
-                                
-                            
-                            self._tag_parents.Append( ( sign, child, parent ), ( status, child, parent ) )
-                            
+                        continue
                         
                     
+                    all_pairs.update( pairs )
+                    
                 
-                #self._tag_parents.SortListItems( 2 )
+                self._tag_parents.AddDatas( all_pairs )
+                
+                self._tag_parents.Sort( 2 )
                 
                 if tags is not None:
                     
@@ -4264,8 +4258,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             self._current_new = None
             
-            self._tag_siblings = ClientGUIListCtrl.SaneListCtrl( self, 250, [ ( '', 30 ), ( 'old', 160 ), ( 'new', -1 ) ] )
-            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_ACTIVATED, self.EventActivated )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self, 'tag_siblings', 30, 25, [ ( '', 4 ), ( 'old', 25 ), ( 'new', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
@@ -4509,12 +4502,30 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if len( affected_pairs ) > 0:
                 
-                for pair in affected_pairs:
+                def in_current( pair ):
                     
-                    self._RefreshPair( pair )
+                    for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
+                        
+                        if pair in self._current_statuses_to_pairs[ status ]:
+                            
+                            return True
+                            
+                        
+                        return False
+                        
                     
                 
-                #self._tag_siblings.SortListItems()
+                affected_pairs = [ ( self._tag_siblings.HasData( pair ), in_current( pair ), pair ) for pair in affected_pairs ]
+                
+                to_add = [ pair for ( exists, current, pair ) in affected_pairs if not exists ]
+                to_update = [ pair for ( exists, current, pair ) in affected_pairs if exists and current ]
+                to_delete = [ pair for ( exists, current, pair ) in affected_pairs if exists and not current ]
+                
+                self._tag_siblings.AddDatas( to_add )
+                self._tag_siblings.UpdateDatas( to_update )
+                self._tag_siblings.DeleteDatas( to_delete )
+                
+                self._tag_siblings.Sort()
                 
             
         
@@ -4559,43 +4570,51 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             return True
             
         
-        def _RefreshPair( self, pair ):
+        def _ListCtrlActivated( self ):
+            
+            news_to_olds = collections.defaultdict( set )
+            
+            pairs = self._tag_siblings.GetData( only_selected = True )
+            
+            for ( old, new ) in pairs:
+                
+                news_to_olds[ new ].add( old )
+                
+            
+            if len( news_to_olds ) > 0:
+                
+                for ( new, olds ) in news_to_olds.items():
+                    
+                    self._AddPairs( olds, new )
+                    
+                
+            
+        
+        def _ConvertPairToListCtrlTuples( self, pair ):
             
             ( old, new ) = pair
             
-            for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_DELETED, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
-                
-                if self._tag_siblings.HasClientData( ( status, old, new ) ):
-                    
-                    index = self._tag_siblings.GetIndexFromClientData( ( status, old, new ) )
-                    
-                    self._tag_siblings.DeleteItem( index )
-                    
-                    break
-                    
-                
-            
-            new_status = None
-            
             if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                 
-                new_status = HC.CONTENT_STATUS_PENDING
+                status = HC.CONTENT_STATUS_PENDING
                 
             elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                 
-                new_status = HC.CONTENT_STATUS_PETITIONED
+                status = HC.CONTENT_STATUS_PETITIONED
                 
             elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                 
-                new_status = HC.CONTENT_STATUS_CURRENT
+                status = HC.CONTENT_STATUS_CURRENT
                 
             
-            if new_status is not None:
-                
-                sign = HydrusData.ConvertStatusToPrefix( new_status )
-                
-                self._tag_siblings.Append( ( sign, old, new ), ( new_status, old, new ) )
-                
+            sign = HydrusData.ConvertStatusToPrefix( status )
+            
+            pretty_status = sign
+            
+            display_tuple = ( pretty_status, old, new )
+            sort_tuple = ( status, old, new )
+            
+            return ( display_tuple, sort_tuple )
             
         
         def _SetButtonStatus( self ):
@@ -4661,28 +4680,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             self._old_siblings.EnterTags( olds )
             
             self._SetButtonStatus()
-            
-        
-        def EventActivated( self, event ):
-            
-            news_to_olds = collections.defaultdict( set )
-            
-            all_selected = self._tag_siblings.GetAllSelected()
-            
-            for selection in all_selected:
-                
-                ( status, old, new ) = self._tag_siblings.GetClientData( selection )
-                
-                news_to_olds[ new ].add( old )
-                
-            
-            if len( news_to_olds ) > 0:
-                
-                for ( new, olds ) in news_to_olds.items():
-                    
-                    self._AddPairs( olds, new )
-                    
-                
             
         
         def EventAddButton( self, event ):
@@ -4784,27 +4781,21 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._old_input.Enable()
                 self._new_input.Enable()
                 
-                petitioned_pairs = set( self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                all_pairs = set()
                 
                 for ( status, pairs ) in self._original_statuses_to_pairs.items():
                     
-                    if status != HC.CONTENT_STATUS_DELETED:
+                    if status == HC.CONTENT_STATUS_DELETED:
                         
-                        sign = HydrusData.ConvertStatusToPrefix( status )
-                        
-                        for ( old, new ) in pairs:
-                            
-                            if status == HC.CONTENT_STATUS_CURRENT and ( old, new ) in petitioned_pairs:
-                                
-                                continue
-                                
-                            
-                            self._tag_siblings.Append( ( sign, old, new ), ( status, old, new ) )
-                            
+                        continue
                         
                     
+                    all_pairs.update( pairs )
+                    
                 
-                #self._tag_siblings.SortListItems( 2 )
+                self._tag_siblings.AddDatas( all_pairs )
+                
+                self._tag_siblings.Sort( 2 )
                 
                 if tags is not None:
                     

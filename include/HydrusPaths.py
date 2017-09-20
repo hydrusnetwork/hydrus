@@ -234,6 +234,21 @@ def FilterFreePaths( paths ):
     
     return free_paths
     
+def GetDefaultLaunchPath():
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        return 'windows is called directly'
+        
+    elif HC.PLATFORM_OSX:
+        
+        return 'open "%path%"'
+        
+    elif HC.PLATFORM_LINUX:
+        
+        return 'xdg-open "%path%"'
+        
+    
 def GetDevice( path ):
     
     path = path.lower()
@@ -263,8 +278,18 @@ def GetFreeSpace( path ):
     
     return disk_usage.free
     
-def GetTempFile(): return tempfile.TemporaryFile()
-def GetTempFileQuick(): return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
+def GetTempFile():
+    
+    return tempfile.TemporaryFile()
+    
+def GetTempFileQuick():
+    
+    return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
+    
+def GetTempDir():
+    
+    return tempfile.mkdtemp( prefix = 'hydrus' )
+    
 def GetTempPath( suffix = '' ):
     
     return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus' )
@@ -325,11 +350,9 @@ def LaunchDirectory( path ):
                 cmd = 'xdg-open'
                 
             
-            cmd += ' "' + path + '"'
-            
             # setsid call un-childs this new process
             
-            process = subprocess.Popen( shlex.split( cmd ), preexec_fn = os.setsid, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+            process = subprocess.Popen( [ cmd, path ], preexec_fn = os.setsid, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
             
             process.wait()
             
@@ -343,38 +366,54 @@ def LaunchDirectory( path ):
     
     thread.start()
     
-def LaunchFile( path ):
+def LaunchFile( path, launch_path = None ):
     
-    def do_it():
+    def do_it( launch_path ):
         
-        if HC.PLATFORM_WINDOWS:
+        if HC.PLATFORM_WINDOWS and launch_path is None:
             
             os.startfile( path )
             
         else:
             
-            if HC.PLATFORM_OSX:
+            if launch_path is None:
                 
-                cmd = 'open'
-                
-            elif HC.PLATFORM_LINUX:
-                
-                cmd = 'xdg-open'
+                launch_path = GetDefaultLaunchPath()
                 
             
-            cmd += ' "' + path + '"'
+            cmd = launch_path.replace( '%path%', path )
             
-            # setsid call un-childs this new process
+            if HC.PLATFORM_WINDOWS:
+                
+                preexec_fn = None
+                
+            else:
+                
+                # setsid call un-childs this new process
+                
+                preexec_fn = os.setsid
+                
+                cmd = shlex.split( cmd )
+                
             
-            process = subprocess.Popen( shlex.split( cmd ), preexec_fn = os.setsid, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
-            
-            process.wait()
-            
-            process.communicate()
+            try:
+                
+                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
+                
+                process.wait()
+                
+                process.communicate()
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'Could not launch a file! Command used was:' + os.linesep + HydrusData.ToUnicode( cmd ) )
+                
+                HydrusData.ShowException( e )
+                
             
         
     
-    thread = threading.Thread( target = do_it )
+    thread = threading.Thread( target = do_it, args = ( launch_path, ) )
     
     thread.daemon = True
     

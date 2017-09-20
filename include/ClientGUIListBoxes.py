@@ -620,15 +620,13 @@ class ListBoxTags( ListBox ):
         
         self._get_current_predicates_callable = None
         
-        new_options = HG.client_controller.GetNewOptions()
-        
-        self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
+        self._UpdateBackgroundColour()
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventMouseRightClick )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseMiddleClick )
-        self.Bind( wx.EVT_MENU, self.EventMenu )
         
         HG.client_controller.sub( self, 'SiblingsHaveChanged', 'notify_new_siblings_gui' )
+        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
     
     def _GetNamespaceColours( self ):
@@ -692,93 +690,88 @@ class ListBoxTags( ListBox ):
             
         
     
+    def _ProcessMenuCopyEvent( self, command ):
+        
+        if command in ( 'copy_terms', 'copy_sub_terms' ):
+            
+            texts = []
+            
+            for term in self._selected_terms:
+                
+                if isinstance( term, ClientSearch.Predicate ):
+                    
+                    text = term.GetUnicode( with_count = False )
+                    
+                else:
+                    
+                    text = HydrusData.ToUnicode( term )
+                    
+                
+                if command == 'copy_sub_terms':
+                    
+                    ( namespace_gumpf, text ) = HydrusTags.SplitTag( text )
+                    
+                
+                texts.append( text )
+                
+            
+            texts.sort()
+            
+            text = os.linesep.join( texts )
+            
+        elif command == 'copy_all_tags':
+            
+            text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = False ) )
+            
+        elif command == 'copy_all_tags_with_counts':
+            
+            text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) )
+            
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
     def _ProcessMenuPredicateEvent( self, command ):
         
         pass
         
     
-    def EventMenu( self, event ):
+    def _ProcessMenuTagEvent( self, command ):
         
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        import ClientGUIDialogsManage
         
-        if action is not None:
+        if command == 'censorship':
             
-            ( command, data ) = action
+            ( tag, ) = self._selected_terms
             
-            if command in ( 'copy_terms', 'copy_sub_terms', 'copy_all_tags', 'copy_all_tags_with_counts' ):
+            with ClientGUIDialogsManage.DialogManageTagCensorship( self, tag ) as dlg:
                 
-                if command in ( 'copy_terms', 'copy_sub_terms' ):
-                    
-                    texts = []
-                    
-                    for term in self._selected_terms:
-                        
-                        if isinstance( term, ClientSearch.Predicate ):
-                            
-                            text = term.GetUnicode( with_count = False )
-                            
-                        else:
-                            
-                            text = HydrusData.ToUnicode( term )
-                            
-                        
-                        if command == 'copy_sub_terms':
-                            
-                            ( namespace_gumpf, text ) = HydrusTags.SplitTag( text )
-                            
-                        
-                        texts.append( text )
-                        
-                    
-                    texts.sort()
-                    
-                    text = os.linesep.join( texts )
-                    
-                elif command == 'copy_all_tags':
-                    
-                    text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = False ) )
-                    
-                elif command == 'copy_all_tags_with_counts':
-                    
-                    text = os.linesep.join( self._GetAllTagsForClipboard( with_counts = True ) )
-                    
-                
-                HG.client_controller.pub( 'clipboard', 'text', text )
-                
-            elif command in ( 'add_include_predicates', 'remove_include_predicates', 'add_exclude_predicates', 'remove_exclude_predicates' ):
-                
-                self._ProcessMenuPredicateEvent( command )
-                
-            elif command == 'new_search_page':
-                
-                self._NewSearchPage()
-                
-            elif command in ( 'censorship', 'parent', 'sibling' ):
-                
-                import ClientGUIDialogsManage
-                
-                if command == 'censorship':
-                    
-                    ( tag, ) = self._selected_terms
-                    
-                    with ClientGUIDialogsManage.DialogManageTagCensorship( self, tag ) as dlg: dlg.ShowModal()
-                    
-                elif command == 'parent':
-                    
-                    with ClientGUIDialogsManage.DialogManageTagParents( self, self._selected_terms ) as dlg: dlg.ShowModal()
-                    
-                elif command == 'sibling':
-                    
-                    with ClientGUIDialogsManage.DialogManageTagSiblings( self, self._selected_terms ) as dlg: dlg.ShowModal()
-                    
-                
-            else:
-                
-                event.Skip()
-                
-                return # this is about select_up and select_down
+                dlg.ShowModal()
                 
             
+        elif command == 'parent':
+            
+            with ClientGUIDialogsManage.DialogManageTagParents( self, self._selected_terms ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+        elif command == 'sibling':
+            
+            with ClientGUIDialogsManage.DialogManageTagSiblings( self, self._selected_terms ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def _UpdateBackgroundColour( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
+        
+        self.Refresh()
         
     
     def EventMouseMiddleClick( self, event ):
@@ -836,22 +829,22 @@ class ListBoxTags( ListBox ):
                         
                         if True in ( include_predicate in current_predicates for include_predicate in include_predicates ):
                             
-                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_include_predicates' ), 'discard ' + selection_string + ' from current search' )
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'discard ' + selection_string + ' from current search', 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_include_predicates' )
                             
                         
                         if True in ( include_predicate not in current_predicates for include_predicate in include_predicates ):
                             
-                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'add_include_predicates' ), 'require ' + selection_string + ' for current search' )
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'require ' + selection_string + ' for current search', 'Add the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'add_include_predicates' )
                             
                         
                         if True in ( exclude_predicate in current_predicates for exclude_predicate in exclude_predicates ):
                             
-                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'remove_exclude_predicates' ), 'permit ' + selection_string + ' for current search' )
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'permit ' + selection_string + ' for current search', 'Stop disallowing the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_exclude_predicates' )
                             
                         
                         if True in ( exclude_predicate not in current_predicates for exclude_predicate in exclude_predicates ):
                             
-                            menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'add_exclude_predicates' ), 'exclude ' + selection_string + ' from current search' )
+                            ClientGUIMenus.AppendMenuItem( self, menu, 'exclude ' + selection_string + ' from current search', 'Disallow the selected predicates for the current search.', self._ProcessMenuPredicateEvent, 'add_exclude_predicates' )
                             
                         
                     
@@ -860,12 +853,12 @@ class ListBoxTags( ListBox ):
                 
                 if self.can_spawn_new_windows:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'new_search_page' ), 'open a new search page for ' + selection_string )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPage )
                     
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_terms' ), 'copy ' + selection_string )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + selection_string, 'Copy the selected predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_terms' )
                 
                 if len( self._selected_terms ) == 1:
                     
@@ -875,12 +868,12 @@ class ListBoxTags( ListBox ):
                         
                         sub_selection_string = '"' + subtag
                         
-                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy ' + sub_selection_string )
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'copy ' + sub_selection_string, 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
                         
                     
                 else:
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_sub_terms' ), 'copy selected subtags' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'copy selected subtags', 'Copy the selected sub-predicates to your clipboard.', self._ProcessMenuCopyEvent, 'copy_sub_terms' )
                     
                 
             
@@ -888,8 +881,12 @@ class ListBoxTags( ListBox ):
             
             if len( self._ordered_terms ) > len( self._selected_terms ):
                 
-                menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags' ), 'copy all tags' )
-                if self.has_counts: menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'copy_all_tags_with_counts' ), 'copy all tags with counts' )
+                ClientGUIMenus.AppendMenuItem( self, menu, 'copy all tags', 'Copy all the predicates in this list to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags' )
+                
+                if self.has_counts:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'copy all tags with counts', 'Copy all the predicates in this list, with their counts, to your clipboard.', self._ProcessMenuCopyEvent, 'copy_all_tags_with_counts' )
+                    
                 
             
             if self.can_spawn_new_windows and len( self._selected_terms ) > 0:
@@ -913,11 +910,11 @@ class ListBoxTags( ListBox ):
                     
                     if len( self._selected_terms ) == 1:
                         
-                        menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'censorship' ), 'censor ' + text )
+                        ClientGUIMenus.AppendMenuItem( self, menu, 'censor ' + text, 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'censorship' )
                         
                     
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'parent' ), 'add parents to ' + text )
-                    menu.Append( ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'sibling' ), 'add siblings to ' + text )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                     
                 
             

@@ -834,6 +834,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _FlipDarkmode( self ):
+        
+        current_colourset = self._new_options.GetString( 'current_colourset' )
+        
+        if current_colourset == 'darkmode':
+            
+            new_colourset = 'default'
+            
+        elif current_colourset == 'default':
+            
+            new_colourset = 'darkmode'
+            
+        
+        self._new_options.SetString( 'current_colourset', new_colourset )
+        
+    
     def _GenerateMenuInfo( self, name ):
         
         menu = wx.Menu()
@@ -1400,6 +1416,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenu( menu, dont_know, 'I don\'t know what I am doing' )
             
             ClientGUIMenus.AppendSeparator( menu )
+            
+            currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self._FlipDarkmode )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
             
@@ -3103,6 +3123,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def NotifyNewOptions( self ):
         
         self._dirty_menus.add( 'services' )
+        self._dirty_menus.add( 'help' )
         
         self._menu_updater.Update()
         

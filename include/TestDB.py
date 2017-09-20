@@ -903,7 +903,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_NEW, None ) )
+        self.assertEqual( result, ( CC.STATUS_NEW, None, '' ) )
         
         #
         
@@ -917,9 +917,9 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'md5_status', md5 )
+        ( status, hash, note ) = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_REDUNDANT, hash ) )
+        self.assertEqual( ( status, hash ), ( CC.STATUS_REDUNDANT, hash ) )
         
         #
         
@@ -933,9 +933,9 @@ class TestClientDB( unittest.TestCase ):
         
         HC.options[ 'exclude_deleted_files' ] = True
         
-        result = self._read( 'md5_status', md5 )
+        ( status, hash, note ) = self._read( 'md5_status', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_DELETED, hash ) )
+        self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
         
     
     def test_media_results( self ):

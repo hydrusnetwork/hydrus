@@ -71,6 +71,8 @@ def GenerateExportFilename( destination_directory, media, terms ):
             
         elif term_type == 'tag':
             
+            tag = term
+            
             ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
             if tags_manager.HasTag( subtag ):

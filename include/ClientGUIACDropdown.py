@@ -46,9 +46,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._text_ctrl = wx.TextCtrl( self, style=wx.TE_PROCESS_ENTER )
         
-        new_options = HG.client_controller.GetNewOptions()
-        
-        self._text_ctrl.SetBackgroundColour( new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND ) )
+        self._UpdateBackgroundColour()
         
         self._last_attempted_dropdown_width = 0
         self._last_attempted_dropdown_position = ( None, None )
@@ -147,6 +145,8 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
         self.Bind( wx.EVT_TIMER, self.TIMEREventLag, id = ID_TIMER_AC_LAG )
+        
+        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
         self._lag_timer = wx.Timer( self, id = ID_TIMER_AC_LAG )
         
@@ -274,6 +274,22 @@ class AutoCompleteDropdown( wx.Panel ):
         raise NotImplementedError()
         
     
+    def _UpdateBackgroundColour( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        colour = new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
+        
+        if not self._intercept_key_events:
+            
+            colour = ClientData.GetLighterDarkerColour( colour )
+            
+        
+        self._text_ctrl.SetBackgroundColour( colour )
+        
+        self._text_ctrl.Refresh()
+        
+    
     def _UpdateList( self ):
         
         pass
@@ -292,24 +308,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             
-            new_options = HG.client_controller.GetNewOptions()
+            self._intercept_key_events = not self._intercept_key_events
             
-            colour = new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
-            
-            if self._intercept_key_events:
-                
-                self._intercept_key_events = False
-                
-                colour = ClientData.GetLighterDarkerColour( colour )
-                
-            else:
-                
-                self._intercept_key_events = True
-                
-            
-            self._text_ctrl.SetBackgroundColour( colour )
-            
-            self._text_ctrl.Refresh()
+            self._UpdateBackgroundColour()
             
         elif key == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
             
@@ -329,8 +330,14 @@ class AutoCompleteDropdown( wx.Panel ):
                 
             elif key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
-                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
-                elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ): id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                    
+                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+                    
+                elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    
+                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+                    
                 
                 new_event = wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = id )
                 

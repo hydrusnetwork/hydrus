@@ -361,7 +361,10 @@ def ConvertTimestampToPrettyAge( timestamp ):
     
 def ConvertTimestampToPrettyAgo( timestamp ):
     
-    if timestamp is None or timestamp == 0: return 'unknown time'
+    if timestamp is None or timestamp == 0:
+        
+        return 'unknown time'
+        
     
     age = GetNow() - timestamp
     
@@ -393,11 +396,11 @@ def ConvertTimestampToPrettyAgo( timestamp ):
     if years == 1: y = '1 year'
     else: y = str( years ) + ' years'
     
-    if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
-    elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
-    elif days > 0: return ' '.join( ( d, h ) ) + ' ago'
-    elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
-    else: return ' '.join( ( m, s ) ) + ' ago'
+    if years > 0: return ' '.join( ( y, mo ) )
+    elif months > 0: return ' '.join( ( mo, d ) )
+    elif days > 0: return ' '.join( ( d, h ) )
+    elif hours > 0: return ' '.join( ( h, m ) )
+    else: return ' '.join( ( m, s ) )
     
 def ConvertTimestampToPrettyExpires( timestamp ):
     
@@ -544,17 +547,28 @@ def ConvertTimestampToPrettySync( timestamp ):
     elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
     else: return ' '.join( ( m, s ) ) + ' ago'
     
-def ConvertTimestampToPrettyTime( timestamp ): return time.strftime( '%Y/%m/%d %H:%M:%S', time.localtime( timestamp ) )
-
+def ConvertTimestampToPrettyTime( timestamp ):
+    
+    return time.strftime( '%Y/%m/%d %H:%M:%S', time.localtime( timestamp ) )
+    
 def ConvertTimestampToHumanPrettyTime( timestamp ):
     
     now = GetNow()
     
     difference = now - timestamp
     
-    if difference < 60: return 'just now'
-    elif difference < 86400 * 7: return ConvertTimestampToPrettyAgo( timestamp )
-    else: return ConvertTimestampToPrettyTime( timestamp )
+    if difference < 60:
+        
+        return 'just now'
+        
+    elif difference < 86400 * 7:
+        
+        return ConvertTimestampToPrettyAgo( timestamp ) + ' ago'
+        
+    else:
+        
+        return ConvertTimestampToPrettyTime( timestamp )
+        
     
 def ConvertTimeToPrettyTime( secs ):
     
@@ -878,7 +892,14 @@ def MergeKeyToListDicts( key_to_list_dicts ):
     
 def Print( text ):
     
-    print( ToUnicode( text ) )
+    try:
+        
+        print( ToUnicode( text ) )
+        
+    except:
+        
+        print( repr( text ) )
+        
     
 ShowText = Print
 

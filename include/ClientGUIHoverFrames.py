@@ -883,9 +883,11 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
                     
                     parse = urlparse.urlparse( url )
                     
-                    url_string = parse.scheme + '://' + parse.hostname
+                    url_string = parse.hostname
                     
                     link = wx.HyperlinkCtrl( self, id = -1, label = url_string, url = url )
+                    
+                    link.SetToolTipString( url )
                     
                     self._urls_vbox.AddF( link, CC.FLAGS_EXPAND_PERPENDICULAR )
                     

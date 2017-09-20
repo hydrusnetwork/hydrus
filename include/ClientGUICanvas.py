@@ -426,7 +426,11 @@ class Animation( wx.Window ):
                     
                     path = client_files_manager.GetFilePath( hash, mime )
                     
-                    HydrusPaths.LaunchFile( path )
+                    new_options = HG.client_controller.GetNewOptions()
+                    
+                    launch_path = new_options.GetMimeLaunch( mime )
+                    
+                    HydrusPaths.LaunchFile( path, launch_path )
                     
                     self.Pause()
                     
@@ -1187,7 +1191,7 @@ class Canvas( wx.Window ):
         self._last_motion_coordinates = ( 0, 0 )
         self._total_drag_delta = ( 0, 0 )
         
-        self.SetBackgroundColour( self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
+        self._UpdateBackgroundColour()
         
         self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
         
@@ -1205,6 +1209,8 @@ class Canvas( wx.Window ):
         HG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         HG.client_controller.sub( self, 'EditMediaViewerCustomShortcuts', 'edit_media_viewer_custom_shortcuts' )
         HG.client_controller.sub( self, 'ProcessApplicationCommand', 'canvas_application_command' )
+        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        HG.client_controller.sub( self, '_SetDirty', 'notify_new_colourset' )
         
     
     def _Archive( self ):
@@ -1639,7 +1645,9 @@ class Canvas( wx.Window ):
         
         path = client_files_manager.GetFilePath( hash, mime )
         
-        HydrusPaths.LaunchFile( path )
+        launch_path = self._new_options.GetMimeLaunch( mime )
+        
+        HydrusPaths.LaunchFile( path, launch_path )
         
         if self._current_media.HasDuration() and mime != HC.APPLICATION_FLASH:
             
@@ -2004,6 +2012,15 @@ class Canvas( wx.Window ):
             
             self.SetFocus() # annoying bug because of the modal dialog
             
+        
+    
+    def _UpdateBackgroundColour( self ):
+        
+        colour = self._GetBackgroundColour()
+        
+        self.SetBackgroundColour( colour )
+        
+        self.Refresh()
         
     
     def _ZoomIn( self ):
@@ -2413,39 +2430,6 @@ class CanvasPanel( Canvas ):
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-    
-    def EventMenu( self, event ):
-        
-        # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None:
-            
-            event.Skip()
-            
-        else:
-            
-            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-            
-            if action is not None:
-                
-                ( command, data ) = action
-                
-                if command == 'archive_file': self._Archive()
-                elif command == 'copy_bmp': self._CopyBMPToClipboard()
-                elif command == 'copy_files': self._CopyFileToClipboard()
-                elif command == 'copy_hash': self._CopyHashToClipboard( data )
-                elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'delete_file': self._Delete( data )
-                elif command == 'inbox_file': self._Inbox()
-                elif command == 'manage_file_ratings': self._ManageRatings()
-                elif command == 'manage_file_tags': wx.CallAfter( self._ManageTags )
-                elif command == 'open_file_in_external_program': self._OpenExternally()
-                elif command == 'undelete': self._Undelete()
-                else: event.Skip()
-                
-            
-        
     
     def EventShowMenu( self, event ):
         
@@ -2792,7 +2776,7 @@ class CanvasWithDetails( Canvas ):
                 
                 parse = urlparse.urlparse( url )
                 
-                url_string = parse.scheme + '://' + parse.hostname
+                url_string = parse.hostname
                 
                 ( text_width, text_height ) = dc.GetTextExtent( url_string )
                 
@@ -4039,8 +4023,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         
@@ -4319,37 +4301,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         event.Skip()
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'archive_file': self._Keep()
-            elif command == 'back': self._Back()
-            elif command == 'close': self._Close()
-            elif command == 'delete_file': self.EventDelete( event )
-            elif command == 'switch_between_fullscreen_borderless_and_regular_framed_window': self.GetParent().FullscreenSwitch()
-            elif command == 'launch_the_archive_delete_filter': self._Close()
-            elif command == 'move_animation_to_previous_frame': self._media_container.GotoPreviousOrNextFrame( -1 )
-            elif command == 'move_animation_to_next_frame': self._media_container.GotoPreviousOrNextFrame( 1 )
-            elif command == 'manage_file_ratings': self._ManageRatings()
-            elif command == 'manage_file_tags': wx.CallAfter( self._ManageTags )
-            elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                
-                if command == 'pan_up': self._DoManualPan( 0, -1 )
-                elif command == 'pan_down': self._DoManualPan( 0, 1 )
-                elif command == 'pan_left': self._DoManualPan( -1, 0 )
-                elif command == 'pan_right': self._DoManualPan( 1, 0 )
-                
-            elif command == 'zoom_in': self._ZoomIn()
-            elif command == 'zoom_out': self._ZoomOut()
-            else: event.Skip()
-            
-        
-    
     def EventSkip( self, event ):
         
         self._Skip()
@@ -4555,8 +4506,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self.Bind( wx.EVT_MOUSEWHEEL, self.EventMouseWheel )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
         if first_hash is None:
             
             first_media = self._GetFirst()
@@ -4639,57 +4588,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         else:
             
             event.Skip()
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        # is None bit means this is prob from a keydown->menu event
-        if event.GetEventObject() is None:
-            
-            event.Skip()
-            
-        else:
-            
-            action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-            
-            if action is not None:
-                
-                ( command, data ) = action
-                
-                if command == 'archive_file': self._Archive()
-                elif command == 'copy_bmp': self._CopyBMPToClipboard()
-                elif command == 'copy_files': self._CopyFileToClipboard()
-                elif command == 'copy_hash': self._CopyHashToClipboard( data )
-                elif command == 'copy_path': self._CopyPathToClipboard()
-                elif command == 'delete_file': self._Delete( data )
-                elif command == 'switch_between_fullscreen_borderless_and_regular_framed_window': self.GetParent().FullscreenSwitch()
-                elif command == 'view_first': self._ShowFirst()
-                elif command == 'view_last': self._ShowLast()
-                elif command == 'view_previous': self._ShowPrevious()
-                elif command == 'view_next': self._ShowNext()
-                elif command == 'move_animation_to_previous_frame': self._media_container.GotoPreviousOrNextFrame( -1 )
-                elif command == 'move_animation_to_next_frame': self._media_container.GotoPreviousOrNextFrame( 1 )
-                elif command == 'inbox_file': self._Inbox()
-                elif command == 'manage_file_ratings': self._ManageRatings()
-                elif command == 'manage_file_tags': wx.CallLater( 1, self._ManageTags )
-                elif command == 'open_file_in_external_program': self._OpenExternally()
-                elif command in ( 'pan_up', 'pan_down', 'pan_left', 'pan_right' ):
-                    
-                    if command == 'pan_up': self._DoManualPan( 0, -1 )
-                    elif command == 'pan_down': self._DoManualPan( 0, 1 )
-                    elif command == 'pan_left': self._DoManualPan( -1, 0 )
-                    elif command == 'pan_right': self._DoManualPan( 1, 0 )
-                    
-                elif command == 'remove_file_from_view': self._Remove()
-                elif command == 'slideshow': wx.CallLater( 1, self._StartSlideshow, data )
-                elif command == 'slideshow_pause_play': wx.CallLater( 1, self._PausePlaySlideshow )
-                elif command == 'undelete': self._Undelete()
-                elif command == 'zoom_in': self._ZoomIn()
-                elif command == 'zoom_out': self._ZoomOut()
-                elif command == 'switch_between_100_percent_and_canvas_zoom': self._ZoomSwitch()
-                else: event.Skip()
-                
             
         
     
@@ -5289,6 +5187,7 @@ class EmbedButton( wx.Window ):
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
+        HG.client_controller.sub( self, '_SetDirty', 'notify_new_colourset' )
         
     
     def _Redraw( self, dc ):
@@ -5453,9 +5352,9 @@ class OpenExternallyPanel( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.GetNewOptions()
         
-        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
+        self.SetBackgroundColour( self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
         
         self._media = media
         
@@ -5500,7 +5399,9 @@ class OpenExternallyPanel( wx.Panel ):
         
         path = client_files_manager.GetFilePath( hash, mime )
         
-        HydrusPaths.LaunchFile( path )
+        launch_path = self._new_options.GetMimeLaunch( mime )
+        
+        HydrusPaths.LaunchFile( path, launch_path )
         
     
 class StaticImage( wx.Window ):

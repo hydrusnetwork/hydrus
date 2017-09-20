@@ -416,7 +416,7 @@ class TestServer( unittest.TestCase ):
         # post content
         
         raise NotImplementedError()
-        
+        '''
         update = HydrusData.ClientToServerContentUpdatePackage( {}, hash_ids_to_hashes )
         
         service.Request( HC.POST, 'content_update_package', { 'update' : update } )
@@ -428,7 +428,7 @@ class TestServer( unittest.TestCase ):
         ( written_service_key, written_account, written_update ) = args
         
         self.assertEqual( update.GetHashes(), written_update.GetHashes() )
-        
+        '''
     
     def _test_restricted( self, service ):
         

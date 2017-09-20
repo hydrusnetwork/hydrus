@@ -6,6 +6,7 @@ import HydrusData
 import HydrusDB
 import HydrusExceptions
 import HydrusGlobals as HG
+import HydrusPaths
 import HydrusPubSub
 import HydrusThreading
 import os
@@ -287,6 +288,8 @@ class HydrusController( object ):
     
     def InitModel( self ):
         
+        self.temp_dir = HydrusPaths.GetTempDir()
+        
         self.db = self._InitDB()
         
     
@@ -382,6 +385,8 @@ class HydrusController( object ):
                 time.sleep( 0.1 )
                 
             
+        
+        HydrusPaths.DeletePath( self.temp_dir )
         
     
     def ShutdownView( self ):

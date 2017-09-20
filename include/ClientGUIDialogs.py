@@ -459,9 +459,9 @@ class DialogGenerateNewAccounts( Dialog ):
             
         
     
-class DialogInputImportTagOptions( Dialog ):
+class DialogInputTagImportOptions( Dialog ):
     
-    def __init__( self, parent, pretty_name, gallery_identifier, import_tag_options = None ):
+    def __init__( self, parent, pretty_name, gallery_identifier, tag_import_options = None ):
         
         Dialog.__init__( self, parent, 'configure default import tag options for ' + pretty_name )
         
@@ -469,7 +469,7 @@ class DialogInputImportTagOptions( Dialog ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
+        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.SetForegroundColour( ( 0, 128, 0 ) )
@@ -479,14 +479,14 @@ class DialogInputImportTagOptions( Dialog ):
         
         #
         
-        if import_tag_options is None:
+        if tag_import_options is None:
             
             new_options = HG.client_controller.GetNewOptions()
             
-            import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
+            tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
             
         
-        self._import_tag_options.SetOptions( import_tag_options )
+        self._tag_import_options.SetOptions( tag_import_options )
         
         #
         
@@ -496,7 +496,7 @@ class DialogInputImportTagOptions( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -508,14 +508,14 @@ class DialogInputImportTagOptions( Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-        wx.CallAfter( self._import_tag_options.ExpandCollapse )
+        wx.CallAfter( self._tag_import_options.ExpandCollapse )
         
     
-    def GetImportTagOptions( self ):
+    def GetTagImportOptions( self ):
         
-        import_tag_options = self._import_tag_options.GetOptions()
+        tag_import_options = self._tag_import_options.GetOptions()
         
-        return import_tag_options
+        return tag_import_options
         
     
 class DialogInputFileSystemPredicates( Dialog ):
@@ -847,7 +847,7 @@ class DialogInputLocalFiles( Dialog ):
         
         file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self, file_import_options )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
         self._delete_after_success_st = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
         self._delete_after_success_st.SetForegroundColour( ( 127, 0, 0 ) )

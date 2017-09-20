@@ -25,7 +25,6 @@ import ClientConstants as CC
 import HydrusGlobals as HG
 import collections
 import HydrusTags
-import itertools
 import traceback
 
 # important thing here, and reason why it is recursive, is because we want to preserve the parent-grandparent interleaving
@@ -3347,13 +3346,9 @@ class WebSessionManagerClient( object ):
         
         response = session.get( 'https://www.hentai-foundry.com/' )
         
-        response.content
-        
         time.sleep( 1 )
         
         response = session.get( 'https://www.hentai-foundry.com/?enterAgree=1' )
-        
-        response.content
         
         time.sleep( 1 )
         
@@ -3370,8 +3365,6 @@ class WebSessionManagerClient( object ):
         hentai_foundry_form_info[ 'YII_CSRF_TOKEN' ] = csrf_token
         
         response = session.post( 'http://www.hentai-foundry.com/site/filters', data = hentai_foundry_form_info )
-        
-        response.content
         
         time.sleep( 1 )
         
@@ -3418,7 +3411,9 @@ class WebSessionManagerClient( object ):
         headers[ 'referer' ] = "https://accounts.pixiv.net/login?lang=en^source=pc&view_type=page&ref=wwwtop_accounts_index"
         headers[ 'origin' ] = "https://accounts.pixiv.net"
         
-        r = session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        
+        time.sleep( 1 )
         
     
     def SetupHydrusSession( self, service_key ):

@@ -1704,6 +1704,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
             
+            HG.client_controller.pub( 'notify_new_colourset' )
+            
         
     
     class _ConnectionPanel( wx.Panel ):
@@ -2173,8 +2175,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._import_tag_options = wx.ListBox( self )
-            self._import_tag_options.Bind( wx.EVT_LEFT_DCLICK, self.EventDelete )
+            self._tag_import_options = wx.ListBox( self )
+            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventDelete )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2187,18 +2189,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            for ( gallery_identifier, import_tag_options ) in self._new_options.GetDefaultImportTagOptions().items():
+            for ( gallery_identifier, tag_import_options ) in self._new_options.GetDefaultTagImportOptions().items():
                 
                 name = gallery_identifier.ToString()
                 
-                self._import_tag_options.Append( name, ( gallery_identifier, import_tag_options ) )
+                self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
                 
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -2239,9 +2241,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     name = gallery_identifier.ToString()
                     
-                    for i in range( self._import_tag_options.GetCount() ):
+                    for i in range( self._tag_import_options.GetCount() ):
                         
-                        if name == self._import_tag_options.GetString( i ):
+                        if name == self._tag_import_options.GetString( i ):
                             
                             wx.MessageBox( 'You already have default tag import options set up for that domain!' )
                             
@@ -2249,13 +2251,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    with ClientGUIDialogs.DialogInputImportTagOptions( self, name, gallery_identifier ) as ito_dlg:
+                    with ClientGUIDialogs.DialogInputTagImportOptions( self, name, gallery_identifier ) as ito_dlg:
                         
                         if ito_dlg.ShowModal() == wx.ID_OK:
                             
-                            import_tag_options = ito_dlg.GetImportTagOptions()
+                            tag_import_options = ito_dlg.GetTagImportOptions()
                             
-                            self._import_tag_options.Append( name, ( gallery_identifier, import_tag_options ) )
+                            self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
                             
                         
                     
@@ -2264,28 +2266,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventDelete( self, event ):
             
-            selection = self._import_tag_options.GetSelection()
+            selection = self._tag_import_options.GetSelection()
             
-            if selection != wx.NOT_FOUND: self._import_tag_options.Delete( selection )
+            if selection != wx.NOT_FOUND: self._tag_import_options.Delete( selection )
             
         
         def EventEdit( self, event ):
             
-            selection = self._import_tag_options.GetSelection()
+            selection = self._tag_import_options.GetSelection()
             
             if selection != wx.NOT_FOUND:
                 
-                name = self._import_tag_options.GetString( selection )
+                name = self._tag_import_options.GetString( selection )
                 
-                ( gallery_identifier, import_tag_options ) = self._import_tag_options.GetClientData( selection )
+                ( gallery_identifier, tag_import_options ) = self._tag_import_options.GetClientData( selection )
                 
-                with ClientGUIDialogs.DialogInputImportTagOptions( self, name, gallery_identifier, import_tag_options ) as dlg:
+                with ClientGUIDialogs.DialogInputTagImportOptions( self, name, gallery_identifier, tag_import_options ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        import_tag_options = dlg.GetImportTagOptions()
+                        tag_import_options = dlg.GetTagImportOptions()
                         
-                        self._import_tag_options.SetClientData( selection, ( gallery_identifier, import_tag_options ) )
+                        self._tag_import_options.SetClientData( selection, ( gallery_identifier, tag_import_options ) )
                         
                     
                 
@@ -2293,11 +2295,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.ClearDefaultImportTagOptions()
+            self._new_options.ClearDefaultTagImportOptions()
             
-            for ( gallery_identifier, import_tag_options ) in [ self._import_tag_options.GetClientData( i ) for i in range( self._import_tag_options.GetCount() ) ]:
+            for ( gallery_identifier, tag_import_options ) in [ self._tag_import_options.GetClientData( i ) for i in range( self._tag_import_options.GetCount() ) ]:
                 
-                self._new_options.SetDefaultImportTagOptions( gallery_identifier, import_tag_options )
+                self._new_options.SetDefaultTagImportOptions( gallery_identifier, tag_import_options )
                 
             
         
@@ -2319,6 +2321,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
             self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
             
+            mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
+            
+            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, [ ( 'mime', 20 ), ( 'launch path', -1 ) ], self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
+            
             #
             
             if HC.options[ 'export_path' ] is not None:
@@ -2338,6 +2344,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
+            self._new_options = HG.client_controller.GetNewOptions()
+            
+            for mime in HC.SEARCHABLE_MIMES:
+                
+                launch_path = self._new_options.GetMimeLaunch( mime )
+                
+                self._mime_launch_listctrl.AddDatas( [ ( mime, launch_path ) ] )
+                
+            
+            self._mime_launch_listctrl.Sort( 0 )
+            
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2354,12 +2371,83 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
+            mime_panel.AddF( self._mime_launch_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
             vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.AddF( mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
+            
+        
+        def _ConvertMimeToListCtrlTuples( self, data ):
+            
+            ( mime, launch_path ) = data
+            
+            pretty_mime = HC.mime_string_lookup[ mime ]
+            
+            if launch_path is None:
+                
+                pretty_launch_path = 'default: ' + HydrusPaths.GetDefaultLaunchPath()
+                
+            else:
+                
+                pretty_launch_path = launch_path
+                
+            
+            display_tuple = ( pretty_mime, pretty_launch_path )
+            sort_tuple = display_tuple
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _EditMimeLaunch( self ):
+            
+            for ( mime, launch_path ) in self._mime_launch_listctrl.GetData( only_selected = True ):
+                
+                message = 'Enter the new launch path for ' + HC.mime_string_lookup[ mime ]
+                message += os.linesep * 2
+                message += 'Hydrus will insert the file\'s full path wherever you put %path%, even multiple times!'
+                message += os.linesep * 2
+                message += 'Set as blank to reset to default.'
+                
+                if launch_path is None:
+                    
+                    default = 'program "%path%"'
+                    
+                else:
+                    
+                    default = launch_path
+                    
+                
+                with ClientGUIDialogs.DialogTextEntry( self, message, default = default, allow_blank = True ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        new_launch_path = dlg.GetValue()
+                        
+                        if new_launch_path == '':
+                            
+                            new_launch_path = None
+                            
+                        
+                        if new_launch_path not in ( launch_path, default ):
+                            
+                            self._mime_launch_listctrl.DeleteDatas( [ ( mime, launch_path ) ] )
+                            
+                            self._mime_launch_listctrl.AddDatas( [ ( mime, new_launch_path ) ] )
+                            
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            
+            self._mime_launch_listctrl.Sort()
             
         
         def UpdateOptions( self ):
@@ -2372,6 +2460,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            for ( mime, launch_path ) in self._mime_launch_listctrl.GetData():
+                
+                self._new_options.SetMimeLaunch( mime, launch_path )
+                
             
         
     
@@ -2411,6 +2504,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_thumbnail_title_banner = wx.CheckBox( self )
             self._show_thumbnail_page = wx.CheckBox( self )
+            
+            self._discord_dnd_fix = wx.CheckBox( self )
+            self._discord_dnd_fix.SetToolTipString( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
             self._always_show_hover_windows = wx.CheckBox( self )
             self._always_show_hover_windows.SetToolTipString( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
@@ -2465,6 +2561,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
             
+            self._discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
+            
             self._always_show_hover_windows.SetValue( self._new_options.GetBoolean( 'always_show_hover_windows' ) )
             
             self._hide_message_manager_on_gui_iconise.SetValue( self._new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ) )
@@ -2497,6 +2595,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
+            rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui loses focus: ', self._hide_message_manager_on_gui_deactive ) )
@@ -2586,6 +2685,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
             
+            self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.GetValue() )
             self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_iconise', self._hide_message_manager_on_gui_iconise.GetValue() )
             self._new_options.SetBoolean( 'hide_message_manager_on_gui_deactive', self._hide_message_manager_on_gui_deactive.GetValue() )
@@ -4777,7 +4877,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
         
         pretty_site = gallery_identifier.ToString()
         

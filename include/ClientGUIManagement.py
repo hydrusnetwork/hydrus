@@ -1417,10 +1417,10 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._gallery_import.SetDownloadControls( self._file_download_control, self._gallery_download_control )
         
-        ( file_import_options, import_tag_options, file_limit ) = self._gallery_import.GetOptions()
+        ( file_import_options, tag_import_options, file_limit ) = self._gallery_import.GetOptions()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._gallery_downloader_panel, file_import_options, self._gallery_import.SetFileImportOptions )
-        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._gallery_downloader_panel )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._gallery_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self._gallery_downloader_panel )
         
         #
         
@@ -1467,7 +1467,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.AddF( self._cog_button, CC.FLAGS_LONE_BUTTON )
         self._gallery_downloader_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1495,10 +1495,10 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._seed_cache_control.SetSeedCache( seed_cache )
         
-        self._import_tag_options.SetNamespaces( namespaces )
+        self._tag_import_options.SetNamespaces( namespaces )
         self._query_input.SetValue( search_value )
         
-        self._import_tag_options.SetOptions( import_tag_options )
+        self._tag_import_options.SetOptions( tag_import_options )
         
         self._file_limit.SetValue( file_limit )
         
@@ -1706,11 +1706,11 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
             
             ( command, data ) = action
             
-            if command == 'import_tag_options_changed':
+            if command == 'tag_import_options_changed':
                 
-                import_tag_options = self._import_tag_options.GetOptions()
+                tag_import_options = self._tag_import_options.GetOptions()
                 
-                self._gallery_import.SetImportTagOptions( import_tag_options )
+                self._gallery_import.SetTagImportOptions( tag_import_options )
                 
             else:
                 
@@ -1928,7 +1928,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         ( file_import_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._page_of_images_panel, file_import_options, self._page_of_images_import.SetFileImportOptions )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._page_of_images_panel, file_import_options, self._page_of_images_import.SetFileImportOptions )
         
         #
         
@@ -2248,10 +2248,10 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
         
-        ( thread_url, file_import_options, import_tag_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
+        ( thread_url, file_import_options, tag_import_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
-        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
         #
         
@@ -2282,7 +2282,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._thread_watcher_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._thread_watcher_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2313,7 +2313,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_input.SetValue( thread_url )
         
-        self._import_tag_options.SetOptions( import_tag_options )
+        self._tag_import_options.SetOptions( tag_import_options )
         
         self._thread_times_to_check.SetValue( times_to_check )
         self._thread_check_period.SetValue( check_period )
@@ -2455,13 +2455,16 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             ( command, data ) = action
             
-            if command == 'import_tag_options_changed':
+            if command == 'tag_import_options_changed':
                 
-                import_tag_options = self._import_tag_options.GetOptions()
+                tag_import_options = self._tag_import_options.GetOptions()
                 
-                self._thread_watcher_import.SetImportTagOptions( import_tag_options )
+                self._thread_watcher_import.SetTagImportOptions( tag_import_options )
                 
-            else: event.Skip()
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -2545,7 +2548,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         file_import_options = self._urls_import.GetOptions()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
         
         #
         

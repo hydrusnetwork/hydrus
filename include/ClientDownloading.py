@@ -18,7 +18,6 @@ import urlparse
 import HydrusData
 import ClientConstants as CC
 import HydrusGlobals as HG
-import wx
 
 # This is fairly ugly, but it works for what I need it to do
 
@@ -1247,7 +1246,10 @@ class GalleryHentaiFoundry( Gallery ):
                 ( nothing, pictures, user, artist_name, file_id, title ) = href.split( '/' )
                 
                 # /pictures/user/artist_name/page/3
-                if file_id != 'page': return True
+                if file_id != 'page':
+                    
+                    return True
+                    
                 
             
             return False

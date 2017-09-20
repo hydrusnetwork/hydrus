@@ -15,6 +15,7 @@ import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
 import ClientGUITopLevelWindows
+import ClientTags
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
@@ -612,6 +613,56 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return duplicate_action_options
         
     
+class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, file_import_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
+        self._auto_archive.SetToolTipString( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
+        
+        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
+        self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
+        
+        self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
+        self._min_size.SetValue( 5120 )
+        
+        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'resolution', num_dimensions = 2 )
+        self._min_resolution.SetValue( ( 50, 50 ) )
+        
+        #
+        
+        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = file_import_options.ToTuple()
+        
+        self._auto_archive.SetValue( automatic_archive )
+        self._exclude_deleted.SetValue( exclude_deleted )
+        self._min_size.SetValue( min_size )
+        self._min_resolution.SetValue( min_resolution )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        automatic_archive = self._auto_archive.GetValue()
+        exclude_deleted = self._exclude_deleted.GetValue()
+        min_size = self._min_size.GetValue()
+        min_resolution = self._min_resolution.GetValue()
+        
+        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+        
+    
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, info ):
@@ -705,56 +756,6 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         fullscreen = self._fullscreen.GetValue()
         
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
-        
-    
-class EditImportOptionsFiles( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, file_import_options ):
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
-        self._auto_archive.SetToolTipString( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
-        
-        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
-        self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
-        
-        self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
-        self._min_size.SetValue( 5120 )
-        
-        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'resolution', num_dimensions = 2 )
-        self._min_resolution.SetValue( ( 50, 50 ) )
-        
-        #
-        
-        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = file_import_options.ToTuple()
-        
-        self._auto_archive.SetValue( automatic_archive )
-        self._exclude_deleted.SetValue( exclude_deleted )
-        self._min_size.SetValue( min_size )
-        self._min_resolution.SetValue( min_resolution )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-    
-    def GetValue( self ):
-        
-        automatic_archive = self._auto_archive.GetValue()
-        exclude_deleted = self._exclude_deleted.GetValue()
-        min_size = self._min_size.GetValue()
-        min_resolution = self._min_resolution.GetValue()
-        
-        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
         
     
 class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1324,11 +1325,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
         
-        self._file_import_options = ClientGUIImport.ImportOptionsFilesButton( self, file_import_options )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
-        self._import_tag_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
+        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
         
         #
         
@@ -1363,7 +1364,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused.SetValue( paused )
         
-        self._import_tag_options.SetOptions( import_tag_options )
+        self._tag_import_options.SetOptions( tag_import_options )
         
         if self._last_checked == 0:
             
@@ -1435,12 +1436,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_tag_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
     
-    def _ConfigureImportTagOptions( self ):
+    def _ConfigureTagImportOptions( self ):
         
         gallery_identifier = self._GetGalleryIdentifier()
         
@@ -1448,17 +1449,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         new_options = HG.client_controller.GetNewOptions()
         
-        import_tag_options = new_options.GetDefaultImportTagOptions( gallery_identifier )
+        tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
         
         if gallery_identifier == self._original_subscription.GetGalleryIdentifier():
             
             search_value = self._original_subscription.GetQuery()
-            import_tag_options = self._original_subscription.GetImportTagOptions()
+            tag_import_options = self._original_subscription.GetTagImportOptions()
             
         
         self._query.SetValue( search_value )
-        self._import_tag_options.SetNamespaces( namespaces )
-        self._import_tag_options.SetOptions( import_tag_options )
+        self._tag_import_options.SetNamespaces( namespaces )
+        self._tag_import_options.SetOptions( tag_import_options )
         
     
     def _GetGalleryIdentifier( self ):
@@ -1583,7 +1584,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._booru_selector.Hide()
             
         
-        wx.CallAfter( self._ConfigureImportTagOptions )
+        wx.CallAfter( self._ConfigureTagImportOptions )
         
         ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
@@ -1598,7 +1599,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventBooruSelected( self, event ):
         
-        self._ConfigureImportTagOptions()
+        self._ConfigureTagImportOptions()
         
     
     def EventPeriodChanged( self, event ):
@@ -1633,9 +1634,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_import_options = self._file_import_options.GetValue()
         
-        import_tag_options = self._import_tag_options.GetOptions()
+        tag_import_options = self._tag_import_options.GetOptions()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, import_tag_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         
         return subscription
         
@@ -1914,5 +1915,211 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return tag_censor
+        
+    
+class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, namespaces, tag_import_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._service_keys_to_checkbox_info = {}
+        self._service_keys_to_explicit_button_info = {}
+        self._button_ids_to_service_keys = {}
+        
+        #
+        
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button.SetToolTipString( 'Show help regarding these tag options.' )
+        
+        self._services_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        #
+        
+        self._SetNamespaces( namespaces )
+        self._SetOptions( tag_import_options )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _SetNamespaces( self, namespaces ):
+        
+        self._service_keys_to_checkbox_info = {}
+        self._service_keys_to_explicit_button_info = {}
+        self._button_ids_to_service_keys = {}
+        
+        self._services_vbox.Clear( True )
+        
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        
+        button_id = 1
+        
+        if len( services ) > 0:
+            
+            outer_gridbox = wx.FlexGridSizer( 0, 2 )
+            
+            outer_gridbox.AddGrowableCol( 1, 1 )
+            
+            for service in services:
+                
+                service_key = service.GetServiceKey()
+                
+                self._service_keys_to_checkbox_info[ service_key ] = []
+                
+                outer_gridbox.AddF( ClientGUICommon.BetterStaticText( self, service.GetName() ), CC.FLAGS_VCENTER )
+            
+                vbox = wx.BoxSizer( wx.VERTICAL )
+                
+                for namespace in namespaces:
+                    
+                    label = ClientTags.RenderNamespaceForUser( namespace )
+                    
+                    namespace_checkbox = wx.CheckBox( self, label = label )
+                    
+                    self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
+                    
+                    vbox.AddF( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
+                
+                explicit_tags = set()
+                
+                button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+                
+                explicit_button = wx.Button( self, label = button_label, id = button_id )
+                explicit_button.Bind( wx.EVT_BUTTON, self.EventExplicitTags )
+                
+                self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+                self._button_ids_to_service_keys[ button_id ] = service_key
+                
+                button_id += 1
+                
+                vbox.AddF( explicit_button, CC.FLAGS_VCENTER )
+                
+                outer_gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                
+            
+            self._services_vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+        
+    
+    def _SetOptions( self, tag_import_options ):
+        
+        service_keys_to_namespaces = tag_import_options.GetServiceKeysToNamespaces()
+        
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            if service_key in service_keys_to_namespaces:
+                
+                namespaces_to_set = service_keys_to_namespaces[ service_key ]
+                
+            else:
+                
+                namespaces_to_set = set()
+                
+            
+            for ( namespace, checkbox ) in checkbox_info:
+                
+                if namespace in namespaces_to_set:
+                    
+                    checkbox.SetValue( True )
+                    
+                else:
+                    
+                    checkbox.SetValue( False )
+                    
+                
+            
+        
+        service_keys_to_explicit_tags = tag_import_options.GetServiceKeysToExplicitTags()
+        
+        new_service_keys_to_explicit_button_info = {}
+        
+        for ( service_key, button_info ) in self._service_keys_to_explicit_button_info.items():
+            
+            if service_key in service_keys_to_explicit_tags:
+                
+                explicit_tags = service_keys_to_explicit_tags[ service_key ]
+                
+            else:
+                
+                explicit_tags = set()
+                
+            
+            ( old_explicit_tags, explicit_button ) = button_info
+            
+            button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+            
+            explicit_button.SetLabelText( button_label )
+            
+            new_service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+            
+        
+        self._service_keys_to_explicit_button_info = new_service_keys_to_explicit_button_info
+        
+    
+    def _ShowHelp( self ):
+        
+        message = 'Here you can select which kinds of tags you would like applied to the files that are imported.'
+        message += os.linesep * 2
+        message += 'If this import context can parse tags (such as a gallery downloader, which may provide \'creator\' or \'series\' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.'
+        message += os.linesep * 2
+        message += 'You can also set some fixed \'explicit\' tags to be applied to all successful files. For instance, you might want to add something like \'read later\' or \'from my unsorted folder\' or \'pixiv subscription\'.'
+        
+        wx.MessageBox( message )
+        
+    
+    def EventChecked( self, event ):
+        
+        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
+        
+        event.Skip()
+        
+    
+    def EventExplicitTags( self, event ):
+        
+        button_id = event.GetId()
+        
+        service_key = self._button_ids_to_service_keys[ button_id ]
+        
+        ( explicit_tags, explicit_button ) = self._service_keys_to_explicit_button_info[ service_key ]
+        
+        with ClientGUIDialogs.DialogInputTags( self, service_key, explicit_tags ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                explicit_tags = dlg.GetTags()
+                
+            
+        
+        button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+        
+        explicit_button.SetLabelText( button_label )
+        
+        self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+        
+    
+    def GetValue( self ):
+        
+        service_keys_to_namespaces = {}
+        
+        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
+            
+            service_keys_to_namespaces[ service_key ] = namespaces
+            
+        
+        service_keys_to_explicit_tags = { service_key : explicit_tags for ( service_key, ( explicit_tags, explicit_button ) ) in self._service_keys_to_explicit_button_info.items() }
+        
+        tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+        
+        return tag_import_options
         
     

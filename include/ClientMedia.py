@@ -602,6 +602,9 @@ class MediaList( object ):
         
         self._hashes = set()
         
+        self._hashes_to_singleton_media = {}
+        self._hashes_to_collected_media = {}
+        
         self._media_sort = MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
         self._collect_by = []
         
@@ -656,9 +659,15 @@ class MediaList( object ):
         return keys_to_medias
         
     
-    def _GenerateMediaCollection( self, media_results ): return MediaCollection( self._file_service_key, media_results )
+    def _GenerateMediaCollection( self, media_results ):
+        
+        return MediaCollection( self._file_service_key, media_results )
+        
     
-    def _GenerateMediaSingleton( self, media_result ): return MediaSingleton( media_result )
+    def _GenerateMediaSingleton( self, media_result ):
+        
+        return MediaSingleton( media_result )
+        
     
     def _GetFirst( self ): return self._sorted_media[ 0 ]
     
@@ -666,6 +675,26 @@ class MediaList( object ):
     
     def _GetMedia( self, hashes, discriminator = None ):
         
+        if hashes.isdisjoint( self._hashes ):
+            
+            return []
+            
+        
+        medias = []
+        
+        if discriminator is None or discriminator == 'singletons':
+            
+            medias.extend( ( self._hashes_to_singleton_media[ hash ] for hash in hashes if hash in self._hashes_to_singleton_media ) )
+            
+        
+        if discriminator is None or discriminator == 'collections':
+            
+            medias.extend( { self._hashes_to_collected_media[ hash ] for hash in hashes if hash in self._hashes_to_collected_media } )
+            
+        
+        return medias
+        
+        '''
         if discriminator is None:
             
             medias = self._sorted_media
@@ -679,8 +708,8 @@ class MediaList( object ):
             medias = self._collected_media
             
         
-        return [ media for media in medias if not hashes.isdisjoint( media.GetHashes() ) ]
-        
+        return [ media for media in medias if media.HasAnyOfTheseHashes( hashes ) ]
+        '''
     
     def _GetNext( self, media ):
         
@@ -719,14 +748,28 @@ class MediaList( object ):
         
         self._hashes = set()
         
+        self._hashes_to_singleton_media = {}
+        self._hashes_to_collected_media = {}
+        
         for media in self._collected_media:
             
-            self._hashes.update( media.GetHashes() )
+            hashes = media.GetHashes()
+            
+            self._hashes.update( hashes )
+            
+            for hash in hashes:
+                
+                self._hashes_to_collected_media[ hash ] = media
+                
             
         
         for media in self._singleton_media:
             
-            self._hashes.add( media.GetHash() )
+            hash = media.GetHash()
+            
+            self._hashes.add( hash )
+            
+            self._hashes_to_singleton_media[ hash ] = media
             
         
     
@@ -789,18 +832,17 @@ class MediaList( object ):
             
             for media in new_media:
                 
-                self._hashes.add( media.GetHash() )
+                hash = media.GetHash()
+                
+                self._hashes.add( hash )
+                
+                self._hashes_to_singleton_media[ hash ] = media
                 
             
             self._singleton_media.update( new_media )
             self._sorted_media.append_items( new_media )
             
         else:
-            
-            for media in new_media:
-                
-                self._hashes.update( media.GetHashes() )
-                
             
             if self._collect_by is not None:
                 
@@ -864,6 +906,8 @@ class MediaList( object ):
             
             self._sorted_media.insert_items( new_media )
             
+            self._RecalcHashes()
+            
         
         return new_media
         
@@ -899,6 +943,8 @@ class MediaList( object ):
             
         
         self._sorted_media = SortedList( list( self._singleton_media ) + list( self._collected_media ) )
+        
+        self._RecalcHashes()
         
     
     def DeletePending( self, service_key ):
@@ -1051,6 +1097,11 @@ class MediaList( object ):
         return self._sorted_media
         
     
+    def HasAnyOfTheseHashes( self, hashes ):
+        
+        return not hashes.isdisjoint( self._hashes )
+        
+    
     def HasMedia( self, media ):
         
         if media is None:
@@ -1070,7 +1121,10 @@ class MediaList( object ):
             
             for media_collection in self._collected_media:
                 
-                if media_collection.HasMedia( media ): return True
+                if media_collection.HasMedia( media ):
+                    
+                    return True
+                    
                 
             
         
@@ -1381,7 +1435,7 @@ class MediaCollection( MediaList, Media ):
     
     def HasDuration( self ): return self._duration is not None
     
-    def HasImages( self ): return True in ( media.HasImages() for media in self._collected_media | self._singleton_media )
+    def HasImages( self ): return True in ( media.HasImages() for media in self._sorted_media )
     
     def HasInbox( self ): return self._inbox
     
@@ -1421,11 +1475,20 @@ class MediaSingleton( Media ):
         return MediaSingleton( self._media_result.Duplicate() )
         
     
-    def GetDisplayMedia( self ): return self
+    def GetDisplayMedia( self ):
+        
+        return self
+        
     
-    def GetDuration( self ): return self._media_result.GetDuration()
+    def GetDuration( self ):
+        
+        return self._media_result.GetDuration()
+        
     
-    def GetHash( self ): return self._media_result.GetHash()
+    def GetHash( self ):
+        
+        return self._media_result.GetHash()
+        
     
     def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
@@ -1567,14 +1630,14 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
+            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
             
         
         if CC.TRASH_SERVICE_KEY in current_service_keys:
             
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
-            lines.append( 'trashed ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
+            lines.append( 'trashed ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
             
         
         for service_key in current_service_keys:
@@ -1599,7 +1662,7 @@ class MediaSingleton( Media ):
                 status = 'uploaded '
                 
             
-            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) )
+            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
             
         
         return lines
@@ -1722,6 +1785,11 @@ class MediaSingleton( Media ):
             
         
         return title_string
+        
+    
+    def HasAnyOfTheseHashes( self, hashes ):
+        
+        return self._media_result.GetHash() in hashes
         
     
     def HasArchive( self ): return not self._media_result.GetInbox()

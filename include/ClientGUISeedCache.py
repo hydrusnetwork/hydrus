@@ -64,8 +64,8 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_seed_index = HydrusData.ConvertIntToPrettyString( seed_index )
         pretty_seed = HydrusData.ToUnicode( seed )
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp )
-        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp )
+        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp ) + ' ago'
+        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp ) + ' ago'
         pretty_note = note.split( os.linesep )[0]
         
         display_tuple = ( pretty_seed_index, pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )

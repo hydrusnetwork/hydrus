@@ -609,7 +609,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def _SortAndRefreshRows( self ):
         
-        selected_data = self.GetData( only_selected = True )
+        selected_data_quick = set( self.GetData( only_selected = True ) )
         
         selected_indices = self._GetSelected()
         
@@ -633,7 +633,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             self._UpdateRow( index, display_tuple )
             
-            if data in selected_data:
+            if data in selected_data_quick:
                 
                 self.Select( index )
                 
@@ -782,13 +782,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             indices = self._indices_to_data_info.keys()
             
         
-        result = set()
+        result = []
         
         for index in indices:
             
             ( data, display_tuple, sort_tuple ) = self._indices_to_data_info[ index ]
             
-            result.add( data )
+            result.append( data )
             
         
         return result

@@ -104,9 +104,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self.SetDoubleBuffered( True ) # This seems to stop some bad scroll draw logic, where top/bottom row is auto-drawn undrawn and then paint event called
         
-        new_options = HG.client_controller.GetNewOptions()
-        
-        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) )
+        self._UpdateBackgroundColour()
         
         self.SetScrollRate( 0, 50 )
         
@@ -126,6 +124,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HG.client_controller.sub( self, 'Sort', 'sort_media' )
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
         HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
+        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
         self._due_a_forced_selection_pub = False
         
@@ -492,7 +491,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                HydrusPaths.LaunchFile( path )
+                new_options = HG.client_controller.GetNewOptions()
+                
+                launch_path = new_options.GetMimeLaunch( mime )
+                
+                HydrusPaths.LaunchFile( path, launch_path )
                 
                 return
                 
@@ -940,9 +943,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                self._SetFocussedMedia( None )
+                new_options = HG.client_controller.GetNewOptions()
                 
-                HydrusPaths.LaunchFile( path )
+                launch_path = new_options.GetMimeLaunch( mime )
+                
+                HydrusPaths.LaunchFile( path, launch_path )
+                
+                self._SetFocussedMedia( None )
                 
             
         
@@ -1479,6 +1486,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _UpdateBackgroundColour( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) )
+        
+        self.Refresh()
+        
+    
     def _UploadDirectory( self, file_service_key ):
         
         hashes = self._GetSelectedHashes()
@@ -1716,17 +1732,17 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
+        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        self._clean_canvas_pages = {}
+        self._dirty_canvas_pages = []
+        self._num_rows_per_canvas_page = 1
+        
         MediaPanel.__init__( self, parent, page_key, file_service_key, media_results )
         
         self._last_client_size = ( 0, 0 )
         self._num_columns = 1
         
         self._drag_init_coordinates = None
-        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
-        self._clean_canvas_pages = {}
-        self._dirty_canvas_pages = []
-        self._num_rows_per_canvas_page = 1
-        
         self._timer_animation = wx.Timer( self, ID_TIMER_ANIMATION )
         self._thumbnails_being_faded_in = {}
         self._hashes_faded = set()
@@ -2104,12 +2120,20 @@ class MediaPanelThumbnails( MediaPanel ):
             
             new_position = current_position + columns + ( self._num_columns * rows )
             
-            if new_position < 0: new_position = 0
-            elif new_position > len( self._sorted_media ) - 1: new_position = len( self._sorted_media ) - 1
+            if new_position < 0:
+                
+                new_position = 0
+                
+            elif new_position > len( self._sorted_media ) - 1:
+                
+                new_position = len( self._sorted_media ) - 1
+                
             
-            self._HitMedia( self._sorted_media[ new_position ], False, shift )
+            new_media = self._sorted_media[ new_position ]
             
-            self._ScrollToMedia( media_to_use )
+            self._HitMedia( new_media, False, shift )
+            
+            self._ScrollToMedia( new_media )
             
         
         
@@ -2332,6 +2356,17 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def _UpdateBackgroundColour( self ):
+        
+        MediaPanel._UpdateBackgroundColour( self )
+    
+        self._DirtyAllPages()
+        
+        self._DeleteAllDirtyPages()
+        
+        self.Refresh()
+        
+    
     def AddMediaResults( self, page_key, media_results, append = True ):
         
         if page_key == self._page_key:
@@ -2366,6 +2401,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( hashes ) > 0:
                     
+                    self._drag_init_coordinates = None
+                    
                     drop_source = wx.DropSource( self )
                     
                     data_object = wx.DataObjectComposite()
@@ -2386,9 +2423,65 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     client_files_manager = HG.client_controller.client_files_manager
                     
+                    original_paths = []
+                    
                     for hash in hashes:
                         
-                        path = client_files_manager.GetFilePath( hash )
+                        original_paths.append( client_files_manager.GetFilePath( hash ) )
+                        
+                    
+                    #
+                    
+                    do_temp_dnd = False
+                    
+                    new_options = HG.client_controller.GetNewOptions()
+                    
+                    if new_options.GetBoolean( 'discord_dnd_fix' ):
+                        
+                        if len( original_paths ) <= 10 and sum( ( os.path.getsize( path ) for path in original_paths ) ) < 50 * 1048576:
+                            
+                            do_temp_dnd = True
+                            
+                        
+                    
+                    if do_temp_dnd:
+                        
+                        temp_dir = HG.client_controller.temp_dir
+                        
+                        dnd_paths = []
+                        
+                        for original_path in original_paths:
+                            
+                            filename = os.path.basename( original_path )
+                            
+                            dnd_path = os.path.join( temp_dir, filename )
+                            
+                            if not os.path.exists( dnd_path ):
+                                
+                                HydrusPaths.MirrorFile( original_path, dnd_path )
+                                
+                            
+                            dnd_paths.append( dnd_path )
+                            
+                        
+                        flags = wx.Drag_AllowMove
+                        
+                    else:
+                        
+                        dnd_paths = original_paths
+                        
+                        if event.CmdDown():
+                            
+                            # secret dangerous discord compat mode
+                            flags = wx.Drag_AllowMove
+                            
+                        else:
+                            
+                            flags = wx.Drag_CopyOnly
+                            
+                        
+                    
+                    for path in dnd_paths:
                         
                         file_data_object.AddFile( path )
                         
@@ -2399,20 +2492,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     drop_source.SetData( data_object )
                     
-                    if event.CmdDown():
-                        
-                        # secret dangerous discord compat mode
-                        flags = wx.Drag_AllowMove
-                        
-                    else:
-                        
-                        flags = wx.Drag_CopyOnly
-                        
-                    
                     drop_source.DoDragDrop( flags )
                     
-                
-                self._drag_init_coordinates = None
                 
             
         
@@ -2453,19 +2534,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( command, data ) = action
             
-            if command == 'archive_file': self._Archive()
-            elif command == 'copy_bmp': self._CopyBMPToClipboard()
-            elif command == 'copy_files': self._CopyFilesToClipboard()
-            elif command == 'copy_hash': self._CopyHashToClipboard( data )
-            elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
-            elif command == 'copy_hashes': self._CopyHashesToClipboard( data )
-            elif command == 'copy_service_filename': self._CopyServiceFilenameToClipboard( data )
-            elif command == 'copy_service_filenames': self._CopyServiceFilenamesToClipboard( data )
-            elif command == 'copy_path': self._CopyPathToClipboard()
-            elif command == 'copy_paths': self._CopyPathsToClipboard()
+            if command == 'copy_files': self._CopyFilesToClipboard()
             elif command == 'ctrl-space':
                 
-                if self._focussed_media is not None: self._HitMedia( self._focussed_media, True, False )
+                if self._focussed_media is not None:
+                    
+                    self._HitMedia( self._focussed_media, True, False )
+                    
                 
             elif command == 'delete_file':
                 
@@ -2478,29 +2553,13 @@ class MediaPanelThumbnails( MediaPanel ):
                     self._Delete( data )
                     
                 
-            elif command == 'export_files': self._ExportFiles()
-            elif command == 'export_tags': self._ExportTags()
-            elif command == 'launch_the_archive_delete_filter': self._ArchiveDeleteFilter()
             elif command == 'fullscreen': self._FullScreen()
-            elif command == 'inbox_file': self._Inbox()
-            elif command == 'manage_file_ratings': self._ManageRatings()
-            elif command == 'manage_file_tags': self._ManageTags()
-            elif command == 'modify_account': self._ModifyUploaders( data )
-            elif command == 'open_file_in_external_program': self._OpenExternally()
-            elif command == 'petition': self._PetitionFiles( data )
-            elif command == 'remove_file_from_view': self._Remove()
-            elif command == 'rescind_petition': self._RescindPetitionFiles( data )
-            elif command == 'rescind_upload': self._RescindUploadFiles( data )
             elif command == 'scroll_end': self._ScrollEnd( False )
             elif command == 'scroll_home': self._ScrollHome( False )
             elif command == 'shift_scroll_end': self._ScrollEnd( True )
             elif command == 'shift_scroll_home': self._ScrollHome( True )
             elif command == 'select': self._Select( data )
-            elif command == 'share_on_local_booru': self._ShareOnLocalBooru()
-            elif command == 'show_selection_in_new_query_page': self._ShowSelectionInNewPage()
             elif command == 'undelete': self._Undelete()
-            elif command == 'upload': self._UploadFiles( data )
-            elif command == 'upload_directory': self._UploadDirectory( data )
             elif command == 'key_up': self._MoveFocussedThumbnail( -1, 0, False )
             elif command == 'key_down': self._MoveFocussedThumbnail( 1, 0, False )
             elif command == 'key_left': self._MoveFocussedThumbnail( 0, -1, False )
@@ -3292,7 +3351,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenuItem( self, export_menu, 'tags', 'Export the selected files\' tags to an external database.', self._ExportTags )
                     
                 
-                share_menu.AppendMenu( CC.ID_NULL, 'export', export_menu )
+                ClientGUIMenus.AppendMenu( share_menu, export_menu, 'export' )
                 
                 #
                 
@@ -3554,7 +3613,10 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if page_key == self._page_key:
             
-            if media is None: self._SetFocussedMedia( None )
+            if media is None:
+                
+                self._SetFocussedMedia( None )
+                
             else:
                 
                 try:
@@ -3565,7 +3627,10 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     self._ScrollToMedia( self._focussed_media )
                     
-                except: pass
+                except:
+                    
+                    pass
+                    
                 
             
         

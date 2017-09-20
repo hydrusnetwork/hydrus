@@ -1834,8 +1834,6 @@ class NetworkEngine( object ):
     
 class NetworkJob( object ):
     
-    MAX_CONNECTION_ATTEMPTS = 5
-    
     def __init__( self, method, url, body = None, files = None, referral_url = None, temp_path = None ):
         
         if HG.network_report_mode:
@@ -1855,6 +1853,8 @@ class NetworkJob( object ):
         self._temp_path = temp_path
         
         self._for_login = False
+        
+        self._current_connection_attempt_number = 1
         
         self._additional_headers = {}
         
@@ -1882,6 +1882,20 @@ class NetworkJob( object ):
         self._num_bytes_to_read = 1
         
         self._network_contexts = self._GenerateNetworkContexts()
+        
+    
+    def _CanReattemptRequest( self ):
+        
+        if self._method == 'GET':
+            
+            max_attempts_allowed = 5
+            
+        elif self._method == 'POST':
+            
+            max_attempts_allowed = 1
+            
+        
+        return self._current_connection_attempt_number <= max_attempts_allowed
         
     
     def _GenerateNetworkContexts( self ):
@@ -1921,42 +1935,12 @@ class NetworkJob( object ):
                 headers[ key ] = value
                 
             
-        
-        connection_successful = False
-        connection_attempts = 1
-        
-        while not connection_successful:
+            self._status_text = u'sending request\u2026'
             
-            try:
-                
-                with self._lock:
-                    
-                    self._status_text = u'sending request\u2026'
-                    
-                
-                timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
-                
-                response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = timeout )
-                
-                connection_successful = True
-                
-            except requests.exceptions.ConnectionError, requests.exceptions.Timeout:
-                
-                connection_attempts += 1
-                
-                if connection_attempts > self.MAX_CONNECTION_ATTEMPTS:
-                    
-                    raise HydrusExceptions.NetworkException( 'Could not connect!' )
-                    
-                
-                with self._lock:
-                    
-                    self._status_text = u'connection failed--retrying'
-                    
-                
-                time.sleep( 3 )
-                
-            
+        
+        timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
+        
+        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = timeout )
         
         return response
         
@@ -2367,58 +2351,100 @@ class NetworkJob( object ):
         
         try:
             
-            response = self._SendRequestAndGetResponse()
+            request_completed = False
             
-            with self._lock:
+            while not request_completed:
                 
-                if self._body is not None:
+                try:
                     
-                    self._ReportDataUsed( len( self._body ) )
+                    response = self._SendRequestAndGetResponse()
                     
-                
-            
-            if response.ok:
-                
-                with self._lock:
-                    
-                    self._status_text = u'downloading\u2026'
-                    
-                
-                if self._temp_path is None:
-                    
-                    self._ReadResponse( response, self._stream_io )
-                    
-                else:
-                    
-                    with open( self._temp_path, 'wb' ) as f:
+                    with self._lock:
                         
-                        self._ReadResponse( response, f )
+                        if self._body is not None:
+                            
+                            self._ReportDataUsed( len( self._body ) )
+                            
                         
                     
-                
-                with self._lock:
+                    if response.ok:
+                        
+                        with self._lock:
+                            
+                            self._status_text = u'downloading\u2026'
+                            
+                        
+                        if self._temp_path is None:
+                            
+                            self._ReadResponse( response, self._stream_io )
+                            
+                        else:
+                            
+                            with open( self._temp_path, 'wb' ) as f:
+                                
+                                self._ReadResponse( response, f )
+                                
+                            
+                        
+                        with self._lock:
+                            
+                            self._status_text = 'done!'
+                            
+                        
+                    else:
+                        
+                        with self._lock:
+                            
+                            self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
+                            
+                        
+                        self._ReadResponse( response, self._stream_io )
+                        
+                        with self._lock:
+                            
+                            self._stream_io.seek( 0 )
+                            
+                            data = self._stream_io.read()
+                            
+                            ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data )
+                            
+                            self._SetError( e, error_text )
+                            
+                        
                     
-                    self._status_text = 'done!'
+                    request_completed = True
                     
-                
-            else:
-                
-                with self._lock:
+                except requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout:
                     
-                    self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
+                    self._current_connection_attempt_number += 1
                     
-                
-                self._ReadResponse( response, self._stream_io )
-                
-                with self._lock:
+                    if not self._CanReattemptRequest():
+                        
+                        raise HydrusExceptions.NetworkException( 'Could not connect!' )
+                        
                     
-                    self._stream_io.seek( 0 )
+                    with self._lock:
+                        
+                        self._status_text = u'connection failed--retrying'
+                        
                     
-                    data = self._stream_io.read()
+                    time.sleep( 3 )
                     
-                    ( e, error_text ) = ConvertStatusCodeAndDataIntoExceptionInfo( response.status_code, data )
+                except requests.exceptions.ReadTimeout:
                     
-                    self._SetError( e, error_text )
+                    self._current_connection_attempt_number += 1
+                    
+                    if not self._CanReattemptRequest():
+                        
+                        raise HydrusExceptions.NetworkException( 'Connection successful, but reading response timed out!' )
+                        
+                    
+                    with self._lock:
+                        
+                        self._status_text = u'read timed out--retrying'
+                        
+                    
+                    time.sleep( 3 )
                     
                 
             
