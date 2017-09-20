@@ -8,6 +8,31 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 274</h3></li>
+				<ul>
+					<li>the help menu now has an easy on/off check entry for the darkmode colourset</li>
+					<li>changing any individual colour or the entire colourset will now immediately refresh almost all custom-coloured controls with the new colour</li>
+					<li>added a BUGFIX option to options->gui to permanently fix all discord file drag-and-drop events (as long as they contain <= 10 files and total < 50MB)</li>
+					<li>you can now set specific 'open externally' launch paths on a per-mime basis under options->files and trash</li>
+					<li>improved error reporting on a bad file launch</li>
+					<li>improved the network engine to recover from and reattempt in-progress response read errors (previously reported as ReadTimeout)</li>
+					<li>fixed the 'scroll to focused thumbnail' calculations on key events (when hitting up/down arrow key on thumbnail grid, the page wasn't scrolling correctly as needed)</li>
+					<li>known urls no longer display with the scheme (http or https) in the media viewer top-right summary</li>
+					<li>known urls in the media viewer top-right summary now tooltip their full url</li>
+					<li>wrote a new button for editing tag import options. it has a good summary tooltip. it is only in the manage import folder dialog atm, but I will replicate it across the rest of the program in the coming weeks</li>
+					<li>in some situations, the file import status window will list some timestamp note info for 'already in db' and 'deleted' statuses. see if you like it</li>
+					<li>the new listctrl will generally give its data to other consumers in ui sorted order (this fixes some stuff like 'copy sources' in the file import status window, which was copying them in random order)</li>
+					<li>manage tag parents now uses the new listctrl (and is hence now safely sortable)</li>
+					<li>manage tag sibings now uses the new listctrl (and is hence now safely sortable)</li>
+					<li>some behind-the-scenes of manage parents/siblings is a bit neater</li>
+					<li>improved some thumbnail internal media structures to fetch specific media based on hash much much faster, particularly for pages with 10,000+ thumbs. this should speed up large imports and other content update events that can result in thumb redraws</li>
+					<li>fixed an issue where dismissing a popup message could spawn the entire result of the queue, ignoring the 'show 10 max' rule</li>
+					<li>completely finished the menu rewrite! all menus now work on the new system</li>
+					<li>deleted a ton of old and now obselete menu event processing code</li>
+					<li>some boot/shutdown terminal printing should be more reliable</li>
+					<li>misc refactoring</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 273</h3></li>
 				<ul>
 					<li>converted the gui colour options to the new options system</li>
