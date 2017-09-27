@@ -623,6 +623,61 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
             
         
     
+class CheckboxManager( object ):
+    
+    def GetCurrentValue( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def Invert( self ):
+        
+        raise NotImplementedError()
+        
+    
+class CheckboxManagerCalls( CheckboxManager ):
+    
+    def __init__( self, invert_call, value_call ):
+        
+        CheckboxManager.__init__( self )
+        
+        self._invert_call = invert_call
+        self._value_call = value_call
+        
+    
+    def GetCurrentValue( self ):
+        
+        return self._value_call()
+        
+    
+    def Invert( self ):
+        
+        self._invert_call()
+        
+    
+class CheckboxManagerOptions( CheckboxManager ):
+    
+    def __init__( self, boolean_name ):
+        
+        CheckboxManager.__init__( self )
+        
+        self._boolean_name = boolean_name
+        
+    
+    def GetCurrentValue( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        return new_options.GetBoolean( self._boolean_name )
+        
+    
+    def Invert( self ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        new_options.InvertBoolean( self._boolean_name )
+        
+    
 class ChoiceSort( wx.Panel ):
     
     def __init__( self, parent, management_controller = None ):
@@ -1360,61 +1415,6 @@ class ListBook( wx.Panel ):
             
         
     
-class CheckboxManager( object ):
-    
-    def GetCurrentValue( self ):
-        
-        raise NotImplementedError()
-        
-    
-    def Invert( self ):
-        
-        raise NotImplementedError()
-        
-    
-class CheckboxManagerCalls( CheckboxManager ):
-    
-    def __init__( self, invert_call, value_call ):
-        
-        CheckboxManager.__init__( self )
-        
-        self._invert_call = invert_call
-        self._value_call = value_call
-        
-    
-    def GetCurrentValue( self ):
-        
-        return self._value_call()
-        
-    
-    def Invert( self ):
-        
-        self._invert_call()
-        
-    
-class CheckboxManagerOptions( CheckboxManager ):
-    
-    def __init__( self, boolean_name ):
-        
-        CheckboxManager.__init__( self )
-        
-        self._boolean_name = boolean_name
-        
-    
-    def GetCurrentValue( self ):
-        
-        new_options = HG.client_controller.GetNewOptions()
-        
-        return new_options.GetBoolean( self._boolean_name )
-        
-    
-    def Invert( self ):
-        
-        new_options = HG.client_controller.GetNewOptions()
-        
-        new_options.InvertBoolean( self._boolean_name )
-        
-    
 class MenuBitmapButton( BetterBitmapButton ):
     
     def __init__( self, parent, bitmap, menu_items ):
@@ -1554,8 +1554,13 @@ class NoneableSpinCtrl( wx.Panel ):
     def Bind( self, event_type, callback ):
         
         self._checkbox.Bind( wx.EVT_CHECKBOX, callback )
+        
         self._one.Bind( wx.EVT_SPINCTRL, callback )
-        if self._num_dimensions == 2: self._two.Bind( wx.EVT_SPINCTRL, callback )
+        
+        if self._num_dimensions == 2:
+            
+            self._two.Bind( wx.EVT_SPINCTRL, callback )
+            
         
     
     def EventCheckBox( self, event ):
@@ -2539,6 +2544,50 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         self._tags_box.SetTagsByMedia( media, force_reload = force_reload )
         
     
+class RadioBox( StaticBox ):
+    
+    def __init__( self, parent, title, choice_pairs, initial_index = None ):
+        
+        StaticBox.__init__( self, parent, title )
+        
+        self._indices_to_radio_buttons = {}
+        self._radio_buttons_to_data = {}
+        
+        first_button = True
+        
+        for ( index, ( text, data ) ) in enumerate( choice_pairs ):
+            
+            if first_button:
+                
+                style = wx.RB_GROUP
+                
+                first_button = False
+                
+            else: style = 0
+            
+            radio_button = wx.RadioButton( self, label = text, style = style )
+            
+            self.AddF( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._indices_to_radio_buttons[ index ] = radio_button
+            self._radio_buttons_to_data[ radio_button ] = data
+            
+        
+        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].SetValue( True )
+        
+    
+    def GetSelectedClientData( self ):
+        
+        for radio_button in self._radio_buttons_to_data.keys():
+            
+            if radio_button.GetValue() == True: return self._radio_buttons_to_data[ radio_button ]
+            
+        
+    
+    def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
+    
+    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabelText( text )
+    
 class TextAndGauge( wx.Panel ):
     
     def __init__( self, parent ):
@@ -2727,7 +2776,7 @@ class TimeDeltaButton( wx.Button ):
     
 class TimeDeltaCtrl( wx.Panel ):
     
-    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False, monthly_label = 'monthly' ):
         
         wx.Panel.__init__( self, parent )
         
@@ -2782,7 +2831,7 @@ class TimeDeltaCtrl( wx.Panel ):
             self._monthly.Bind( wx.EVT_CHECKBOX, self.EventChange )
             
             hbox.AddF( self._monthly, CC.FLAGS_VCENTER )
-            hbox.AddF( BetterStaticText( self, 'monthly' ), CC.FLAGS_VCENTER )
+            hbox.AddF( BetterStaticText( self, monthly_label ), CC.FLAGS_VCENTER )
             
         
         self.SetSizer( hbox )
@@ -2937,47 +2986,60 @@ class TimeDeltaCtrl( wx.Panel ):
         self._UpdateEnables()
         
     
-class RadioBox( StaticBox ):
+class VelocityCtrl( wx.Panel ):
     
-    def __init__( self, parent, title, choice_pairs, initial_index = None ):
+    def __init__( self, parent, min_time_delta = 60, days = False, hours = False, minutes = False, seconds = False, per_phrase = 'per', unit = None ):
         
-        StaticBox.__init__( self, parent, title )
+        wx.Panel.__init__( self, parent )
         
-        self._indices_to_radio_buttons = {}
-        self._radio_buttons_to_data = {}
+        self._num = wx.SpinCtrl( self, min = 0, max = 1000, size = ( 60, -1 ) )
         
-        first_button = True
+        self._times = TimeDeltaCtrl( self, min = min_time_delta, days = days, hours = hours, minutes = minutes, seconds = seconds )
         
-        for ( index, ( text, data ) ) in enumerate( choice_pairs ):
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._num, CC.FLAGS_VCENTER )
+        
+        mid_text = per_phrase
+        
+        if unit is not None:
             
-            if first_button:
-                
-                style = wx.RB_GROUP
-                
-                first_button = False
-                
-            else: style = 0
-            
-            radio_button = wx.RadioButton( self, label = text, style = style )
-            
-            self.AddF( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._indices_to_radio_buttons[ index ] = radio_button
-            self._radio_buttons_to_data[ radio_button ] = data
+            mid_text = unit + ' ' + mid_text
             
         
-        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].SetValue( True )
+        hbox.AddF( BetterStaticText( self, mid_text ), CC.FLAGS_VCENTER )
+        
+        hbox.AddF( self._times, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
         
     
-    def GetSelectedClientData( self ):
+    def GetValue( self ):
         
-        for radio_button in self._radio_buttons_to_data.keys():
+        num = self._num.GetValue()
+        time_delta = self._times.GetValue()
+        
+        return ( num, time_delta )
+        
+    
+    def SetToolTipString( self, text ):
+        
+        wx.Panel.SetToolTipString( self, text )
+        
+        for c in self.GetChildren():
             
-            if radio_button.GetValue() == True: return self._radio_buttons_to_data[ radio_button ]
+            c.SetToolTipString( text )
             
         
     
-    def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
-    
-    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabelText( text )
+    def SetValue( self, velocity ):
+        
+        ( num, time_delta ) = velocity
+        
+        self._num.SetValue( num )
+        
+        self._times.SetValue( time_delta )
+        
     

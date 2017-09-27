@@ -576,12 +576,14 @@ class Page( wx.SplitterWindow ):
     
     def PageHidden( self ):
         
-        self._controller.pub( 'page_hidden', self._page_key )
+        self._management_panel.PageHidden()
+        self._media_panel.PageHidden()
         
     
     def PageShown( self ):
         
-        self._controller.pub( 'page_shown', self._page_key )
+        self._management_panel.PageShown()
+        self._media_panel.PageShown()
         
     
     def PrepareToHide( self ):
@@ -1998,12 +2000,20 @@ class PagesNotebook( wx.Notebook ):
             
             page.Reparent( dest_notebook )
             
+            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            
         
-        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName() )
+        shift_down = wx.GetKeyState( wx.WXK_SHIFT )
         
-        self.ShowPage( page )
+        follow_dropped_page = not shift_down
         
-        self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName(), select = follow_dropped_page )
+        
+        if follow_dropped_page:
+            
+            self.ShowPage( page )
+            
+        
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         
     

@@ -38,13 +38,17 @@ class FileDropTarget( wx.PyDropTarget ):
                 
                 paths = self._file_data_object.GetFilenames()
                 
-                wx.CallAfter( self._filenames_callable, paths )
+                wx.CallAfter( self._filenames_callable, paths ) # callafter to terminate dnd event now
+                
+                result = wx.DragNone
                 
             elif received_format_type in ( wx.DF_TEXT, wx.DF_UNICODETEXT ) and self._url_callable is not None:
                 
                 text = self._text_data_object.GetText()
                 
-                self._url_callable( text )
+                wx.CallAfter( self._url_callable, text ) # callafter to terminate dnd event now
+                
+                result = wx.DragCopy
                 
             else:
                 
@@ -59,14 +63,16 @@ class FileDropTarget( wx.PyDropTarget ):
                 
                 if format_id == 'application/hydrus-media':
                     
-                    pass
+                    result = wx.DragCancel
                     
                 
                 if format_id == 'application/hydrus-page-tab' and self._page_callable is not None:
                     
                     page_key = self._hydrus_page_tab_data_object.GetData()
                     
-                    self._page_callable( page_key )
+                    wx.CallAfter( self._page_callable, page_key ) # callafter to terminate dnd event now
+                    
+                    result = wx.DragMove
                     
                 
             
@@ -74,8 +80,4 @@ class FileDropTarget( wx.PyDropTarget ):
         return result
         
     
-    def OnDragOver( self, x, y, result ):
-        
-        return wx.DragCopy
-        
-    
+    # setting OnDragOver to return copy gives Linux trouble with page tab drops with shift held down

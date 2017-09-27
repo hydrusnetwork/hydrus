@@ -1055,6 +1055,10 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 self.FullscreenSwitch()
                 
+            elif action == 'flip_darkmode':
+                
+                HG.client_controller.gui.FlipDarkmode()
+                
             else:
                 
                 command_processed = False
@@ -1682,6 +1686,22 @@ class Canvas( wx.Window ):
             elif action == 'archive_file':
                 
                 self._Archive()
+                
+            elif action == 'copy_bmp':
+                
+                self._CopyBMPToClipboard()
+                
+            elif action == 'copy_file':
+                
+                self._CopyFileToClipboard()
+                
+            elif action == 'copy_path':
+                
+                self._CopyPathToClipboard()
+                
+            elif action == 'copy_sha256_hash':
+                
+                self._CopyHashToClipboard( 'sha256' )
                 
             elif action == 'delete_file':
                 
@@ -3591,7 +3611,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
                 elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
-                elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
                 else:
                     
                     CanvasWithHovers.EventCharHook( self, event )
@@ -4229,8 +4248,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
             
-            if modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
+            if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
             else:
                 
                 CanvasMediaList.EventCharHook( self, event )
@@ -4579,7 +4597,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): wx.CallAfter( self._PausePlaySlideshow )
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
-            elif modifier == wx.ACCEL_CTRL and key == ord( 'C' ): self._CopyFileToClipboard()
             else:
                 
                 CanvasMediaListNavigable.EventCharHook( self, event )

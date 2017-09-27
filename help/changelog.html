@@ -8,6 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<ul>
+				<li><h3>version 275</h3></li>
+					<li>if you hold shift down while dropping a page tab, the client will not 'chase' that page to show it (try it out!)</li>
+					<li>the gui will be more snappy about dealing with drag-and-drop drops (of types file import, page tab rearrange, and url drop), returning the mouse to normal state instantly on drop and dealing with the event in a subsequent action</li>
+					<li>dropping url text on the client will specifically inform the source program not to delete the dragged text (that the operation was copy, not move), if it is interested in hearing that</li>
+					<li>page drag-and-drops should transition a little less flickerily</li>
+					<li>all file import status objects can now track 'source time', typically to represent upload time</li>
+					<li>file imports now populate 'source time' based on the earliest of creation/modified time! (this will be used later to parse as a tag)</li>
+					<li>thread watchers now populate 'source time' based on post time!</li>
+					<li>finished a watcher options object for the new thread checker system</li>
+					<li>wrote a panel to edit watcher options</li>
+					<li>converted the thread object to the new watcher system</li>
+					<li>thread watchers now have two pause buttons--one for the file queue, one for the checker</li>
+					<li>compressed thread watcher ui layout</li>
+					<li>converted the thread left-panel ui and options->downloading page to reflect the new watcher system</li>
+					<li>improved the watcher options to generate better timings for fresh threads</li>
+					<li>cleaned up some thread watcher check time code</li>
+					<li>the total/selected mime summary on the status bar is a little prettier and will now report by individual mime sometimes</li>
+					<li>generating the total/select mime summaries are now faster on pages with >1,000 files (it'll just use 'file')</li>
+					<li>a 'refresh' action on an import page now triggers a sort event</li>
+					<li>added 'flip_darkmode' shortcut command to 'main_gui' and 'media_viewer' shortcut sets</li>
+					<li>added copy_file/path/hash/bmp actions to the 'media' shortcut set, removed the hardcoded ctrl+c for copy_file. I added ctrl+c to the defaults, but existing users will have to re-add it manually if they want it!</li>
+					<li>simplified some page ui update code</li>
+					<li>import pages will no longer update their left-panel ui (which uses a bit of cpu) when they are not in view</li>
+					<li>polished some new string and url matching code the domain engine will be using</li>
+					<li>wrote a panel to edit string match objects</li>
+					<li>wrote a new panel to handle simple ordered lists of data in a better way</li>
+					<li>wrote most of a panel to edit url match objects</li>
+					<li>misc domain manager work</li>
+					<li>fixed an issue with the old listctrl where object name de-duplication was sometimes not permitting (1)-type names to be cleaned up</li>
+					<li>fixed some inelegant time duration->text conversions</li>
+					<li>improved complete process shutdown reliability when some downloads are waiting on bandwidth on shutdown</li>
+					<li>did some misc listctrl update work</li>
+				</ul>
 				<li><h3>version 274</h3></li>
 				<ul>
 					<li>the help menu now has an easy on/off check entry for the darkmode colourset</li>

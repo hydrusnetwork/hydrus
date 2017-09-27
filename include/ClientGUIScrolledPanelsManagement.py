@@ -1865,23 +1865,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
             
-            self._thread_times_to_check = wx.SpinCtrl( thread_checker, min = 0, max = 65536 )
-            self._thread_times_to_check.SetToolTipString( 'how many times the thread checker will check' )
+            watcher_options = self._new_options.GetDefaultThreadWatcherOptions()
             
-            self._thread_check_period = ClientGUICommon.TimeDeltaButton( thread_checker, min = 30, days = True, hours = True, minutes = True, seconds = True )
-            self._thread_check_period.SetToolTipString( 'how long the checker will wait between checks' )
+            self._thread_watcher_options = ClientGUIScrolledPanelsEdit.EditWatcherOptions( thread_checker, watcher_options )
             
             #
             
             self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
-            
-            ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
-            
-            self._thread_times_to_check.SetValue( times_to_check )
-            
-            self._thread_check_period.SetValue( check_period )
             
             #
             
@@ -1899,14 +1891,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'default number of times to check: ', self._thread_times_to_check ) )
-            rows.append( ( 'default wait between checks: ', self._thread_check_period ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
-            
-            thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            thread_checker.AddF( self._thread_watcher_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1923,7 +1908,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
-            HC.options[ 'thread_checker_timings' ] = ( self._thread_times_to_check.GetValue(), self._thread_check_period.GetValue() )
+            
+            self._new_options.SetDefaultThreadWatcherOptions( self._thread_watcher_options.GetValue() )
             
         
     
@@ -6244,6 +6230,72 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+class ManageURLMatchesPanel( ClientGUIScrolledPanels.ManagePanel ):
+    
+    def __init__( self, parent ):
+        
+        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
+        
+        self._url_matches = ClientGUIListCtrl.BetterListCtrl( self, 'manage_url_matches', 15, 30, [ ( 'name', 20 ), ( 'example url', -1 ) ], self._ConvertURLMatchToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        # add, edit, delete buttons
+        # it would be nice to wrap this up in a panel rather than writing it out manually
+        
+        #
+        
+        # load them from the db, populate the listctrl
+        
+        self._original_names = set()
+        # set self._original_names
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._url_matches, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        pass
+        
+    
+    def _ConvertURLMatchToListCtrlTuples( self, url_match ):
+        
+        name = url_match.GetName()
+        example_url = url_match.GetExampleURL()
+        
+        display_tuple = ( name, example_url )
+        sort_tuple = display_tuple
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        pass
+        
+    
+    def _Edit( self ):
+        
+        pass
+        
+    
+    def CommitChanges( self ):
+        
+        datas = self._url_matches.GetData()
+        
+        datas_names = { data.GetName() for data in datas }
+        
+        to_delete = [ name for name in self._original_names if name not in datas_names ]
+        
+        # save datas to db
+        
+        # delete names from db
+        
+
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, missing_locations ):
@@ -6409,3 +6461,4 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
         
+    

@@ -278,7 +278,7 @@ def Parse4chanPostScreen( html ):
         except: return ( 'error', 'unknown error' )
         
     
-def ParseImageboardFileURLFromPost( thread_url, post ):
+def ParseImageboardFileURLFromPost( thread_url, post, source_timestamp ):
     
     url_filename = str( post[ 'tim' ] )
     url_ext = post[ 'ext' ]
@@ -295,7 +295,7 @@ def ParseImageboardFileURLFromPost( thread_url, post ):
         file_md5_base64 = None
         
     
-    return ( file_url, file_md5_base64, file_original_filename )
+    return ( file_url, file_md5_base64, file_original_filename, source_timestamp )
     
 def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
     
@@ -312,7 +312,16 @@ def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
             continue
             
         
-        file_infos.append( ParseImageboardFileURLFromPost( thread_url, post ) )
+        if 'time' in post:
+            
+            source_timestamp = post[ 'time' ]
+            
+        else:
+            
+            source_timestamp = HydrusData.GetNow()
+            
+        
+        file_infos.append( ParseImageboardFileURLFromPost( thread_url, post, source_timestamp ) )
         
         if 'extra_files' in post:
             
@@ -323,7 +332,7 @@ def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
                     continue
                     
                 
-                file_infos.append( ParseImageboardFileURLFromPost( thread_url, extra_file ) )
+                file_infos.append( ParseImageboardFileURLFromPost( thread_url, extra_file, source_timestamp ) )
                 
             
         

@@ -766,6 +766,16 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
+    def PageHidden( self ):
+        
+        pass
+        
+    
+    def PageShown( self ):
+        
+        pass
+        
+    
     def SetSearchFocus( self, page_key ):
         
         pass
@@ -1330,10 +1340,36 @@ class ManagementPanelImporter( ManagementPanel ):
         
         self._import_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
         
+        self._controller.sub( self, 'RefreshSort', 'refresh_query' )
+        
     
     def _UpdateStatus( self ):
         
         raise NotImplementedError()
+        
+    
+    def PageHidden( self ):
+        
+        ManagementPanel.PageHidden( self )
+        
+        self._import_update_timer.Stop()
+        
+    
+    def PageShown( self ):
+        
+        ManagementPanel.PageShown( self )
+        
+        self._UpdateStatus()
+        
+        self._import_update_timer.Start()
+        
+    
+    def RefreshSort( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._sort_by.BroadcastSort()
+            
         
     
     def TIMEREventImportUpdate( self, event ):
@@ -2213,12 +2249,12 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._options_panel = wx.Panel( self._thread_watcher_panel )
         
-        self._pause_button = wx.BitmapButton( self._options_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
-        
         #
         
-        imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'imports' )
+        imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
+        
+        self._files_pause_button = wx.BitmapButton( imports_panel, bitmap = CC.GlobalBMPs.pause )
+        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( imports_panel )
         self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( imports_panel, self._controller )
@@ -2228,52 +2264,58 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         checker_panel = ClientGUICommon.StaticBox( self._options_panel, 'checker' )
         
+        self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel )
+        
+        self._thread_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
+        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseThread )
+        
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel )
-        self._thread_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
-        
-        ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
-        
-        self._thread_times_to_check = wx.SpinCtrl( checker_panel, size = ( 60, -1 ), min = 0, max = 65536 )
-        self._thread_times_to_check.SetValue( times_to_check )
-        self._thread_times_to_check.Bind( wx.EVT_SPINCTRL, self.EventTimesToCheck )
-        
-        self._thread_check_period = ClientGUICommon.TimeDeltaButton( checker_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
-        self._thread_check_period.SetValue( check_period )
-        self._thread_check_period.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventCheckPeriod )
         
         self._thread_check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
+        
+        self._watcher_options_button = ClientGUICommon.BetterButton( checker_panel, 'edit check timings', self._EditWatcherOptions )
+        
+        self._thread_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
         
         #
         
         self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
         
-        ( thread_url, file_import_options, tag_import_options, times_to_check, check_period ) = self._thread_watcher_import.GetOptions()
+        ( thread_url, file_import_options, tag_import_options ) = self._thread_watcher_import.GetOptions()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
         self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
         
         #
         
-        imports_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        
+        hbox.AddF( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
+        
+        imports_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         imports_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         imports_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        hbox_1 = wx.WrapSizer( wx.HORIZONTAL )
+        #
         
-        hbox_1.AddF( ClientGUICommon.BetterStaticText( checker_panel, label = 'checking ' ), CC.FLAGS_VCENTER )
-        hbox_1.AddF( self._thread_times_to_check, CC.FLAGS_VCENTER )
-        hbox_1.AddF( ClientGUICommon.BetterStaticText( checker_panel, label = ' more times, every ' ), CC.FLAGS_VCENTER )
-        hbox_1.AddF( self._thread_check_period, CC.FLAGS_VCENTER )
-        hbox_1.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
+        gridbox = wx.FlexGridSizer( 0, 2 )
         
-        checker_panel.AddF( self._watcher_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox.AddGrowableCol( 0, 1 )
+        
+        gridbox.AddF( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        gridbox.AddF( self._thread_pause_button, CC.FLAGS_LONE_BUTTON )
+        gridbox.AddF( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        gridbox.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
+        
+        checker_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        checker_panel.AddF( self._watcher_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.AddF( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.AddF( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
         vbox.AddF( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2302,8 +2344,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         
-        self._controller.sub( self, 'DecrementTimesToCheck', 'decrement_times_to_check' )
-        
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
@@ -2315,10 +2355,28 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._tag_import_options.SetOptions( tag_import_options )
         
-        self._thread_times_to_check.SetValue( times_to_check )
-        self._thread_check_period.SetValue( check_period )
-        
         self._UpdateStatus()
+        
+    
+    def _EditWatcherOptions( self ):
+        
+        watcher_options = self._thread_watcher_import.GetWatcherOptions()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self._watcher_options_button, 'edit check timings' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditWatcherOptions( dlg, watcher_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_watcher_options = panel.GetValue()
+                
+                self._thread_watcher_import.SetWatcherOptions( new_watcher_options )
+                
+                self._UpdateStatus()
+                
+            
         
     
     def _UpdateStatus( self ):
@@ -2344,36 +2402,62 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 
             
         
-        ( current_action, watcher_status, check_now, paused ) = self._thread_watcher_import.GetStatus()
+        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, check_now, thread_paused ) = self._thread_watcher_import.GetStatus()
         
-        self._current_action.SetLabelText( current_action )
-        
-        if paused:
+        if files_paused:
             
-            if self._thread_times_to_check.GetValue() > 0 or check_now:
+            if current_action == '':
                 
-                watcher_status = 'paused'
+                current_action = 'paused'
+                
+            else:
+                
+                current_action = 'pausing, ' + current_action
                 
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.play:
                 
-                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                self._files_pause_button.SetBitmap( CC.GlobalBMPs.play )
                 
             
         else:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
                 
-                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                self._files_pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                
+            
+        
+        self._current_action.SetLabelText( current_action )
+        
+        self._file_velocity_status.SetLabelText( file_velocity_status )
+        
+        if thread_paused:
+            
+            if watcher_status == '':
+                
+                watcher_status = 'paused'
+                
+            
+            if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._thread_pause_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            if watcher_status == '':
+                
+                watcher_status = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
+                
+            
+            if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._thread_pause_button.SetBitmap( CC.GlobalBMPs.pause )
                 
             
         
         self._watcher_status.SetLabelText( watcher_status )
-        
-        if current_action == '' and paused:
-            
-            current_action = 'paused'
-            
         
         if check_now:
             
@@ -2385,18 +2469,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
     
-    def DecrementTimesToCheck( self, page_key ):
-        
-        if page_key == self._page_key:
-            
-            current_value = self._thread_times_to_check.GetValue()
-            
-            new_value = max( 0, current_value - 1 )
-            
-            self._thread_times_to_check.SetValue( new_value )
-            
-        
-    
     def EventCheckNow( self, event ):
         
         self._thread_watcher_import.CheckNow()
@@ -2404,11 +2476,18 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def EventCheckPeriod( self, event ):
+    def EventPauseFiles( self, event ):
         
-        check_period = self._thread_check_period.GetValue()
+        self._thread_watcher_import.PausePlayFiles()
         
-        self._thread_watcher_import.SetCheckPeriod( check_period )
+        self._UpdateStatus()
+        
+    
+    def EventPauseThread( self, event ):
+        
+        self._thread_watcher_import.PausePlayThread()
+        
+        self._UpdateStatus()
         
     
     def EventKeyDown( self, event ):
@@ -2466,20 +2545,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 event.Skip()
                 
             
-        
-    
-    def EventPause( self, event ):
-        
-        self._thread_watcher_import.PausePlay()
-        
-        self._UpdateStatus()
-        
-    
-    def EventTimesToCheck( self, event ):
-        
-        times_to_check = self._thread_times_to_check.GetValue()
-        
-        self._thread_watcher_import.SetTimesToCheck( times_to_check )
         
     
     def SetSearchFocus( self, page_key ):

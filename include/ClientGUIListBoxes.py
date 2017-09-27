@@ -14,6 +14,225 @@ import HydrusTags
 import os
 import wx
 
+class QueueListBox( wx.Panel ):
+    
+    def __init__( self, parent, data_to_pretty_callable, add_callable, edit_callable ):
+        
+        self._data_to_pretty_callable = data_to_pretty_callable
+        self._add_callable = add_callable
+        self._edit_callable = edit_callable
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._listbox = wx.ListBox( self, style = wx.LB_MULTIPLE )
+        
+        self._up_button = ClientGUICommon.BetterButton( self, u'\u2191', self._Up )
+        
+        self._delete_button = ClientGUICommon.BetterButton( self, 'X', self._Delete )
+        
+        self._down_button = ClientGUICommon.BetterButton( self, u'\u2193', self._Down )
+        
+        self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        buttons_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        buttons_vbox.AddF( self._up_button, CC.FLAGS_VCENTER )
+        buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        buttons_vbox.AddF( self._down_button, CC.FLAGS_VCENTER )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( buttons_vbox, CC.FLAGS_VCENTER )
+        
+        buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons_hbox.AddF( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        buttons_hbox.AddF( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.AddF( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
+        
+    
+    def _Add( self ):
+        
+        ( result, data ) = self._add_callable()
+        
+        if result:
+            
+            self._AddData( data )
+            
+        
+    
+    def _AddData( self, data ):
+        
+        pretty_data = self._data_to_pretty_callable( data )
+        
+        self._listbox.Append( pretty_data, data )
+        
+    
+    def _Delete( self ):
+        
+        indices = self._listbox.GetSelections()
+        
+        indices.sort( reverse = True )
+        
+        if len( indices ) == 0:
+            
+            return
+            
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
+            
+            if dlg_yn.ShowModal() == wx.ID_YES:
+                
+                for i in indices:
+                    
+                    self._listbox.Delete( i )
+                    
+                
+            
+        
+    
+    def _Down( self ):
+        
+        indices = self._listbox.GetSelections()
+        
+        indices.sort( reverse = True )
+        
+        for i in indices:
+            
+            if i > 0:
+                
+                if not self._listbox.IsSelected( i + 1 ): # is the one below not selected?
+                    
+                    self._SwapRows( i, i + 1 )
+                    
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for i in range( self._listbox.GetCount() ):
+            
+            if not self._listbox.IsSelected( i ):
+                
+                continue
+                
+            
+            data = self._listbox.GetClientData( i )
+            
+            ( result, new_data ) = self._edit_callable( data )
+            
+            if result:
+                
+                self._listbox.Delete( i )
+                
+                pretty_new_data = self._data_to_pretty_callable( new_data )
+                
+                self._listbox.Set( pretty_new_data, i, new_data )
+                
+            else:
+                
+                break
+                
+            
+        
+    
+    def _SwapRows( self, index_a, index_b ):
+        
+        data_a = self._listbox.GetClientData( index_a )
+        data_b = self._listbox.GetClientData( index_b )
+        
+        pretty_data_a = self._data_to_pretty_callable( data_a )
+        pretty_data_b = self._data_to_pretty_callable( data_b )
+        
+        self._listbox.Delete( index_a )
+        self._listbox.Insert( pretty_data_b, index_a, data_b )
+        
+        self._listbox.Delete( index_b )
+        self._listbox.Insert( pretty_data_a, index_b, data_a )
+        
+    
+    def _Up( self ):
+        
+        indices = self._listbox.GetSelections()
+        
+        for i in indices:
+            
+            if i > 0:
+                
+                if not self._listbox.IsSelected( i - 1 ): # is the one above not selected?
+                    
+                    self._SwapRows( i, i - 1 )
+                    
+                
+            
+        
+    
+    def AddDatas( self, datas ):
+        
+        for data in datas:
+            
+            self._AddData( data )
+            
+        
+    
+    def Bind( self, event, handler ):
+        
+        self._listbox.Bind( event, handler )
+        
+    
+    def EventSelection( self, event ):
+        
+        if self._listbox.GetSelection() == wx.NOT_FOUND:
+            
+            self._up_button.Disable()
+            self._delete_button.Disable()
+            self._down_button.Disable()
+            
+            self._edit_button.Disable()
+            
+        else:
+            
+            self._up_button.Enable()
+            self._delete_button.Enable()
+            self._down_button.Enable()
+            
+            self._edit_button.Enable()
+            
+        
+        event.Skip()
+        
+    
+    def GetData( self, only_selected = False ):
+        
+        datas = []
+        
+        for i in range( self._listbox.GetCount() ):
+            
+            data = self._listbox.GetClientData( i )
+            
+            datas.append( data )
+            
+        
+        return datas
+        
+    
 class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3
@@ -914,7 +1133,7 @@ class ListBoxTags( ListBox ):
                         
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a parent to this tag.', self._ProcessMenuTagEvent, 'parent' )
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'add parents to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'add siblings to ' + text, 'Add a sibling to this tag.', self._ProcessMenuTagEvent, 'sibling' )
                     
                 
             

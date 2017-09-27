@@ -376,7 +376,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         
         name = obj.GetName()
         
-        current_names = { obj.GetName() for obj in self.GetObjects() }
+        current_names = { o.GetName() for o in self.GetObjects() if o is not obj }
         
         if name in current_names:
             
@@ -492,7 +492,7 @@ class SaneListCtrlPanel( wx.Panel ):
         self._listctrl.Bind( wx.EVT_LIST_DELETE_ITEM, self.EventContentChanged )
         self._listctrl.Bind( wx.EVT_LIST_DELETE_ALL_ITEMS, self.EventContentChanged )
         
-
+    
 class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, delete_key_callback = None, activation_callback = None ):
@@ -881,3 +881,92 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
             
         
+
+class BetterListCtrlPanel( wx.Panel ):
+    
+    def __init__( self, parent ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._listctrl = None
+        
+        self._button_infos = []
+        
+    
+    def _HasSelected( self ):
+        
+        return self._listctrl.HasSelected()
+        
+    
+    def _UpdateButtons( self ):
+        
+        for ( button, enabled_check_func ) in self._button_infos:
+            
+            if enabled_check_func():
+                
+                button.Enable()
+                
+            else:
+                
+                button.Disable()
+                
+            
+        
+    
+    def AddButton( self, label, clicked_func, enabled_only_on_selection = False, enabled_check_func = None ):
+        
+        button = ClientGUICommon.BetterButton( self, label, clicked_func )
+        
+        self._buttonbox.AddF( button, CC.FLAGS_VCENTER )
+        
+        if enabled_only_on_selection:
+            
+            enabled_check_func = self._HasSelected
+            
+        
+        if enabled_check_func is not None:
+            
+            self._button_infos.append( ( button, enabled_check_func ) )
+            
+        
+    
+    def AddWindow( self, window ):
+        
+        self._buttonbox.AddF( window, CC.FLAGS_VCENTER )
+        
+    
+    def EventContentChanged( self, event ):
+        
+        self._UpdateButtons()
+        
+        event.Skip()
+        
+    
+    def EventSelectionChanged( self, event ):
+        
+        self._UpdateButtons()
+        
+        event.Skip()
+        
+    
+    def SetListCtrl( self, listctrl ):
+        
+        self._listctrl = listctrl
+        
+        self._vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._vbox.AddF( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( self._vbox )
+        
+        self._listctrl.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectionChanged )
+        self._listctrl.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectionChanged )
+        
+        self._listctrl.Bind( wx.EVT_LIST_INSERT_ITEM, self.EventContentChanged )
+        self._listctrl.Bind( wx.EVT_LIST_DELETE_ITEM, self.EventContentChanged )
+        self._listctrl.Bind( wx.EVT_LIST_DELETE_ALL_ITEMS, self.EventContentChanged )
+        
+    

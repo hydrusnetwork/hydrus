@@ -628,6 +628,8 @@ def GetDefaultShortcuts():
     
     media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F12, [] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'launch_the_archive_delete_filter' ) )
     
+    media.SetCommand( ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, ord( 'C' ), [ CC.SHORTCUT_MODIFIER_CTRL ] ), ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'copy_file' ) )
+    
     shortcuts.append( media )
     
     main_gui = ClientData.Shortcuts( 'main_gui' )

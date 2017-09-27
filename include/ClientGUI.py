@@ -834,22 +834,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _FlipDarkmode( self ):
-        
-        current_colourset = self._new_options.GetString( 'current_colourset' )
-        
-        if current_colourset == 'darkmode':
-            
-            new_colourset = 'default'
-            
-        elif current_colourset == 'default':
-            
-            new_colourset = 'darkmode'
-            
-        
-        self._new_options.SetString( 'current_colourset', new_colourset )
-        
-    
     def _GenerateMenuInfo( self, name ):
         
         menu = wx.Menu()
@@ -1419,7 +1403,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
             
-            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self._FlipDarkmode )
+            ClientGUIMenus.AppendMenuCheckItem( self, menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self.FlipDarkmode )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
             
@@ -1953,6 +1937,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             elif action == 'unclose_page':
                 
                 self._UnclosePage()
+                
+            elif action == 'flip_darkmode':
+                
+                self.FlipDarkmode()
                 
             elif action == 'show_hide_splitters':
                 
@@ -2970,6 +2958,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self.Destroy()
         
         return True
+        
+    
+    def FlipDarkmode( self ):
+        
+        current_colourset = self._new_options.GetString( 'current_colourset' )
+        
+        if current_colourset == 'darkmode':
+            
+            new_colourset = 'default'
+            
+        elif current_colourset == 'default':
+            
+            new_colourset = 'darkmode'
+            
+        
+        self._new_options.SetString( 'current_colourset', new_colourset )
         
     
     def FlushOutPredicates( self, predicates ):

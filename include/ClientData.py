@@ -1038,6 +1038,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = WatcherOptions( intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+        
+        #
+        
         self._dictionary[ 'suggested_tags' ] = HydrusSerialisable.SerialisableDictionary()
         
         self._dictionary[ 'suggested_tags' ][ 'favourites' ] = {}
@@ -1332,6 +1338,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultThreadWatcherOptions( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ]
+            
+        
+    
     def GetDefaultSort( self ):
         
         with self._lock:
@@ -1582,6 +1596,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = tag_import_options
+            
+        
+    
+    def SetDefaultThreadWatcherOptions( self, watcher_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = watcher_options
             
         
     
@@ -2690,3 +2712,139 @@ class TagCensor( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_CENSOR ] = TagCensor
+
+class WatcherOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_OPTIONS
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._intended_files_per_check = intended_files_per_check
+        self._never_faster_than = never_faster_than
+        self._never_slower_than = never_slower_than
+        self._death_file_velocity = death_file_velocity
+        
+    
+    def _GetCurrentFilesVelocity( self, seed_cache, last_check_time ):
+        
+        ( death_files_found, death_time_delta ) = self._death_file_velocity
+        
+        since = last_check_time - death_time_delta
+        
+        current_files_found = seed_cache.GetNumNewFilesSince( since )
+        
+        if len( seed_cache ) == 0:
+            
+            current_time_delta = death_time_delta
+            
+        else:
+            
+            # when a thread is only 30mins old (i.e. first file was posted 30 mins ago), we don't want to calculate based on a longer delete time delta
+            # we want next check to be like 30mins from now, not 12 hours
+            # so we'll say "5 files in 30 mins" rather than "5 files in 24 hours"
+            
+            earliest_file_time = seed_cache.GetEarliestTimestamp()
+            
+            early_time_delta = max( last_check_time - earliest_file_time, 30 )
+            
+            current_time_delta = min( early_time_delta, death_time_delta )
+            
+        
+        return ( current_files_found, current_time_delta )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity ) = serialisable_info
+        
+    
+    def GetNextCheckTime( self, seed_cache, last_check_time ):
+        
+        if len( seed_cache ) == 0:
+            
+            if last_check_time == 0:
+                
+                return 0 # haven't checked yet, so should check immediately
+                
+            else:
+                
+                return HydrusData.GetNow() + self._never_slower_than
+                
+            
+        else:
+            
+            ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( seed_cache, last_check_time )
+            
+            if current_files_found == 0:
+                
+                check_period = self._never_slower_than
+                
+            else:
+                
+                approx_time_per_file = current_time_delta / current_files_found
+                
+                ideal_check_period = self._intended_files_per_check * approx_time_per_file
+                
+                check_period = min( max( self._never_faster_than, ideal_check_period ), self._never_slower_than )
+                
+            
+            return last_check_time + check_period
+            
+        
+    
+    def GetPrettyCurrentVelocity( self, seed_cache, last_check_time ):
+        
+        if len( seed_cache ) == 0:
+            
+            if last_check_time == 0:
+                
+                pretty_current_velocity = 'no files yet'
+                
+            else:
+                
+                pretty_current_velocity = 'no files, unable to determine velocity'
+                
+            
+        else:
+            
+            ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( seed_cache, last_check_time )
+            
+            pretty_current_velocity = 'at last check, found ' + HydrusData.ConvertIntToPrettyString( current_files_found ) + ' files in previous ' + HydrusData.ConvertTimeDeltaToPrettyString( current_time_delta )
+            
+        
+        return pretty_current_velocity
+        
+    
+    def IsDead( self, seed_cache, last_check_time ):
+        
+        if len( seed_cache ) == 0 and last_check_time == 0:
+            
+            return False
+            
+        else:
+            
+            ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( seed_cache, last_check_time )
+            
+            ( death_files_found, deleted_time_delta ) = self._death_file_velocity
+            
+            current_file_velocity_float = current_files_found / float( current_time_delta )
+            death_file_velocity_float = death_files_found / float( deleted_time_delta )
+            
+            return current_file_velocity_float < death_file_velocity_float
+            
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_OPTIONS ] = WatcherOptions

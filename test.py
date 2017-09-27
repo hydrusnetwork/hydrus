@@ -17,6 +17,7 @@ from include import HydrusTags
 from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
+from include import TestClientData
 from include import TestClientListBoxes
 from include import TestClientNetworking
 from include import TestConstants
@@ -312,6 +313,7 @@ class Controller( object ):
         if run_all or only_run == 'data':
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )

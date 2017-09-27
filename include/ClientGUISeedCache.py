@@ -24,7 +24,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on seed add/remove
         
-        columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 20 ), ( 'last modified', 20 ), ( 'note', 30 ) ]
+        columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'source time', 23 ), ( 'note', 20 ) ]
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'seed_cache', 30, 30, columns, self._ConvertSeedToListCtrlTuples )
         
@@ -59,16 +59,26 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         sort_tuple = self._seed_cache.GetSeedInfo( seed )
         
-        ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note ) = sort_tuple
+        ( seed_index, seed, status, added_timestamp, last_modified_timestamp, source_timestamp, note ) = sort_tuple
         
         pretty_seed_index = HydrusData.ConvertIntToPrettyString( seed_index )
         pretty_seed = HydrusData.ToUnicode( seed )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp ) + ' ago'
         pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp ) + ' ago'
+        
+        if source_timestamp is None:
+            
+            pretty_source_time = 'unknown'
+            
+        else:
+            
+            pretty_source_time = HydrusData.ConvertTimestampToHumanPrettyTime( source_timestamp )
+            
+        
         pretty_note = note.split( os.linesep )[0]
         
-        display_tuple = ( pretty_seed_index, pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_note )
+        display_tuple = ( pretty_seed_index, pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
         
         return ( display_tuple, sort_tuple )
         
@@ -79,7 +89,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for seed in self._list_ctrl.GetData( only_selected = True ):
             
-            ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
+            ( seed_index, seed, status, added_timestamp, last_modified_timestamp, source_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
             
             if note != '':
                 

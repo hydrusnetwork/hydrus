@@ -15,9 +15,12 @@ import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
 import ClientGUITopLevelWindows
+import ClientNetworkingDomain
+import ClientParsing
 import ClientTags
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
@@ -159,6 +162,47 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     def GetValue( self ):
         
         return self._bandwidth_rules_ctrl.GetValue()
+        
+    
+class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, choice_tuples ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._checkboxes = wx.CheckListBox( self )
+        
+        self._checkboxes.SetMinSize( ( 320, 420 ) )
+        
+        for ( i, ( label, data, selected ) ) in enumerate( choice_tuples ):
+            
+            self._checkboxes.Append( label, data )
+            
+            if selected:
+                
+                self._checkboxes.Check( i )
+                
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        datas = []
+        
+        for index in self._checkboxes.GetChecked():
+            
+            datas.append( self._checkboxes.GetClientData( index ) )
+            
+        
+        return datas
         
     
 class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1190,45 +1234,183 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
+class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, choice_tuples ):
+    def __init__( self, parent, string_match ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._checkboxes = wx.CheckListBox( self )
+        self._match_type = ClientGUICommon.BetterChoice( self )
         
-        self._checkboxes.SetMinSize( ( 320, 420 ) )
+        self._match_type.Append( ClientParsing.STRING_MATCH_ANY, 'any characters' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_FIXED, 'fixed characters' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_FLEXIBLE, 'character set' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_REGEX, 'regex' )
         
-        for ( i, ( label, data, selected ) ) in enumerate( choice_tuples ):
-            
-            self._checkboxes.Append( label, data )
-            
-            if selected:
-                
-                self._checkboxes.Check( i )
-                
-            
+        self._match_value_text_input = wx.TextCtrl( self )
+        
+        self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
+        
+        self._match_value_flexible_input.Append( ClientParsing.ALPHA, 'alphabetic characters (a-zA-Z)' )
+        self._match_value_flexible_input.Append( ClientParsing.ALPHANUMERIC, 'alphanumeric characters (a-zA-Z0-9)' )
+        self._match_value_flexible_input.Append( ClientParsing.NUMERIC, 'numeric characters (0-9)' )
+        
+        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        
+        self._example_string = wx.TextCtrl( self )
+        
+        self._example_string_matches = ClientGUICommon.BetterStaticText( self )
         
         #
         
+        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
+        
+        self._match_type.SetClientData( match_type )
+        
+        if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_flexible_input.SetClientData( match_value )
+            
+        else:
+            
+            self._match_value_flexible_input.SetClientData( ClientParsing.ALPHA )
+            
+            self._match_value_text_input.SetValue( match_value )
+            
+        
+        self._UpdateControls()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'match type: ', self._match_type ) )
+        rows.append( ( 'match text: ', self._match_value_text_input ) )
+        rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
+        rows.append( ( 'minumum allowed number of characters: ', self._min_chars ) )
+        rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        #
+        
+        self._match_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._match_value_text_input.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._match_value_flexible_input.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._min_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._max_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _GetValue( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            match_value = ''
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            match_value = self._match_value_flexible_input.GetChoice()
+            
+        else:
+            
+            match_value = self._match_value_text_input.GetValue()
+            
+        
+        min_chars = self._min_chars.GetValue()
+        max_chars = self._max_chars.GetValue()
+        
+        example_string = self._example_string.GetValue()
+        
+        string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
+        
+        return string_match
+        
+    
+    def _UpdateControls( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Disable()
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Enable()
+            
+        else:
+            
+            self._match_value_text_input.Enable()
+            self._match_value_flexible_input.Disable()
+            
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            self._min_chars.SetValue( None )
+            self._max_chars.SetValue( None )
+            
+            self._min_chars.Disable()
+            self._max_chars.Disable()
+            
+            self._example_string.SetValue( self._match_value_text_input.GetValue() )
+            
+            self._example_string_matches.SetLabelText( '' )
+            
+        else:
+            
+            self._min_chars.Enable()
+            self._max_chars.Enable()
+            
+            string_match = self._GetValue()
+            
+            ( result, reason ) = string_match.Test( self._example_string.GetValue() )
+            
+            if result:
+                
+                self._example_string_matches.SetLabelText( 'Example matches ok!' )
+                self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            else:
+                
+                self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
+                self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
+                
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateControls()
         
     
     def GetValue( self ):
         
-        datas = []
+        string_match = self._GetValue()
         
-        for index in self._checkboxes.GetChecked():
+        ( result, reason ) = string_match.Test( self._example_string.GetValue() )
+        
+        if not result:
             
-            datas.append( self._checkboxes.GetClientData( index ) )
+            wx.MessageBox( 'Please enter an example text that matches the given rules!' )
+            
+            raise HydrusExceptions.VetoException()
             
         
-        return datas
+        return string_match
         
     
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1673,7 +1855,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateSeedInfo()
         
     
-
 class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_censor ):
@@ -2121,5 +2302,312 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
         tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
         
         return tag_import_options
+        
+    
+class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, url_match ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._name = wx.TextCtrl( self )
+        
+        self._preferred_scheme = ClientGUICommon.BetterChoice( self )
+        
+        self._preferred_scheme.Append( 'http', 'http' )
+        self._preferred_scheme.Append( 'https', 'https' )
+        
+        self._netloc = wx.TextCtrl( self )
+        
+        self._subdomain_is_important = wx.CheckBox( self )
+        
+        #
+        
+        path_components_panel = ClientGUICommon.StaticBox( self, 'path components' )
+        
+        self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, self._ConvertPathComponentToString, self._AddPathComponent, self._EditPathComponent )
+        
+        #
+        
+        parameters_panel = ClientGUICommon.StaticBox( self, 'parameters' )
+        
+        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_panel, 'url_match_path_components', 5, 20, [ ( 'key', 14 ), ( 'value', -1 ) ], self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        
+        # parameter buttons, do it with a new wrapper panel class
+        
+        #
+        
+        self._example_url = wx.TextCtrl( self )
+        
+        self._example_url_matches = ClientGUICommon.BetterStaticText( self )
+        
+        #
+        
+        name = url_match.GetName()
+        
+        self._name.SetValue( name )
+        
+        ( preferred_scheme, netloc, subdomain_is_important, path_components, parameters, example_url ) = url_match.ToTuple()
+        
+        self._preferred_scheme.SelectClientData( preferred_scheme )
+        
+        self._netloc.SetValue( netloc )
+        
+        self._subdomain_is_important.SetValue( subdomain_is_important )
+        
+        self._path_components.AddDatas( path_components )
+        00
+        self._parameters.AddDatas( parameters.items() )
+        
+        self._example_url.SetValue( example_url )
+        
+        self._UpdateControls()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
+        rows.append( ( 'network location: ', self._netloc ) )
+        rows.append( ( 'keep subdomains?: ', self._subdomain_is_important ) )
+        
+        gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
+        
+        rows = []
+        
+        rows.append( ( 'example url: ', self._example_url ) )
+        
+        gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( path_components_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( parameters_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._example_url_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( gridbox_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._preferred_scheme.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._netloc.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._subdomain_is_important.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
+        self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _AddParameters( self ):
+        
+        # throw up a dialog to take key text
+          # warn on key conflict I guess
+        
+        # throw up a string match dialog to take value
+        
+        # add it
+        
+        pass
+        
+    
+    def _AddPathComponent( self ):
+        
+        string_match = ClientParsing.StringMatch()
+        
+        return self._EditPathComponent( string_match )
+        
+    
+    def _ConvertParameterToListCtrlTuples( self, data ):
+        
+        ( key, string_match ) = data
+        
+        pretty_key = key
+        pretty_string_match = string_match.ToUnicode()
+        
+        sort_key = pretty_key
+        sort_string_match = pretty_string_match
+        
+        display_tuple = ( pretty_key, pretty_string_match )
+        sort_tuple = ( sort_key, sort_string_match )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ConvertPathComponentToString( self, path_component ):
+        
+        return path_component.ToUnicode()
+        
+    
+    def _DeleteParameters( self ):
+        
+        # ask for certain, then do it
+        
+        pass
+        
+    
+    def _EditParameters( self ):
+        
+        # for each in list, throw up dialog for key, value
+        # delete and readd
+        # break on cancel, etc...
+        # sort at the end
+        
+        pass
+        
+    
+    def _EditPathComponent( self, string_match ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
+            
+            panel = EditStringMatchPanel( dlg, string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.Showmodal() == wx.ID_OK:
+                
+                new_string_match = panel.GetValue()
+                
+                return ( True, new_string_match )
+                
+            else:
+                
+                return ( False, None )
+                
+            
+        
+    
+    def _GetValue( self ):
+        
+        name = self._name.GetValue()
+        preferred_scheme = self._preferred_scheme.GetChoice()
+        netloc = self._netloc.GetValue()
+        subdomain_is_important = self._subdomain_is_important.GetValue()
+        path_components = self._path_components.GetData()
+        parameters = self._parameters.GetData()
+        example_url = self._example_url.GetValue()
+        
+        url_match = ClientNetworkingDomain.URLMatch( name, preferred_scheme = preferred_scheme, netloc = netloc, subdomain_is_important = subdomain_is_important, path_components = path_components, parameters = parameters, example_url = example_url )
+        
+        return url_match
+        
+    
+    def _UpdateControls( self ):
+        
+        url_match = self._GetValue()
+        
+        ( result, reason ) = url_match.Test( self._example_url.GetValue() )
+        
+        if result:
+            
+            self._example_url_matches.SetLabelText( 'Example matches ok!' )
+            self._example_url_matches.SetForegroundColour( ( 0, 128, 0 ) )
+            
+        else:
+            
+            self._example_url_matches.SetLabelText( 'Example does not match - ' + reason )
+            self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateControls()
+        
+    
+    def GetValue( self ):
+        
+        url_match = self._GetValue()
+        
+        ( result, reason ) = url_match.Test( self._example_url.GetValue() )
+        
+        if not result:
+            
+            wx.MessageBox( 'Please enter an example url that matches the given rules!' )
+            
+            raise HydrusExceptions.VetoException()
+            
+        
+        return url_match
+        
+    
+class EditWatcherOptions( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, watcher_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
+        help_button.SetToolTipString( 'Show help regarding these checker options.' )
+        
+        # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
+        # or indeed this could just take the seed cache and last check of the caller, if there is one
+        # this would be more useful to the user, to know 'right, on ok, it'll refresh in 30 mins'
+        
+        self._intended_files_per_check = wx.SpinCtrl( self, min = 1, max = 1000 )
+        
+        self._never_faster_than = ClientGUICommon.TimeDeltaCtrl( self, min = 30, days = True, hours = True, minutes = True, seconds = True )
+        
+        self._never_slower_than = ClientGUICommon.TimeDeltaCtrl( self, min = 600, days = True, hours = True, minutes = True )
+        
+        self._death_file_velocity = ClientGUICommon.VelocityCtrl( self, min_time_delta = 60, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
+        
+        #
+        
+        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = watcher_options.ToTuple()
+        
+        self._intended_files_per_check.SetValue( intended_files_per_check )
+        self._never_faster_than.SetValue( never_faster_than )
+        self._never_slower_than.SetValue( never_slower_than )
+        self._death_file_velocity.SetValue( death_file_velocity )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'intended new files per check: ', self._intended_files_per_check ) )
+        rows.append( ( 'stop checking if new files found falls below: ', self._death_file_velocity ) )
+        rows.append( ( 'never check faster than once per: ', self._never_faster_than ) )
+        rows.append( ( 'never check slower than once per: ', self._never_slower_than ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
+        
+        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
+        
+        help_hbox.AddF( st, CC.FLAGS_VCENTER )
+        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        
+        vbox.AddF( help_hbox, CC.FLAGS_LONE_BUTTON )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ShowHelp( self ):
+        
+        help = 'PROTIP: Do not change anything here unless you understand what it means!'
+        help += os.linesep * 2
+        help += 'After its initialisation check, the checker times future checks so that it will probably find the same specified number of new files each time. When files are being posted frequently, it will check more often. When things are slow, it will slow down as well.'
+        help += os.linesep * 2
+        help += 'For instance, if it were set to try for 5 new files with every check, and at the last check it knew that the last 24 hours had produced 10 new files, it would check again 12 hours later. When that check was done and any new files found, it would then recalculate and repeat the process.'
+        help += os.linesep * 2
+        help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have been a rush of new files, hit the \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
+        
+        wx.MessageBox( help )
+        
+    
+    def GetValue( self ):
+        
+        intended_files_per_check = self._intended_files_per_check.GetValue()
+        never_faster_than = self._never_faster_than.GetValue()
+        never_slower_than = self._never_slower_than.GetValue()
+        death_file_velocity = self._death_file_velocity.GetValue()
+        
+        return ClientData.WatcherOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
         
     

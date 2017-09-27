@@ -2472,7 +2472,15 @@ class NetworkJob( object ):
     
     def WaitUntilDone( self ):
         
-        self._is_done_event.wait()
+        while True:
+            
+            self._is_done_event.wait( 5 )
+            
+            if self.IsDone():
+                
+                break
+                
+            
         
         with self._lock:
             

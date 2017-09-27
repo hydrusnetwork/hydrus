@@ -1026,19 +1026,35 @@ STRING_MATCH_ANY = 3
 ALPHA = 0
 ALPHANUMERIC = 1
 NUMERIC = 2
-# make it serialisable as well
-class StringMatch( object ):
+
+class StringMatch( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, match_type = STRING_MATCH_FIXED, match_value = 'post' ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, match_type = STRING_MATCH_FIXED, match_value = 'post', min_chars = None, max_chars = None, example_string = 'post' ):
         
+        HydrusSerialisable.SerialisableBase.__init__( self )
         # make a gui control that accepts one of these. displays expected input on the right and colours red/green (and does isvalid) based on current input
         # think about replacing the veto stuff above with this.
         
         self._match_type = match_type
         self._match_value = match_value
         
-        self._min_chars = None
-        self._max_chars = None
+        self._min_chars = min_chars
+        self._max_chars = max_chars
+        
+        self._example_string = example_string
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string ) = serialisable_info
         
     
     def SetMaxChars( self, max_chars ):
@@ -1059,12 +1075,12 @@ class StringMatch( object ):
         
         if self._min_chars is not None and text_len < self._min_chars:
             
-            return ( False, presentation_text + ' had too few characters' )
+            return ( False, presentation_text + ' had fewer than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
             
         
         if self._max_chars is not None and text_len > self._max_chars:
             
-            return ( False, presentation_text + ' had too many characters' )
+            return ( False, presentation_text + ' had more than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
             
         
         if self._match_type == STRING_MATCH_FIXED:
@@ -1105,7 +1121,7 @@ class StringMatch( object ):
                 fail_reason = ' did not match "' + r + '"'
                 
             
-            if re.search( r, text ) is None:
+            if re.search( r, text, flags = re.UNICODE ) is None:
                 
                 return ( False, presentation_text + fail_reason )
                 
@@ -1120,3 +1136,64 @@ class StringMatch( object ):
             
         
     
+    def ToUnicode( self ):
+        
+        result = ''
+        
+        if self._min_chars is not None:
+            
+            if self._max_chars is not None:
+                
+                result += 'between ' + HydrusData.ToUnicode( self._min_chars ) + ' and ' + HydrusData.ToUnicode( self._max_chars ) + ' '
+                
+            else:
+                
+                result += 'at least ' + HydrusData.ToUnicode( self._min_chars ) + ' '
+                
+            
+        else:
+            
+            result += 'at most ' + HydrusData.ToUnicode( self._max_chars ) + ' '
+            
+        
+        show_example = True
+        
+        if self._match_type == STRING_MATCH_ANY:
+            
+            result += 'characters'
+            
+        elif self._match_type == STRING_MATCH_FIXED:
+            
+            result += self._match_value
+            
+            show_example = False
+            
+        elif self._match_type == STRING_MATCH_FLEXIBLE:
+            
+            if self._match_value == ALPHA:
+                
+                result += 'alphabetical characters'
+                
+            elif self._match_value == ALPHANUMERIC:
+                
+                result += 'alphanumeric characters'
+                
+            elif self._match_value == NUMERIC:
+                
+                result += 'numeric characters'
+                
+            
+        elif self._match_type == STRING_MATCH_REGEX:
+            
+            result += 'characters, matching regex "' + self._match_value + '"'
+            
+        
+        if show_example:
+            
+            result += ', such as ' + self._example_string
+            
+        
+        return result
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH ] = StringMatch

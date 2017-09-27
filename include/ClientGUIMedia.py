@@ -118,8 +118,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         HG.client_controller.sub( self, 'SetFocussedMedia', 'set_focus' )
-        HG.client_controller.sub( self, 'PageHidden', 'page_hidden' )
-        HG.client_controller.sub( self, 'PageShown', 'page_shown' )
         HG.client_controller.sub( self, 'Collect', 'collect_media' )
         HG.client_controller.sub( self, 'Sort', 'sort_media' )
         HG.client_controller.sub( self, 'FileDumped', 'file_dumped' )
@@ -547,34 +545,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         num_selected = self._GetNumSelected()
         
-        ( sorted_mime_classes, selected_mime_classes ) = self._GetSortedSelectedMimeClasses()
-        
-        if sorted_mime_classes == set( [ 'image' ] ):
-            
-            num_files_descriptor = 'image'
-            
-        elif sorted_mime_classes == set( [ 'video' ] ):
-            
-            num_files_descriptor = 'video'
-            
-        else:
-            
-            num_files_descriptor = 'file'
-            
-        
-        if selected_mime_classes == set( [ 'image' ] ):
-            
-            selected_files_descriptor = 'image'
-            
-        elif selected_mime_classes == set( [ 'video' ] ):
-            
-            selected_files_descriptor = 'video'
-            
-        else:
-            
-            selected_files_descriptor = 'file'
-            
-        
+        ( num_files_descriptor, selected_files_descriptor ) = self._GetSortedSelectedMimeDescriptors()
         
         if num_files == 1:
             
@@ -585,27 +556,20 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             num_files_string = HydrusData.ConvertIntToPrettyString( num_files ) + ' ' + num_files_descriptor + 's'
             
         
-        if selected_files_descriptor == num_files_descriptor:
-            
-            selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected )
-            
-        else:
-            
-            if num_selected == 1:
-                
-                selected_files_string = '1 ' + selected_files_descriptor
-                
-            else:
-                
-                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected ) + ' ' + selected_files_descriptor + 's'
-                
-            
-        
         s = num_files_string # 23 files
         
         if num_selected > 0:
             
             s += ' - '
+            
+            if num_selected == 1 or selected_files_descriptor == num_files_descriptor:
+                
+                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected )
+                
+            else:
+                
+                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected ) + ' ' + selected_files_descriptor + 's'
+                
             
             if num_selected == 1: # 23 files - 1 video selected, file_info
                 
@@ -617,9 +581,18 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 num_inbox = sum( ( media.GetNumInbox() for media in self._selected_media ) )
                 
-                if num_inbox == num_selected: inbox_phrase = 'all in inbox, '
-                elif num_inbox == 0: inbox_phrase = 'all archived, '
-                else: inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+                if num_inbox == num_selected:
+                    
+                    inbox_phrase = 'all in inbox, '
+                    
+                elif num_inbox == 0:
+                    
+                    inbox_phrase = 'all archived, '
+                    
+                else:
+                    
+                    inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+                    
                 
                 pretty_total_size = self._GetPrettyTotalSelectedSize()
                 
@@ -706,57 +679,63 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def _GetSortedSelectedMimeClasses( self ):
+    def _GetSortedSelectedMimeDescriptors( self ):
         
-        sorted_mimes = set()
-        
-        for media in self._sorted_media:
+        def GetDescriptor( classes ):
             
-            mime = media.GetMime()
+            if len( classes ) == 0:
+                
+                return 'file'
+                
             
-            if mime in HC.IMAGES:
+            if len( classes ) == 1:
                 
-                sorted_mimes.add( 'image' )
+                ( mime, ) = classes
                 
-            elif mime in HC.VIDEO:
+                return HC.mime_string_lookup[ mime ]
                 
-                sorted_mimes.add( 'video' )
+            
+            if len( classes.difference( HC.IMAGES ) ) == 0:
                 
-            elif mime in HC.AUDIO:
+                return 'image'
                 
-                sorted_mimes.add( 'audio' )
+            elif len( classes.difference( HC.VIDEO ) ) == 0:
+                
+                return 'video'
+                
+            elif len( classes.difference( HC.AUDIO ) ) == 0:
+                
+                return 'audio file'
                 
             else:
                 
-                sorted_mimes.add( 'misc' )
+                return 'file'
                 
             
         
-        selected_mimes = set()
-        
-        for media in self._selected_media:
+        if len( self._sorted_media ) > 1000:
             
-            mime = media.GetMime()
+            sorted_mime_descriptor = 'file'
             
-            if mime in HC.IMAGES:
-                
-                selected_mimes.add( 'image' )
-                
-            elif mime in HC.VIDEO:
-                
-                selected_mimes.add( 'video' )
-                
-            elif mime in HC.AUDIO:
-                
-                selected_mimes.add( 'audio' )
-                
-            else:
-                
-                selected_mimes.add( 'misc' )
-                
+        else:
+            
+            sorted_mimes = { media.GetMime() for media in self._sorted_media }
+            
+            sorted_mime_descriptor = GetDescriptor( sorted_mimes )
             
         
-        return ( sorted_mimes, selected_mimes )
+        if len( self._selected_media ) > 1000:
+            
+            selected_mime_descriptor = 'file'
+            
+        else:
+            
+            selected_mimes = { media.GetMime() for media in self._selected_media }
+            
+            selected_mime_descriptor = GetDescriptor( selected_mimes )
+            
+        
+        return ( sorted_mime_descriptor, selected_mime_descriptor )
         
     
     def _HitMedia( self, media, ctrl, shift ):
@@ -1031,7 +1010,23 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             action = data
             
-            if action == 'manage_file_ratings':
+            if action == 'copy_bmp':
+                
+                self._CopyBMPToClipboard()
+                
+            elif action == 'copy_file':
+                
+                self._CopyFilesToClipboard()
+                
+            elif action == 'copy_path':
+                
+                self._CopyPathsToClipboard()
+                
+            elif action == 'copy_sha256_hash':
+                
+                self._CopyHashesToClipboard( 'sha256' )
+                
+            elif action == 'manage_file_ratings':
                 
                 self._ManageRatings()
                 
@@ -1586,22 +1581,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def PageHidden( self, page_key ):
+    def PageHidden( self ):
         
-        if page_key == self._page_key:
-            
-            HG.client_controller.pub( 'preview_changed', self._page_key, None )
-            
+        HG.client_controller.pub( 'preview_changed', self._page_key, None )
         
     
-    def PageShown( self, page_key ):
+    def PageShown( self ):
         
-        if page_key == self._page_key:
-            
-            HG.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
-            
-            self._PublishSelectionChange()
-            
+        HG.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
+        
+        self._PublishSelectionChange()
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -3594,7 +3583,6 @@ class MediaPanelThumbnails( MediaPanel ):
         ( wx.ACCEL_SHIFT, wx.WXK_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'key_shift_right' ) ),
         ( wx.ACCEL_SHIFT, wx.WXK_NUMPAD_RIGHT, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'key_shift_right' ) ),
         ( wx.ACCEL_CTRL, ord( 'A' ), ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'select', 'all' ) ),
-        ( wx.ACCEL_CTRL, ord( 'c' ), ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'copy_files' )  ),
         ( wx.ACCEL_CTRL, wx.WXK_SPACE, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'ctrl-space' )  )
         ]
         

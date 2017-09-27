@@ -230,7 +230,7 @@ def ConvertTimeDeltaToPrettyString( seconds ):
         return 'per month'
         
     
-    if seconds > 60:
+    if seconds >= 60:
         
         seconds = int( seconds )
         
@@ -277,7 +277,14 @@ def ConvertTimeDeltaToPrettyString( seconds ):
             minutes = seconds / 60
             seconds = seconds % 60
             
-            result = '%d' % minutes + ' minutes'
+            if minutes == 1:
+                
+                result = '1 minute'
+                
+            else:
+                
+                result = '%d' % minutes + ' minutes'
+                
             
             if seconds > 0:
                 

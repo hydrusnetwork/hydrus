@@ -1171,6 +1171,22 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             self._paths_cache.AddSeeds( paths )
             
+            for path in paths:
+                
+                try:
+                    
+                    s = os.stat( path )
+                    
+                    source_time = min( s.st_mtime, s.st_ctime )
+                    
+                    self._paths_cache.UpdateSeedSourceTime( path, source_time )
+                    
+                except:
+                    
+                    pass
+                    
+                
+            
         
         self._file_import_options = file_import_options
         self._paths_to_tags = paths_to_tags
@@ -2438,7 +2454,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self ):
         
@@ -2496,20 +2512,6 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         self._dirty = False
         
     
-    def _GetSeedTuple( self, seed ):
-        
-        seed_index = self._seeds_to_indices[ seed ]
-        
-        seed_info = self._seeds_to_info[ seed ]
-        
-        status = seed_info[ 'status' ]
-        added_timestamp = seed_info[ 'added_timestamp' ]
-        last_modified_timestamp = seed_info[ 'last_modified_timestamp' ]
-        note = seed_info[ 'note' ]
-        
-        return ( seed_index, seed, status, added_timestamp, last_modified_timestamp, note )
-        
-    
     def _GetSerialisableInfo( self ):
         
         with self._lock:
@@ -2525,6 +2527,20 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             return serialisable_info
             
+        
+    
+    def _GetSourceTimestamp( self, seed ):
+        
+        seed_info = self._seeds_to_info[ seed ]
+        
+        source_timestamp = seed_info[ 'source_timestamp' ]
+        
+        if source_timestamp is None:
+            
+            source_timestamp = seed_info[ 'added_timestamp' ] # decent fallback compromise
+            
+        
+        return source_timestamp
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -2680,6 +2696,20 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            new_serialisable_info = []
+            
+            for ( seed, seed_info ) in old_serialisable_info:
+                
+                seed_info[ 'source_timestamp' ] = None
+                
+                new_serialisable_info.append( ( seed, seed_info ) )
+                
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def AddSeeds( self, seeds ):
         
@@ -2719,6 +2749,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 seed_info[ 'status' ] = CC.STATUS_UNKNOWN
                 seed_info[ 'added_timestamp' ] = now
                 seed_info[ 'last_modified_timestamp' ] = now
+                seed_info[ 'source_timestamp' ] = None
                 seed_info[ 'note' ] = ''
                 
                 self._seeds_to_info[ seed ] = seed_info
@@ -2774,6 +2805,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, ( seed, ) )
         
     
+    def GetEarliestTimestamp( self ):
+        
+        with self._lock:
+            
+            earliest_timestamp = min( ( self._GetSourceTimestamp( seed ) for seed in self._seeds_ordered ) )
+            
+        
+        return earliest_timestamp
+        
+    
     def GetNextSeed( self, status ):
         
         with self._lock:
@@ -2790,6 +2831,26 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         return None
+        
+    
+    def GetNumNewFilesSince( self, since ):
+        
+        num_files = 0
+        
+        with self._lock:
+            
+            for seed in self._seeds_ordered:
+                
+                source_timestamp = self._GetSourceTimestamp( seed )
+                
+                if source_timestamp > since:
+                    
+                    num_files += 1
+                    
+                
+            
+        
+        return num_files
         
     
     def GetSeedCacheKey( self ):
@@ -2855,7 +2916,17 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._GetSeedTuple( seed )
+            seed_index = self._seeds_to_indices[ seed ]
+            
+            seed_info = self._seeds_to_info[ seed ]
+            
+            status = seed_info[ 'status' ]
+            added_timestamp = seed_info[ 'added_timestamp' ]
+            last_modified_timestamp = seed_info[ 'last_modified_timestamp' ]
+            source_timestamp = seed_info[ 'source_timestamp' ]
+            note = seed_info[ 'note' ]
+            
+            return ( seed_index, seed, status, added_timestamp, last_modified_timestamp, source_timestamp, note )
             
         
     
@@ -2946,6 +3017,18 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, seeds_to_delete )
+        
+    
+    def UpdateSeedSourceTime( self, seed, source_timestamp ):
+        
+        # this is ugly--this should all be moved to the seed when it becomes a cleverer object, rather than jimmying it through the cache
+        
+        with self._lock:
+            
+            seed_info = self._seeds_to_info[ seed ]
+            
+            seed_info[ 'source_timestamp' ] = source_timestamp
+            
         
     
     def UpdateSeedStatus( self, seed, status, note = '', exception = None ):
@@ -3892,7 +3975,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     MIN_CHECK_PERIOD = 30
     
@@ -3906,17 +3989,16 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
         
-        ( times_to_check, check_period ) = HC.options[ 'thread_checker_timings' ]
-        
         self._thread_url = ''
         self._urls_cache = SeedCache()
         self._urls_to_filenames = {}
         self._urls_to_md5_base64 = {}
+        self._watcher_options = new_options.GetDefaultThreadWatcherOptions()
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
-        self._times_to_check = times_to_check
-        self._check_period = check_period
-        self._last_time_checked = 0
+        self._last_check_time = 0
+        
+        self._next_check_time = None
         
         self._download_control_file_set = None
         self._download_control_file_clear = None
@@ -3924,10 +4006,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._download_control_thread_clear = None
         
         self._check_now = False
-        self._paused = False
+        self._files_paused = False
+        self._thread_paused = False
         
-        self._watcher_status = ''
+        self._file_velocity_status = ''
         self._current_action = ''
+        self._watcher_status = ''
         
         self._thread_key = HydrusData.GenerateKey()
         
@@ -3937,22 +4021,208 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._new_thread_event = threading.Event()
         
     
+    def _CheckThread( self, page_key ):
+        
+        error_occurred = False
+        watcher_status_should_stick = True
+        
+        with self._lock:
+            
+            self._watcher_status = 'checking thread'
+            
+        
+        try:
+            
+            json_url = ClientDownloading.GetImageboardThreadJSONURL( self._thread_url )
+            
+            network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', json_url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            with self._lock:
+                
+                if self._download_control_thread_set is not None:
+                    
+                    wx.CallAfter( self._download_control_thread_set, network_job )
+                    
+                
+            
+            try:
+                
+                network_job.WaitUntilDone()
+                
+            finally:
+                
+                if self._download_control_thread_clear is not None:
+                    
+                    wx.CallAfter( self._download_control_thread_clear )
+                    
+                
+            
+            raw_json = network_job.GetContent()
+            
+            file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
+            
+            new_urls = []
+            new_urls_set = set()
+            
+            file_urls_to_source_timestamps = {}
+            
+            for ( file_url, file_md5_base64, file_original_filename, source_timestamp ) in file_infos:
+                
+                if not self._urls_cache.HasSeed( file_url ) and not file_url in new_urls_set:
+                    
+                    new_urls.append( file_url )
+                    new_urls_set.add( file_url )
+                    
+                    self._urls_to_filenames[ file_url ] = file_original_filename
+                    
+                    if file_md5_base64 is not None:
+                        
+                        self._urls_to_md5_base64[ file_url ] = file_md5_base64
+                        
+                    
+                    file_urls_to_source_timestamps[ file_url ] = source_timestamp
+                    
+                
+            
+            self._urls_cache.AddSeeds( new_urls )
+            
+            for ( file_url, source_timestamp ) in file_urls_to_source_timestamps.items():
+                
+                self._urls_cache.UpdateSeedSourceTime( file_url, source_timestamp )
+                
+            
+            num_new = len( new_urls )
+            
+            watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
+            watcher_status_should_stick = False
+            
+            if num_new > 0:
+                
+                self._new_files_event.set()
+                
+            
+        except HydrusExceptions.NotFoundException:
+            
+            error_occurred = True
+            
+            watcher_status = 'thread 404'
+            
+        except Exception as e:
+            
+            error_occurred = True
+            
+            watcher_status = HydrusData.ToUnicode( e )
+            
+            HydrusData.PrintException( e )
+            
+        
+        with self._lock:
+            
+            if self._check_now:
+                
+                self._check_now = False
+                
+            
+            self._watcher_status = watcher_status
+            
+            self._last_check_time = HydrusData.GetNow()
+            
+            self._UpdateFileVelocityStatus()
+            
+            self._UpdateNextCheckTime()
+            
+            if error_occurred:
+                
+                self._thread_paused = True
+                
+            
+        
+        if error_occurred:
+            
+            time.sleep( 5 )
+            
+        
+        if not watcher_status_should_stick:
+            
+            time.sleep( 5 )
+            
+            with self._lock:
+                
+                self._watcher_status = ''
+                
+            
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
+        serialisable_watcher_options = self._watcher_options.GetSerialisableTuple()
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, self._times_to_check, self._check_period, self._last_time_checked, self._paused )
+        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused )
+        
+    
+    def _HasThread( self ):
+        
+        return self._thread_url != ''
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, self._times_to_check, self._check_period, self._last_time_checked, self._paused ) = serialisable_info
+        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
+        self._watcher_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watcher_options )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
+        
+    
+    def _UpdateFileVelocityStatus( self ):
+        
+        self._file_velocity_status = self._watcher_options.GetPrettyCurrentVelocity( self._urls_cache, self._last_check_time )
+        
+    
+    def _UpdateNextCheckTime( self ):
+        
+        if self._check_now:
+            
+            self._next_check_time = self._last_check_time + self.MIN_CHECK_PERIOD
+            
+        else:
+            
+            if self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
+                
+                self._watcher_status = 'thread is dead'
+                
+                self._thread_paused = True
+                
+            
+            self._next_check_time = self._watcher_options.GetNextCheckTime( self._urls_cache, self._last_check_time )
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, times_to_check, check_period, last_check_time, paused ) = old_serialisable_info
+            
+            watcher_options = ClientData.WatcherOptions( intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+            
+            serialisable_watcher_options = watcher_options.GetSerialisableTuple()
+            
+            files_paused = paused
+            thread_paused = paused
+            
+            new_serialisable_info = ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def _WorkOnFiles( self, page_key ):
@@ -4139,168 +4409,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         return True
         
     
-    def _WorkOnThread( self, page_key ):
-        
-        error_occurred = False
-        
-        with self._lock:
-            
-            p1 = self._check_now and HydrusData.TimeHasPassed( self._last_time_checked + self.MIN_CHECK_PERIOD )
-            p2 = self._times_to_check > 0 and HydrusData.TimeHasPassed( self._last_time_checked + self._check_period )
-            
-        
-        if p1 or p2:
-            
-            with self._lock:
-                
-                self._watcher_status = 'checking thread'
-                
-            
-            try:
-                
-                json_url = ClientDownloading.GetImageboardThreadJSONURL( self._thread_url )
-                
-                network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', json_url )
-                
-                network_job.OverrideBandwidth()
-                
-                HG.client_controller.network_engine.AddJob( network_job )
-                
-                with self._lock:
-                    
-                    if self._download_control_thread_set is not None:
-                        
-                        wx.CallAfter( self._download_control_thread_set, network_job )
-                        
-                    
-                
-                try:
-                    
-                    network_job.WaitUntilDone()
-                    
-                finally:
-                    
-                    if self._download_control_thread_clear is not None:
-                        
-                        wx.CallAfter( self._download_control_thread_clear )
-                        
-                    
-                
-                raw_json = network_job.GetContent()
-                
-                file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
-                
-                new_urls = []
-                new_urls_set = set()
-                
-                for ( file_url, file_md5_base64, file_original_filename ) in file_infos:
-                    
-                    if not self._urls_cache.HasSeed( file_url ) and not file_url in new_urls_set:
-                        
-                        new_urls.append( file_url )
-                        new_urls_set.add( file_url )
-                        
-                        self._urls_to_filenames[ file_url ] = file_original_filename
-                        
-                        if file_md5_base64 is not None:
-                            
-                            self._urls_to_md5_base64[ file_url ] = file_md5_base64
-                            
-                        
-                    
-                
-                self._urls_cache.AddSeeds( new_urls )
-                
-                num_new = len( new_urls )
-                
-                watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
-                
-                if num_new > 0:
-                    
-                    self._new_files_event.set()
-                    
-                
-            except HydrusExceptions.NotFoundException:
-                
-                error_occurred = True
-                
-                watcher_status = 'thread 404'
-                
-                with self._lock:
-                    
-                    for i in range( self._times_to_check ):
-                        
-                        HG.client_controller.pub( 'decrement_times_to_check', page_key )
-                        
-                    
-                    self._times_to_check = 0
-                    
-                
-            except Exception as e:
-                
-                error_occurred = True
-                
-                watcher_status = HydrusData.ToUnicode( e )
-                
-                HydrusData.PrintException( e )
-                
-            
-            with self._lock:
-                
-                if self._check_now:
-                    
-                    self._check_now = False
-                    
-                else:
-                    
-                    self._times_to_check -= 1
-                    
-                    HG.client_controller.pub( 'decrement_times_to_check', page_key )
-                    
-                
-                self._last_time_checked = HydrusData.GetNow()
-                
-            
-        else:
-            
-            with self._lock:
-                
-                if self._check_now or self._times_to_check > 0:
-                    
-                    if self._check_now:
-                        
-                        delay = self.MIN_CHECK_PERIOD
-                        
-                    else:
-                        
-                        delay = self._check_period
-                        
-                    
-                    watcher_status = 'checking again ' + HydrusData.ConvertTimestampToPrettyPending( self._last_time_checked + delay )
-                    
-                else:
-                    
-                    watcher_status = 'checking finished'
-                    
-                
-            
-        
-        with self._lock:
-            
-            self._watcher_status = watcher_status
-            
-        
-        if error_occurred:
-            
-            time.sleep( 5 )
-            
-        
-    
     def _THREADWorkOnFiles( self, page_key ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
+            if self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -4344,7 +4457,15 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
+            with self._lock:
+                
+                able_to_check = self._HasThread() and not self._thread_paused
+                check_due = HydrusData.TimeHasPassed( self._next_check_time )
+                
+                time_to_check = able_to_check and check_due
+                
+            
+            if not time_to_check or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_thread_event.wait( 5 )
                 
@@ -4352,14 +4473,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    if self._thread_url != '':
-                        
-                        self._WorkOnThread( page_key )
-                        
+                    self._CheckThread( page_key )
                     
-                    time.sleep( 1 )
-                    
-                    # 1s wait here regardless so the text countdown status updates every sec
+                    time.sleep( 5 )
                     
                     HG.client_controller.WaitUntilPubSubsEmpty()
                     
@@ -4381,6 +4497,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._check_now = True
             
+            self._thread_paused = False
+            
+            self._UpdateNextCheckTime()
+            
             self._new_thread_event.set()
             
         
@@ -4391,7 +4511,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             finished = not self._urls_cache.WorkToDo()
             
-            return not finished and not self._paused
+            return not finished and not self._files_paused
             
         
     
@@ -4404,7 +4524,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._thread_url, self._file_import_options, self._tag_import_options, self._times_to_check, self._check_period )
+            return ( self._thread_url, self._file_import_options, self._tag_import_options )
             
         
     
@@ -4412,9 +4532,15 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            finished = not self._urls_cache.WorkToDo()
+            return ( self._current_action, self._files_paused, self._file_velocity_status, self._next_check_time, self._watcher_status, self._check_now, self._thread_paused )
             
-            return ( self._current_action, self._watcher_status, self._check_now, self._paused )
+        
+    
+    def GetWatcherOptions( self ):
+        
+        with self._lock:
+            
+            return self._watcher_options
             
         
     
@@ -4422,26 +4548,34 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._thread_url != ''
+            return self._HasThread()
             
         
     
-    def PausePlay( self ):
+    def PausePlayFiles( self ):
         
         with self._lock:
             
-            self._paused = not self._paused
+            self._files_paused = not self._files_paused
             
             self._new_files_event.set()
-            self._new_thread_event.set()
             
         
     
-    def SetCheckPeriod( self, check_period ):
+    def PausePlayThread( self ):
         
         with self._lock:
             
-            self._check_period = max( self.MIN_CHECK_PERIOD, check_period )
+            if self._thread_paused and self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
+                
+                self._watcher_status = 'thread is dead--hit check now to try to revive'
+                
+            else:
+                
+                self._thread_paused = not self._thread_paused
+                
+                self._new_thread_event.set()
+                
             
         
     
@@ -4489,17 +4623,27 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetTimesToCheck( self, times_to_check ):
+    def SetWatcherOptions( self, watcher_options ):
         
         with self._lock:
             
-            self._times_to_check = times_to_check
+            self._watcher_options = watcher_options
+            
+            self._thread_paused = False
+            
+            self._UpdateNextCheckTime()
+            
+            self._UpdateFileVelocityStatus()
             
             self._new_thread_event.set()
             
         
     
     def Start( self, page_key ):
+        
+        self._UpdateNextCheckTime()
+        
+        self._UpdateFileVelocityStatus()
         
         HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnThread, page_key )
         HG.client_controller.CallToThreadLongRunning( self._THREADWorkOnFiles, page_key )
