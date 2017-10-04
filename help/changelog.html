@@ -8,8 +8,40 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 276</h3></li>
 				<ul>
+					<li>the new thread watcher object will no longer produce check periods shorter than the time since the latest file. this effectively throttles checking on threads that were posting very fast but have since suddenly stopped completely</li>
+					<li>thread watchers now parse their thread subject and place this in the left management panel</li>
+					<li>thread watchers now name their pages based on the thread subject, if one exists</li>
+					<li>an option to permit or deny thread watchers renaming their pages is now under options->downloading</li>
+					<li>dead and 404 threads now disable their checker pause button--to attempt to revive, hit 'check now'</li>
+					<li>thread watchers now preface their page name with [DEAD] or [404] when appropriate</li>
+					<li>misc thread watcher code improvements</li>
+					<li>added basic import support for zip, rar, and 7z files. they get no useful metadata (yet) and have a default 'archive' thumbnail</li>
+					<li>the client will now by default detect and not import decompression bombs before they blat your computer. an option to allow them nonetheless is under options->media</li>
+					<li>the server will now not parse or accept decompression bomb uploads in POST requests</li>
+					<li>added a 'refresh all pages' entry to page of pages's right-click menu</li>
+					<li>added 'send this page down to a new page of pages' to page right-click menu</li>
+					<li>added 'send all pages to the right to a new page of pages' to page right-click menu</li>
+					<li>fixed a page of pages drag and drop issue when dropping the last page of a notebook onto the same notebook tab</li>
+					<li>fixed some index calculation problems when DnDing page tabs to the right on the same notebook</li>
+					<li>sending a refresh event to a 'show selection in a new page' page (which has no search predicates and so cannot 'refresh' its search) will now trigger a sort event (like importers got last week)</li>
+					<li>thumbnails at the bottom of the current view but are at least 90% in view will no longer scroll into view when selected</li>
+					<li>click events will no longer scroll thumbnails that are semi-out of view into view</li>
+					<li>improved how all 'wait until the client ain't so busy' checks work. importers that have a whole slew of 'already in db' to catch up on should now not clog the gui so much</li>
+					<li>similarly, under ideal conditions where nothing is busy, importers will iterate over their files more quickly</li>
+					<li>the network engine now has a 'verification' loop that doesn't do anything yet, and a stub domain engine is generated to be consulted in this</li>
+					<li>wrote some verification code, extended popup messages to support yes/no questions</li>
+					<li>polished some domain engine code</li>
+					<li>fixed an issue where file repositories were not recording deleted files in certain cases</li>
+					<li>all file repositories will be reset on update</li>
+					<li>the date entries on the review bandwidth bar chart now have leading zeroes on 0-9 months to ensure the sort correctly (this month's 2017-10 entry was sorting before 2017-8, wew!)</li>
+					<li>the migrate database dialog now shows approximate total thumbnail size</li>
+					<li>gave the migrate database help a quick pass</li>
+					<li>gave the 'help my db is broke.txt' file a quick pass</li>
+				</ul>
 				<li><h3>version 275</h3></li>
+				<ul>
 					<li>if you hold shift down while dropping a page tab, the client will not 'chase' that page to show it (try it out!)</li>
 					<li>the gui will be more snappy about dealing with drag-and-drop drops (of types file import, page tab rearrange, and url drop), returning the mouse to normal state instantly on drop and dealing with the event in a subsequent action</li>
 					<li>dropping url text on the client will specifically inform the source program not to delete the dragged text (that the operation was copy, not move), if it is interested in hearing that</li>
