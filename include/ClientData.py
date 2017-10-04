@@ -820,6 +820,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         
+        self._dictionary[ 'booleans' ][ 'do_not_import_decompression_bombs' ] = True
+        
         self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
         
         self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
@@ -831,6 +833,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
         self._dictionary[ 'booleans' ][ 'get_tags_if_url_known_and_file_redundant' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'permit_watchers_to_name_their_pages' ] = True
         
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
@@ -1018,6 +1022,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_ZIP ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_7Z ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_RAR ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
         self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
         
@@ -2746,9 +2753,9 @@ class WatcherOptions( HydrusSerialisable.SerialisableBase ):
             # we want next check to be like 30mins from now, not 12 hours
             # so we'll say "5 files in 30 mins" rather than "5 files in 24 hours"
             
-            earliest_file_time = seed_cache.GetEarliestTimestamp()
+            earliest_source_time = seed_cache.GetEarliestSourceTime()
             
-            early_time_delta = max( last_check_time - earliest_file_time, 30 )
+            early_time_delta = max( last_check_time - earliest_source_time, 30 )
             
             current_time_delta = min( early_time_delta, death_time_delta )
             
@@ -2785,6 +2792,8 @@ class WatcherOptions( HydrusSerialisable.SerialisableBase ):
             
             if current_files_found == 0:
                 
+                # this shouldn't typically matter, since a dead checker won't care about next check time
+                # so let's just have a nice safe value in case this is ever asked legit
                 check_period = self._never_slower_than
                 
             else:
@@ -2793,7 +2802,16 @@ class WatcherOptions( HydrusSerialisable.SerialisableBase ):
                 
                 ideal_check_period = self._intended_files_per_check * approx_time_per_file
                 
-                check_period = min( max( self._never_faster_than, ideal_check_period ), self._never_slower_than )
+                # if a thread produced lots of files and then stopped completely for whatever reason, we don't want to keep checking fast
+                # so, we set a lower limit of time since last file upload, neatly doubling our check period in these situations
+                
+                latest_source_time = seed_cache.GetLatestSourceTime()
+                
+                time_since_latest_file = max( last_check_time - latest_source_time, 30 )
+                
+                never_faster_than = max( self._never_faster_than, time_since_latest_file )
+                
+                check_period = min( max( never_faster_than, ideal_check_period ), self._never_slower_than )
                 
             
             return last_check_time + check_period

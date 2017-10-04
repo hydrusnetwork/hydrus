@@ -440,11 +440,37 @@ class HydrusController( object ):
         return self._view_shutdown
         
     
+    def WaitUntilDBEmpty( self ):
+        
+        while True:
+            
+            if self._model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            elif self.db.JobsQueueEmpty() and not self.db.CurrentlyDoingJob():
+                
+                return
+                
+            else:
+                
+                time.sleep( 0.00001 )
+                
+            
+        
+    
+    def WaitUntilModelFree( self ):
+        
+        self.WaitUntilPubSubsEmpty()
+        
+        self.WaitUntilDBEmpty()
+        
+    
     def WaitUntilPubSubsEmpty( self ):
         
         while True:
             
-            if self._view_shutdown:
+            if self._model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
                 

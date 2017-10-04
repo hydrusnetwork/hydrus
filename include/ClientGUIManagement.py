@@ -2244,6 +2244,8 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._thread_watcher_panel = ClientGUICommon.StaticBox( self, 'thread watcher' )
         
+        self._thread_subject = ClientGUICommon.BetterStaticText( self._thread_watcher_panel )
+        
         self._thread_input = wx.TextCtrl( self._thread_watcher_panel, style = wx.TE_PROCESS_ENTER )
         self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
@@ -2321,6 +2323,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._options_panel.SetSizer( vbox )
         
+        self._thread_watcher_panel.AddF( self._thread_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._thread_watcher_panel.AddF( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._thread_watcher_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2387,6 +2390,8 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             if not self._options_panel.IsShown():
                 
+                self._thread_subject.Show()
+                
                 self._options_panel.Show()
                 
                 self.Layout()
@@ -2396,13 +2401,15 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             if self._options_panel.IsShown():
                 
+                self._thread_subject.Hide()
+                
                 self._options_panel.Hide()
                 
                 self.Layout()
                 
             
         
-        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, check_now, thread_paused ) = self._thread_watcher_import.GetStatus()
+        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, thread_subject, thread_status, check_now, thread_paused ) = self._thread_watcher_import.GetStatus()
         
         if files_paused:
             
@@ -2458,6 +2465,26 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
         self._watcher_status.SetLabelText( watcher_status )
+        
+        if thread_status == ClientImporting.THREAD_STATUS_404:
+            
+            self._thread_pause_button.Disable()
+            
+        elif thread_status == ClientImporting.THREAD_STATUS_DEAD:
+            
+            self._thread_pause_button.Disable()
+            
+        else:
+            
+            self._thread_pause_button.Enable()
+            
+        
+        if thread_subject in ( '', 'unknown subject' ):
+            
+            thread_subject = 'no subject'
+            
+        
+        self._thread_subject.SetLabelText( thread_subject )
         
         if check_now:
             
@@ -3364,9 +3391,9 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_job_key = ClientThreading.JobKey()
         
-        if self._management_controller.GetVariable( 'search_enabled' ) and self._management_controller.GetVariable( 'synchronised' ):
+        if self._management_controller.GetVariable( 'search_enabled' ):
             
-            try:
+            if self._management_controller.GetVariable( 'synchronised' ):
                 
                 file_search_context = self._searchbox.GetFileSearchContext()
                 
@@ -3391,7 +3418,10 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 self._controller.pub( 'swap_media_panel', self._page_key, panel )
                 
-            except: wx.MessageBox( traceback.format_exc() )
+            
+        else:
+            
+            self._sort_by.BroadcastSort()
             
         
     

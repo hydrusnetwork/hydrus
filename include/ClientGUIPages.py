@@ -1008,7 +1008,40 @@ class PagesNotebook( wx.Notebook ):
         return None
         
     
-    def _MovePage( self, page_index, delta = None, new_index = None ):
+    def _MovePage( self, page, dest_notebook, insertion_tab_index, follow_dropped_page = False ):
+        
+        source_notebook = page.GetParent()
+        
+        for ( index, p ) in enumerate( source_notebook._GetPages() ):
+            
+            if p == page:
+                
+                source_notebook.RemovePage( index )
+                
+                break
+                
+            
+        
+        if source_notebook != dest_notebook:
+            
+            page.Reparent( dest_notebook )
+            
+            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
+            
+        
+        insertion_tab_index = min( insertion_tab_index, dest_notebook.GetPageCount() )
+        
+        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName(), select = follow_dropped_page )
+        
+        if follow_dropped_page:
+            
+            self.ShowPage( page )
+            
+        
+        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        
+    
+    def _ShiftPage( self, page_index, delta = None, new_index = None ):
         
         new_page_index = page_index
         
@@ -1101,6 +1134,41 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def _SendPageToNewNotebook( self, index ):
+        
+        page = self.GetPage( index )
+        
+        dest_notebook = self.NewPagesNotebook( forced_insertion_index = index, give_it_a_blank_page = False )
+        
+        self._MovePage( page, dest_notebook, 0 )
+        
+    
+    def _SendRightPagesToNewNotebook( self, from_index ):
+        
+        message = 'Send all pages to the right to a new page of pages?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                pages_index = self.GetPageCount()
+                
+                dest_notebook = self.NewPagesNotebook( forced_insertion_index = pages_index, give_it_a_blank_page = False )
+                
+                movees = list( range( from_index + 1, pages_index ) )
+                
+                movees.reverse()
+                
+                for index in movees:
+                    
+                    page = self.GetPage( index )
+                    
+                    self._MovePage( page, dest_notebook, 0 )
+                    
+                
+            
+        
+    
     def _ShowMenu( self, screen_position ):
         
         ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( self, screen_position )
@@ -1113,26 +1181,35 @@ class PagesNotebook( wx.Notebook ):
         
         menu = wx.Menu()
         
-        if tab_index != -1:
+        if click_over_tab:
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             
+            can_go_left = tab_index > 0
+            can_go_right = tab_index < end_index
+            
             if num_pages > 1:
-                
-                can_close_left = tab_index > 0
-                can_close_right = tab_index < end_index
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'close other pages', 'Close all pages but this one.', self._CloseOtherPages, tab_index )
                 
-                if can_close_left:
+                if can_go_left:
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the left', 'Close all pages to the left of this one.', self._CloseLeftPages, tab_index )
                     
                 
-                if can_close_right:
+                if can_go_right:
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'close pages to the right', 'Close all pages to the right of this one.', self._CloseRightPages, tab_index )
                     
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
+            
+            if can_go_right:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1161,23 +1238,32 @@ class PagesNotebook( wx.Notebook ):
                 
                 if can_home:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to left end', 'Move this page all the way to the left.', self._MovePage, tab_index, new_index = 0 )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to left end', 'Move this page all the way to the left.', self._ShiftPage, tab_index, new_index = 0 )
                     
                 
                 if can_move_left:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._MovePage, tab_index, delta = -1 )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move left', 'Move this page one to the left.', self._ShiftPage, tab_index, delta = -1 )
                     
                 
                 if can_move_right:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._MovePage, tab_index, 1 )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move right', 'Move this page one to the right.', self._ShiftPage, tab_index, 1 )
                     
                 
                 if can_end:
                     
-                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._MovePage, tab_index, new_index = end_index )
+                    ClientGUIMenus.AppendMenuItem( self, menu, 'move to right end', 'Move this page all the way to the right.', self._ShiftPage, tab_index, new_index = end_index )
                     
+                
+            
+            page = self.GetPage( tab_index )
+            
+            if isinstance( page, PagesNotebook ) and page.GetPageCount() > 0:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'refresh all this page\'s pages', 'Command every page below this one to refresh.', page.RefreshAllPages )
                 
             
         
@@ -1889,8 +1975,6 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        source_notebook = page.GetParent()
-        
         screen_position = wx.GetMousePosition()
         
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
@@ -1975,46 +2059,13 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        #
-        
         insertion_tab_index = tab_index
-        
-        for ( index, p ) in enumerate( source_notebook._GetPages() ):
-            
-            if p == page:
-                
-                if source_notebook == dest_notebook and index + 1 < insertion_tab_index:
-                    
-                    # we are just about to remove it from earlier in the same list, which shuffles the inserting index up one
-                    
-                    insertion_tab_index -= 1
-                    
-                
-                source_notebook.RemovePage( index )
-                
-                break
-                
-            
-        
-        if source_notebook != dest_notebook:
-            
-            page.Reparent( dest_notebook )
-            
-            self._controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
-            
         
         shift_down = wx.GetKeyState( wx.WXK_SHIFT )
         
         follow_dropped_page = not shift_down
         
-        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName(), select = follow_dropped_page )
-        
-        if follow_dropped_page:
-            
-            self.ShowPage( page )
-            
-        
-        self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        self._MovePage( page, dest_notebook, insertion_tab_index, follow_dropped_page )
         
     
     def PrepareToHide( self ):
@@ -2022,6 +2073,21 @@ class PagesNotebook( wx.Notebook ):
         for page in self._GetPages():
             
             page.PrepareToHide()
+            
+        
+    
+    def RefreshAllPages( self ):
+        
+        for page in self._GetPages():
+            
+            if isinstance( page, PagesNotebook ):
+                
+                page.RefreshAllPages()
+                
+            else:
+                
+                page.RefreshQuery()
+                
             
         
     
@@ -2055,6 +2121,30 @@ class PagesNotebook( wx.Notebook ):
                     
                     break
                     
+                
+            
+        
+    
+    def RenamePage( self, page_key, name ):
+        
+        for page in self._GetPages():
+            
+            if page.GetPageKey() == page_key:
+                
+                if page.GetName() != page_key:
+                    
+                    page.SetName( name )
+                    
+                    self.RefreshPageName( page_key )
+                    
+                
+                return
+                
+            elif isinstance( page, PagesNotebook ) and page.HasPageKey( page_key ):
+                
+                page.RenamePage( page_key, name )
+                
+                return
                 
             
         

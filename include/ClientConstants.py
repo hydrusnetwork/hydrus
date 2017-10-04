@@ -222,6 +222,9 @@ else:
     
 
 media_viewer_capabilities[ HC.APPLICATION_PDF ] = no_support
+media_viewer_capabilities[ HC.APPLICATION_ZIP ] = no_support
+media_viewer_capabilities[ HC.APPLICATION_7Z ] = no_support
+media_viewer_capabilities[ HC.APPLICATION_RAR ] = no_support
 media_viewer_capabilities[ HC.VIDEO_AVI ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_FLV ] = animated_full_support
 media_viewer_capabilities[ HC.VIDEO_MOV ] = animated_full_support

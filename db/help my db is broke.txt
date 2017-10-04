@@ -25,23 +25,23 @@ If your hard drive is fine, please send me the details! If it could be my code b
 
 now what?
 
-If you have a recent backup of your client, it is probably a good idea just to restore from that. A lot of hard drive errors cannot be recovered from. Just copy your backup client.db on top of your corrupted client.db and you are good to go.
+If you have a recent backup of your client, it is probably a good idea just to restore from that. A lot of hard drive errors cannot be recovered from, so if your backup is good, this may be the only way to recover the lost information. Make a copy of your corrupted database somewhere (just in case of other problems or it turns out the backup is also corrupt) and then restore your backup.
 
 If you do not have a backup, you'll have to try recovering what data you can from the corrupted db.
 
-First of all, make a _new_ backup of the corrupted db, just in case something goes wrong with the recovery and we need to try again. You can just copy the client.db, but having a copy of all your files is a great idea if you have the time and space.
-
-FreeFileSync is great for maintaining regular backups. It only takes a few minutes a week to stay safe.
+First of all, make a _new_ backup of the corrupted db, just in case something goes wrong with the recovery and we need to try again. You can just copy the client*.db files, but having a copy of all your media files is a great idea if you have the time and space. Please check the help for more information on making backups--they are important!
 
 
 fix the problem
 
-Open the SQLite shell, which should be in the db directory, called sqlite3 or sqlite3.exe. Type:
+One way to fix common small problems is to instruct the database to copy itself completely. When it comes across damaged data, it will attempt to cleanly correct or nullify the broken links. The new copy often works better than the original.
+
+So: open the SQLite shell, which should be in the db directory, called sqlite3 or sqlite3.exe. Type:
 
 .open client.db
 PRAGMA integrity_check;
 
-The integrity check doesn't correct anything, but it lets you know the magnitude of the problem: if only a couple of issues are found, you may be in luck.
+The integrity check doesn't correct anything, but it lets you know the magnitude of the problem: if only a couple of issues are found, you may be in luck. There are several .db files in the database, and client.db may not be the one broken. If you do not know which file is already broken, try opening the other files in new shells to figure out the extent of the damage. client.mappings.db is usually the largest and busiest file in most people's databases, so it is a common victim.
 
 If it doesn't look too bad, then go:
 
@@ -53,8 +53,8 @@ And wait a bit. It'll report its progress as it tries to copy your db's info to 
 
 Will close the shell.
 
-If the clone doesn't work, contact me and I'll help you manually extract what you can to a new db.
+If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db. Then, try running the client!
 
-If the clone does work, rename client.db to client_old.db and client_new.db to client.db. Then, try running the client!
+If the clone is unsuccessful or it still does not run correctly, contact me (Hydrus Dev) and I'll help you with the next steps. In the worst case, we will manually extract what you can to a new db.
 
 If you still get problems, please contact me. Check help/contact.html for ways to do that.

@@ -380,9 +380,14 @@ class Controller( object ):
         return HG.view_shutdown
         
     
-    def WaitUntilPubSubsEmpty( self ):
+    def WaitUntilModelFree( self ):
         
-        pass
+        return
+        
+    
+    def WaitUntilViewFree( self ):
+        
+        return
         
     
     def Write( self, name, *args, **kwargs ):

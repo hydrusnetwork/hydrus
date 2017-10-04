@@ -112,7 +112,7 @@ def DAEMONDownloadFiles( controller ):
                                 
                                 file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
                                 
-                                controller.WaitUntilPubSubsEmpty()
+                                controller.WaitUntilModelFree()
                                 
                                 automatic_archive = False
                                 exclude_deleted = False # this is the important part here
@@ -209,7 +209,7 @@ def DAEMONMaintainTrash( controller ):
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            controller.WaitUntilPubSubsEmpty()
+            controller.WaitUntilModelFree()
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
@@ -236,7 +236,7 @@ def DAEMONMaintainTrash( controller ):
             
             service_keys_to_content_updates = { CC.TRASH_SERVICE_KEY : [ content_update ] }
             
-            controller.WaitUntilPubSubsEmpty()
+            controller.WaitUntilModelFree()
             
             controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             

@@ -116,6 +116,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
         self._controller.sub( self._statusbar_thread_updater, 'Update', 'refresh_status' )
+        self._controller.sub( self, 'RenamePage', 'rename_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
@@ -2497,7 +2498,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 job_key.SetVariable( 'popup_text_1', 'matched ' + HydrusData.ConvertValueRangeToPrettyString( len( hydrus_hashes ), total_num_hta_hashes ) + ' files' )
                 
-                HG.client_controller.WaitUntilPubSubsEmpty()
+                HG.client_controller.WaitUntilViewFree()
                 
             
             del hta
@@ -2527,7 +2528,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 job_key.SetVariable( 'popup_text_1', 'synced ' + HydrusData.ConvertValueRangeToPrettyString( total_num_processed, len( hydrus_hashes ) ) + ' files' )
                 job_key.SetVariable( 'popup_gauge_1', ( total_num_processed, len( hydrus_hashes ) ) )
                 
-                HG.client_controller.WaitUntilPubSubsEmpty()
+                HG.client_controller.WaitUntilViewFree()
                 
             
             job_key.DeleteVariable( 'popup_gauge_1' )
@@ -2665,7 +2666,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 time.sleep( 0.1 )
                 
-                self._controller.WaitUntilPubSubsEmpty()
+                self._controller.WaitUntilViewFree()
                 
                 result = self._controller.Read( 'pending', service_key )
                 
@@ -3270,6 +3271,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def RefreshStatusBar( self ):
         
         self._RefreshStatusBar()
+        
+    
+    def RenamePage( self, page_key, name ):
+        
+        self._notebook.RenamePage( page_key, name )
         
     
     def SaveLastSession( self ):

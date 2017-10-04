@@ -1620,16 +1620,26 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
         
-        self._current_db_path_st.SetLabelText( 'database (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
+        self._current_db_path_st.SetLabelText( 'database (about ' + HydrusData.ConvertIntToBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
         self._current_install_path_st.SetLabelText( 'install: ' + HC.BASE_DIR )
         
         service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         
         all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         
-        approx_total_client_files = all_local_files_total_size * ( 1.0 + self.RESIZED_RATIO + self.FULLSIZE_RATIO )
+        approx_total_client_files = all_local_files_total_size
+        approx_total_resized_thumbs = all_local_files_total_size * self.RESIZED_RATIO
+        approx_total_fullsize_thumbs = all_local_files_total_size * self.FULLSIZE_RATIO
         
-        self._current_media_paths_st.SetLabelText( 'media (totalling about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + '):' )
+        label_components = []
+        
+        label_components.append( 'media (about ' + HydrusData.ConvertIntToBytes( approx_total_client_files ) + ')' )
+        label_components.append( 'resized thumbnails (about ' + HydrusData.ConvertIntToBytes( approx_total_resized_thumbs ) + ')' )
+        label_components.append( 'full-size thumbnails (about ' + HydrusData.ConvertIntToBytes( approx_total_fullsize_thumbs ) + ')' )
+        
+        label = ', '.join( label_components ) + ':'
+        
+        self._current_media_paths_st.SetLabelText( label )
         
         selected_locations = { l[0] for l in self._current_media_locations_listctrl.GetSelectedClientData() }
         

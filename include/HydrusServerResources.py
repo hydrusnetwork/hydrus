@@ -206,7 +206,14 @@ def ParseFileArguments( path ):
     
     try:
         
-        ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path )
+        mime = HydrusFileHandling.GetMime( path )
+        
+        if mime in HC.IMAGES and HydrusImageHandling.IsDecompressionBomb( path ):
+            
+            raise HydrusExceptions.ForbiddenException( 'File seemed to be a Decompression Bomb!' )
+            
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
         
     except HydrusExceptions.SizeException:
         

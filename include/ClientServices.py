@@ -1062,7 +1062,7 @@ class ServiceRepository( ServiceRestricted ):
         with self._lock:
             
             self._no_requests_reason = ''
-            no_requests_until = 0
+            self._no_requests_until = 0
             
             self._account = HydrusNetwork.Account.GenerateUnknownAccount()
             self._next_account_sync = 0

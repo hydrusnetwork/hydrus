@@ -585,9 +585,8 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 month_dt = datetime.datetime.utcfromtimestamp( month_time )
                 
-                ( year, month ) = ( month_dt.year, month_dt.month )
-                
-                date_str = str( year ) + '-' + str( month )
+                # this generates zero-padded month, to keep this lexicographically sortable at the gui level
+                date_str = month_dt.strftime( '%Y-%m' )
                 
                 result.append( ( date_str, usage ) )
                 

@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientNetworkingDomain
 import collections
 import cPickle
 import cStringIO
@@ -98,25 +99,6 @@ def CombineGETURLWithParameters( url, params_dict ):
     
     return url + '?' + request_string
     
-def ConvertDomainIntoAllApplicableDomains( domain ):
-    
-    domains = []
-    
-    while domain.count( '.' ) > 0:
-        
-        # let's discard www.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
-        startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
-        
-        if not startswith_www:
-            
-            domains.append( domain )
-            
-        
-        domain = '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
-        
-    
-    return domains
-    
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data ):
     
     error_text = data
@@ -170,14 +152,6 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data ):
     e = eclass( error_text )
     
     return ( e, error_text )
-    
-def ConvertURLIntoDomain( url ):
-    
-    parser_result = urlparse.urlparse( url )
-    
-    domain = HydrusData.ToByteString( parser_result.netloc )
-    
-    return domain
     
 def RequestsGet( url, params = None, stream = False, headers = None ):
     
@@ -1619,22 +1593,26 @@ class NetworkEngine( object ):
     
     MAX_JOBS = 10 # turn this into an option
     
-    def __init__( self, controller, bandwidth_manager, session_manager, login_manager ):
+    def __init__( self, controller, bandwidth_manager, session_manager, domain_manager, login_manager ):
         
         self.controller = controller
         
         self.bandwidth_manager = bandwidth_manager
         self.session_manager = session_manager
+        self.domain_manager = domain_manager
         self.login_manager = login_manager
         
         self.bandwidth_manager.engine = self
         self.session_manager.engine = self
+        self.domain_manager.engine = self
         self.login_manager.engine = self
         
         self._lock = threading.Lock()
         
         self._new_work_to_do = threading.Event()
         
+        self._jobs_awaiting_validity = []
+        self._current_validation_process = None
         self._jobs_bandwidth_throttled = []
         self._jobs_login_throttled = []
         self._current_login_process = None
@@ -1652,7 +1630,7 @@ class NetworkEngine( object ):
             
             job.engine = self
             
-            self._jobs_bandwidth_throttled.append( job )
+            self._jobs_awaiting_validity.append( job )
             
         
         self._new_work_to_do.set()
@@ -1675,6 +1653,65 @@ class NetworkEngine( object ):
         
     
     def MainLoop( self ):
+        
+        def ProcessValidationJob( job ):
+            
+            if job.IsDone():
+                
+                return False
+                
+            elif job.IsAsleep():
+                
+                return True
+                
+            elif not job.IsValid():
+                
+                if job.CanValidateInPopup():
+                    
+                    if self._current_validation_process is None:
+                        
+                        validation_process = job.GenerateValidationProcess
+                        
+                        self.controller.CallToThread( validation_process )
+                        
+                        self._current_validation_process = validation_process
+                        
+                        job.SetStatus( u'validation presented to user\u2026' )
+                        
+                    else:
+                        
+                        job.SetStatus( u'waiting on user validation\u2026' )
+                        
+                        job.Sleep( 5 )
+                        
+                    
+                else:
+                    
+                    job.SetStatus( u'network context not currently valid!' )
+                    
+                    job.Sleep( 15 )
+                    
+                
+                return True
+                
+            else:
+                
+                self._jobs_bandwidth_throttled.append( job )
+                
+                return False
+                
+            
+        
+        def ProcessCurrentValidationJob():
+            
+            if self._current_validation_process is not None:
+                
+                if self._current_validation_process.IsDone():
+                    
+                    self._current_validation_process = None
+                    
+                
+            
         
         def ProcessBandwidthJob( job ):
             
@@ -1797,6 +1834,10 @@ class NetworkEngine( object ):
             
             with self._lock:
                 
+                self._jobs_awaiting_validity = filter( ProcessValidationJob, self._jobs_awaiting_validity )
+                
+                ProcessCurrentValidationJob()
+                
                 self._jobs_bandwidth_throttled = filter( ProcessBandwidthJob, self._jobs_bandwidth_throttled )
                 
                 self._jobs_login_throttled = filter( ProcessLoginJob, self._jobs_login_throttled )
@@ -1904,8 +1945,8 @@ class NetworkJob( object ):
         
         network_contexts.append( GLOBAL_NETWORK_CONTEXT )
         
-        domain = ConvertURLIntoDomain( self._url )
-        domains = ConvertDomainIntoAllApplicableDomains( domain )
+        domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
+        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
         
         network_contexts.extend( ( NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
         
@@ -2184,6 +2225,14 @@ class NetworkJob( object ):
             
         
     
+    def CanValidateInPopup( self ):
+        
+        with self._lock:
+            
+            return self.engine.domain_manager.CanValidateInPopup( self._network_contexts )
+            
+        
+    
     def GenerateLoginProcess( self ):
         
         with self._lock:
@@ -2196,6 +2245,14 @@ class NetworkJob( object ):
                 
                 return self.engine.login_manager.GenerateLoginProcess( self._network_contexts )
                 
+            
+        
+    
+    def GenerateValidationPopupProcess( self ):
+        
+        with self._lock:
+            
+            return self.engine.domain_manager.GenerateValidationPopupProcess( self._network_contexts )
             
         
     
@@ -2281,6 +2338,14 @@ class NetworkJob( object ):
             
         
     
+    def IsValid( self ):
+        
+        with self._lock:
+            
+            return self.engine.domain_manager.IsValid( self._network_contexts )
+            
+        
+    
     def NeedsLogin( self ):
         
         with self._lock:
@@ -2291,14 +2356,7 @@ class NetworkJob( object ):
                 
             else:
                 
-                result = self.engine.login_manager.NeedsLogin( self._network_contexts )
-                
-                if result:
-                    
-                    self._status_text = u'waiting on login\u2026'
-                    
-                
-                return result
+                return self.engine.login_manager.NeedsLogin( self._network_contexts )
                 
             
         

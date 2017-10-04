@@ -29,7 +29,7 @@ import urlparse
 import wx
 import HydrusThreading
 
-DID_FILE_WORK_MINIMUM_SLEEP_TIME = 0.25
+DID_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 def THREADDownloadURL( job_key, url, url_string ):
     
@@ -366,7 +366,19 @@ class FileImportJob( object ):
     
     def GenerateInfo( self ):
         
-        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path )
+        mime = HydrusFileHandling.GetMime( self._temp_path )
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        if mime in HC.IMAGES and new_options.GetBoolean( 'do_not_import_decompression_bombs' ):
+            
+            if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
+                
+                raise HydrusExceptions.SizeException( 'Image seems to be a Decompression Bomb!' )
+                
+            
+        
+        self._file_info = HydrusFileHandling.GetFileInfo( self._temp_path, mime )
         
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
@@ -824,7 +836,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         self._new_files_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -861,7 +873,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         self._new_query_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -1364,7 +1376,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                         self._new_files_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -2248,7 +2260,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         self._new_files_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -2285,7 +2297,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                         self._new_page_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -2805,7 +2817,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, ( seed, ) )
         
     
-    def GetEarliestTimestamp( self ):
+    def GetEarliestSourceTime( self ):
         
         with self._lock:
             
@@ -2813,6 +2825,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         return earliest_timestamp
+        
+    
+    def GetLatestSourceTime( self ):
+        
+        with self._lock:
+            
+            latest_timestamp = max( ( self._GetSourceTimestamp( seed ) for seed in self._seeds_ordered ) )
+            
+        
+        return latest_timestamp
         
     
     def GetNextSeed( self, status ):
@@ -3414,7 +3436,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             time.sleep( 0.1 )
             
-            HG.client_controller.WaitUntilPubSubsEmpty()
+            HG.client_controller.WaitUntilViewFree()
             
         
         job_key.DeleteVariable( 'popup_text_1' )
@@ -3972,10 +3994,14 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions
 
+THREAD_STATUS_OK = 0
+THREAD_STATUS_DEAD = 1
+THREAD_STATUS_404 = 2
+
 class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     MIN_CHECK_PERIOD = 30
     
@@ -3997,6 +4023,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
         self._last_check_time = 0
+        self._thread_status = THREAD_STATUS_OK
+        self._thread_subject = 'unknown subject'
         
         self._next_check_time = None
         
@@ -4016,6 +4044,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._thread_key = HydrusData.GenerateKey()
         
         self._lock = threading.Lock()
+        
+        self._last_pubbed_page_name = ''
         
         self._new_files_event = threading.Event()
         self._new_thread_event = threading.Event()
@@ -4063,6 +4093,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             raw_json = network_job.GetContent()
             
+            with self._lock:
+                
+                self._thread_subject = ClientDownloading.ParseImageboardThreadSubject( raw_json )
+                
+            
             file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
             
             new_urls = []
@@ -4109,7 +4144,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             error_occurred = True
             
-            watcher_status = 'thread 404'
+            with self._lock:
+                
+                self._thread_status = THREAD_STATUS_404
+                
+            
+            watcher_status = ''
             
         except Exception as e:
             
@@ -4164,7 +4204,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused )
+        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject )
         
     
     def _HasThread( self ):
@@ -4172,9 +4212,46 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         return self._thread_url != ''
         
     
+    def _PublishPageName( self, page_key ):
+        
+        new_options = HG.client_controller.GetNewOptions()
+        
+        cannot_rename = not new_options.GetBoolean( 'permit_watchers_to_name_their_pages' )
+        
+        if cannot_rename:
+            
+            page_name = 'thread watcher'
+            
+        elif self._thread_subject in ( '', 'unknown subject' ):
+            
+            page_name = 'thread watcher'
+            
+        else:
+            
+            page_name = self._thread_subject
+            
+        
+        if self._thread_status == THREAD_STATUS_404:
+            
+            page_name = '[404] ' + page_name
+            
+        elif self._thread_status == THREAD_STATUS_DEAD:
+            
+            page_name = '[DEAD] ' + page_name
+            
+        
+        if page_name != self._last_pubbed_page_name:
+            
+            HG.client_controller.pub( 'rename_page', page_key, page_name )
+            
+            self._last_pubbed_page_name = page_name
+            
+        
+        
+    
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused ) = serialisable_info
+        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
         self._watcher_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watcher_options )
@@ -4193,13 +4270,24 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._next_check_time = self._last_check_time + self.MIN_CHECK_PERIOD
             
+            self._thread_status = THREAD_STATUS_OK
+            
         else:
             
             if self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
                 
-                self._watcher_status = 'thread is dead'
+                if self._thread_status != THREAD_STATUS_404:
+                    
+                    self._thread_status = THREAD_STATUS_DEAD
+                    
+                
+                self._watcher_status = ''
                 
                 self._thread_paused = True
+                
+            else:
+                
+                self._thread_status = THREAD_STATUS_OK
                 
             
             self._next_check_time = self._watcher_options.GetNextCheckTime( self._urls_cache, self._last_check_time )
@@ -4222,6 +4310,18 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused ) = old_serialisable_info
+            
+            thread_status = THREAD_STATUS_OK
+            thread_subject = 'unknown subject'
+            
+            new_serialisable_info = ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_watcher_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -4438,7 +4538,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                             self._new_files_event.wait( 5 )
                             
                         
-                        HG.client_controller.WaitUntilPubSubsEmpty()
+                        HG.client_controller.WaitUntilViewFree()
                         
                     
                 except Exception as e:
@@ -4475,9 +4575,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._CheckThread( page_key )
                     
+                    with self._lock:
+                        
+                        self._PublishPageName( page_key )
+                        
+                    
                     time.sleep( 5 )
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except Exception as e:
                     
@@ -4485,6 +4590,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     return
                     
+                
+            
+            with self._lock:
+                
+                self._PublishPageName( page_key )
                 
             
             self._new_thread_event.clear()
@@ -4532,7 +4642,20 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( self._current_action, self._files_paused, self._file_velocity_status, self._next_check_time, self._watcher_status, self._check_now, self._thread_paused )
+            if self._thread_status == THREAD_STATUS_404:
+                
+                watcher_status = 'Thread 404'
+                
+            elif self._thread_status == THREAD_STATUS_DEAD:
+                
+                watcher_status = 'Thread dead'
+                
+            else:
+                
+                watcher_status = self._watcher_status
+                
+            
+            return ( self._current_action, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._thread_subject, self._thread_status, self._check_now, self._thread_paused )
             
         
     
@@ -4568,7 +4691,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if self._thread_paused and self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
                 
-                self._watcher_status = 'thread is dead--hit check now to try to revive'
+                return # thread is dead, so don't unpause until a checknow event
                 
             else:
                 
@@ -4642,6 +4765,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     def Start( self, page_key ):
         
         self._UpdateNextCheckTime()
+        
+        self._PublishPageName( page_key )
         
         self._UpdateFileVelocityStatus()
         
@@ -4871,7 +4996,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                         self._new_urls_event.wait( 5 )
                         
                     
-                    HG.client_controller.WaitUntilPubSubsEmpty()
+                    HG.client_controller.WaitUntilViewFree()
                     
                 except HydrusExceptions.ShutdownException:
                     

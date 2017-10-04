@@ -2865,52 +2865,43 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteFiles( self, service_id, hash_ids ):
         
+        service = self._GetService( service_id )
+        
+        service_type = service.GetServiceType()
+        
         splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
         
-        valid_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) }
+        existing_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) }
         
-        if len( valid_hash_ids ) > 0:
+        service_info_updates = []
+        
+        if len( existing_hash_ids ) > 0:
             
-            splayed_valid_hash_ids = HydrusData.SplayListForDB( valid_hash_ids )
+            splayed_existing_hash_ids = HydrusData.SplayListForDB( existing_hash_ids )
             
             # remove them from the service
             
-            self._c.execute( 'DELETE FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
+            self._c.execute( 'DELETE FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_existing_hash_ids + ';', ( service_id, ) )
             
-            self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_valid_hash_ids + ';', ( service_id, ) )
+            self._c.execute( 'DELETE FROM file_petitions WHERE service_id = ? AND hash_id IN ' + splayed_existing_hash_ids + ';', ( service_id, ) )
             
-            info = self._c.execute( 'SELECT size, mime FROM files_info WHERE hash_id IN ' + splayed_valid_hash_ids + ';' ).fetchall()
+            info = self._c.execute( 'SELECT size, mime FROM files_info WHERE hash_id IN ' + splayed_existing_hash_ids + ';' ).fetchall()
             
-            num_files = len( valid_hash_ids )
+            num_existing_files_removed = len( existing_hash_ids )
             delta_size = sum( ( size for ( size, mime ) in info ) )
-            num_inbox = len( valid_hash_ids.intersection( self._inbox_hash_ids ) )
-            
-            service_info_updates = []
+            num_inbox = len( existing_hash_ids.intersection( self._inbox_hash_ids ) )
             
             service_info_updates.append( ( -delta_size, service_id, HC.SERVICE_INFO_TOTAL_SIZE ) )
-            service_info_updates.append( ( -num_files, service_id, HC.SERVICE_INFO_NUM_FILES ) )
+            service_info_updates.append( ( -num_existing_files_removed, service_id, HC.SERVICE_INFO_NUM_FILES ) )
             service_info_updates.append( ( -num_inbox, service_id, HC.SERVICE_INFO_NUM_INBOX ) )
             
             select_statement = 'SELECT COUNT( * ) FROM files_info WHERE mime IN ' + HydrusData.SplayListForDB( HC.SEARCHABLE_MIMES ) + ' AND hash_id IN %s;'
             
-            num_viewable_files = sum( self._STL( self._SelectFromList( select_statement, valid_hash_ids ) ) )
+            num_viewable_files = sum( self._STL( self._SelectFromList( select_statement, existing_hash_ids ) ) )
             
             service_info_updates.append( ( -num_viewable_files, service_id, HC.SERVICE_INFO_NUM_VIEWABLE_FILES ) )
             
             # now do special stuff
-            
-            service = self._GetService( service_id )
-            
-            service_type = service.GetServiceType()
-            
-            # record the deleted row if appropriate
-            
-            if service_id == self._combined_local_file_service_id or service_type == HC.FILE_REPOSITORY:
-                
-                service_info_updates.append( ( num_files, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
-                
-                self._c.executemany( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in valid_hash_ids ] )
-                
             
             # if we maintain tag counts for this service, update
             
@@ -2920,7 +2911,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for tag_service_id in tag_service_ids:
                     
-                    self._CacheSpecificMappingsDeleteFiles( service_id, tag_service_id, valid_hash_ids )
+                    self._CacheSpecificMappingsDeleteFiles( service_id, tag_service_id, existing_hash_ids )
                     
                 
             
@@ -2932,9 +2923,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 splayed_local_file_service_ids = HydrusData.SplayListForDB( local_file_service_ids )
                 
-                non_orphan_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE hash_id IN ' + splayed_valid_hash_ids + ' AND service_id IN ' + splayed_local_file_service_ids + ';' ) }
+                non_orphan_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE hash_id IN ' + splayed_existing_hash_ids + ' AND service_id IN ' + splayed_local_file_service_ids + ';' ) }
                 
-                orphan_hash_ids = valid_hash_ids.difference( non_orphan_hash_ids )
+                orphan_hash_ids = existing_hash_ids.difference( non_orphan_hash_ids )
                 
                 if len( orphan_hash_ids ) > 0:
                     
@@ -2950,17 +2941,28 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_id == self._combined_local_file_service_id:
                 
-                self._DeletePhysicalFiles( valid_hash_ids )
+                self._DeletePhysicalFiles( existing_hash_ids )
                 
-            
-            # push the info updates, notify
-            
-            self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
             
             self.pub_after_job( 'notify_new_pending' )
             
         
-        return valid_hash_ids
+        # record the deleted row if appropriate
+        # this happens outside of 'existing' and occurs on all files due to file repo stuff
+        # file repos will sometimes report deleted files without having reported the initial file
+        
+        if service_id == self._combined_local_file_service_id or service_type == HC.FILE_REPOSITORY:
+            
+            self._c.executemany( 'INSERT OR IGNORE INTO deleted_files ( service_id, hash_id ) VALUES ( ?, ? );', [ ( service_id, hash_id ) for hash_id in hash_ids ] )
+            
+            num_new_deleted_files = self._GetRowCount()
+            
+            service_info_updates.append( ( num_new_deleted_files, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
+            
+        
+        # push the info updates, notify
+        
+        self._c.executemany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
     
     def _DeleteHydrusSessionKey( self, service_key ):
@@ -6814,11 +6816,11 @@ class DB( HydrusDB.HydrusDB ):
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
                                 
-                                deleted_hash_ids = self._DeleteFiles( service_id, hash_ids )
+                                self._DeleteFiles( service_id, hash_ids )
                                 
                                 if service_id == self._trash_service_id:
                                     
-                                    self._DeleteFiles( self._combined_local_file_service_id, deleted_hash_ids )
+                                    self._DeleteFiles( self._combined_local_file_service_id, hash_ids )
                                     
                                 
                             elif action == HC.CONTENT_UPDATE_UNDELETE:
@@ -7343,7 +7345,6 @@ class DB( HydrusDB.HydrusDB ):
             
             files_info_rows = []
             files_rows = []
-            hash_ids = []
             
             for ( service_hash_id, size, mime, timestamp, width, height, duration, num_frames, num_words ) in chunk:
                 
@@ -7352,8 +7353,6 @@ class DB( HydrusDB.HydrusDB ):
                 files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, num_words ) )
                 
                 files_rows.append( ( hash_id, timestamp ) )
-                
-                hash_ids.append( hash_id )
                 
             
             self._AddFilesInfo( files_info_rows )
@@ -9751,6 +9750,50 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Your colour options failed to update, so they have reset to default. The error has been written to your log--please send this information to hydrus dev!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 275:
+            
+            try:
+                
+                self._service_cache = {}
+                
+                file_repo_ids = self._GetServiceIds( ( HC.FILE_REPOSITORY, ) )
+                
+                for service_id in file_repo_ids:
+                    
+                    service = self._GetService( service_id )
+                    
+                    service._no_requests_reason = ''
+                    service._no_requests_until = 0
+                    
+                    service._account = HydrusNetwork.Account.GenerateUnknownAccount()
+                    self._next_account_sync = 0
+                    
+                    service._metadata = HydrusNetwork.Metadata()
+                    
+                    service._SetDirty()
+                    
+                    self._ResetRepository( service )
+                    
+                    self._SaveDirtyServices( ( service, ) )
+                    
+                
+                if len( file_repo_ids ) > 0:
+                    
+                    message = 'All file repositories\' processing caches were reset on this update. They will resync (and have more accurate \'deleted file\' counts!) in the normal maintenance cycle.'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'While attempting to update, the database failed to reset your file repositories. The full error has been written to the log. Please check your file repos in _review services_ to make sure everything looks good, and when it is convenient, try resetting them manually.'
                 
                 self.pub_initial_message( message )
                 

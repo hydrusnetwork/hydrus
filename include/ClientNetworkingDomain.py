@@ -1,13 +1,46 @@
 import ClientConstants as CC
 import ClientParsing
+import ClientThreading
+import collections
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
 import threading
+import time
 import urlparse
 
+def ConvertDomainIntoAllApplicableDomains( domain ):
+    
+    domains = []
+    
+    while domain.count( '.' ) > 0:
+        
+        # let's discard www.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
+        startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
+        
+        if not startswith_www:
+            
+            domains.append( domain )
+            
+        
+        domain = '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
+        
+    
+    return domains
+    
+def ConvertURLIntoDomain( url ):
+    
+    parser_result = urlparse.urlparse( url )
+    
+    domain = HydrusData.ToByteString( parser_result.netloc )
+    
+    return domain
+    
+VALID_DENIED = 0
+VALID_APPROVED = 1
+VALID_UNKNOWN = 2
 # this should do network_contexts->user-agent as well, with some kind of approval system in place
     # approval needs a new queue in the network engine. this will eventually test downloader validity and so on. failable at that stage
     # user-agent info should be exportable/importable on the ui as well
@@ -16,24 +49,32 @@ import urlparse
 # hide urls on media viewer based on domain
 # decide whether we want to add this to the dirtyobjects loop, and it which case, if anything is appropriate to store in the db separately
   # hence making this a serialisableobject itself.
-class DomainManager( object ):
+class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, controller ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
         
-        self._controller = controller
-        self._domains_to_url_matches = {}
-        self._network_contexts_to_custom_headers = {} # user-agent here
-        # ( header_key, header_value, approved, approval_reason )
-        # approved is True for user created, None for imported and defaults
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.engine = None
+        
+        self._url_matches = HydrusSerialisable.SerialisableList()
+        self._network_contexts_to_custom_headers = {}
+        
+        self._domains_to_url_matches = collections.defaultdict( list )
+        
+        self._dirty = False
         
         self._lock = threading.Lock()
         
-        self._Initialise()
+        self._RecalcCache()
         
     
     def _GetURLMatch( self, url ):
         
-        domain = 'blah' # get top urldomain
+        domain = ConvertURLIntoDomain( url )
         
         if domain in self._domains_to_url_matches:
             
@@ -58,39 +99,53 @@ class DomainManager( object ):
         return None
         
     
-    def _Initialise( self ):
+    def _RecalcCache( self ):
         
-        self._domains_to_url_matches = {}
+        self._domains_to_url_matches = collections.defaultdict( list )
         
-        # fetch them all from controller's db
-        # figure out domain -> urlmatch for each entry based on example url
-        
-        pass
-        
-    
-    def CanApprove( self, network_contexts ):
-        
-        # if user selected false for any approval, return false
-        # network job presumably throws a ValidationError at this point, which will cause any larger queue to pause.
-        
-        pass
+        for url_match in self._url_matches:
+            
+            domain = url_match.GetDomain()
+            
+            self._domains_to_url_matches[ domain ].append( url_match )
+            
         
     
-    def DoApproval( self, network_contexts ):
+    def _SetDirty( self ):
         
-        # if false on validity check, it presents the user with a yes/no popup with the approval_reason and waits
+        self._dirty = True
+        
+    
+    def CanValidateInPopup( self, network_contexts ):
+        
+        # we can always do this for headers
+        
+        return True
+        
+    
+    def GenerateValidationProcess( self, network_contexts ):
+        
+        # generate a process that will, when threadcalled maybe with .Start() , ask the user, one after another, all the key-value pairs
+        # Should (network context) apply "(key)" header "(value)"?
+        # Reason given is: "You need this to make it work lol."
+        # once all the yes/nos are set, update db, reinitialise domain manager, set IsDone to true.
         
         pass
         
     
     def GetCustomHeaders( self, network_contexts ):
         
+        keys_to_values = {}
+        
         with self._lock:
             
             pass
             
             # good order is global = least powerful, which I _think_ is how these come.
+            # e.g. a site User-Agent should overwrite a global default
             
+        
+        return keys_to_values
         
     
     def GetDownloader( self, url ):
@@ -106,13 +161,27 @@ class DomainManager( object ):
             
         
     
-    def NeedsApproval( self, network_contexts ):
+    def IsValid( self, network_contexts ):
         
-        # this is called by the network engine in the new approval queue
-        # if a job needs approval, it goes to a single step like the login one and waits, possibly failing.
-        # checks for 'approved is None' on all ncs
+        # for now, let's say that denied headers are simply not added, not that they invalidate a query
         
-        pass
+        for network_context in network_contexts:
+            
+            if network_context in self._network_contexts_to_custom_headers:
+                
+                custom_headers = self._network_contexts_to_custom_headers[ network_context ]
+                
+                for ( key, value, approved, reason ) in custom_headers:
+                    
+                    if approved == VALID_UNKNOWN:
+                        
+                        return False
+                        
+                    
+                
+            
+        
+        return True
         
     
     def NormaliseURL( self, url ):
@@ -135,11 +204,86 @@ class DomainManager( object ):
             
         
     
-    def Reinitialise( self ):
+    def SetClean( self ):
         
         with self._lock:
             
-            self._Initialise()
+            self._dirty = False
+            
+        
+    
+    def SetHeaderValidation( self, network_context, key, approved ):
+        
+        with self._lock:
+            
+            custom_headers = self._network_contexts_to_custom_headers[ network_context ]
+            
+            
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
+
+class DomainValidationProcess( object ):
+    
+    def __init__( self, domain_manager, header_tuples ):
+        
+        self._domain_manager = domain_manager
+        
+        self._header_tuples = header_tuples
+        
+        self._is_done = False
+        
+    
+    def IsDone( self ):
+        
+        return self._is_done
+        
+    
+    def Start( self ):
+        
+        try:
+            
+            results = []
+            
+            for ( network_context, key, value, approval_reason ) in self._header_tuples:
+                
+                job_key = ClientThreading.JobKey()
+                
+                # generate question
+                question = 'intro text ' + approval_reason
+                
+                job_key.SetVariable( 'popup_yes_no_question', question )
+                
+                # pub it
+                
+                result = job_key.GetIfHasVariable( 'popup_yes_no_answer' )
+                
+                while result is None:
+                    
+                    if HG.view_shutdown:
+                        
+                        return
+                        
+                    
+                    time.sleep( 0.25 )
+                    
+                
+                if result:
+                    
+                    approved = VALID_APPROVED
+                    
+                else:
+                    
+                    approved = VALID_DENIED
+                    
+                
+                self._domain_manager.SetHeaderValidation( network_context, key, approved )
+                
+            
+        finally:
+            
+            self._is_done = True
             
         
     
@@ -152,7 +296,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name, preferred_scheme = 'https', netloc = 'hostname.com', subdomain_is_important = False, path_components = None, parameters = None, example_url = 'https://hostname.com' ):
+    def __init__( self, name, preferred_scheme = 'https', netloc = 'hostname.com', subdomain_is_important = False, path_components = None, parameters = None, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
         
         if path_components is None:
             
@@ -175,13 +319,13 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
-        self._preferred_scheme = 'https'
-        self._netloc = 'hostname.com'
-        self._subdomain_is_important = False
-        self._path_components = HydrusSerialisable.SerialisableList()
-        self._parameters = HydrusSerialisable.SerialisableDictionary()
+        self._preferred_scheme = preferred_scheme
+        self._netloc = netloc
+        self._subdomain_is_important = subdomain_is_important
+        self._path_components = path_components
+        self._parameters = parameters
         
-        self._example_url = 'https://hostname.com/post/page.php?id=123456&s=view'
+        self._example_url = example_url
         
     
     def _ClipNetLoc( self, netloc ):
@@ -263,6 +407,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         query = '&'.join( ( key + '=' + value for ( key, value ) in valid_parameters ) )
         
         return query
+        
+    
+    def GetDomain( self ):
+        
+        return ConvertURLIntoDomain( self._example_url )
         
     
     def Normalise( self, url ):

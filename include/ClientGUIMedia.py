@@ -2300,7 +2300,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
-            elif y > ( start_y * y_unit ) + height - thumbnail_span_height:
+            elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * 0.90 ):
                 
                 y_to_scroll_to = ( y - height ) / y_unit
                 
@@ -2365,7 +2365,6 @@ class MediaPanelThumbnails( MediaPanel ):
             self._RecalculateVirtualSize()
             
             HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
-            #self._FadeThumbnails( thumbnails )
             
             if len( self._selected_media ) == 0:
                 
@@ -2669,10 +2668,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._HitMedia( self._GetThumbnailUnderMouse( event ), event.CmdDown(), event.ShiftDown() )
         
-        if not ( event.CmdDown() or event.ShiftDown() ):
-            
-            self._ScrollToMedia( self._focussed_media )
-            
+        # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
         
         event.Skip()
         

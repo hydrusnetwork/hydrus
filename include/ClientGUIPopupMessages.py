@@ -106,6 +106,17 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
+        self._text_yes_no = ClientGUICommon.FitResistantStaticText( self )
+        self._text_yes_no.Wrap( self.WRAP_WIDTH )
+        self._text_yes_no.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
+        self._text_yes_no.Hide()
+        
+        self._yes = ClientGUICommon.BetterButton( self, 'yes', self._YesButton )
+        self._yes.Hide()
+        
+        self._no = ClientGUICommon.BetterButton( self, 'no', self._NoButton )
+        self._no.Hide()
+        
         self._network_job_ctrl = ClientGUIControls.NetworkJobControl( self )
         self._network_job_ctrl.Hide()
         
@@ -143,11 +154,18 @@ class PopupMessage( PopupWindow ):
         hbox.AddF( self._pause_button, CC.FLAGS_VCENTER )
         hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
         
+        yes_no_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        yes_no_hbox.AddF( self._yes, CC.FLAGS_VCENTER )
+        yes_no_hbox.AddF( self._no, CC.FLAGS_VCENTER )
+        
         vbox.AddF( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( yes_no_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -157,6 +175,11 @@ class PopupMessage( PopupWindow ):
         vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
+        
+    
+    def _NoButton( self ):
+        
+        self._job_key.SetVariable( 'popup_yes_no_answer', False )
         
     
     def _ProcessText( self, text ):
@@ -173,6 +196,11 @@ class PopupMessage( PopupWindow ):
             
         
         return text
+        
+    
+    def _YesButton( self ):
+        
+        self._job_key.SetVariable( 'popup_yes_no_answer', True )
         
     
     def Cancel( self ):
@@ -358,6 +386,30 @@ class PopupMessage( PopupWindow ):
         else:
             
             self._gauge_2.Hide()
+            
+        
+        popup_yes_no_question = self._job_key.GetIfHasVariable( 'popup_yes_no_question' )
+        
+        if popup_yes_no_question is not None and not paused:
+            
+            text = popup_yes_no_question
+            
+            # set and show text, yes, no buttons
+            
+            if self._text_yes_no.GetLabelText() != text:
+                
+                self._text_yes_no.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
+                
+            
+            self._text_yes_no.Show()
+            self._yes.Show()
+            self._no.Show()
+            
+        else:
+            
+            self._text_yes_no.Hide()
+            self._yes.Hide()
+            self._no.Hide()
             
         
         popup_network_job = self._job_key.GetIfHasVariable( 'popup_network_job' )

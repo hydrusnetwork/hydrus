@@ -1723,7 +1723,10 @@ class RenderedImageCache( object ):
         self._data_cache = DataCache( self._controller, cache_size, timeout = 600 )
         
     
-    def Clear( self ): self._data_cache.Clear()
+    def Clear( self ):
+        
+        self._data_cache.Clear()
+        
     
     def GetImageRenderer( self, media ):
         
@@ -1909,7 +1912,7 @@ class ThumbnailCache( object ):
             
             self._special_thumbs = {}
             
-            names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video' ]
+            names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video', 'zip' ]
             
             ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
             
@@ -1937,6 +1940,14 @@ class ThumbnailCache( object ):
                 
                 HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
                 
+            
+        
+    
+    def DoingWork( self ):
+        
+        with self._lock:
+            
+            return len( self._waterfall_queue_random ) > 0
             
         
     
@@ -1971,6 +1982,7 @@ class ThumbnailCache( object ):
             elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
             elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
             elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
+            elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
             else: return self._special_thumbs[ 'hydrus' ]
             
         else:

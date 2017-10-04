@@ -1865,6 +1865,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
             
+            self._permit_watchers_to_name_their_pages = wx.CheckBox( thread_checker )
+            
             watcher_options = self._new_options.GetDefaultThreadWatcherOptions()
             
             self._thread_watcher_options = ClientGUIScrolledPanelsEdit.EditWatcherOptions( thread_checker, watcher_options )
@@ -1874,6 +1876,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
+            
+            self._permit_watchers_to_name_their_pages.SetValue( self._new_options.GetBoolean( 'permit_watchers_to_name_their_pages' ) )
             
             #
             
@@ -1891,6 +1895,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            
+            rows = []
+            
+            rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
+            
+            thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             thread_checker.AddF( self._thread_watcher_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -1908,6 +1920,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
+            
+            self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
             
             self._new_options.SetDefaultThreadWatcherOptions( self._thread_watcher_options.GetValue() )
             
@@ -2701,6 +2715,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil = wx.CheckBox( self )
             self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images.' )
             
+            self._do_not_import_decompression_bombs = wx.CheckBox( self )
+            self._do_not_import_decompression_bombs.SetToolTipString( 'Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large (typically 100MegaPixel+) images. Check this to disallow them before they blat your computer.' )
+            
             self._use_system_ffmpeg = wx.CheckBox( self )
             self._use_system_ffmpeg.SetToolTipString( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
@@ -2719,13 +2736,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
+            self._do_not_import_decompression_bombs.SetValue( self._new_options.GetBoolean( 'do_not_import_decompression_bombs' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
             self._media_zooms.SetValue( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
             
-            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
+            mimes_in_correct_order = ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_APNG, HC.IMAGE_GIF, HC.APPLICATION_FLASH, HC.APPLICATION_PDF, HC.APPLICATION_ZIP, HC.APPLICATION_RAR, HC.APPLICATION_7Z, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS, HC.VIDEO_AVI, HC.VIDEO_FLV, HC.VIDEO_MOV, HC.VIDEO_MP4, HC.VIDEO_MKV, HC.VIDEO_MPEG, HC.VIDEO_WEBM, HC.VIDEO_WMV, HC.AUDIO_MP3, HC.AUDIO_OGG, HC.AUDIO_FLAC, HC.AUDIO_WMA )
             
             for mime in mimes_in_correct_order:
                 
@@ -2749,6 +2767,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
             rows.append( ( 'Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
             rows.append( ( 'Load images with PIL: ', self._load_images_with_pil ) )
+            rows.append( ( 'Do not import Decompression Bombs: ', self._do_not_import_decompression_bombs ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             
@@ -2845,6 +2864,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
+            self._new_options.SetBoolean( 'do_not_import_decompression_bombs', self._do_not_import_decompression_bombs.GetValue() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
             
             try:

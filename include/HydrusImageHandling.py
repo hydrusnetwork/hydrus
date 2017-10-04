@@ -13,6 +13,9 @@ import traceback
 import HydrusData
 import HydrusGlobals as HG
 import HydrusPaths
+import warnings
+
+warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 
 def ConvertToPngIfBmp( path ):
     
@@ -241,4 +244,23 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     target_y = int( target_y )
     
     return ( target_x, target_y )
+    
+def IsDecompressionBomb( path ):
+    
+    warnings.simplefilter( 'error', PILImage.DecompressionBombWarning )
+    
+    try:
+        
+        GeneratePILImage( path )
+        
+    except PILImage.DecompressionBombWarning:
+        
+        return True
+        
+    finally:
+        
+        warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
+        
+    
+    return False
     

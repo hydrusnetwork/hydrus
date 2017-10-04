@@ -4,6 +4,7 @@ import ClientDaemons
 import ClientDefaults
 import ClientGUIMenus
 import ClientNetworking
+import ClientNetworkingDomain
 import ClientThreading
 import hashlib
 import HydrusConstants as HC
@@ -591,9 +592,11 @@ class Controller( HydrusController.HydrusController ):
             wx.MessageBox( 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
+        domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+        
         login_manager = ClientNetworking.NetworkLoginManager()
         
-        self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, login_manager )
+        self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
         
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
@@ -1189,7 +1192,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.pub( 'set_num_query_results', page_key, len( media_results ), len( query_hash_ids ) )
             
-            self.WaitUntilPubSubsEmpty()
+            self.WaitUntilViewFree()
             
         
         search_context.SetComplete()
@@ -1274,6 +1277,32 @@ class Controller( HydrusController.HydrusController ):
         finally:
             
             self._DestroySplash()
+            
+        
+    
+    def WaitUntilViewFree( self ):
+        
+        self.WaitUntilModelFree()
+        
+        self.WaitUntilThumbnailsFree()
+        
+    
+    def WaitUntilThumbnailsFree( self ):
+        
+        while True:
+            
+            if self._view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            elif not self._caches[ 'thumbnail' ].DoingWork():
+                
+                return
+                
+            else:
+                
+                time.sleep( 0.00001 )
+                
             
         
     

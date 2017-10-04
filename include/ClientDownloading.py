@@ -339,6 +339,24 @@ def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
     
     return file_infos
     
+def ParseImageboardThreadSubject( raw_json ):
+    
+    json_dict = json.loads( raw_json )
+    
+    posts_list = json_dict[ 'posts' ]
+    
+    if len( posts_list ) > 0:
+        
+        top_post = posts_list[0]
+        
+        if 'sub' in top_post:
+            
+            return top_post[ 'sub' ]
+            
+        
+    
+    return ''
+    
 def IsImageboardThread( url ):
     
     if '4chan.org' in url:

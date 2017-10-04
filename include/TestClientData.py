@@ -35,7 +35,7 @@ class TestData( unittest.TestCase ):
             
             seed_cache.AddSeeds( ( seed, ) )
             
-            seed_cache.UpdateSeedSourceTime( seed, one_day_before + 10 )
+            seed_cache.UpdateSeedSourceTime( seed, last_check_time - 600 )
             
         
         bare_seed_cache = ClientImporting.SeedCache()
@@ -144,8 +144,9 @@ class TestData( unittest.TestCase ):
         self.assertEqual( slow_watcher_options.GetPrettyCurrentVelocity( new_thread_seed_cache, last_check_time ), u'at last check, found 10 files in previous 10 minutes' )
         self.assertEqual( callous_watcher_options.GetPrettyCurrentVelocity( new_thread_seed_cache, last_check_time ), u'at last check, found 0 files in previous 1 minute' )
         
-        self.assertEqual( regular_watcher_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 300 )
-        self.assertEqual( fast_watcher_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 120 )
+        # these would be 360, 120, 600, but the 'don't check faster the time since last file post' bumps this up
+        self.assertEqual( regular_watcher_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 600 )
+        self.assertEqual( fast_watcher_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 600 )
         self.assertEqual( slow_watcher_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 600 )
         
     
