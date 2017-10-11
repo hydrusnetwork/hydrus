@@ -8,6 +8,27 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 277</h3></li>
+				<ul>
+					<li>expanded the domain manager into a legit serialisable object that holds data and saves itself on changes. to begin with, it supports custom http headers for particular on network contexts</li>
+					<li>the global User-Agent (which now defaults to 'hydrus client') is set through this new manager, as attached to the 'global' network context</li>
+					<li>wrote a basic panel to edit custom http headers under services->manage network rules (this panel will be fleshed out with more in future--please ignore if you are not an advanced user)</li>
+					<li>wrote a panel to edit an individual custom http header</li>
+					<li>wrote a panel to edit/select network contexts. this will get a bunch more use elsewhere as the overhaul continues</li>
+					<li>flushed out and tested the new popup yes/no button system</li>
+					<li>sanakucomplex.com has a User-Agent entry in the new custom header system--on the first sank request, you will be presented with a yes/no popup asking if it is ok to use.</li>
+					<li>if you ok the user-agent, sankaku now seems to work again!</li>
+					<li>sankakucomplex.com network context will get some specific conservative bandwidth rules (80 rqs per 7m, 1 rq per 4s) on update</li>
+					<li>added an option to options->gui to reverse the page tab shift behaviour</li>
+					<li>'don't scroll down on key navigation event if thumb is at least this % visible' value is now 75%. it is also editable under options->gui</li>
+					<li>the hydrus icon used on frames is now the non-transparent version that shows up better on dark backgrounds</li>
+					<li>the standard hydrus.ico used in web favicons and the executable builds is now also non-transparent (this should also propagate up to OS shortcuts and taskbar icons wherever the frame icon is not inherited)</li>
+					<li>file export drag and drop events will now defocus the currently focused media on successful drop (e.g. if you drag a video to an external media player, it will stop rendering clientside), just like for open externally</li>
+					<li>database analyze maintenance should be more reliable with respect to fresh repository syncs</li>
+					<li>reduced default impermanent session timeout in new networking engine to 60m (should fix/reduce some hentai foundry 503s)</li>
+					<li>misc ui improvements and speedup</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 276</h3></li>
 				<ul>
 					<li>the new thread watcher object will no longer produce check periods shorter than the time since the latest file. this effectively throttles checking on threads that were posting very fast but have since suddenly stopped completely</li>
