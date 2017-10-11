@@ -15,9 +15,11 @@ import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
 import ClientGUITopLevelWindows
+import ClientNetworking
 import ClientNetworkingDomain
 import ClientParsing
 import ClientTags
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -983,6 +985,364 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         scale_down_quality = self._scale_down_quality.GetChoice()
         
         return ( self._mime, media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        
+    
+class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, network_context ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._context_type = ClientGUICommon.BetterChoice( self )
+        
+        for ct in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ):
+            
+            self._context_type.Append( CC.network_context_type_string_lookup[ ct ], ct )
+            
+        
+        self._context_type_info = ClientGUICommon.BetterStaticText( self )
+        
+        self._context_data_text = wx.TextCtrl( self )
+        
+        self._context_data_services = ClientGUICommon.BetterChoice( self )
+        
+        for service in HG.client_controller.services_manager.GetServices( HC.REPOSITORIES ):
+            
+            self._context_data_services.Append( service.GetName(), service.GetServiceKey() )
+            
+        
+        self._context_data_downloaders = ClientGUICommon.BetterChoice( self )
+        
+        self._context_data_downloaders.Append( 'downloaders are not ready yet!', '' )
+        
+        self._context_data_subscriptions = ClientGUICommon.BetterChoice( self )
+        
+        self._context_data_none = wx.CheckBox( self, label = 'No specific data--acts as default.' )
+        
+        names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        
+        for name in names:
+            
+            self._context_data_subscriptions.Append( name, name )
+            
+        
+        #
+        
+        self._context_type.SelectClientData( network_context.context_type )
+        
+        self._Update()
+        
+        context_type = network_context.context_type
+        
+        if network_context.context_data is None:
+            
+            self._context_data_none.SetValue( True )
+            
+        else:
+            
+            if context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                self._context_data_text.SetValue( network_context.context_data )
+                
+            elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                self._context_data_services.SelectClientData( network_context.context_data )
+                
+            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
+                
+                pass
+                #self._context_data_downloaders.SelectClientData( network_context.context_data )
+                
+            elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
+                
+                self._context_data_subscriptions.SelectClientData( network_context.context_data )
+                
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._context_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_type_info, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_data_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_data_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_data_downloaders, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_data_subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._context_data_none, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._context_type.Bind( wx.EVT_CHOICE, self.EventContextTypeChanged )
+        
+    
+    def _Update( self ):
+        
+        self._context_type_info.SetLabelText( CC.network_context_type_description_lookup[ self._context_type.GetChoice() ] )
+        
+        context_type = self._context_type.GetChoice()
+        
+        self._context_data_text.Disable()
+        self._context_data_services.Disable()
+        self._context_data_downloaders.Disable()
+        self._context_data_subscriptions.Disable()
+        
+        if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ):
+            
+            self._context_data_none.SetValue( True )
+            
+        else:
+            
+            self._context_data_none.SetValue( False )
+            
+            if context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                self._context_data_text.Enable()
+                
+            elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                self._context_data_services.Enable()
+                
+            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
+                
+                self._context_data_downloaders.Enable()
+                
+            elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
+                
+                self._context_data_subscriptions.Enable()
+                
+            
+        
+    
+    def EventContextTypeChanged( self, event ):
+        
+        self._Update()
+        
+    
+    def GetValue( self ):
+        
+        context_type = self._context_type.GetChoice()
+        
+        if self._context_data_none.GetValue() == True:
+            
+            context_data = None
+            
+        else:
+            
+            if context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                context_data = self._context_data_text.GetValue()
+                
+            elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                context_data = self._context_data_services.GetChoice()
+                
+            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
+                
+                raise HydrusExceptions.VetoException( 'Downloaders do not work yet!' )
+                #context_data = self._context_data_downloaders.GetChoice()
+                
+            elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
+                
+                context_data = self._context_data_subscriptions.GetChoice()
+                
+            
+        
+        return ClientNetworking.NetworkContext( context_type, context_data )
+        
+    
+class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, network_contexts_to_custom_header_dicts ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, [ ( 'context', 24 ), ( 'header', 30 ), ( 'approved?', 12 ), ( 'reason', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        self._list_ctrl_panel.AddButton( 'add', self._Add )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        
+        self._list_ctrl.Sort( 0 )
+        
+        #
+        
+        for ( network_context, custom_header_dict ) in network_contexts_to_custom_header_dicts.items():
+            
+            for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                
+                data = ( network_context, ( key, value ), approved, reason )
+                
+                self._list_ctrl.AddDatas( ( data, ) )
+                
+            
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hostname.com' )
+        key = 'Authorization'
+        value = 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
+        approved = ClientNetworkingDomain.VALID_APPROVED
+        reason = 'EXAMPLE REASON: HTTP header login--needed for access.'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit header' ) as dlg:
+            
+            panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                data = ( network_context, ( key, value ), approved, reason )
+                
+                self._list_ctrl.AddDatas( ( data, ) )
+                
+            
+        
+    
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( network_context, ( key, value ), approved, reason ) = data
+        
+        pretty_network_context = network_context.ToUnicode()
+        
+        pretty_key_value = key + ': ' + value
+        
+        pretty_approved = ClientNetworkingDomain.valid_str_lookup[ approved ]
+        
+        pretty_reason = reason
+        
+        display_tuple = ( pretty_network_context, pretty_key_value, pretty_approved, pretty_reason )
+        
+        sort_tuple = ( pretty_network_context, ( key, value ), pretty_approved, reason )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._list_ctrl.DeleteSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for data in self._list_ctrl.GetData( only_selected = True ):
+            
+            ( network_context, ( key, value ), approved, reason ) = data
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit header' ) as dlg:
+                
+                panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._list_ctrl.DeleteDatas( ( data, ) )
+                    
+                    ( network_context, key, value, approved, reason ) = panel.GetValue()
+                    
+                    new_data = ( network_context, ( key, value ), approved, reason )
+                    
+                    self._list_ctrl.AddDatas( ( new_data, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
+        
+        for ( network_context, ( key, value ), approved, reason ) in self._list_ctrl.GetData():
+            
+            network_contexts_to_custom_header_dicts[ network_context ][ key ] = ( value, approved, reason )
+            
+        
+        return network_contexts_to_custom_header_dicts
+        
+    
+    class _EditPanel( ClientGUIScrolledPanels.EditPanel ):
+        
+        def __init__( self, parent, network_context, key, value, approved, reason ):
+            
+            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            
+            self._network_context = ClientGUICommon.NetworkContextButton( self, network_context )
+            
+            self._key = wx.TextCtrl( self )
+            self._value = wx.TextCtrl( self )
+            
+            self._approved = ClientGUICommon.BetterChoice( self )
+            
+            for a in ( ClientNetworkingDomain.VALID_APPROVED, ClientNetworkingDomain.VALID_DENIED, ClientNetworkingDomain.VALID_UNKNOWN ):
+                
+                self._approved.Append( ClientNetworkingDomain.valid_str_lookup[ a ], a )
+                
+            
+            self._reason = wx.TextCtrl( self )
+            
+            width = ClientData.ConvertTextToPixelWidth( self._reason, 60 )
+            self._reason.SetMinSize( ( width, -1 ) )
+            
+            #
+            
+            self._key.SetValue( key )
+            
+            self._value.SetValue( value )
+            
+            self._approved.SelectClientData( approved )
+            
+            self._reason.SetValue( reason )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._network_context, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._key, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._approved, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( self._reason, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def GetValue( self ):
+            
+            network_context = self._network_context.GetValue()
+            key = self._key.GetValue()
+            value = self._value.GetValue()
+            approved = self._approved.GetChoice()
+            reason = self._reason.GetValue()
+            
+            return ( network_context, key, value, approved, reason )
+            
         
     
 class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):

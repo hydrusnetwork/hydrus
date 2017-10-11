@@ -13,6 +13,7 @@ import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
 import ClientGUIPopupMessages
+import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
@@ -149,7 +150,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo = wx.AboutDialogInfo()
         
-        aboutinfo.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus.ico' ), wx.BITMAP_TYPE_ICO ) )
+        aboutinfo.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG ) )
         aboutinfo.SetName( 'hydrus client' )
         aboutinfo.SetVersion( str( HC.SOFTWARE_VERSION ) + ', using network version ' + str( HC.NETWORK_VERSION ) )
         
@@ -1347,6 +1348,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage network rules (under construction)', 'Configure how the client talks to the network.', self._ManageNetworkRules )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1684,6 +1686,31 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _ManageImportFolders( self ):
         
         with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
+        
+    
+    def _ManageNetworkRules( self ):
+        
+        title = 'manage network rules'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            # eventually make this a proper management panel with several notebook pages or something
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextCustomHeadersPanel( dlg, network_contexts_to_custom_header_dicts )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                network_contexts_to_custom_header_dicts = panel.GetValue()
+                
+                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
+                
+            
         
     
     def _ManageOptions( self ):

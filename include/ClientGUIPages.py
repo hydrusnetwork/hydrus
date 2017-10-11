@@ -2065,6 +2065,13 @@ class PagesNotebook( wx.Notebook ):
         
         follow_dropped_page = not shift_down
         
+        new_options = HG.client_controller.GetNewOptions()
+        
+        if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
+            
+            follow_dropped_page = not follow_dropped_page
+            
+        
         self._MovePage( page, dest_notebook, insertion_tab_index, follow_dropped_page )
         
     
@@ -2131,7 +2138,7 @@ class PagesNotebook( wx.Notebook ):
             
             if page.GetPageKey() == page_key:
                 
-                if page.GetName() != page_key:
+                if page.GetName() != name:
                     
                     page.SetName( name )
                     

@@ -160,7 +160,7 @@ def RequestsGet( url, params = None, stream = False, headers = None ):
         headers = {}
         
     
-    headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+    headers[ 'User-Agent' ] = 'hydrus client'
     
     response = requests.get( url, params = params, stream = stream, headers = headers )
     
@@ -198,7 +198,7 @@ def RequestsPost( url, data = None, files = None, headers = None ):
         headers = {}
         
     
-    headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+    headers[ 'User-Agent' ] = 'hydrus client'
     
     response = requests.post( url, data = data, files = files )
     
@@ -668,7 +668,7 @@ class HTTPConnection( object ):
         
         if 'User-Agent' not in request_headers:
             
-            request_headers[ 'User-Agent' ] = 'hydrus/' + str( HC.NETWORK_VERSION )
+            request_headers[ 'User-Agent' ] = 'hydrus client'
             
         
         if 'Accept' not in request_headers:
@@ -1670,9 +1670,9 @@ class NetworkEngine( object ):
                     
                     if self._current_validation_process is None:
                         
-                        validation_process = job.GenerateValidationProcess
+                        validation_process = job.GenerateValidationPopupProcess()
                         
-                        self.controller.CallToThread( validation_process )
+                        self.controller.CallToThread( validation_process.Start )
                         
                         self._current_validation_process = validation_process
                         
@@ -1964,11 +1964,11 @@ class NetworkJob( object ):
             data = self._body
             files = self._files
             
-            headers = {}
+            headers = self.engine.domain_manager.GetHeaders( self._network_contexts )
             
             if self._referral_url is not None:
                 
-                headers = { 'referer' : self._referral_url }
+                headers[ 'referer' ] = self._referral_url
                 
             
             for ( key, value ) in self._additional_headers.items():
@@ -2817,8 +2817,6 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     def _GenerateSession( self, network_context ):
         
         session = requests.Session()
-        
-        session.headers.update( { 'User-Agent' : 'hydrus/' + str( HC.NETWORK_VERSION ) } )
         
         if network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
             

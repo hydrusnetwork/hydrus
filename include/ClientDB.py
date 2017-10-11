@@ -3,6 +3,7 @@ import ClientDefaults
 import ClientImageHandling
 import ClientMedia
 import ClientNetworking
+import ClientNetworkingDomain
 import ClientRatings
 import ClientSearch
 import ClientServices
@@ -2851,6 +2852,12 @@ class DB( HydrusDB.HydrusDB ):
         ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
         
         self._SetJSONDump( bandwidth_manager )
+        
+        domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+        
+        ClientDefaults.SetDefaultDomainManagerData( domain_manager )
+        
+        self._SetJSONDump( domain_manager )
         
         session_manager = ClientNetworking.NetworkSessionManager()
         
@@ -7830,14 +7837,9 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                self._AnalyzeStaleBigTables()
-                
             finally:
                 
-                if this_is_first_sync:
-                    
-                    self._AnalyzeStaleBigTables()
-                    
+                self._AnalyzeStaleBigTables()
                 
                 job_key.SetVariable( 'popup_text_1', 'finished' )
                 job_key.DeleteVariable( 'popup_gauge_1' )
@@ -9797,6 +9799,35 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 276:
+            
+            domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+            
+            ClientDefaults.SetDefaultDomainManagerData( domain_manager )
+            
+            self._SetJSONDump( domain_manager )
+            
+            #
+            
+            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+            
+            rules = HydrusNetworking.BandwidthRules()
+            
+            rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60 * 7, 80 )
+            
+            rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
+            
+            bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
+            
+            self._SetJSONDump( bandwidth_manager )
+            
+            message = 'The Sankaku downloader appears to be working again with a User-Agent substitution. There are also some new, conservative Sankaku bandwidth rules.'
+            message += os.linesep * 2
+            message += 'If you do not currently have the Sankaku downloader(s) in your booru list but would like to try, please check the user-run wiki (linked off the \'contact\' help page) for the .yaml \'preset\' import files.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

@@ -2498,12 +2498,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
                 
             
+            self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
+            self._reverse_page_shift_drag_behaviour.SetToolTipString( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
+            
             self._always_embed_autocompletes = wx.CheckBox( self )
             
             self._hide_preview = wx.CheckBox( self )
             
             self._show_thumbnail_title_banner = wx.CheckBox( self )
             self._show_thumbnail_page = wx.CheckBox( self )
+            
+            self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
+            self._thumbnail_visibility_scroll_percent.SetToolTipString( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
             self._discord_dnd_fix = wx.CheckBox( self )
             self._discord_dnd_fix.SetToolTipString( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
@@ -2553,6 +2559,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
             
+            self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
+            
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
@@ -2560,6 +2568,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_thumbnail_title_banner.SetValue( self._new_options.GetBoolean( 'show_thumbnail_title_banner' ) )
             
             self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
+            
+            self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
             
             self._discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
             
@@ -2591,10 +2601,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
+            rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
+            rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
@@ -2680,10 +2692,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
             
+            self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
+            
             HG.client_controller.pub( 'main_gui_title', title )
             
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
+            
+            self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
             
             self._new_options.SetBoolean( 'discord_dnd_fix', self._discord_dnd_fix.GetValue() )
             self._new_options.SetBoolean( 'always_show_hover_windows', self._always_show_hover_windows.GetValue() )

@@ -7,6 +7,7 @@ import HydrusGlobals as HG
 import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
+import os
 import threading
 import time
 import urlparse
@@ -41,17 +42,16 @@ def ConvertURLIntoDomain( url ):
 VALID_DENIED = 0
 VALID_APPROVED = 1
 VALID_UNKNOWN = 2
-# this should do network_contexts->user-agent as well, with some kind of approval system in place
-    # approval needs a new queue in the network engine. this will eventually test downloader validity and so on. failable at that stage
-    # user-agent info should be exportable/importable on the ui as well
-# eventually extend this to do urlmatch->downloader_key, I think.
-# hence we'll be able to do some kind of dnd_url->new thread watcher page
-# hide urls on media viewer based on domain
-# decide whether we want to add this to the dirtyobjects loop, and it which case, if anything is appropriate to store in the db separately
-  # hence making this a serialisableobject itself.
+
+valid_str_lookup = {}
+
+valid_str_lookup[ VALID_DENIED ] = 'denied'
+valid_str_lookup[ VALID_APPROVED ] = 'approved'
+valid_str_lookup[ VALID_UNKNOWN ] = 'unknown'
+
 class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -61,7 +61,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self.engine = None
         
         self._url_matches = HydrusSerialisable.SerialisableList()
-        self._network_contexts_to_custom_headers = {}
+        self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
         
         self._domains_to_url_matches = collections.defaultdict( list )
         
@@ -70,6 +70,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._lock = threading.Lock()
         
         self._RecalcCache()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_url_matches = self._url_matches.GetSerialisableTuple()
+        serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), custom_header_dict.items() ) for ( network_context, custom_header_dict ) in self._network_contexts_to_custom_header_dicts.items() ]
+        
+        return ( serialisable_url_matches, serialisable_network_contexts_to_custom_header_dicts )
         
     
     def _GetURLMatch( self, url ):
@@ -99,6 +107,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return None
         
     
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_url_matches, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
+        
+        self._url_matches = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_matches )
+        
+        self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
+        
+        for ( serialisable_network_context, custom_header_dict_items ) in serialisable_network_contexts_to_custom_header_dicts:
+            
+            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
+            custom_header_dict = dict( custom_header_dict_items )
+            
+            self._network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
+            
+        
+    
     def _RecalcCache( self ):
         
         self._domains_to_url_matches = collections.defaultdict( list )
@@ -123,29 +148,32 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return True
         
     
-    def GenerateValidationProcess( self, network_contexts ):
-        
-        # generate a process that will, when threadcalled maybe with .Start() , ask the user, one after another, all the key-value pairs
-        # Should (network context) apply "(key)" header "(value)"?
-        # Reason given is: "You need this to make it work lol."
-        # once all the yes/nos are set, update db, reinitialise domain manager, set IsDone to true.
-        
-        pass
-        
-    
-    def GetCustomHeaders( self, network_contexts ):
-        
-        keys_to_values = {}
+    def GenerateValidationPopupProcess( self, network_contexts ):
         
         with self._lock:
             
-            pass
+            header_tuples = []
             
-            # good order is global = least powerful, which I _think_ is how these come.
-            # e.g. a site User-Agent should overwrite a global default
+            for network_context in network_contexts:
+                
+                if network_context in self._network_contexts_to_custom_header_dicts:
+                    
+                    custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                    
+                    for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                        
+                        if approved == VALID_UNKNOWN:
+                            
+                            header_tuples.append( ( network_context, key, value, reason ) )
+                            
+                        
+                    
+                
             
-        
-        return keys_to_values
+            process = DomainValidationPopupProcess( self, header_tuples )
+            
+            return process
+            
         
     
     def GetDownloader( self, url ):
@@ -161,17 +189,59 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetHeaders( self, network_contexts ):
+        
+        with self._lock:
+            
+            headers = {}
+            
+            for network_context in network_contexts:
+                
+                if network_context in self._network_contexts_to_custom_header_dicts:
+                    
+                    custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                    
+                    for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
+                        
+                        if approved == VALID_APPROVED:
+                            
+                            headers[ key ] = value
+                            
+                        
+                    
+                
+            
+            return headers
+            
+        
+    
+    def GetNetworkContextsToCustomHeaderDicts( self ):
+        
+        with self._lock:
+            
+            return dict( self._network_contexts_to_custom_header_dicts )
+            
+        
+    
+    def IsDirty( self ):
+        
+        with self._lock:
+            
+            return self._dirty
+            
+        
+    
     def IsValid( self, network_contexts ):
         
         # for now, let's say that denied headers are simply not added, not that they invalidate a query
         
         for network_context in network_contexts:
             
-            if network_context in self._network_contexts_to_custom_headers:
+            if network_context in self._network_contexts_to_custom_header_dicts:
                 
-                custom_headers = self._network_contexts_to_custom_headers[ network_context ]
+                custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
                 
-                for ( key, value, approved, reason ) in custom_headers:
+                for ( value, approved, reason ) in custom_header_dict.values():
                     
                     if approved == VALID_UNKNOWN:
                         
@@ -216,15 +286,35 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            custom_headers = self._network_contexts_to_custom_headers[ network_context ]
+            if network_context in self._network_contexts_to_custom_header_dicts:
+                
+                custom_header_dict = self._network_contexts_to_custom_header_dicts[ network_context ]
+                
+                if key in custom_header_dict:
+                    
+                    ( value, old_approved, reason ) = custom_header_dict[ key ]
+                    
+                    custom_header_dict[ key ] = ( value, approved, reason )
+                    
+                
             
+            self._SetDirty()
             
+        
+    
+    def SetNetworkContextsToCustomHeaderDicts( self, network_contexts_to_custom_header_dicts ):
+        
+        with self._lock:
+            
+            self._network_contexts_to_custom_header_dicts = network_contexts_to_custom_header_dicts
+            
+            self._SetDirty()
             
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
 
-class DomainValidationProcess( object ):
+class DomainValidationPopupProcess( object ):
     
     def __init__( self, domain_manager, header_tuples ):
         
@@ -246,16 +336,21 @@ class DomainValidationProcess( object ):
             
             results = []
             
-            for ( network_context, key, value, approval_reason ) in self._header_tuples:
+            for ( network_context, key, value, reason ) in self._header_tuples:
                 
                 job_key = ClientThreading.JobKey()
                 
                 # generate question
-                question = 'intro text ' + approval_reason
+                
+                question = 'For the network context ' + network_context.ToUnicode() + ', can the client set this header?'
+                question += os.linesep * 2
+                question += key + ': ' + value
+                question += os.linesep * 2
+                question += reason
                 
                 job_key.SetVariable( 'popup_yes_no_question', question )
                 
-                # pub it
+                HG.client_controller.pub( 'message', job_key )
                 
                 result = job_key.GetIfHasVariable( 'popup_yes_no_answer' )
                 
@@ -267,6 +362,8 @@ class DomainValidationProcess( object ):
                         
                     
                     time.sleep( 0.25 )
+                    
+                    result = job_key.GetIfHasVariable( 'popup_yes_no_answer' )
                     
                 
                 if result:
@@ -287,10 +384,6 @@ class DomainValidationProcess( object ):
             
         
     
-# make this serialisable--maybe with name as the name of a named serialisable
-# __hash__ for name? not sure
-# maybe all serialisable should return __hash__ of ( type, name ) if they don't already
-# that might lead to problems elsewhere, so careful
 class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH

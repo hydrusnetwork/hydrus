@@ -291,6 +291,16 @@ class BetterCheckListBox( wx.CheckListBox ):
     
 class BetterChoice( wx.Choice ):
     
+    def Append( self, display_string, client_data ):
+        
+        wx.Choice.Append( self, display_string, client_data )
+        
+        if self.GetCount() == 1:
+            
+            self.Select( 0 )
+            
+        
+    
     def GetChoice( self ):
         
         selection = self.GetSelection()
@@ -1503,6 +1513,52 @@ class MenuButton( BetterButton ):
     def SetMenuItems( self, menu_items ):
         
         self._menu_items = menu_items
+        
+    
+class NetworkContextButton( BetterButton ):
+    
+    def __init__( self, parent, network_context ):
+        
+        BetterButton.__init__( self, parent, network_context.ToUnicode(), self._Edit )
+        
+        self._network_context = network_context
+        
+    
+    def _Edit( self ):
+        
+        import ClientGUITopLevelWindows
+        import ClientGUIScrolledPanelsEdit
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit network context' ) as dlg:
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, self._network_context )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._network_context = panel.GetValue()
+                
+                self._Update()
+                
+            
+        
+    
+    def _Update( self ):
+        
+        self.SetLabelText( self._network_context.ToUnicode() )
+        
+    
+    def GetValue( self ):
+        
+        return self._network_context
+        
+    
+    def SetValue( self, network_context ):
+        
+        self._network_context = network_context
+        
+        self._Update()
         
     
 class NoneableSpinCtrl( wx.Panel ):

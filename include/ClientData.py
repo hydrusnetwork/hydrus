@@ -851,6 +851,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
         
+        self._dictionary[ 'booleans' ][ 'reverse_page_shift_drag_behaviour' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -914,6 +916,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
         
         self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
+        
+        self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
         
         #
         
@@ -1047,7 +1051,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = WatcherOptions( intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = WatcherOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
         
         #
         

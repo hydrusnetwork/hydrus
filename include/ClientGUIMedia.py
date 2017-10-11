@@ -2292,6 +2292,10 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
+            new_options = HG.client_controller.GetNewOptions()
+            
+            percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / float( 100 )
+            
             if y < start_y * y_unit:
                 
                 y_to_scroll_to = y / y_unit
@@ -2300,7 +2304,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
-            elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * 0.90 ):
+            elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * percent_visible ):
                 
                 y_to_scroll_to = ( y - height ) / y_unit
                 
@@ -2480,7 +2484,12 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     drop_source.SetData( data_object )
                     
-                    drop_source.DoDragDrop( flags )
+                    result = drop_source.DoDragDrop( flags )
+                    
+                    if result not in ( wx.DragError, wx.DragNone ):
+                        
+                        self._SetFocussedMedia( None )
+                        
                     
                 
             

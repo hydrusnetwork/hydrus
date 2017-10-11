@@ -181,6 +181,11 @@ class PopupMessage( PopupWindow ):
         
         self._job_key.SetVariable( 'popup_yes_no_answer', False )
         
+        self._job_key.Delete()
+        
+        self._yes.Hide()
+        self._no.Hide()
+        
     
     def _ProcessText( self, text ):
         
@@ -201,6 +206,11 @@ class PopupMessage( PopupWindow ):
     def _YesButton( self ):
         
         self._job_key.SetVariable( 'popup_yes_no_answer', True )
+        
+        self._job_key.Delete()
+        
+        self._yes.Hide()
+        self._no.Hide()
         
     
     def Cancel( self ):

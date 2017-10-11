@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientImporting
 import ClientNetworking
+import ClientNetworkingDomain
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusNetworking
@@ -80,6 +81,42 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60 * 7, 80 )
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
+    
+    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
+    
+def SetDefaultDomainManagerData( domain_manager ):
+    
+    network_contexts_to_custom_header_dicts = {}
+    
+    #
+    
+    custom_header_dict = {}
+    
+    custom_header_dict[ 'User-Agent' ] = ( 'hydrus client', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
+    
+    network_contexts_to_custom_header_dicts[ ClientNetworking.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
+    
+    #
+    
+    custom_header_dict = {}
+    
+    custom_header_dict[ 'User-Agent' ] = ( 'SCChannelApp/2.0.1 (Android; black)', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku seem to currently have a User-Agent whitelist on file requests. Setting this User-Agent allows the sankaku downloader to work.' )
+    
+    network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+    
+    network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
+    
+    #
+    
+    domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
     
 def GetClientDefaultOptions():
     
@@ -462,9 +499,20 @@ def GetDefaultBoorus():
     thumb_classname = 'thumb'
     image_id = 'highres'
     image_data = None
-    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium' }
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium', 'tag-type-meta' : 'meta', 'tag-type-studio' : 'studio' }
     
-    #boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    boorus[ 'sankaku chan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
+    
+    name = 'sankaku idol'
+    search_url = 'https://idol.sankakucomplex.com/?tags=%tags%&page=%index%'
+    search_separator = '+'
+    advance_by_page_num = True
+    thumb_classname = 'thumb'
+    image_id = 'highres'
+    image_data = None
+    tag_classnames_to_namespaces = { 'tag-type-general' : '', 'tag-type-character' : 'character', 'tag-type-copyright' : 'series', 'tag-type-artist' : 'creator', 'tag-type-medium' : 'medium', 'tag-type-meta' : 'meta', 'tag-type-photo_set' : 'photo set', 'tag-type-idol' : 'person' }
+    
+    boorus[ 'sankaku idol' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'rule34hentai'
     search_url = 'http://rule34hentai.net/post/list/%tags%/%index%'

@@ -580,6 +580,8 @@ class Controller( HydrusController.HydrusController ):
             
             ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
             
+            bandwidth_manager._dirty = True
+            
             wx.MessageBox( 'Your bandwidth manager was missing on boot! I have recreated a new empty one with default rules. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
@@ -589,10 +591,21 @@ class Controller( HydrusController.HydrusController ):
             
             session_manager = ClientNetworking.NetworkSessionManager()
             
+            session_manager._dirty = True
+            
             wx.MessageBox( 'Your session manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
-        domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+        domain_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+        
+        if domain_manager is None:
+            
+            domain_manager = ClientNetworking.NetworkSessionManager()
+            
+            domain_manager._dirty = True
+            
+            wx.MessageBox( 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
         
         login_manager = ClientNetworking.NetworkLoginManager()
         
@@ -1054,6 +1067,13 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.network_engine.bandwidth_manager )
                 
                 self.network_engine.bandwidth_manager.SetClean()
+                
+            
+            if self.network_engine.domain_manager.IsDirty():
+                
+                self.WriteSynchronous( 'serialisable', self.network_engine.domain_manager )
+                
+                self.network_engine.domain_manager.SetClean()
                 
             
             if self.network_engine.session_manager.IsDirty():

@@ -15,6 +15,18 @@ import HydrusGlobals as HG
 import HydrusPaths
 import warnings
 
+if not hasattr( PILImage, 'DecompressionBombWarning' ):
+    
+    # super old versions don't have this, so let's just make a stub, wew
+    
+    class DBW_stub( Exception ):
+        
+        pass
+        
+    
+    PILImage.DecompressionBombWarning = DBW_stub
+    
+
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 
 def ConvertToPngIfBmp( path ):

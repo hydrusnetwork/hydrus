@@ -3176,7 +3176,7 @@ class UndoManager( object ):
     
 class WebSessionManagerClient( object ):
     
-    SESSION_TIMEOUT = 90 * 60
+    SESSION_TIMEOUT = 60 * 60
     
     def __init__( self, controller ):
         
