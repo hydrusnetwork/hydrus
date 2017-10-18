@@ -2363,8 +2363,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._paused = wx.CheckBox( self._folder_box )
         
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._folder_box, CC.GlobalBMPs.seed_cache, self.ShowSeedCache )
-        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self, HG.client_controller, self._import_folder.GetSeedCache, seed_cache_set_callable = self._import_folder.SetSeedCache )
         
         #
         
@@ -2756,25 +2755,6 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         return self._import_folder
         
     
-    def ShowSeedCache( self ):
-        
-        seed_cache = self._import_folder.GetSeedCache()
-        
-        dupe_seed_cache = seed_cache.Duplicate()
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
-            
-            panel = ClientGUISeedCache.EditSeedCachePanel( dlg, HG.client_controller, dupe_seed_cache )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._import_folder.SetSeedCache( dupe_seed_cache )
-                
-            
-        
-    
 class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent ):
@@ -2872,7 +2852,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         
         try:
             
-            manager = HG.client_controller.GetManager( 'web_sessions' )
+            manager = HG.client_controller.network_engine.login_manager
             
             ( result, message ) = manager.TestPixiv( pixiv_id, password )
             
@@ -3611,6 +3591,19 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
     
     def EventOK( self, event ):
         
+        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+        
         service_keys_to_content_updates = {}
         
         try:
@@ -3624,7 +3617,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
-        finally: self.EndModal( wx.ID_OK )
+        finally:
+            
+            self.EndModal( wx.ID_OK )
+            
         
     
     def EventServiceChanged( self, event ):
@@ -4080,6 +4076,11 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             return ( self._service_key, content_updates )
             
         
+        def HasUncommittedPair( self ):
+            
+            return len( self._children.GetTags() ) > 0 and len( self._parents.GetTags() ) > 0
+            
+        
         def SetTagBoxFocus( self ):
             
             if len( self._children.GetTags() ) == 0: self._child_input.SetFocus()
@@ -4214,6 +4215,19 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
     
     def EventOK( self, event ):
+        
+        if self._tag_repositories.GetCurrentPage().HasUncommittedPair():
+            
+            message = 'Are you sure you want to OK? You have an uncommitted pair.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
         
         service_keys_to_content_updates = {}
         
@@ -4739,6 +4753,11 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             return ( self._service_key, content_updates )
             
         
+        def HasUncommittedPair( self ):
+            
+            return len( self._old_siblings.GetTags() ) > 0 and self._current_new is not None
+            
+        
         def SetNew( self, new_tags ):
             
             if len( new_tags ) == 0:
@@ -4763,8 +4782,14 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         def SetTagBoxFocus( self ):
             
-            if len( self._old_siblings.GetTags() ) == 0: self._old_input.SetFocus()
-            else: self._new_input.SetFocus()
+            if len( self._old_siblings.GetTags() ) == 0:
+                
+                self._old_input.SetFocus()
+                
+            else:
+                
+                self._new_input.SetFocus()
+                
             
         
         def THREADInitialise( self, tags ):

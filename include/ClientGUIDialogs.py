@@ -2525,6 +2525,10 @@ class DialogPathsToTags( Dialog ):
                             
                             txt_tags = siblings_manager.CollapseTags( self._service_key, txt_tags )
                             
+                            tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+                            
+                            txt_tags = tag_censorship_manager.FilterTags( self._service_key, txt_tags )
+                            
                             tags.extend( txt_tags )
                             
                         except:
@@ -3337,9 +3341,19 @@ class DialogSetupExport( Dialog ):
                         
                         tags = set()
                         
+                        siblings_manager = HG.controller.GetManager( 'tag_siblings' )
+                        
+                        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+                        
                         for service_key in self._neighbouring_txt_tag_service_keys:
                             
-                            tags.update( tags_manager.GetCurrent( service_key ) )
+                            current_tags = tags_manager.GetCurrent( service_key )
+                            
+                            current_tags = siblings_manager.CollapseTags( service_key, current_tags )
+                            
+                            current_tags = tag_censorship_manager.FilterTags( service_key, current_tags )
+                            
+                            tags.update( current_tags )
                             
                         
                         tags = list( tags )

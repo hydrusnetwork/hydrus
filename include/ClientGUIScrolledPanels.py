@@ -20,12 +20,22 @@ class ResizingScrolledPanel( wx.lib.scrolledpanel.ScrolledPanel ):
     
 class EditPanel( ResizingScrolledPanel ):
     
+    def CanCancel( self ):
+        
+        return True
+        
+    
     def GetValue( self ):
         
         raise NotImplementedError()
         
     
 class ManagePanel( ResizingScrolledPanel ):
+    
+    def CanCancel( self ):
+        
+        return True
+        
     
     def CommitChanges( self ):
         

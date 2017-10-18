@@ -20,11 +20,9 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, 'bandwidth rules' )
         
-        columns = [ ( 'type', -1 ), ( 'time delta', 120 ), ( 'max allowed', 80 ) ]
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
-        
-        self._listctrl = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 100, columns, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, [ ( 'type', -1 ), ( 'time delta', 16 ), ( 'max allowed', 14 ) ], self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -34,18 +32,13 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         #
         
-        for rule in bandwidth_rules.GetRules():
-            
-            sort_tuple = rule
-            
-            display_tuple = self._GetDisplayTuple( sort_tuple )
-            
-            self._listctrl.Append( display_tuple, sort_tuple )
-            
+        self._listctrl.AddDatas( bandwidth_rules.GetRules() )
+        
+        self._listctrl.Sort( 0 )
         
         #
         
-        self.AddF( listctrl_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _Add( self ):
@@ -62,16 +55,14 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
                 new_rule = panel.GetValue()
                 
-                sort_tuple = new_rule
+                self._listctrl.AddDatas( ( new_rule, ) )
                 
-                display_tuple = self._GetDisplayTuple( sort_tuple )
-                
-                self._listctrl.Append( display_tuple, sort_tuple )
+                self._listctrl.Sort()
                 
             
         
     
-    def _GetDisplayTuple( self, rule ):
+    def _ConvertRuleToListctrlTuples( self, rule ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
@@ -88,7 +79,10 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             pretty_max_allowed = HydrusData.ConvertIntToPrettyString( max_allowed )
             
         
-        return ( pretty_bandwidth_type, pretty_time_delta, pretty_max_allowed )
+        sort_tuple = ( pretty_bandwidth_type, time_delta, max_allowed )
+        display_tuple = ( pretty_bandwidth_type, pretty_time_delta, pretty_max_allowed )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _Delete( self ):
@@ -97,18 +91,16 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._listctrl.RemoveAllSelected()
+                self._listctrl.DeleteSelected()
                 
             
         
     
     def _Edit( self ):
         
-        all_selected = self._listctrl.GetAllSelected()
+        selected_rules = self._listctrl.GetData( only_selected = True )
         
-        for index in all_selected:
-            
-            rule = self._listctrl.GetClientData( index )
+        for rule in selected_rules:
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit rule' ) as dlg:
                 
@@ -120,11 +112,9 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                     
                     edited_rule = panel.GetValue()
                     
-                    sort_tuple = edited_rule
+                    self._listctrl.DeleteDatas( ( rule, ) )
                     
-                    display_tuple = self._GetDisplayTuple( sort_tuple )
-                    
-                    self._listctrl.UpdateRow( index, display_tuple, sort_tuple )
+                    self._listctrl.AddDatas( ( edited_rule, ) )
                     
                 else:
                     
@@ -133,12 +123,16 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
             
         
+        self._listctrl.Sort()
+        
     
     def GetValue( self ):
         
         bandwidth_rules = HydrusNetworking.BandwidthRules()
         
-        for ( bandwidth_type, time_delta, max_allowed ) in self._listctrl.GetClientData():
+        for rule in self._listctrl.GetData():
+            
+            ( bandwidth_type, time_delta, max_allowed ) = rule
             
             bandwidth_rules.AddRule( bandwidth_type, time_delta, max_allowed )
             

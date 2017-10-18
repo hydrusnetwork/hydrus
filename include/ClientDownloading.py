@@ -1239,9 +1239,7 @@ class GalleryHentaiFoundry( Gallery ):
     
     def _EnsureLoggedIn( self ):
         
-        manager = HG.client_controller.GetManager( 'web_sessions' )
-        
-        manager.EnsureLoggedIn( 'hentai foundry' )
+        HG.client_controller.network_engine.login_manager.EnsureLoggedIn( 'hentai foundry' )
         
     
     def _GetFileURLAndTags( self, url ):
@@ -1564,9 +1562,7 @@ class GalleryPixiv( Gallery ):
     
     def _EnsureLoggedIn( self ):
         
-        manager = HG.client_controller.GetManager( 'web_sessions' )
-        
-        manager.EnsureLoggedIn( 'pixiv' )
+        HG.client_controller.network_engine.login_manager.EnsureLoggedIn( 'pixiv' )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -1753,6 +1749,8 @@ class GalleryTumblr( Gallery ):
             
             # I am not sure if it is always 68, but let's not assume
             
+            # Indeed, this is apparently now 78, wew!
+            
             ( scheme, rest ) = long_url.split( '://', 1 )
             
             if rest.startswith( 'media.tumblr.com' ):
@@ -1765,6 +1763,11 @@ class GalleryTumblr( Gallery ):
             shorter_url = scheme + '://' + shorter_rest
             
             return shorter_url
+            
+        
+        def MediaToDataSubdomain( url ):
+            
+            return url.replace( 'media', 'data', 1 )
             
         
         definitely_no_more_pages = False
@@ -1822,6 +1825,8 @@ class GalleryTumblr( Gallery ):
                                     url = ConvertRegularToRawURL( url )
                                     
                                     url = Remove68Subdomain( url )
+                                    
+                                    url = MediaToDataSubdomain( url )
                                     
                                 
                             

@@ -733,6 +733,7 @@ class ChoiceSort( wx.Panel ):
         self._sort_asc_choice.Bind( wx.EVT_CHOICE, self.EventSortAscChoice )
         
         HG.client_controller.sub( self, 'ACollectHappened', 'collect_media' )
+        HG.client_controller.sub( self, 'BroadcastSort', 'do_page_sort' )
         
         if self._management_controller is not None and self._management_controller.HasVariable( 'media_sort' ):
             
@@ -815,7 +816,12 @@ class ChoiceSort( wx.Panel ):
             
         
     
-    def BroadcastSort( self ):
+    def BroadcastSort( self, page_key = None ):
+        
+        if page_key is not None and page_key != self._management_controller.GetKey( 'page' ):
+            
+            return
+            
         
         self._BroadcastSort()
         
@@ -1635,11 +1641,20 @@ class NoneableSpinCtrl( wx.Panel ):
     
     def GetValue( self ):
         
-        if self._checkbox.GetValue(): return None
+        if self._checkbox.GetValue():
+            
+            return None
+            
         else:
             
-            if self._num_dimensions == 2: return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
-            else: return self._one.GetValue() * self._multiplier
+            if self._num_dimensions == 2:
+                
+                return ( self._one.GetValue() * self._multiplier, self._two.GetValue() * self._multiplier )
+                
+            else:
+                
+                return self._one.GetValue() * self._multiplier
+                
             
         
     
@@ -1678,6 +1693,90 @@ class NoneableSpinCtrl( wx.Panel ):
             self._one.Enable()
             
             self._one.SetValue( value / self._multiplier )
+            
+        
+    
+class NoneableTextCtrl( wx.Panel ):
+    
+    def __init__( self, parent, message = '', none_phrase = 'no limit' ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._checkbox = wx.CheckBox( self )
+        self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
+        self._checkbox.SetLabelText( none_phrase )
+        
+        self._text = wx.TextCtrl( self )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        if len( message ) > 0:
+            
+            hbox.AddF( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
+            
+        
+        hbox.AddF( self._text, CC.FLAGS_VCENTER )
+        hbox.AddF( self._checkbox, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def Bind( self, event_type, callback ):
+        
+        self._checkbox.Bind( wx.EVT_CHECKBOX, callback )
+        
+        self._text.Bind( wx.EVT_TEXT, callback )
+        
+    
+    def EventCheckBox( self, event ):
+        
+        if self._checkbox.GetValue():
+            
+            self._text.Disable()
+            
+        else:
+            
+            self._text.Enable()
+            
+        
+    
+    def GetValue( self ):
+        
+        if self._checkbox.GetValue():
+            
+            return None
+            
+        else:
+            
+            return self._text.GetValue()
+            
+        
+    
+    def SetToolTipString( self, text ):
+        
+        wx.Panel.SetToolTipString( self, text )
+        
+        for c in self.GetChildren():
+            
+            c.SetToolTipString( text )
+            
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            self._checkbox.SetValue( True )
+            
+            self._text.Disable()
+            
+        else:
+            
+            self._checkbox.SetValue( False )
+            
+            self._text.Enable()
+            
+            self._text.SetValue( value )
             
         
     

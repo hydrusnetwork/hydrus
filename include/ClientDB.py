@@ -1499,7 +1499,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         path = client_files_manager.GetFilePath( hash, mime )
                         
-                        if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ):
+                        if mime in HC.MIMES_WE_CAN_PHASH:
                             
                             try:
                                 
@@ -9830,6 +9830,31 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_initial_message( message )
             
         
+        if version == 277:
+            
+            self._controller.pub( 'splash_set_status_text', 'updating tumblr urls' )
+            
+            urls = self._c.execute( 'SELECT hash_id, url FROM urls;' ).fetchall()
+            
+            # don't catch the 68.media.whatever, as these may be valid, not raw urls
+            magic_phrase = '//media.tumblr.com'
+            replacement = '//data.tumblr.com'
+            
+            updates = []
+            
+            for ( hash_id, url ) in urls:
+                
+                if magic_phrase in url:
+                    
+                    fixed_url = url.replace( magic_phrase, replacement )
+                    
+                    updates.append( ( fixed_url, hash_id ) )
+                    
+                
+            
+            self._c.executemany( 'UPDATE OR IGNORE urls SET url = ? WHERE hash_id = ?;', updates )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10426,6 +10451,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'repair_client_files': result = self._RepairClientFiles( *args, **kwargs )
         elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
+        elif action == 'schedule_full_phash_regen': result = self._CacheSimilarFilesSchedulePHashRegeneration()
         elif action == 'serialisable_simple': result = self._SetJSONSimple( *args, **kwargs )
         elif action == 'serialisable': result = self._SetJSONDump( *args, **kwargs )
         elif action == 'serialisables_overwrite': result = self._OverwriteJSONDumps( *args, **kwargs )

@@ -157,6 +157,20 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _ArchiveDeleteFilter( self ):
+        
+        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
+        
+        if len( media_results ) > 0:
+            
+            canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
+            
+            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, media_results )
+            
+            canvas_frame.SetCanvas( canvas_window )
+            
+        
+    
     def _CopyBMPToClipboard( self ):
         
         media = self._focussed_media.GetDisplayMedia()
@@ -515,20 +529,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
             
             canvas_window = ClientGUICanvas.CanvasMediaListBrowser( canvas_frame, self._page_key, media_results, first_hash )
-            
-            canvas_frame.SetCanvas( canvas_window )
-            
-        
-    
-    def _ArchiveDeleteFilter( self ):
-        
-        media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH, selected_media = set( self._selected_media ), for_media_viewer = True )
-        
-        if len( media_results ) > 0:
-            
-            canvas_frame = ClientGUICanvas.CanvasFrame( self.GetTopLevelParent() )
-            
-            canvas_window = ClientGUICanvas.CanvasMediaListFilterArchiveDelete( canvas_frame, self._page_key, media_results )
             
             canvas_frame.SetCanvas( canvas_window )
             
@@ -1279,6 +1279,21 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             media_pairs = list( itertools.combinations( flat_media, 2 ) )
             
         
+        if len( media_pairs ) > 100:
+            
+            message = 'The duplicate system does not yet work well for large groups of duplicates. This is about to ask if you want to apply a dupe status for more than 100 pairs.'
+            message += os.linesep * 2
+            message += 'Unless you are testing the system or have another good reason to try this, I recommend you step back for now.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'I know what I am doing', no_label = 'step back for now' ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
+            
+        
         message = 'Are you sure you want to ' + yes_no_text + ' for the ' + HydrusData.ConvertIntToPrettyString( len( media_pairs ) ) + ' pairs?'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
@@ -1432,13 +1447,13 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if hashes is not None and len( hashes ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes )
+            HG.client_controller.pub( 'new_page_query', self._file_service_key, initial_hashes = hashes, do_sort = True )
             
         
     
     def _ShowSelectionInNewPage( self ):
         
-        hashes = self._GetSelectedHashes()
+        hashes = self._GetSelectedHashes( ordered = True )
         
         if hashes is not None and len( hashes ) > 0:
             

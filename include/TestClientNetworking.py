@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientNetworking
 import ClientNetworkingDomain
+import ClientNetworkingLogin
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -222,7 +223,7 @@ class TestNetworkingEngine( unittest.TestCase ):
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         engine = ClientNetworking.NetworkEngine( mock_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -252,7 +253,7 @@ class TestNetworkingEngine( unittest.TestCase ):
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         engine = ClientNetworking.NetworkEngine( mock_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -280,7 +281,7 @@ class TestNetworkingEngine( unittest.TestCase ):
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         engine = ClientNetworking.NetworkEngine( mock_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -332,7 +333,7 @@ class TestNetworkingJob( unittest.TestCase ):
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         engine = ClientNetworking.NetworkEngine( mock_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -541,7 +542,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         engine = ClientNetworking.NetworkEngine( mock_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
         

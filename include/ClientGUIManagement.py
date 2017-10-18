@@ -937,9 +937,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self.SetSizer( vbox )
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdateDBJob, id = ID_TIMER_UPDATE )
-        self._update_db_job_timer = wx.Timer( self, id = ID_TIMER_UPDATE )
-        
         HG.client_controller.sub( self, 'RefreshAndUpdateStatus', 'refresh_dupe_numbers' )
         
     
@@ -978,9 +975,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _RebalanceTree( self ):
         
-        self._job = 'branches'
+        job_key = ClientThreading.JobKey( cancellable = True )
         
-        self._StartStopDBJob()
+        self._controller.Write( 'maintain_similar_files_tree', job_key = job_key )
+        
+        self._controller.pub( 'modal_message', job_key )
+        
+        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
         
     
     def _RefreshAndUpdateStatus( self ):
@@ -994,9 +995,13 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _RegeneratePhashes( self ):
         
-        self._job = 'phashes'
+        job_key = ClientThreading.JobKey( cancellable = True )
         
-        self._StartStopDBJob()
+        self._controller.Write( 'maintain_similar_files_phashes', job_key = job_key )
+        
+        self._controller.pub( 'modal_message', job_key )
+        
+        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
         
     
     def _ResetUnknown( self ):
@@ -1017,9 +1022,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _SearchForDuplicates( self ):
         
-        self._job = 'search'
+        job_key = ClientThreading.JobKey( cancellable = True )
         
-        self._StartStopDBJob()
+        search_distance = self._search_distance_spinctrl.GetValue()
+        
+        self._controller.Write( 'maintain_similar_files_duplicate_pairs', search_distance, job_key = job_key )
+        
+        self._controller.pub( 'modal_message', job_key )
+        
+        self._controller.CallToThread( self._THREADWaitOnJob, job_key )
         
     
     def _SetFileDomain( self, service_key ):
@@ -1054,7 +1065,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         message += os.linesep
         message += '3 - Walking through the pairs or groups of potential duplicates and telling the client how they are related.'
         message += os.linesep * 2
-        message += 'For the first two steps, you likely just want to click the play buttons and wait for them to complete. They are very CPU intensive and lock the database heavily as they work. If you want to use the client for anything else while they are running, pause them first. You can also set them to run in idle time from the cog icon. For the search \'distance\', start at the fast and limited \'exact match\', or 0 \'hamming distance\' search and slowly expand it as you gain experience with the system.'
+        message += 'For the first two steps, you likely just want to click the play buttons and wait for them to complete. They are CPU intensive and lock the client as they work. You can also set them to run in idle time from the cog icon. For the search \'distance\', start at the fast and limited \'exact match\' (0 \'hamming distance\') and slowly expand it as you gain experience with the system.'
         message += os.linesep * 2
         message += 'Once you have found some potential pairs, you can either show some random groups as thumbnails (and process them manually however you prefer), or you can launch the specialised duplicate filter, which lets you quickly assign duplicate status to pairs of files and will automatically merge files and tags between dupes however you prefer.'
         message += os.linesep * 2
@@ -1092,125 +1103,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._controller.pub( 'swap_media_panel', self._page_key, panel )
         
     
-    def _StartStopDBJob( self ):
-        
-        if self._job_key is None:
-            
-            self._cog_button.Disable()
-            self._phashes_button.Disable()
-            self._branches_button.Disable()
-            self._search_button.Disable()
-            self._search_distance_button.Disable()
-            self._search_distance_spinctrl.Disable()
-            self._show_some_dupes.Disable()
-            self._launch_filter.Disable()
-            
-            self._job_key = ClientThreading.JobKey( cancellable = True )
-            
-            if self._job == 'phashes':
-                
-                self._phashes_button.Enable()
-                self._phashes_button.SetBitmap( CC.GlobalBMPs.stop )
-                
-                self._controller.Write( 'maintain_similar_files_phashes', job_key = self._job_key )
-                
-            elif self._job == 'branches':
-                
-                self._branches_button.Enable()
-                self._branches_button.SetBitmap( CC.GlobalBMPs.stop )
-                
-                self._controller.Write( 'maintain_similar_files_tree', job_key = self._job_key )
-                
-            elif self._job == 'search':
-                
-                self._search_button.Enable()
-                self._search_button.SetBitmap( CC.GlobalBMPs.stop )
-                
-                search_distance = self._search_distance_spinctrl.GetValue()
-                
-                self._controller.Write( 'maintain_similar_files_duplicate_pairs', search_distance, job_key = self._job_key )
-                
-            
-            self._update_db_job_timer.Start( 250, wx.TIMER_CONTINUOUS )
-            
-        else:
-            
-            self._job_key.Cancel()
-            
-        
-    
-    def _UpdateJob( self ):
-        
-        if self._in_break:
-            
-            if HG.client_controller.DBCurrentlyDoingJob():
-                
-                return
-                
-            else:
-                
-                self._in_break = False
-                
-                self._StartStopDBJob()
-                
-                return
-                
-            
-        
-        if self._job_key.TimeRunning() > 10:
-            
-            self._job_key.Cancel()
-            
-            self._job_key = None
-            
-            self._in_break = True
-            
-            return
-            
-        
-        if self._job_key.IsDone():
-            
-            self._job_key = None
-            
-            self._update_db_job_timer.Stop()
-            
-            self._RefreshAndUpdateStatus()
-            
-            return
-            
-        
-        if self._job == 'phashes':
-            
-            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
-            
-            if text is not None:
-                
-                self._num_phashes_to_regen.SetLabelText( text )
-                
-            
-        elif self._job == 'branches':
-            
-            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
-            
-            if text is not None:
-                
-                self._num_branches_to_regen.SetLabelText( text )
-                
-            
-        elif self._job == 'search':
-            
-            text = self._job_key.GetIfHasVariable( 'popup_text_1' )
-            gauge = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
-            
-            if text is not None and gauge is not None:
-                
-                ( value, range ) = gauge
-                
-                self._num_searched.SetValue( text, value, range )
-                
-            
-        
-    
     def _UpdateStatus( self ):
         
         ( num_phashes_to_regen, num_branches_to_regen, searched_distances_to_count, duplicate_types_to_count ) = self._similar_files_maintenance_status
@@ -1221,7 +1113,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._branches_button.SetBitmap( CC.GlobalBMPs.play )
         self._search_button.SetBitmap( CC.GlobalBMPs.play )
         
-        total_num_files = sum( searched_distances_to_count.values() )
+        total_num_files = max( num_phashes_to_regen, sum( searched_distances_to_count.values() ) )
         
         if num_phashes_to_regen == 0:
             
@@ -1312,6 +1204,21 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         
     
+    def _THREADWaitOnJob( self, job_key ):
+        
+        while not job_key.IsDone():
+            
+            if HG.model_shutdown:
+                
+                return
+                
+            
+            time.sleep( 0.25 )
+            
+        
+        self._RefreshAndUpdateStatus()
+        
+    
     def EventSearchDistanceChanged( self, event ):
         
         self._UpdateStatus()
@@ -1320,11 +1227,6 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def RefreshAndUpdateStatus( self ):
         
         self._RefreshAndUpdateStatus()
-        
-    
-    def TIMEREventUpdateDBJob( self, event ):
-        
-        self._UpdateJob()
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_DUPLICATE_FILTER ] = ManagementPanelDuplicateFilter
@@ -2169,7 +2071,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
     
     def EventPaste( self, event ):
-    
+        
         if wx.TheClipboard.Open():
             
             data = wx.TextDataObject()
@@ -2627,16 +2529,16 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
         self._overall_gauge = ClientGUICommon.Gauge( self._url_panel )
         
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self._url_panel, CC.GlobalBMPs.seed_cache, self._SeedCache )
-        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
+        
+        # replace all this with a seed cache panel sometime
+        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self, self._controller, self._urls_import.GetSeedCache )
         
         self._url_input = wx.TextCtrl( self._url_panel, style = wx.TE_PROCESS_ENTER )
         self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self._url_paste = wx.Button( self._url_panel, label = 'paste urls' )
         self._url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
-        
-        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
         file_import_options = self._urls_import.GetOptions()
         
@@ -2679,20 +2581,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateStatus()
         
         HG.client_controller.sub( self, 'SetURLInput', 'set_page_url_input' )
-        
-    
-    def _SeedCache( self ):
-        
-        seed_cache = self._urls_import.GetSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUISeedCache.EditSeedCachePanel( frame, self._controller, seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def _UpdateStatus( self ):

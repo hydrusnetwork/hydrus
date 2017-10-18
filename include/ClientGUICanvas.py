@@ -2945,7 +2945,9 @@ class CanvasWithHovers( CanvasWithDetails ):
                     self._current_drag_is_touch = True
                     
                 
-                if HC.PLATFORM_WINDOWS and not self._current_drag_is_touch:
+                anchor_and_hide_canvas_drags = HG.client_controller.new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
+                
+                if HC.PLATFORM_WINDOWS and anchor_and_hide_canvas_drags and not self._current_drag_is_touch:
                     
                     # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
                     

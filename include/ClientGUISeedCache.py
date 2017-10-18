@@ -230,6 +230,160 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
+    
+    def __init__( self, parent, controller, seed_cache_get_callable, seed_cache_set_callable = None ):
+        
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.seed_cache, self._ShowSeedCacheFrame )
+        
+        self._controller = controller
+        self._seed_cache_get_callable = seed_cache_get_callable
+        self._seed_cache_set_callable = seed_cache_set_callable
+        
+        self.SetToolTipString( 'open detailed file import status--right-click for quick actions, if applicable' )
+        
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        
+    
+    def _ClearProcessed( self ):
+        
+        message = 'Are you sure you want to delete all the processed (i.e. anything with a non-blank status in the larger window) files? This is useful for cleaning up and de-laggifying a very large list, but not much else.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                seed_cache = self._seed_cache_get_callable()
+                
+                seed_cache.RemoveProcessedSeeds()
+                
+            
+        
+    
+    def _RetryFailures( self ):
+        
+        message = 'Are you sure you want to retry all the failed files?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                seed_cache = self._seed_cache_get_callable()
+                
+                seed_cache.RetryFailures()
+                
+            
+        
+    
+    def _ShowSeedCacheFrame( self ):
+        
+        seed_cache = self._seed_cache_get_callable()
+        
+        tlp = ClientGUICommon.GetTLP( self )
+        
+        if isinstance( tlp, wx.Dialog ):
+            
+            if self._seed_cache_set_callable is None: # throw up a dialog that edits the seed cache in place
+                
+                with ClientGUITopLevelWindows.DialogNullipotent( self, 'file import status' ) as dlg:
+                    
+                    panel = EditSeedCachePanel( dlg, self._controller, seed_cache )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    dlg.ShowModal()
+                    
+                
+            else: # throw up a dialog that edits the seed cache but can be cancelled
+                
+                dupe_seed_cache = seed_cache.Duplicate()
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
+                    
+                    panel = EditSeedCachePanel( dlg, self._controller, dupe_seed_cache )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        self._seed_cache_set_callable( dupe_seed_cache )
+                        
+                    
+                
+            
+        else: # throw up a frame that edits the seed cache in place
+            
+            title = 'file import status'
+            frame_key = 'file_import_status'
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
+            
+            panel = EditSeedCachePanel( frame, self._controller, seed_cache )
+            
+            frame.SetPanel( panel )
+            
+        
+    
+    def EventShowMenu( self, event ):
+        
+        seed_cache = self._seed_cache_get_callable()
+        
+        menu_items = []
+        
+        num_failures = seed_cache.GetSeedCount( CC.STATUS_FAILED )
+        
+        if num_failures > 0:
+            
+            menu_items.append( ( 'normal', 'retry ' + HydrusData.ConvertIntToPrettyString( num_failures ) + ' failures', 'Tell this cache to reattempt all its failures.', self._RetryFailures ) )
+            
+        
+        num_unknown = seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
+        
+        num_processed = len( seed_cache ) - num_unknown
+        
+        if num_processed > 0:
+            
+            menu_items.append( ( 'normal', 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' files from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed ) )
+            
+        
+        if len( menu_items ) > 0:
+            
+            menu = wx.Menu()
+            
+            for ( item_type, title, description, data ) in menu_items:
+                
+                if item_type == 'normal':
+                    
+                    func = data
+                    
+                    ClientGUIMenus.AppendMenuItem( self, menu, title, description, func )
+                    
+                elif item_type == 'check':
+                    
+                    check_manager = data
+                    
+                    current_value = check_manager.GetCurrentValue()
+                    func = check_manager.Invert
+                    
+                    if current_value is not None:
+                        
+                        ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
+                        
+                    
+                elif item_type == 'separator':
+                    
+                    ClientGUIMenus.AppendSeparator( menu )
+                    
+                
+            
+            HG.client_controller.PopupMenu( self, menu )
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
 class SeedCacheStatusControl( wx.Panel ):
     
     def __init__( self, parent, controller ):
@@ -243,8 +397,7 @@ class SeedCacheStatusControl( wx.Panel ):
         self._import_summary_st = ClientGUICommon.BetterStaticText( self )
         self._progress_st = ClientGUICommon.BetterStaticText( self )
         
-        self._seed_cache_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.seed_cache, self._ShowSeedCacheFrame )
-        self._seed_cache_button.SetToolTipString( 'open detailed file import status' )
+        self._seed_cache_button = SeedCacheButton( self, self._controller, self._GetSeedCache )
         
         self._progress_gauge = ClientGUICommon.Gauge( self )
         
@@ -274,32 +427,9 @@ class SeedCacheStatusControl( wx.Panel ):
         self._update_timer = wx.Timer( self )
         
     
-    def _ShowSeedCacheFrame( self ):
+    def _GetSeedCache( self ):
         
-        tlp = ClientGUICommon.GetTLP( self )
-        
-        if isinstance( tlp, wx.Dialog ):
-            
-            with ClientGUITopLevelWindows.DialogNullipotent( self, 'file import status' ) as dlg:
-                
-                panel = EditSeedCachePanel( dlg, self._controller, self._seed_cache )
-                
-                dlg.SetPanel( panel )
-                
-                dlg.ShowModal()
-                
-            
-        else:
-            
-            title = 'file import status'
-            frame_key = 'file_import_status'
-            
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-            
-            panel = EditSeedCachePanel( frame, self._controller, self._seed_cache )
-            
-            frame.SetPanel( panel )
-            
+        return self._seed_cache
         
     
     def _Update( self ):

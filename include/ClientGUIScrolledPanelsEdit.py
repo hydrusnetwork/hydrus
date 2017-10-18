@@ -1859,7 +1859,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused = wx.CheckBox( self._control_panel )
         
-        self._retry_failed = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailed )
+        self._retry_failures = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailures )
         
         self._check_now_button = ClientGUICommon.BetterButton( self._control_panel, 'force check on dialog ok', self.CheckNow )
         
@@ -1964,7 +1964,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
         
         self._control_panel.AddF( gridbox, CC.FLAGS_LONE_BUTTON )
-        self._control_panel.AddF( self._retry_failed, CC.FLAGS_LONE_BUTTON )
+        self._control_panel.AddF( self._retry_failures, CC.FLAGS_LONE_BUTTON )
         self._control_panel.AddF( self._check_now_button, CC.FLAGS_LONE_BUTTON )
         self._control_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
         
@@ -2041,11 +2041,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if no_failures:
             
-            self._retry_failed.Disable()
+            self._retry_failures.Disable()
             
         else:
             
-            self._retry_failed.Enable()
+            self._retry_failures.Enable()
             
         
         if can_check:
@@ -2202,11 +2202,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def RetryFailed( self ):
+    def RetryFailures( self ):
         
-        failed_seeds = self._seed_cache.GetSeeds( CC.STATUS_FAILED )
-        
-        self._seed_cache.UpdateSeedsStatus( failed_seeds, CC.STATUS_UNKNOWN )
+        self._seed_cache.RetryFailures()
         
         self._last_error = 0
         

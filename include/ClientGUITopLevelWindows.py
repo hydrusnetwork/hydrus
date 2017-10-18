@@ -308,6 +308,11 @@ class NewDialog( wx.Dialog ):
         HG.client_controller.ResetIdleTimer()
         
     
+    def _CanCancel( self ):
+        
+        return True
+        
+    
     def EventMenuClose( self, event ):
         
         menu = event.GetMenu()
@@ -368,7 +373,17 @@ class NewDialog( wx.Dialog ):
     
     def EventDialogButton( self, event ):
         
-        self.EndModal( event.GetId() )
+        event_id = event.GetId()
+        
+        if event_id == wx.ID_CANCEL:
+            
+            if not self._CanCancel():
+                
+                return
+                
+            
+        
+        self.EndModal( event_id )
         
     
 class DialogThatResizes( NewDialog ):
@@ -392,6 +407,11 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
+        
+    
+    def _CanCancel( self ):
+        
+        return self._panel.CanCancel()
         
     
     def _GetButtonBox( self ):

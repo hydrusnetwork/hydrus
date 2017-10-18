@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 278</h3></li>
+				<ul>
+					<li>fixed the tumblr raw url converter to now point to the data.tumblr.com domain</li>
+					<li>added a hardcoded ssl verify exception for data.tumblr.com, which has an incorrectly defined ssl cert (at least for public-facing interactions), wew</li>
+					<li>all existing db urls and file import cache urls for media.tumblr.com will be updated to data.tumblr.com on update! (everything _should_ just magically work again)</li>
+					<li>fixed apng import, which the decompressionbomb detection code was not handling correctly</li>
+					<li>collapsed the different instatiations of the 'file import status' button down to one class</li>
+					<li>the file import status button now has a right-click menu that supports 'retry failures' and 'delete processed', if applicable</li>
+					<li>misc import status cache cleanup and refactoring</li>
+					<li>you can now edit or completely turn off the [404] and [DEAD] thread watcher page name prefixes under options->downloading</li>
+					<li>thread watchers should more reliably keep 404 status</li>
+					<li>'open selection in a new page' now preserves file order!</li>
+					<li>'view this file's duplicates' now sorts the files!</li>
+					<li>options->gui now has an option to change how often 'last session' is saved</li>
+					<li>'last session' will no longer autosave to the database if there are no changes</li>
+					<li>tags exported to neighbouring .txt files are now correctly sibling-collapsed</li>
+					<li>tags imported or exported via neighbouring .txt files are now correctly tag censored</li>
+					<li>the manage tags dialog will now protest with a yes/no dialog if you attempt to cancel it with uncommitted changes</li>
+					<li>the manage parents and siblings dialogs will now protest with a yes/no on an ok event if there are 'uncommitted' pairs in the lower boxes (e.g. if you forgot to click the 'add' button)</li>
+					<li>fixed an issue that would sometimes stop old sessions from loading properly</li>
+					<li>the duplicates page now does its maintenance jobs in modal popups!</li>
+					<li>attempting to apply a duplicate status to more than 100 pairs now throws up a warning yes/no dialog</li>
+					<li>the manage urls dialog now has copy/paste buttons</li>
+					<li>added a (somewhat debug) option to disable the mouse hide&anchor behaviour on slow Windows canvas drags to options->media</li>
+					<li>added a 'regen all phashes' command to the database regen menu</li>
+					<li>the disk cache options in help now have a help button to explain good values for ssd vs hdd</li>
+					<li>the edit bandwidth rules dialog now uses the new listctrl</li>
+					<li>merged the old and new login managers</li>
+					<li>misc login work</li>
+					<li>misc refactoring</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 277</h3></li>
 				<ul>
 					<li>expanded the domain manager into a legit serialisable object that holds data and saves itself on changes. to begin with, it supports custom http headers for particular on network contexts</li>

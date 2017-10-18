@@ -139,7 +139,6 @@ class Controller( object ):
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
-        self._managers[ 'web_sessions' ] = TestConstants.FakeWebSessionManager()
         self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
         

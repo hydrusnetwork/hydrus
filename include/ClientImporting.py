@@ -370,7 +370,7 @@ class FileImportJob( object ):
         
         new_options = HG.client_controller.GetNewOptions()
         
-        if mime in HC.IMAGES and new_options.GetBoolean( 'do_not_import_decompression_bombs' ):
+        if mime in HC.DECOMPRESSION_BOMB_IMAGES and new_options.GetBoolean( 'do_not_import_decompression_bombs' ):
             
             if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
                 
@@ -2466,7 +2466,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self ):
         
@@ -2720,6 +2720,33 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            new_serialisable_info = []
+            
+            for ( seed, seed_info ) in old_serialisable_info:
+                
+                try:
+                    
+                    magic_phrase = '//media.tumblr.com'
+                    replacement = '//data.tumblr.com'
+                    
+                    if magic_phrase in seed:
+                        
+                        seed = seed.replace( magic_phrase, replacement )
+                        
+                    
+                except:
+                    
+                    pass
+                    
+                
+                new_serialisable_info.append( ( seed, seed_info ) )
+                
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -2990,6 +3017,35 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def RemoveProcessedSeeds( self ):
+        
+        with self._lock:
+            
+            seeds_to_delete = set()
+            
+            for ( seed, seed_info ) in self._seeds_to_info.items():
+                
+                if seed_info[ 'status' ] != CC.STATUS_UNKNOWN:
+                    
+                    seeds_to_delete.add( seed )
+                    
+                
+            
+            for seed in seeds_to_delete:
+                
+                del self._seeds_to_info[ seed ]
+                
+                self._seeds_ordered.remove( seed )
+                
+            
+            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds_ordered ) }
+            
+            self._SetDirty()
+            
+        
+        HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, seeds_to_delete )
+        
+    
     def RemoveSeeds( self, seeds ):
         
         with self._lock:
@@ -3039,6 +3095,13 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, seeds_to_delete )
+        
+    
+    def RetryFailures( self ):
+        
+        failed_seeds = self.GetSeeds( CC.STATUS_FAILED )
+        
+        self.UpdateSeedsStatus( failed_seeds, CC.STATUS_UNKNOWN )
         
     
     def UpdateSeedSourceTime( self, seed, source_timestamp ):
@@ -4233,11 +4296,21 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if self._thread_status == THREAD_STATUS_404:
             
-            page_name = '[404] ' + page_name
+            thread_watcher_not_found_page_string = new_options.GetNoneableString( 'thread_watcher_not_found_page_string' )
+            
+            if thread_watcher_not_found_page_string is not None:
+                
+                page_name = thread_watcher_not_found_page_string + ' ' + page_name
+                
             
         elif self._thread_status == THREAD_STATUS_DEAD:
             
-            page_name = '[DEAD] ' + page_name
+            thread_watcher_dead_page_string = new_options.GetNoneableString( 'thread_watcher_dead_page_string' )
+            
+            if thread_watcher_dead_page_string is not None:
+                
+                page_name = thread_watcher_dead_page_string + ' ' + page_name
+                
             
         
         if page_name != self._last_pubbed_page_name:
@@ -4274,20 +4347,20 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            if self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
+            if self._thread_status != THREAD_STATUS_404:
                 
-                if self._thread_status != THREAD_STATUS_404:
+                if self._watcher_options.IsDead( self._urls_cache, self._last_check_time ):
                     
                     self._thread_status = THREAD_STATUS_DEAD
                     
-                
-                self._watcher_status = ''
-                
-                self._thread_paused = True
-                
-            else:
-                
-                self._thread_status = THREAD_STATUS_OK
+                    self._watcher_status = ''
+                    
+                    self._thread_paused = True
+                    
+                else:
+                    
+                    self._thread_status = THREAD_STATUS_OK
+                    
                 
             
             self._next_check_time = self._watcher_options.GetNextCheckTime( self._urls_cache, self._last_check_time )

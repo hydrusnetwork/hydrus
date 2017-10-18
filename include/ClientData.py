@@ -853,6 +853,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'reverse_page_shift_drag_behaviour' ] = False
         
+        self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -919,6 +921,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
         
+        self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -951,6 +955,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
         self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
         self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_not_found_page_string' ] = '[404]'
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_dead_page_string' ] = '[DEAD]'
         
         self._dictionary[ 'strings' ] = {}
         

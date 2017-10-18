@@ -5,6 +5,7 @@ import ClientDefaults
 import ClientGUIMenus
 import ClientNetworking
 import ClientNetworkingDomain
+import ClientNetworkingLogin
 import ClientThreading
 import hashlib
 import HydrusConstants as HC
@@ -51,10 +52,10 @@ class Controller( HydrusController.HydrusController ):
         HG.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
-        self._options = ClientDefaults.GetClientDefaultOptions()
-        self._new_options = ClientData.ClientOptions( self.db_dir )
+        self.options = ClientDefaults.GetClientDefaultOptions()
+        self.new_options = ClientData.ClientOptions( self.db_dir )
         
-        HC.options = self._options
+        HC.options = self.options
         
         self._last_mouse_position = None
         self._menu_open = False
@@ -324,9 +325,9 @@ class Controller( HydrusController.HydrusController ):
             return False
             
         
-        idle_normal = self._options[ 'idle_normal' ]
-        idle_period = self._options[ 'idle_period' ]
-        idle_mouse_period = self._options[ 'idle_mouse_period' ]
+        idle_normal = self.options[ 'idle_normal' ]
+        idle_period = self.options[ 'idle_period' ]
+        idle_mouse_period = self.options[ 'idle_mouse_period' ]
         
         if idle_normal:
             
@@ -389,11 +390,11 @@ class Controller( HydrusController.HydrusController ):
     
     def DoIdleShutdownWork( self ):
         
-        stop_time = HydrusData.GetNow() + ( self._options[ 'idle_shutdown_max_minutes' ] * 60 )
+        stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
         
         self.MaintainDB( stop_time = stop_time )
         
-        if not self._options[ 'pause_repo_sync' ]:
+        if not self.options[ 'pause_repo_sync' ]:
             
             services = self.services_manager.GetServices( HC.REPOSITORIES )
             
@@ -422,11 +423,11 @@ class Controller( HydrusController.HydrusController ):
                 
                 self._CreateSplash()
                 
-                idle_shutdown_action = self._options[ 'idle_shutdown' ]
+                idle_shutdown_action = self.options[ 'idle_shutdown' ]
                 
                 if idle_shutdown_action in ( CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
                     
-                    idle_shutdown_max_minutes = self._options[ 'idle_shutdown_max_minutes' ]
+                    idle_shutdown_max_minutes = self.options[ 'idle_shutdown_max_minutes' ]
                     
                     time_to_stop = HydrusData.GetNow() + ( idle_shutdown_max_minutes * 60 )
                     
@@ -497,12 +498,12 @@ class Controller( HydrusController.HydrusController ):
     
     def GetOptions( self ):
         
-        return self._options
+        return self.options
         
     
     def GetNewOptions( self ):
         
-        return self._new_options
+        return self.new_options
         
     
     def GoodTimeToDoForegroundWork( self ):
@@ -555,12 +556,12 @@ class Controller( HydrusController.HydrusController ):
         
         self.services_manager = ClientCaches.ServicesManager( self )
         
-        self._options = self.Read( 'options' )
-        self._new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+        self.options = self.Read( 'options' )
+        self.new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
         
-        HC.options = self._options
+        HC.options = self.options
         
-        if self._new_options.GetBoolean( 'use_system_ffmpeg' ):
+        if self.new_options.GetBoolean( 'use_system_ffmpeg' ):
             
             if HydrusVideoHandling.FFMPEG_PATH.startswith( HC.BIN_DIR ):
                 
@@ -600,14 +601,14 @@ class Controller( HydrusController.HydrusController ):
         
         if domain_manager is None:
             
-            domain_manager = ClientNetworking.NetworkSessionManager()
+            domain_manager = ClientNetworkingDomain.NetworkDomainManager()
             
             domain_manager._dirty = True
             
             wx.MessageBox( 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
-        login_manager = ClientNetworking.NetworkLoginManager()
+        login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
         
@@ -624,7 +625,6 @@ class Controller( HydrusController.HydrusController ):
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
-        self._managers[ 'web_sessions' ] = ClientCaches.WebSessionManagerClient( self )
         
         def wx_code():
             
@@ -642,7 +642,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitView( self ):
         
-        if self._options[ 'password' ] is not None:
+        if self.options[ 'password' ] is not None:
             
             self.pub( 'splash_set_status_text', 'waiting for password' )
             
@@ -657,7 +657,7 @@ class Controller( HydrusController.HydrusController ):
                             # this can produce unicode with cyrillic or w/e keyboards, which hashlib can't handle
                             password = HydrusData.ToByteString( dlg.GetValue() )
                             
-                            if hashlib.sha256( password ).digest() == self._options[ 'password' ]: break
+                            if hashlib.sha256( password ).digest() == self.options[ 'password' ]: break
                             
                         else:
                             
@@ -743,7 +743,7 @@ class Controller( HydrusController.HydrusController ):
     
     def MaintainDB( self, stop_time = None ):
         
-        if self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
+        if self.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
             phashes_stop_time = stop_time
             
@@ -763,7 +763,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.WriteInterruptable( 'maintain_similar_files_tree', stop_time = tree_stop_time, abandon_if_other_work_to_do = True )
             
-            search_distance = self._new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            search_distance = self.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
             search_stop_time = stop_time
             
@@ -815,7 +815,7 @@ class Controller( HydrusController.HydrusController ):
             self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
             
         
-        disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
+        disk_cache_maintenance_mb = self.new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
         
         if disk_cache_maintenance_mb is not None:
             
@@ -1141,7 +1141,7 @@ class Controller( HydrusController.HydrusController ):
             return False
             
         
-        max_cpu = self._options[ 'idle_cpu_max' ]
+        max_cpu = self.options[ 'idle_cpu_max' ]
         
         if max_cpu is None:
             

@@ -146,7 +146,7 @@ def GetClientDefaultOptions():
     options[ 'idle_shutdown_max_minutes' ] = 5
     options[ 'maintenance_delete_orphans_period' ] = 86400 * 3
     options[ 'trash_max_age' ] = 72
-    options[ 'trash_max_size' ] = 512
+    options[ 'trash_max_size' ] = 2048
     options[ 'remove_trashed_files' ] = False
     options[ 'remove_filtered_files' ] = False
     options[ 'external_host' ] = None

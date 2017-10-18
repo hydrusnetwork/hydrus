@@ -9,6 +9,7 @@ import ClientGUIMenus
 import ClientGUICanvas
 import ClientDownloading
 import ClientSearch
+import hashlib
 import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
@@ -728,6 +729,8 @@ class PagesNotebook( wx.Notebook ):
         self._closed_pages = []
         
         self._page_key = HydrusData.GenerateKey()
+        
+        self._last_last_session_hash = None
         
         self._controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
         self._controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
@@ -1773,6 +1776,9 @@ class PagesNotebook( wx.Notebook ):
         
         page_name = page.GetName()
         
+        # in some unusual circumstances, this gets out of whack
+        insertion_index = min( insertion_index, self.GetPageCount() )
+        
         self.InsertPage( insertion_index, page, page_name, select = True )
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
@@ -1838,7 +1844,7 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False ):
+    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False ):
         
         if initial_hashes is None:
             
@@ -1870,7 +1876,14 @@ class PagesNotebook( wx.Notebook ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
         
-        return self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook )
+        page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook )
+        
+        if do_sort:
+            
+            HG.client_controller.pub( 'do_page_sort', page.GetPageKey() )
+            
+        
+        return page
         
     
     def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False, give_it_a_blank_page = True ):
@@ -2200,11 +2213,27 @@ class PagesNotebook( wx.Notebook ):
                 
             
         
+        #
+        
         session = GUISession( name )
         
         for page in self._GetPages():
             
             session.AddPage( page )
+            
+        
+        #
+        
+        if name == 'last session':
+            
+            session_hash = hashlib.sha256( session.DumpToString() ).digest()
+            
+            if session_hash == self._last_last_session_hash:
+                
+                return
+                
+            
+            self._last_last_session_hash = session_hash
             
         
         self._controller.Write( 'serialisable', session )

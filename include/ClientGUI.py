@@ -1154,7 +1154,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             submenu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search data', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesData )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search metadata', 'Delete and recreate the similar files search phashes.', self._RegenerateSimilarFilesPhashes )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'all thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self._RegenerateThumbnails )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
@@ -1656,7 +1657,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             self._notebook.LoadGUISession( default_gui_session )
             
         
-        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+        
+        wx.CallLater( last_session_save_period_minutes * 60 * 1000, self.SaveLastSession )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -2101,7 +2104,26 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _RegenerateSimilarFilesData( self ):
+    def _RegenerateSimilarFilesPhashes( self ):
+        
+        message = 'This will schedule all similar files \'phash\' metadata to be regenerated. This is a very expensive operation that will occur in future idle time.'
+        message += os.linesep * 2
+        message += 'This ultimately requires a full read for all valid files. It is a large investment of CPU and HDD time.'
+        message += os.linesep * 2
+        message += 'Do not run this unless you know your phashes need to be regenerated.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            result = dlg.ShowModal()
+            
+            if result == wx.ID_YES:
+                
+                self._controller.Write( 'schedule_full_phash_regen' )
+                
+            
+        
+    
+    def _RegenerateSimilarFilesTree( self ):
         
         message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
         message += os.linesep * 2
@@ -3125,7 +3147,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.NewPage( management_controller, on_deepest_notebook = True )
         
     
-    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None ):
+    def NewPageQuery( self, service_key, initial_hashes = None, initial_predicates = None, page_name = None, do_sort = False ):
         
         if initial_hashes is None:
             
@@ -3137,7 +3159,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             initial_predicates = []
             
         
-        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True )
+        self._notebook.NewPageQuery( service_key, initial_hashes = initial_hashes, initial_predicates = initial_predicates, page_name = page_name, on_deepest_notebook = True, do_sort = do_sort )
         
     
     def NotifyClosedPage( self, page ):
@@ -3312,7 +3334,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._notebook.SaveGUISession( 'last session' )
             
         
-        wx.CallLater( 5 * 60 * 1000, self.SaveLastSession )
+        last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+        
+        wx.CallLater( last_session_save_period_minutes * 60 * 1000, self.SaveLastSession )
         
     
     def SetMediaFocus( self ): self._SetMediaFocus()

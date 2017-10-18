@@ -1867,6 +1867,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._permit_watchers_to_name_their_pages = wx.CheckBox( thread_checker )
             
+            self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
+            self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
+            
             watcher_options = self._new_options.GetDefaultThreadWatcherOptions()
             
             self._thread_watcher_options = ClientGUIScrolledPanelsEdit.EditWatcherOptions( thread_checker, watcher_options )
@@ -1878,6 +1881,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
             self._permit_watchers_to_name_their_pages.SetValue( self._new_options.GetBoolean( 'permit_watchers_to_name_their_pages' ) )
+            
+            self._thread_watcher_not_found_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_not_found_page_string' ) )
+            self._thread_watcher_dead_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_dead_page_string' ) )
             
             #
             
@@ -1899,6 +1905,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
+            rows.append( ( 'Prepend thread checker page names with this on 404:', self._thread_watcher_not_found_page_string ) )
+            rows.append( ( 'Prepend thread checker page names with this on death:', self._thread_watcher_dead_page_string ) )
             
             gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
             
@@ -1924,6 +1932,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
             
             self._new_options.SetDefaultThreadWatcherOptions( self._thread_watcher_options.GetValue() )
+            
+            self._new_options.SetNoneableString( 'thread_watcher_not_found_page_string', self._thread_watcher_not_found_page_string.GetValue() )
+            self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
             
         
     
@@ -2478,6 +2489,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_gui_session = wx.Choice( self )
             
+            self._last_session_save_period_minutes = wx.SpinCtrl( self, min = 1, max = 1440 )
+            
             self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
             
             for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
@@ -2538,14 +2551,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
             
-            if 'last session' not in gui_session_names: gui_session_names.insert( 0, 'last session' )
+            if 'last session' not in gui_session_names:
+                
+                gui_session_names.insert( 0, 'last session' )
+                
             
             self._default_gui_session.Append( 'just a blank page', None )
             
-            for name in gui_session_names: self._default_gui_session.Append( name, name )
+            for name in gui_session_names:
+                
+                self._default_gui_session.Append( name, name )
+                
             
-            try: self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
-            except: self._default_gui_session.SetSelection( 0 )
+            try:
+                
+                self._default_gui_session.SetStringSelection( HC.options[ 'default_gui_session' ] )
+                
+            except:
+                
+                self._default_gui_session.SetSelection( 0 )
+                
+            
+            self._last_session_save_period_minutes.SetValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
             
             self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
@@ -2595,6 +2622,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
+            rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
             rows.append( ( 'By default, new page tabs: ', self._default_new_page_goes ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
@@ -2686,6 +2714,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetString( 'main_gui_title', title )
             
+            self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.GetValue() )
+            
             self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
             
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
@@ -2737,6 +2767,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg = wx.CheckBox( self )
             self._use_system_ffmpeg.SetToolTipString( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
+            self._anchor_and_hide_canvas_drags = wx.CheckBox( self )
+            
             self._media_zooms = wx.TextCtrl( self )
             self._media_zooms.Bind( wx.EVT_TEXT, self.EventZoomsChanged )
             
@@ -2754,6 +2786,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._do_not_import_decompression_bombs.SetValue( self._new_options.GetBoolean( 'do_not_import_decompression_bombs' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
+            self._anchor_and_hide_canvas_drags.SetValue( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             
             media_zooms = self._new_options.GetMediaZooms()
             
@@ -2785,6 +2818,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Load images with PIL: ', self._load_images_with_pil ) )
             rows.append( ( 'Do not import Decompression Bombs: ', self._do_not_import_decompression_bombs ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
+            rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -2882,6 +2916,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
             self._new_options.SetBoolean( 'do_not_import_decompression_bombs', self._do_not_import_decompression_bombs.GetValue() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
+            self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.GetValue() )
             
             try:
                 
@@ -3072,6 +3107,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             disk_panel = ClientGUICommon.StaticBox( self, 'disk cache' )
             
+            disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.GlobalBMPs.help, self._ShowDiskCacheHelp )
+            disk_cache_help_button.SetToolTipString( 'Show help regarding the disk cache.' )
+            
             self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
             self._disk_cache_init_period.SetToolTipString( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
             
@@ -3165,8 +3203,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            
+            help_hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            st = ClientGUICommon.BetterStaticText( disk_panel, 'help for this panel -->' )
+            
+            st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
+            
+            help_hbox.AddF( st, CC.FLAGS_VCENTER )
+            help_hbox.AddF( disk_cache_help_button, CC.FLAGS_VCENTER )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            disk_panel.AddF( help_hbox, CC.FLAGS_LONE_BUTTON )
             disk_panel.AddF( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
             disk_panel.AddF( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3266,6 +3315,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self.EventVideoBufferUpdate( None )
             
             wx.CallAfter( self.Layout ) # draws the static texts correctly
+            
+        
+        def _ShowDiskCacheHelp( self ):
+            
+            message = 'The hydrus database runs best on a drive with fast random access latency. Important and heavy read and write operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
+            message += os.linesep * 2
+            message += 'To get around this, the client populates a pre-boot and ongoing disk cache. By contiguously frontloading the database into memory, the most important functions do not need to wait on your disk for most of their work.'
+            message += os.linesep * 2
+            message += 'If you tend to leave your client on in the background and have a slow drive but a lot of ram, you might like to pump these numbers up. 15s boot cache and 2048MB ongoing can really make a difference on, for instance, a slow laptop drive.'
+            message += os.linesep * 2
+            message += 'If you run the database from an SSD, you can reduce or entirely eliminate these values, as the benefit is not so stark. 2s and 256MB is fine.'
+            message += os.linesep * 2
+            message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing returns.'
+            
+            wx.MessageBox( message )
             
         
         def EventFetchAuto( self, event ):
@@ -5253,12 +5317,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             seed_cache = subscription.GetSeedCache()
             
-            failed_seeds = seed_cache.GetSeeds( CC.STATUS_FAILED )
-            
-            for seed in failed_seeds:
-                
-                seed_cache.UpdateSeedStatus( seed, CC.STATUS_UNKNOWN )
-                
+            seed_cache.RetryFailures()
             
         
         self._subscriptions.UpdateDatas( subscriptions )
@@ -5338,6 +5397,23 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    def _GetServiceKeysToContentUpdates( self ):
+        
+        service_keys_to_content_updates = {}
+        
+        for page in self._tag_repositories.GetActivePages():
+            
+            ( service_key, content_updates ) = page.GetContentUpdates()
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates[ service_key ] = content_updates
+                
+            
+        
+        return service_keys_to_content_updates
+        
+    
     def _OKParent( self ):
         
         wx.PostEvent( self.GetParent(), wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
@@ -5413,19 +5489,29 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    def CanCancel( self ):
+        
+        service_keys_to_content_updates = self._GetServiceKeysToContentUpdates()
+        
+        if len( service_keys_to_content_updates ) > 0:
+            
+            message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
+        
+    
     def CommitChanges( self ):
         
-        service_keys_to_content_updates = {}
-        
-        for page in self._tag_repositories.GetActivePages():
-            
-            ( service_key, content_updates ) = page.GetContentUpdates()
-            
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ service_key ] = content_updates
-                
-            
+        service_keys_to_content_updates = self._GetServiceKeysToContentUpdates()
         
         if len( service_keys_to_content_updates ) > 0:
             
@@ -6121,6 +6207,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._url_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
         self._url_input.Bind( wx.EVT_CHAR_HOOK, self.EventInputCharHook )
         
+        self._copy_button = ClientGUICommon.BetterButton( self, 'copy all', self._Copy )
+        self._paste_button = ClientGUICommon.BetterButton( self, 'paste', self._Paste )
+        
         self._urls_to_add = set()
         self._urls_to_remove = set()
         
@@ -6139,19 +6228,41 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._copy_button, CC.FLAGS_VCENTER )
+        hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
         wx.CallAfter( self._url_input.SetFocus )
         
     
-    def _EnterURL( self, url ):
+    def _Copy( self ):
+        
+        urls = list( self._current_urls )
+        
+        urls.sort()
+        
+        text = os.linesep.join( urls )
+        
+        HG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _EnterURL( self, url, only_add = False ):
         
         if url in self._current_urls:
+            
+            if only_add:
+                
+                return
+                
             
             for index in range( self._urls_listbox.GetCount() ):
                 
@@ -6175,6 +6286,39 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._urls_to_add.add( url )
                 
+            
+        
+    
+    def _Paste( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                for url in HydrusData.SplitByLinesep( raw_text ):
+                    
+                    if url != '':
+                        
+                        self._EnterURL( url, only_add = True )
+                        
+                    
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
     

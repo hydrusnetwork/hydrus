@@ -2356,7 +2356,9 @@ class NetworkJob( object ):
                 
             else:
                 
-                return self.engine.login_manager.NeedsLogin( self._network_contexts )
+                session_network_context = self._GetSessionNetworkContext()
+                
+                return self.engine.login_manager.NeedsLogin( session_network_context )
                 
             
         
@@ -2729,73 +2731,6 @@ class NetworkJobThreadWatcher( NetworkJob ):
         return self._network_contexts[-2] # the domain one
         
     
-class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self.engine = None
-        
-        self._lock = threading.Lock()
-        
-        self._network_contexts_to_logins = {}
-        
-        # a login has:
-          # a network_context it works for (PRIMARY KEY)
-          # a login script
-          # rules to check validity in cookies in a current session (fold that into the login script, which may have several stages of this)
-          # current user/pass/whatever
-          # current script validity
-          # current credentials validity
-          # recent error? some way of dealing with 'domain is currently down, so try again later'
-        
-        # so, we fetch all the logins, ask them for the network contexts so we can set up the dict
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return {}
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        self._network_contexts_to_logins = {}
-        
-    
-    def CanLogin( self, network_contexts ):
-        
-        # look them up in our structure
-        # if they have a login, is it valid?
-          # valid means we have tested credentials and it hasn't been invalidated by a parsing error or similar
-          # I think this just means saying Login.CanLogin( credentials )
-        
-        return False
-        
-    
-    def GenerateLoginProcess( self, network_contexts ):
-        
-        # look up the logins
-          # login_process = Login.GenerateLoginProcess
-          # return login_process
-        
-        raise NotImplementedError()
-        
-    
-    def NeedsLogin( self, network_contexts ):
-        
-        # look up the network contexts in our structure
-            # if they have a login, see if they match the 'is logged in' predicates
-        # otherwise:
-        
-        return False
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
-
 class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER
@@ -2861,6 +2796,8 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
                 
                 del self._network_contexts_to_sessions[ network_context ]
                 
+                self._SetDirty()
+                
             
         
     
@@ -2871,6 +2808,14 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             if network_context not in self._network_contexts_to_sessions:
                 
                 self._network_contexts_to_sessions[ network_context ] = self._GenerateSession( network_context )
+                
+            
+            # tumblr can't into ssl for some reason, and the data subdomain they use has weird cert properties, looking like amazon S3
+            # perhaps it is inward-facing somehow? whatever the case, let's just say fuck it for tumblr
+            
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN and network_context.context_data == 'tumblr.com':
+                
+                self._network_contexts_to_sessions[ network_context ].verify = False
                 
             
             self._SetDirty()
