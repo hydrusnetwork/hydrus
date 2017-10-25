@@ -6,6 +6,22 @@ import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
 
+def SetNonDupeName( obj, disallowed_names ):
+    
+    i = 1
+    
+    original_name = obj.GetName()
+    new_name = original_name
+    
+    while new_name in disallowed_names:
+        
+        new_name = original_name + ' (' + str( i ) + ')'
+        
+        i += 1
+        
+    
+    obj.SetName( new_name )
+    
 class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
     
     def __init__( self, parent, height, columns, delete_key_callback = None, activation_callback = None ):

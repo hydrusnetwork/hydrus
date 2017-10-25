@@ -19,10 +19,18 @@ try:
     
     from include import ClientController
     import threading
-    from twisted.internet import reactor
     from include import HydrusGlobals as HG
     from include import HydrusLogger
     import traceback
+    
+    try:
+        
+        from twisted.internet import reactor
+        
+    except:
+        
+        HG.twisted_is_broke = True
+        
     
     #
     

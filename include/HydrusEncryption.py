@@ -4,7 +4,6 @@ import Crypto.PublicKey.RSA
 import HydrusConstants as HC
 import OpenSSL
 import os
-import socket
 import stat
 import traceback
 

@@ -1,4 +1,3 @@
-import httplib
 import HydrusConstants as HC
 import HydrusController
 import HydrusData

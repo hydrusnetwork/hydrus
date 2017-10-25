@@ -133,7 +133,6 @@ class Controller( object ):
         
         self.services_manager = ClientCaches.ServicesManager( self )
         self.client_files_manager = ClientCaches.ClientFilesManager( self )
-        self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
@@ -203,11 +202,6 @@ class Controller( object ):
     def DBCurrentlyDoingJob( self ):
         
         return False
-        
-    
-    def GetClientSessionManager( self ):
-        
-        return self._client_session_manager
         
     
     def GetFilesDir( self ):

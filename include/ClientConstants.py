@@ -586,3 +586,5 @@ COMBINED_LOCAL_FILE_SERVICE_KEY = 'all local files'
 COMBINED_FILE_SERVICE_KEY = 'all known files'
 
 COMBINED_TAG_SERVICE_KEY = 'all known tags'
+
+TEST_SERVICE_KEY = 'test service'

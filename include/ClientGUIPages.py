@@ -22,6 +22,8 @@ import traceback
 import wx
 import HydrusGlobals as HG
 
+USER_PAGE_NAME_PREFIX = '[USER]'
+
 class DialogPageChooser( ClientGUIDialogs.Dialog ):
     
     def __init__( self, parent, controller ):
@@ -1093,6 +1095,11 @@ class PagesNotebook( wx.Notebook ):
         
         page_name = page.GetName()
         
+        if page_name.startswith( USER_PAGE_NAME_PREFIX ):
+            
+            page_name = page_name.replace( USER_PAGE_NAME_PREFIX, '' )
+            
+        
         if len( page_name ) > max_page_name_chars:
             
             page_name = page_name[ : max_page_name_chars ] + u'\u2026'
@@ -1122,6 +1129,11 @@ class PagesNotebook( wx.Notebook ):
         
         current_name = page.GetName()
         
+        if current_name.startswith( USER_PAGE_NAME_PREFIX ):
+            
+            current_name = current_name.replace( USER_PAGE_NAME_PREFIX, '' )
+            
+        
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
@@ -1129,6 +1141,8 @@ class PagesNotebook( wx.Notebook ):
                 new_name = dlg.GetValue()
                 
                 new_name = self.EscapeMnemonics( new_name )
+                
+                new_name = USER_PAGE_NAME_PREFIX + new_name
                 
                 page.SetName( new_name )
                 
@@ -1782,6 +1796,7 @@ class PagesNotebook( wx.Notebook ):
         self.InsertPage( insertion_index, page, page_name, select = True )
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        self._controller.pub( 'notify_new_pages' )
         
         wx.CallAfter( page.Start )
         wx.CallAfter( page.SetSearchFocus )
@@ -2151,11 +2166,17 @@ class PagesNotebook( wx.Notebook ):
             
             if page.GetPageKey() == page_key:
                 
-                if page.GetName() != name:
+                existing_name = page.GetName()
+                
+                # this is the auto-renaming system. if the existing name is user-set, then don't overwrite
+                if not existing_name.startswith( USER_PAGE_NAME_PREFIX ):
                     
-                    page.SetName( name )
-                    
-                    self.RefreshPageName( page_key )
+                    if existing_name != name:
+                        
+                        page.SetName( name )
+                        
+                        self.RefreshPageName( page_key )
+                        
                     
                 
                 return

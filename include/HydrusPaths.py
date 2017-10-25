@@ -452,6 +452,11 @@ def MakeFileWritable( path ):
     
 def MergeFile( source, dest ):
     
+    if not os.path.isdir( source ):
+        
+        MakeFileWritable( source )
+        
+    
     if PathsHaveSameSizeAndDate( source, dest ):
         
         DeletePath( source )
@@ -481,7 +486,19 @@ def MergeTree( source, dest, text_update_hook = None ):
     
     if not os.path.exists( dest ):
         
-        shutil.move( source, dest )
+        try:
+            
+            shutil.move( source, dest )
+            
+        except OSError:
+            
+            # if there were read only files in source and this was partition to partition, the copy2 goes ok but the subsequent source unlink fails
+            # so, if it seems this has happened, let's just try a walking mergetree, which should be able to deal with these readonlies on a file-by-file basis
+            if os.path.exists( dest ):
+                
+                MergeTree( source, dest, text_update_hook = text_update_hook )
+                
+            
         
     else:
         
@@ -491,6 +508,11 @@ def MergeTree( source, dest, text_update_hook = None ):
                 
                 source_path = os.path.join( source, filename )
                 dest_path = os.path.join( dest, filename )
+                
+                if not os.path.isdir( source_path ):
+                    
+                    MakeFileWritable( source_path )
+                    
                 
                 shutil.move( source_path, dest_path )
                 

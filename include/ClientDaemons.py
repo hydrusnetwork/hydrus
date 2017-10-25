@@ -39,9 +39,11 @@ def DAEMONCheckImportFolders( controller ):
     
     if not options[ 'pause_import_folders_sync' ]:
         
-        import_folders = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+        import_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
-        for import_folder in import_folders:
+        for name in import_folder_names:
+            
+            import_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
             
             if options[ 'pause_import_folders_sync' ]:
                 

@@ -1,6 +1,4 @@
 import collections
-import hashlib
-import httplib
 import HydrusConstants as HC
 import HydrusExceptions
 import os

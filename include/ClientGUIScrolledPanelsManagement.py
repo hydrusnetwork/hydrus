@@ -246,7 +246,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._listctrl = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 400, [ ( 'type', 220 ), ( 'name', -1 ), ( 'deletable', 120 ) ], delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'manage_services', 25, 20, [ ( 'type', 20 ), ( 'name', -1 ), ( 'deletable', 12 ) ], self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
         menu_items = []
         
@@ -263,16 +263,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        all_services = HG.client_controller.services_manager.GetServices()
+        services = HG.client_controller.services_manager.GetServices()
         
-        for service in all_services:
-            
-            ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( service )
-            
-            self._listctrl.Append( display_tuple, sort_tuple, service )
-            
+        self._listctrl.AddDatas( services )
         
-        #self._listctrl.SortListItems( 0 )
+        self._listctrl.Sort( 0 )
         
         #
         
@@ -288,26 +283,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         vbox.AddF( add_remove_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
-        
-    
-    def _ConvertServiceToTuples( self, service ):
-        
-        service_type = service.GetServiceType()
-        name = service.GetName()
-        deletable = service_type in HC.ADDREMOVABLE_SERVICES
-        
-        pretty_service_type = HC.service_string_lookup[ service_type ]
-        
-        if deletable:
-            
-            pretty_deletable = 'yes'
-            
-        else:
-            
-            pretty_deletable = ''
-            
-        
-        return ( ( pretty_service_type, name, pretty_deletable ), ( pretty_service_type, name, deletable ) )
         
     
     def _Add( self, service_type ):
@@ -327,67 +302,102 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 new_service = panel.GetValue()
                 
-                self._listctrl.SetNonDupeName( new_service )
+                ClientGUIListCtrl.SetNonDupeName( new_service, self._GetExistingNames() )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( new_service )
+                self._listctrl.AddDatas( ( new_service, ) )
                 
-                self._listctrl.Append( display_tuple, sort_tuple, new_service )
+                self._listctrl.Sort()
                 
             
+        
+    
+    def _ConvertServiceToListCtrlTuples( self, service ):
+        
+        service_type = service.GetServiceType()
+        name = service.GetName()
+        deletable = service_type in HC.ADDREMOVABLE_SERVICES
+        
+        pretty_service_type = HC.service_string_lookup[ service_type ]
+        
+        if deletable:
+            
+            pretty_deletable = 'yes'
+            
+        else:
+            
+            pretty_deletable = ''
+            
+        
+        return ( ( pretty_service_type, name, pretty_deletable ), ( pretty_service_type, name, deletable ) )
+        
+    
+    def _GetExistingNames( self ):
+        
+        services = self._listctrl.GetData()
+        
+        names = { service.GetName() for service in services }
+        
+        return names
         
     
     def _Delete( self ):
         
-        deletable_indices = []
+        selected_services = self._listctrl.GetData( only_selected = True )
         
-        selected = self._listctrl.GetAllSelected()
+        deletable_services = [ service for service in selected_services if service.GetServiceType() in HC.ADDREMOVABLE_SERVICES ]
         
-        for index in selected:
+        if len( deletable_services ) > 0:
             
-            service = self._listctrl.GetObject( index )
-            
-            if service.GetServiceType() in HC.ADDREMOVABLE_SERVICES:
+            with ClientGUIDialogs.DialogYesNo( self, 'Delete the selected services?' ) as dlg:
                 
-                deletable_indices.append( index )
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._listctrl.DeleteDatas( deletable_services )
+                    
                 
             
-        
-        self._listctrl.RemoveIndices( deletable_indices )
         
     
     def _Edit( self ):
         
-        indices = self._listctrl.GetAllSelected()
+        selected_services = self._listctrl.GetData( only_selected = True )
         
-        for index in indices:
+        try:
             
-            service = self._listctrl.GetObject( index )
+            for service in selected_services:
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
+                    
+                    panel = self._EditPanel( dlg, service )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        self._listctrl.DeleteDatas( ( service, ) )
+                        
+                        edited_service = panel.GetValue()
+                        
+                        ClientGUIListCtrl.SetNonDupeName( edited_service, self._GetExistingNames() )
+                        
+                        self._listctrl.AddDatas( ( edited_service, ) )
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
             
-            with ClientGUITopLevelWindows.DialogEdit( self, 'edit service' ) as dlg:
-                
-                panel = self._EditPanel( dlg, service )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    edited_service = panel.GetValue()
-                    
-                    ( display_tuple, sort_tuple ) = self._ConvertServiceToTuples( edited_service )
-                    
-                    self._listctrl.UpdateRow( index, display_tuple, sort_tuple, edited_service )
-                    
-                else:
-                    
-                    return
-                    
-                
+        finally:
+            
+            self._listctrl.Sort()
             
         
     
     def CommitChanges( self ):
         
-        services = self._listctrl.GetObjects()
+        services = self._listctrl.GetData()
         
         HG.client_controller.SetServices( services )
         
@@ -622,14 +632,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._service_type = service_type
                 
                 credentials = dictionary[ 'credentials' ]
-                bandwidth_rules = dictionary[ 'bandwidth_rules' ]
                 
                 self._host = wx.TextCtrl( self )
                 self._port = wx.SpinCtrl( self, min = 1, max = 65535, size = ( 80, -1 ) )
                 
                 self._test_address_button = ClientGUICommon.BetterButton( self, 'test address', self._TestAddress )
-                
-                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
                 
                 #
                 
@@ -650,7 +657,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self.AddF( wrapped_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 self.AddF( self._test_address_button, CC.FLAGS_LONE_BUTTON )
-                self.AddF( self._bandwidth_rules, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def _TestAddress( self ):
@@ -669,21 +675,21 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 if self._service_type == HC.IPFS:
                     
                     scheme = 'http://'
-                    hydrus_network = False
                     request = 'api/v0/version'
                     
                 else:
                     
                     scheme = 'https://'
-                    hydrus_network = True
                     request = ''
                     
                 
                 url = scheme + host + ':' + str( port ) + '/' + request
                 
-                network_job = ClientNetworking.NetworkJob( 'GET', url )
+                network_job = ClientNetworking.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
                 
                 network_job.OverrideBandwidth()
+                
+                network_job.SetForLogin( True )
                 
                 HG.client_controller.network_engine.AddJob( network_job )
                 
@@ -722,10 +728,6 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 credentials = self.GetCredentials()
                 
                 dictionary_part[ 'credentials' ] = credentials
-                
-                bandwidth_rules = self._bandwidth_rules.GetValue()
-                
-                dictionary_part[ 'bandwidth_rules' ] = bandwidth_rules
                 
                 return dictionary_part
                 
@@ -770,15 +772,42 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def _GetAccessKeyFromRegistrationKey( self ):
                 
-                def do_it( service, registration_key ):
+                def do_it( credentials, registration_key ):
                     
                     try:
                         
-                        response = service.Request( HC.GET, 'access_key', { 'registration_key' : registration_key } )
+                        ( host, port ) = credentials.GetAddress()
                         
-                        access_key_encoded = response[ 'access_key' ].encode( 'hex' )
+                        url = 'https://' + host + ':' + str( port ) + '/access_key?registration_key=' + registration_key.encode( 'hex' )
                         
-                        wx.CallAfter( self._access_key.SetValue, access_key_encoded )
+                        network_job = ClientNetworking.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                        
+                        network_job.OverrideBandwidth()
+                        
+                        network_job.SetForLogin( True )
+                        
+                        HG.client_controller.network_engine.AddJob( network_job )
+                        
+                        try:
+                            
+                            network_job.WaitUntilDone()
+                            
+                            content = network_job.GetContent()
+                            
+                            response = HydrusNetwork.ParseBodyString( content )
+                            
+                            access_key_encoded = response[ 'access_key' ].encode( 'hex' )
+                            
+                            wx.CallAfter( self._access_key.SetValue, access_key_encoded )
+                            
+                            wx.MessageBox( 'Looks good!' )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.PrintException( e )
+                            
+                            wx.MessageBox( 'Had a problem: ' + HydrusData.ToUnicode( e ) )
+                            
                         
                     finally:
                         
@@ -831,19 +860,54 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-                service_key = HydrusData.GenerateKey()
-                
-                service = ClientServices.GenerateService( service_key, self._service_type, 'test service' )
-                
-                service.SetCredentials( credentials )
-                
                 self._register.Disable()
                 self._register.SetLabel( u'fetching\u2026' )
                 
-                HG.client_controller.CallToThread( do_it, service, registration_key )
+                HG.client_controller.CallToThread( do_it, credentials, registration_key )
                 
             
             def _TestCredentials( self ):
+                
+                def do_it( credentials ):
+                    
+                    service = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, self._service_type, CC.TEST_SERVICE_KEY )
+                    
+                    service.SetCredentials( credentials )
+                    
+                    try:
+                        
+                        if self._service_type in HC.RESTRICTED_SERVICES:
+                            
+                            response = service.Request( HC.GET, 'access_key_verification' )
+                            
+                            if not response[ 'verified' ]:
+                                
+                                wx.MessageBox( 'That access key was not recognised!' )
+                                
+                            else:
+                                
+                                wx.MessageBox( 'Everything looks ok!' )
+                                
+                            
+                        
+                    except HydrusExceptions.WrongServiceTypeException:
+                        
+                        wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
+                        
+                        return
+                        
+                    except HydrusExceptions.NetworkException as e:
+                        
+                        wx.MessageBox( 'Network problem: ' + HydrusData.ToUnicode( e ) )
+                        
+                        return
+                        
+                    finally:
+                        
+                        self._test_credentials_button.Enable()
+                        self._test_credentials_button.SetLabel( 'test access key' )
+                        
+                    
                 
                 try:
                     
@@ -854,40 +918,10 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     return
                     
                 
-                service_key = HydrusData.GenerateKey()
+                self._test_credentials_button.Disable()
+                self._test_credentials_button.SetLabel( u'fetching\u2026' )
                 
-                service = ClientServices.GenerateService( service_key, self._service_type, 'test service' )
-                
-                service.SetCredentials( credentials )
-                
-                try:
-                    
-                    if self._service_type in HC.RESTRICTED_SERVICES:
-                        
-                        response = service.Request( HC.GET, 'access_key_verification' )
-                        
-                        if not response[ 'verified' ]:
-                            
-                            wx.MessageBox( 'That access key was not recognised!' )
-                            
-                        else:
-                            
-                            wx.MessageBox( 'Everything looks ok!' )
-                            
-                        
-                    
-                except HydrusExceptions.WrongServiceTypeException:
-                    
-                    wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
-                    
-                    return
-                    
-                except HydrusExceptions.NetworkException as e:
-                    
-                    wx.MessageBox( 'Network problem: ' + HydrusData.ToUnicode( e ) )
-                    
-                    return
-                    
+                HG.client_controller.CallToThread( do_it, credentials )
                 
             
             def GetCredentials( self ):
@@ -925,9 +959,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     dictionary_part[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( account )
                     
-                    session_manager = HG.client_controller.GetClientSessionManager()
+                    network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
                     
-                    session_manager.DeleteSessionKey( self._service_key )
+                    HG.client_controller.network_engine.session_manager.ClearSession( network_context )
                     
                 
                 dictionary_part[ 'credentials' ] = credentials

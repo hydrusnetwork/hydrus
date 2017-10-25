@@ -4166,9 +4166,67 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
+                good_rating_pred = None
                 
-                query_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) )
+                for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
+                    
+                    if value != 'not rated':
+                        
+                        good_rating_pred = ( operator, value, service_key )
+                        
+                        break
+                        
+                    
+                
+                can_ratings_optimise = len( files_info_predicates ) == 0 and good_rating_pred is not None
+                
+                if can_ratings_optimise:
+                    
+                    ( operator, value, service_key ) = good_rating_pred
+                    
+                    ratings_service_id = self._GetServiceId( service_key )
+                    
+                    # not a natural join since it'll match up hash_id and service_id, but we only want hash_id
+                    
+                    if value == 'rated':
+                        
+                        query_hash_ids = self._STS( self._c.execute( 'SELECT local_ratings.hash_id FROM local_ratings, current_files ON ( local_ratings.hash_id = current_files.hash_id ) WHERE local_ratings.service_id = ? AND current_files.service_id = ?;', ( ratings_service_id, file_service_id ) ) )
+                        
+                    else:
+                        
+                        if isinstance( value, ( str, unicode ) ):
+                            
+                            value = float( value )
+                            
+                        
+                        # floats are a pain!
+                        
+                        if operator == u'\u2248':
+                            
+                            predicate = str( value * 0.8 ) + ' < rating AND rating < ' + str( value * 1.2 )
+                            
+                        elif operator == '<':
+                            
+                            predicate = 'rating < ' + str( value * 0.995 )
+                            
+                        elif operator == '>':
+                            
+                            predicate = 'rating > ' + str( value * 1.005 )
+                            
+                        elif operator == '=':
+                            
+                            predicate = str( value * 0.995 ) + ' <= rating AND rating <= ' + str( value * 1.005 )
+                            
+                        
+                        query_hash_ids = self._STS( self._c.execute( 'SELECT local_ratings.hash_id FROM local_ratings, current_files ON ( local_ratings.hash_id = current_files.hash_id ) WHERE local_ratings.service_id = ? AND current_files.service_id = ? AND ' + predicate + ';', ( ratings_service_id, file_service_id ) ) )
+                        
+                    
+                else:
+                    
+                    files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
+                    
+                    query_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) )
+                    
                 
             
         
@@ -4196,11 +4254,20 @@ class DB( HydrusDB.HydrusDB ):
         
         exclude_query_hash_ids = set()
         
-        for tag in tags_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
+        for tag in tags_to_exclude:
+            
+            exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
+            
         
-        for namespace in namespaces_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+        for namespace in namespaces_to_exclude:
+            
+            exclude_query_hash_ids.update( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) )
+            
         
-        for wildcard in wildcards_to_exclude: exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
+        for wildcard in wildcards_to_exclude:
+            
+            exclude_query_hash_ids.update( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) )
+            
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
         
@@ -4240,8 +4307,14 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            if value == 'rated': query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
-            elif value == 'not rated': query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+            if value == 'rated':
+                
+                query_hash_ids.intersection_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+                
+            elif value == 'not rated':
+                
+                query_hash_ids.difference_update( [ hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ] )
+                
             else:
                 
                 if isinstance( value, ( str, unicode ) ):
@@ -5214,8 +5287,14 @@ class DB( HydrusDB.HydrusDB ):
             
             service_id = self._GetServiceId( service_key )
             
-            if service_type in ( HC.FILE_REPOSITORY, HC.IPFS ): info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
-            elif service_type == HC.TAG_REPOSITORY: info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS }
+            if service_type in ( HC.FILE_REPOSITORY, HC.IPFS ):
+                
+                info_types = { HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES }
+                
+            elif service_type == HC.TAG_REPOSITORY:
+                
+                info_types = { HC.SERVICE_INFO_NUM_PENDING_MAPPINGS, HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS, HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS, HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS }
+                
             
             pendings[ service_key ] = self._GetServiceInfoSpecific( service_id, service_type, info_types )
             
@@ -9853,6 +9932,13 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             self._c.executemany( 'UPDATE OR IGNORE urls SET url = ? WHERE hash_id = ?;', updates )
+            
+        
+        if version == 278:
+            
+            message = 'The hydrus network now uses the new networking engine. Please be warned that your new client will be unable to \'log in\' to older repositories. It is safe to leave them alone--they will catch up in time once the server\'s admin updates.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

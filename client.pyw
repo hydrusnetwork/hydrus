@@ -19,10 +19,18 @@ try:
     
     from include import ClientController
     import threading
-    from twisted.internet import reactor
     from include import HydrusGlobals as HG
     from include import HydrusLogger
     import traceback
+    
+    try:
+        
+        from twisted.internet import reactor
+        
+    except:
+        
+        HG.twisted_is_broke = True
+        
     
     #
     
@@ -67,7 +75,10 @@ try:
             
             HydrusData.Print( 'hydrus client started' )
             
-            threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+            if not HG.twisted_is_broke:
+                
+                threading.Thread( target = reactor.run, kwargs = { 'installSignalHandlers' : 0 } ).start()
+                
             
             controller = ClientController.Controller( db_dir, no_daemons, no_wal )
             
@@ -93,7 +104,10 @@ try:
                 HydrusData.Print( traceback.format_exc() )
                 
             
-            reactor.callFromThread( reactor.stop )
+            if not HG.twisted_is_broke:
+                
+                reactor.callFromThread( reactor.stop )
+                
             
             HydrusData.Print( 'hydrus client shut down' )
             

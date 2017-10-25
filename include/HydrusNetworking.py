@@ -215,7 +215,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetUsageStringsAndGaugeTuples( self, bandwidth_tracker, threshold = 600 ):
+    def GetBandwidthStringsAndGaugeTuples( self, bandwidth_tracker, threshold = 600 ):
         
         with self._lock:
             

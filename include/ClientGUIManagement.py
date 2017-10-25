@@ -2532,7 +2532,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
         # replace all this with a seed cache panel sometime
-        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self, self._controller, self._urls_import.GetSeedCache )
+        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._url_panel, self._controller, self._urls_import.GetSeedCache )
         
         self._url_input = wx.TextCtrl( self._url_panel, style = wx.TE_PROCESS_ENTER )
         self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )

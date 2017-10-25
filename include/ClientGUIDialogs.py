@@ -2678,7 +2678,7 @@ class DialogSelectBooru( Dialog ):
         self._boorus = wx.ListBox( self )
         self._boorus.Bind( wx.EVT_LISTBOX_DCLICK, self.EventDoubleClick )
         
-        self._ok = wx.Button( self, id = wx.ID_OK, size = ( 0, 0 ) )
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
         self._ok.SetDefault()
         
@@ -2695,11 +2695,16 @@ class DialogSelectBooru( Dialog ):
             self._boorus.Append( name )
             
         
+        self._boorus.Select( 0 )
+        
+        self._boorus.SetFocus()
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
@@ -2712,17 +2717,14 @@ class DialogSelectBooru( Dialog ):
         
         if len( boorus ) == 1:
             
-            self._boorus.Select( 0 )
-            
-            wx.CallAfter( self.EventOK, None )
-            
-        else:
-            
-            wx.CallAfter( self._ok.SetFocus )
+            wx.CallAfter( self.EndModal, wx.ID_OK )
             
         
     
-    def EventDoubleClick( self, event ): self.EndModal( wx.ID_OK )
+    def EventDoubleClick( self, event ):
+        
+        self.EndModal( wx.ID_OK )
+        
     
     def EventOK( self, event ):
     

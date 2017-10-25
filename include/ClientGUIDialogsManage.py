@@ -77,6 +77,22 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         self._remove.Bind( wx.EVT_BUTTON, self.EventRemove )
         self._remove.SetForegroundColour( ( 128, 0, 0 ) )
         
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'all', 'restore all defaults', self._RestoreDefault ) )
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
+        default_booru_data = list( ClientDefaults.GetDefaultBoorus().items() )
+        
+        default_booru_data.sort()
+        
+        for ( name, booru ) in default_booru_data:
+            
+            menu_items.append( ( 'normal', name, 'add this booru from the defaults', HydrusData.Call( self._RestoreDefault, booru ) ) )
+            
+        
+        self._restore_default = ClientGUICommon.MenuButton( self, 'restore default', menu_items )
+        
         self._export = wx.Button( self, label = 'export' )
         self._export.Bind( wx.EVT_BUTTON, self.EventExport )
         
@@ -101,6 +117,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
         add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
         add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
+        add_remove_hbox.AddF( self._restore_default, CC.FLAGS_VCENTER )
         add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
         
         ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -121,6 +138,44 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         self.SetInitialSize( ( 980, y ) )
         
         wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def _RestoreDefault( self, booru = None ):
+        
+        if booru is None:
+            
+            for booru in ClientDefaults.GetDefaultBoorus().values():
+                
+                self._RestoreDefault( booru )
+                
+            
+        else:
+            
+            name = booru.GetName()
+            
+            if self._boorus.KeyExists( name ):
+                
+                message = '\'' + name + '\' already exists--are you sure you want to overwrite it with the default entry?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        self._boorus.Select( name )
+                        
+                        page = self._boorus.GetPage( name )
+                        
+                        page.Update( booru )
+                        
+                    
+                
+            else:
+                
+                page = self._Panel( self._boorus, booru, is_new = True )
+                
+                self._boorus.AddPage( name, name, page, select = True )
+                
+            
         
     
     def EventAdd( self, event ):
@@ -2347,7 +2402,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ) = self._import_folder.ToTuple()
+        ( name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2363,7 +2418,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._paused = wx.CheckBox( self._folder_box )
         
-        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self, HG.client_controller, self._import_folder.GetSeedCache, seed_cache_set_callable = self._import_folder.SetSeedCache )
+        self._check_now = wx.CheckBox( self._folder_box )
+        
+        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetSeedCache, seed_cache_set_callable = self._import_folder.SetSeedCache )
         
         #
         
@@ -2470,7 +2527,8 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'folder path: ', self._path ) )
         rows.append( ( 'check period: ', self._period ) )
-        rows.append( ( 'currently paused: ', self._paused ) )
+        rows.append( ( 'periodic checks currently paused: ', self._paused ) )
+        rows.append( ( 'check on manage dialog ok: ', self._check_now ) )
         rows.append( ( 'open a popup if new files imported: ', self._open_popup ) )
         rows.append( ( 'review currently cached import paths: ', self._seed_cache_button ) )
         
@@ -2750,7 +2808,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         paused = self._paused.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused )
+        check_now = self._check_now.GetValue()
+        
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now )
         
         return self._import_folder
         

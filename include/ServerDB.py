@@ -1,6 +1,5 @@
 import collections
 import hashlib
-import httplib
 import HydrusConstants as HC
 import HydrusDB
 import HydrusEncryption

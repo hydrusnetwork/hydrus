@@ -80,7 +80,7 @@ class HydrusResourceSessionKey( HydrusServerResources.HydrusResource ):
         
         now = HydrusData.GetNow()
         
-        max_age = now - expires
+        max_age = expires - now
         
         cookies = [ ( 'session_key', session_key.encode( 'hex' ), { 'max_age' : max_age, 'path' : '/' } ) ]
         

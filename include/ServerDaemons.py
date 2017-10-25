@@ -1,23 +1,6 @@
-import collections
-import hashlib
-import httplib
 import HydrusConstants as HC
-import HydrusData
-import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNATPunch
-import HydrusServer
-import itertools
-import os
-import Queue
-import random
-import ServerFiles
-import shutil
-import sqlite3
-import sys
-import threading
-import time
-import traceback
 
 def DAEMONSaveDirtyObjects( controller ):
     

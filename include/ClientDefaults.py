@@ -372,7 +372,7 @@ def GetDefaultBoorus():
     boorus[ 'gelbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'safebooru'
-    search_url = 'http://safebooru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://safebooru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '+'
     advance_by_page_num = False
     thumb_classname = 'thumb'
@@ -394,7 +394,7 @@ def GetDefaultBoorus():
     boorus[ 'e621' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'rule34@paheal'
-    search_url = 'http://rule34.paheal.net/post/list/%tags%/%index%'
+    search_url = 'https://rule34.paheal.net/post/list/%tags%/%index%'
     search_separator = '%20'
     advance_by_page_num = True
     thumb_classname = 'thumb'
@@ -405,7 +405,7 @@ def GetDefaultBoorus():
     boorus[ 'rule34@paheal' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'danbooru'
-    search_url = 'http://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
+    search_url = 'https://danbooru.donmai.us/posts?page=%index%&tags=%tags%'
     search_separator = '%20'
     advance_by_page_num = True
     thumb_classname = 'post-preview'
@@ -416,7 +416,7 @@ def GetDefaultBoorus():
     boorus[ 'danbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'mishimmie'
-    search_url = 'http://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
+    search_url = 'https://shimmie.katawa-shoujo.com/post/list/%tags%/%index%'
     search_separator = '%20'
     advance_by_page_num = True
     thumb_classname = 'thumb'
@@ -427,7 +427,7 @@ def GetDefaultBoorus():
     boorus[ 'mishimmie' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'rule34@booru.org'
-    search_url = 'http://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://rule34.xxx/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '%20'
     advance_by_page_num = False
     thumb_classname = 'thumb'
@@ -438,7 +438,7 @@ def GetDefaultBoorus():
     boorus[ 'rule34@booru.org' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'furry@booru.org'
-    search_url = 'http://furry.booru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://furry.booru.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '+'
     advance_by_page_num = False
     thumb_classname = 'thumb'
@@ -460,7 +460,7 @@ def GetDefaultBoorus():
     boorus[ 'xbooru' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'konachan'
-    search_url = 'http://konachan.com/post?page=%index%&tags=%tags%'
+    search_url = 'https://konachan.com/post?page=%index%&tags=%tags%'
     search_separator = '+'
     advance_by_page_num = True
     thumb_classname = 'thumb'
@@ -471,7 +471,7 @@ def GetDefaultBoorus():
     boorus[ 'konachan' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'yande.re'
-    search_url = 'http://yande.re/post?page=%index%&tags=%tags%'
+    search_url = 'https://yande.re/post?page=%index%&tags=%tags%'
     search_separator = '+'
     advance_by_page_num = True
     thumb_classname = 'thumb'
@@ -482,7 +482,7 @@ def GetDefaultBoorus():
     boorus[ 'yande.re' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'tbib'
-    search_url = 'http://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://tbib.org/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '+'
     advance_by_page_num = False
     thumb_classname = 'thumb'
@@ -515,7 +515,7 @@ def GetDefaultBoorus():
     boorus[ 'sankaku idol' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'rule34hentai'
-    search_url = 'http://rule34hentai.net/post/list/%tags%/%index%'
+    search_url = 'https://rule34hentai.net/post/list/%tags%/%index%'
     search_separator = '%20'
     advance_by_page_num = True
     thumb_classname = 'shm-thumb'

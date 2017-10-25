@@ -46,43 +46,26 @@ class MockController( object ):
         return self.model_is_shutdown or HG.test_controller.ModelIsShutdown()
         
     
-class FakeHTTPConnectionManager():
+class MockServicesManager( object ):
     
-    def __init__( self ):
+    def __init__( self, services ):
         
-        self._fake_responses = {}
-        
-    
-    def Request( self, method, url, request_headers = None, body = '', return_cookies = False, report_hooks = None, temp_path = None, hydrus_network = False ):
-        
-        if request_headers is None: request_headers = {}
-        if report_hooks is None: report_hooks = []
-        
-        ( response, size_of_response, response_headers, cookies ) = self._fake_responses[ ( method, url ) ]
-        
-        if temp_path is not None:
-            
-            with open( temp_path, 'wb' ) as f: f.write( response )
-            
-            response = 'path written to temporary path'
-            
-        
-        if hydrus_network: return ( response, size_of_response, response_headers, cookies )
-        elif return_cookies: return ( response, cookies )
-        else: return response
+        self._service_keys_to_services = { service.GetServiceKey() : service for service in services }
         
     
-    def RequestHydrus( self, method, url, request_headers = None, body = '', report_hooks = None, temp_path = None ):
+    def GetName( self, service_key ):
         
-        pass
+        return self._service_keys_to_services[ service_key ].GetName()
         
     
-    def SetResponse( self, method, url, response, size_of_response = 100, response_headers = None, cookies = None ):
+    def GetService( self, service_key ):
         
-        if response_headers is None: response_headers = {}
-        if cookies is None: cookies = []
+        return self._service_keys_to_services[ service_key ]
         
-        self._fake_responses[ ( method, url ) ] = ( response, size_of_response, response_headers, cookies )
+    
+    def ServiceExists( self, service_key ):
+        
+        return service_key in self._service_keys_to_services
         
     
 class FakeWebSessionManager():

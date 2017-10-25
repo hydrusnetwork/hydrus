@@ -22,6 +22,8 @@ shutdown_complete = False
 restart = False
 emergency_exit = False
 
+twisted_is_broke = False
+
 do_not_catch_char_hook = False
 
 dirty_object_lock = threading.Lock()

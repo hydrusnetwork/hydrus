@@ -46,21 +46,50 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
-        self._domains_to_logins = {}
+        self._domains_to_login_scripts = {}
         
-        # a login has:
-          # a login script
-          # rules to check validity in cookies in a current session (fold that into the login script, which may have several stages of this)
-          # current user/pass/whatever
-          # current script validity
-          # current credentials validity
-          # recent error? some way of dealing with 'domain is currently down, so try again later'
+        self._hydrus_login_script = LoginScriptHydrus()
+        
+        # as a login script can apply to multiple places, the actual credentials should be a separate object
+        # this makes script import/export privacy a little easier!
+        # these credentials should have validity tracking too
+        # the script failing vs the credentials failing are different things, wew
+        
+        # track recent error at the script level? some sensible way of dealing with 'domain is currently down, so try again later'
+        # maybe this should be at the domain manager's validity level, yeah.
         
         # so, we fetch all the logins, ask them for the network contexts so we can set up the dict
         # variables from old object here
         self._error_names = set()
         
+        # should this be handled in the session manager? yeah, prob
         self._network_contexts_to_session_timeouts = {}
+        
+    
+    def _GetLoginScript( self, network_context ):
+        
+        if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+            
+            nc_domain = network_context.context_data
+            
+            possible_domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( nc_domain )
+            
+            for domain in possible_domains:
+                
+                if domain in self._domains_to_login_scripts:
+                    
+                    login_script = self._domains_to_login_scripts[ domain ]
+                    
+                    return login_script
+                    
+                
+            
+        elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+            
+            return self._hydrus_login_script
+            
+        
+        return None
         
     
     def _GetSerialisableInfo( self ):
@@ -73,55 +102,70 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_logins = {}
         
     
-    def CanLogin( self, network_contexts ):
+    def CanLogin( self, network_context ):
         
-        # look them up in our structure
-        # if they have a login, is it valid?
-          # valid means we have tested credentials and it hasn't been invalidated by a parsing error or similar
-          # I think this just means saying Login.CanLogin( credentials )
-        
-        return False
+        with self._lock:
+            
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                pass
+                
+                # look them up in our structure
+                # if they have a login, is it valid?
+                  # valid means we have tested credentials and it hasn't been invalidated by a parsing error or similar
+                  # I think this just means saying Login.CanLogin( credentials )
+                
+            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                service_key = network_context.context_data
+                
+                services_manager = self.engine.controller.services_manager
+                
+                if not services_manager.ServiceExists( service_key ):
+                    
+                    return False
+                    
+                
+                service = services_manager.GetService( service_key )
+                
+                return service.IsFunctional( ignore_account = True )
+                
+            
+            return False
+            
         
     
-    def GenerateLoginProcess( self, network_contexts ):
+    def GenerateLoginProcess( self, network_context ):
         
-        # look up the logins
-          # login_process = Login.GenerateLoginProcess
-          # return login_process
-        
-        raise NotImplementedError()
+        with self._lock:
+            
+            login_script = self._GetLoginScript( network_context )
+            
+            if login_script is None:
+                
+                login_script = LoginScript()
+                
+            
+            login_process = LoginProcess( self.engine, network_context, login_script )
+            
+            return login_process
+            
         
     
     def NeedsLogin( self, network_context ):
         
         with self._lock:
             
-            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+            login_script = self._GetLoginScript( network_context )
+            
+            if login_script is None:
                 
-                nc_domain = network_context.context_data
-                
-                domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( nc_domain )
-                
-                for domain in domains:
-                    
-                    if domain in self._domains_to_logins:
-                        
-                        # fetch session
-                        # does the login script reckon the session is logged in?
-                        # if not, return True
-                        
-                        pass
-                        
-                    
-                
-            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
-                
-                service_key = network_context.context_data
-                
-                # figure it out here
+                return False
                 
             
-            return False
+            session = self.engine.session_manager.GetSession( network_context )
+            
+            return not login_script.IsLoggedIn( network_context, session )
             
         
     
@@ -129,7 +173,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     def _GetCookiesDict( self, network_context ):
         
-        session = self._GetSession( network_context )
+        session = self.engine.session_manager.GetSession( network_context )
         
         cookies = session.cookies
         
@@ -148,25 +192,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         return {}
         
     
-    def _GetSession( self, network_context ):
-        
-        session = self.engine.controller.network_engine.session_manager.GetSession( network_context )
-        
-        if network_context not in self._network_contexts_to_session_timeouts:
-            
-            self._network_contexts_to_session_timeouts[ network_context ] = 0
-            
-        
-        if HydrusData.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
-            
-            session.cookies.clear_session_cookies()
-            
-        
-        self._network_contexts_to_session_timeouts[ network_context ] = HydrusData.GetNow() + self.SESSION_TIMEOUT
-        
-        return session
-        
-    
     def _IsLoggedIn( self, network_context, required_cookies ):
         
         cookie_dict = self._GetCookiesDict( network_context )
@@ -180,51 +205,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
         return True
-        
-    
-    def EnsureHydrusSessionIsOK( self, service_key ):
-        
-        with self._lock:
-            
-            if not self.engine.controller.services_manager.ServiceExists( service_key ):
-                
-                raise HydrusExceptions.DataMissing( 'Service does not exist!' )
-                
-            
-            name = self.engine.controller.services_manager.GetService( service_key ).GetName()
-            
-            if service_key in self._error_names:
-                
-                raise Exception( 'Could not establish a hydrus network session for ' + name + '! This ugly error is temporary due to the network engine rewrite. Please restart the client to reattempt this network context.' )
-                
-            
-            network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, service_key )
-            
-            required_cookies = [ 'session_key' ]
-            
-            if self._IsLoggedIn( network_context, required_cookies ):
-                
-                return
-                
-            
-            try:
-                
-                self.SetupHydrusSession( service_key )
-                
-                if not self._IsLoggedIn( network_context, required_cookies ):
-                    
-                    return
-                    
-                
-                HydrusData.Print( 'Successfully logged into ' + name + '.' )
-                
-            except:
-                
-                self._error_names.add( service_key )
-                
-                raise
-                
-            
         
     
     def EnsureLoggedIn( self, name ):
@@ -292,7 +272,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     def LoginHF( self, network_context ):
         
-        session = self._GetSession( network_context )
+        session = self.engine.session_manager.GetSession( network_context )
         
         response = session.get( 'https://www.hentai-foundry.com/' )
         
@@ -325,7 +305,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     # I am leaving this as a mess with the hope the eventual login engine will replace it
     def LoginPixiv( self, network_context, pixiv_id, password ):
         
-        session = self._GetSession( network_context )
+        session = self.engine.session_manager.GetSession( network_context )
         
         response = session.get( 'https://accounts.pixiv.net/login' )
         
@@ -364,32 +344,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
         
         time.sleep( 1 )
-        
-    
-    def SetupHydrusSession( self, service_key ):
-        
-        # nah, replace this with a proper login script
-        
-        service = self.engine.controller.services_manager.GetService( service_key )
-        
-        if not service.HasAccessKey():
-            
-            raise HydrusExceptions.DataMissing( 'No access key for this service, so cannot set up session!' )
-            
-        
-        access_key = service.GetAccessKey()
-        
-        url = 'blah'
-        
-        network_job = ClientNetworking.NetworkJobHydrus( service_key, 'GET', url )
-        
-        network_job.SetForLogin( True )
-        
-        network_job.AddAdditionalHeader( 'Hydrus-Key', access_key.encode( 'hex' ) )
-        
-        self.engine.controller.network_engine.AddJob( network_job )
-        
-        network_job.WaitUntilDone()
         
     
     def TestPixiv( self, pixiv_id, password ):
@@ -470,39 +424,155 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         return ( False, 'Pixiv login failed to establish session! Info printed to log.' )
         
 
+class LoginProcess( object ):
+    
+    def __init__( self, engine, network_context, login_script ):
+        
+        self.engine = engine
+        self.network_context = network_context
+        self.login_script = login_script
+        
+        self._done = False
+        
+    
+    def IsDone( self ):
+        
+        return self._done
+        
+    
+    def Start( self ):
+        
+        try:
+            
+            self.login_script.Start( self.engine, self.network_context )
+            
+        finally:
+            
+            self._done = True
+            
+        
+    
+class LoginScriptHydrus( object ):
+    
+    def _IsLoggedIn( self, network_context, session ):
+        
+        cookies = session.cookies
+        
+        cookies.clear_expired_cookies()
+        
+        # I would normally do cookies_dict = cookies.get_dict( domain ) and then inspect that sub-dict, but domain for hydrus is trickier
+        # the session is cleared on credentials change, so this is no big deal anyway
+        
+        return 'session_key' in cookies
+        
+    
+    def IsLoggedIn( self, network_context, session ):
+        
+        return self._IsLoggedIn( network_context, session )
+        
+    
+    def Start( self, engine, network_context ):
+        
+        service_key = network_context.context_data
+        
+        service = engine.controller.services_manager.GetService( service_key )
+        
+        base_url = service.GetBaseURL()
+        
+        url = base_url + 'session_key'
+        
+        access_key = service.GetCredentials().GetAccessKey()
+        
+        network_job = ClientNetworking.NetworkJobHydrus( service_key, 'GET', url )
+        
+        network_job.SetForLogin( True )
+        
+        network_job.AddAdditionalHeader( 'Hydrus-Key', access_key.encode( 'hex' ) )
+        
+        engine.AddJob( network_job )
+        
+        try:
+            
+            network_job.WaitUntilDone()
+            
+            session = engine.session_manager.GetSession( network_context )
+            
+            if self._IsLoggedIn( network_context, session ):
+                
+                HydrusData.Print( 'Successfully logged into ' + service.GetName() + '.' )
+                
+            else:
+                
+                service.DelayFutureRequests( 'Could not log in for unknown reason.' )
+                
+            
+        except Exception as e:
+            
+            e_string = str( e )
+            
+            service.DelayFutureRequests( e_string )
+            
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
 
 # make this serialisable
-class LoginProcess( object ):
+class LoginScript( object ):
     
     def __init__( self ):
         
-        self._network_context = None
+        # cookie stuff to say 'this is a logged in session'
+        
         self._login_steps = []
         self._validity = VALIDITY_UNTESTED
-        
-        # possible error info
-        
-        self._temp_variables = {}
+        self._error_reason = ''
         
     
-    def Start( self, controller, credentials ):
+    def _IsLoggedIn( self, network_context, session ):
+        
+        # check session against required cookies
+        
+        pass
+        
+    
+    def GetRequiredCredentials( self ):
+        
+        required_creds = []
+        
+        for step in self._login_steps:
+            
+            required_creds.extend( step.GetRequiredCredentials() ) # user facing [ ( name, string match ) ] with an order
+            
+        
+        return required_creds
+        
+    
+    def IsLoggedIn( self, network_context, session ):
+        
+        return self._IsLoggedIn( network_context, session )
+        
+    
+    def Start( self, engine, credentials ):
         
         # this maybe takes some job_key or something so it can present to the user login process status
         # this will be needed in the dialog where we test this. we need good feedback on how it is going
         # irl, this could be a 'login popup' message as well, just to inform the user on the progress of any delay
         
+        temp_variables = {}
+        
         for step in self._login_steps:
             
             try:
                 
-                step.Start( controller, credentials, self._temp_variables )
+                step.Start( engine, credentials, temp_variables )
                 
             except HydrusExceptions.VetoException: # or something--invalidscript exception?
                 
                 # set error info
                 
                 self._validity = VALIDITY_INVALID
+                
+                # inform login manager that I'm dirty and need to be saved
                 
                 return False
                 
@@ -512,23 +582,15 @@ class LoginProcess( object ):
                 
                 self._validity = VALIDITY_INVALID
                 
+                # inform login manager that I'm dirty and need to be saved
+                
                 return False
                 
             
         
+        # test session logged in status here, erroring gracefully
+        
         return True
-        
-    
-    def GetRequiredCredentials( self ):
-        
-        required_creds = []
-        
-        for step in self._login_steps:
-            
-            required_creds.extend( step.GetRequiredCredentials() ) # user facing name : string match
-            
-        
-        return required_creds
         
     
 LOGIN_PARAMETER_TYPE_PARAMETER = 0
@@ -556,7 +618,7 @@ class LoginStep( object ):
         self._temp_variable_scripts = [] # name | script that produces a single bit of text or vetoes
         
     
-    def Start( self, controller, credentials, temp_variables ):
+    def Start( self, engine, credentials, temp_variables ):
         
         # construct the url, failing if creds or temps missing
         

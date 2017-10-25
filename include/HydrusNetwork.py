@@ -210,6 +210,11 @@ def DumpToGETQuery( args ):
     
 def ParseBodyString( json_string ):
     
+    if json_string == '':
+        
+        return HydrusSerialisable.SerialisableDictionary()
+        
+    
     args = HydrusSerialisable.CreateFromNetworkString( json_string )
     
     if 'access_key' in args:
@@ -385,6 +390,7 @@ class Account( object ):
         if self._IsBanned():
             
             return ( False, self._GetBannedString() )
+            
         
         if self._IsExpired():
             
@@ -775,7 +781,7 @@ class AccountType( object ):
     
     def GetBandwidthStringsAndGaugeTuples( self, bandwidth_tracker ):
         
-        return self._bandwidth_rules.GetUsageStringsAndGaugeTuples( bandwidth_tracker )
+        return self._bandwidth_rules.GetBandwidthStringsAndGaugeTuples( bandwidth_tracker )
         
     
     def GetAccountTypeKey( self ):

@@ -818,7 +818,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 files = None
                 
             
-            network_job = ClientNetworking.NetworkJob( 'POST', self._url, body = request_args, files = files )
+            network_job = ClientNetworking.NetworkJob( 'POST', self._url, body = request_args )
+            
+            network_job.SetFiles( files )
             
         
         # send nj to nj control on this panel here

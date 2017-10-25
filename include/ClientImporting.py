@@ -743,11 +743,16 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+            num_already_in_seed_cache = 0
             new_urls = []
             
             for url in page_of_urls:
                 
-                if not self._seed_cache.HasSeed( url ):
+                if self._seed_cache.HasSeed( url ):
+                    
+                    num_already_in_seed_cache += 1
+                    
+                else:
                     
                     with self._lock:
                         
@@ -808,6 +813,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._gallery_status = HydrusData.ConvertIntToPrettyString( self._current_query_num_urls ) + ' urls found so far for ' + query
+            
+            if num_already_in_seed_cache > 0:
+                
+                self._gallery_status += ' (' + HydrusData.ConvertIntToPrettyString( num_already_in_seed_cache ) + ' of last page already in queue)'
+                
             
         
         return True
@@ -1433,7 +1443,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, txt_parse_tag_service_keys = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
         
@@ -1489,6 +1499,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_cache = SeedCache()
         self._last_checked = 0
         self._paused = False
+        self._check_now = False
         
     
     def _ActionPaths( self ):
@@ -1613,12 +1624,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused )
+        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused ) = serialisable_info
+        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
@@ -1662,6 +1673,22 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused ) = old_serialisable_info
+            
+            check_now = False
+            
+            new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused, check_now )
+            
+            return ( 4, new_serialisable_info )
+            
+        
+    
+    def CheckNow( self ):
+        
+        self._check_now = True
+        
     
     def DoWork( self ):
         
@@ -1670,7 +1697,10 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return
             
         
-        if not self._paused and HydrusData.TimeHasPassed( self._last_checked + self._period ):
+        due_by_check_now = self._check_now
+        due_by_period = not self._paused and HydrusData.TimeHasPassed( self._last_checked + self._period )
+        
+        if due_by_check_now or due_by_period:
             
             if os.path.exists( self._path ) and os.path.isdir( self._path ):
                 
@@ -1841,6 +1871,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
             self._last_checked = HydrusData.GetNow()
+            self._check_now = False
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
@@ -1858,7 +1889,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused )
+        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused, self._check_now )
         
     
     def SetSeedCache( self, seed_cache ):
@@ -1866,7 +1897,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_cache = seed_cache
         
     
-    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused ):
+    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now ):
         
         if path != self._path:
             
@@ -1889,6 +1920,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._period = period
         self._open_popup = open_popup
         self._paused = paused
+        self._check_now = check_now
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ] = ImportFolder
@@ -2197,6 +2229,13 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                     
                 
                 parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
+                
+                num_already_in_seed_cache = len( file_urls ) - num_new
+                
+                if num_already_in_seed_cache > 0:
+                    
+                    parser_status += ' (' + HydrusData.ConvertIntToPrettyString( num_already_in_seed_cache ) + ' already in queue)'
+                    
                 
             except HydrusExceptions.NotFoundException:
                 

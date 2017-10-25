@@ -49,7 +49,8 @@ class TestDaemons( unittest.TestCase ):
             
             import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, actions = actions )
             
-            HG.test_controller.SetRead( 'serialisable_named', [ import_folder ] )
+            HG.test_controller.SetRead( 'serialisable_names', [ 'imp' ] )
+            HG.test_controller.SetRead( 'serialisable_named', import_folder )
             
             ClientDaemons.DAEMONCheckImportFolders( HG.test_controller )
             

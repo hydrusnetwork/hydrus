@@ -3,6 +3,7 @@ import ClientDownloading
 import ClientNetworking
 import ClientRendering
 import ClientSearch
+import ClientServices
 import ClientThreading
 import HydrusConstants as HC
 import HydrusExceptions
@@ -1555,65 +1556,6 @@ class LocalBooruCache( object ):
             
         
     
-class HydrusSessionManager( object ):
-    
-    def __init__( self, controller ):
-        
-        self._controller = controller
-        
-        existing_sessions = self._controller.Read( 'hydrus_sessions' )
-        
-        self._service_keys_to_sessions = { service_key : ( session_key, expires ) for ( service_key, session_key, expires ) in existing_sessions }
-        
-        self._lock = threading.Lock()
-        
-    
-    def DeleteSessionKey( self, service_key ):
-        
-        with self._lock:
-            
-            self._controller.Write( 'delete_hydrus_session_key', service_key )
-            
-            if service_key in self._service_keys_to_sessions:
-                
-                del self._service_keys_to_sessions[ service_key ]
-                
-            
-        
-    
-    def GetSessionKey( self, service_key ):
-        
-        now = HydrusData.GetNow()
-        
-        with self._lock:
-            
-            if service_key in self._service_keys_to_sessions:
-                
-                ( session_key, expires ) = self._service_keys_to_sessions[ service_key ]
-                
-                if now + 600 > expires: del self._service_keys_to_sessions[ service_key ]
-                else: return session_key
-                
-            
-            # session key expired or not found
-            
-            service = self._controller.services_manager.GetService( service_key )
-            
-            ( response_gumpf, cookies ) = service.Request( HC.GET, 'session_key', return_cookies = True )
-            
-            try: session_key = cookies[ 'session_key' ].decode( 'hex' )
-            except: raise Exception( 'Service did not return a session key!' )
-            
-            expires = now + HydrusSessions.HYDRUS_SESSION_LIFETIME
-            
-            self._service_keys_to_sessions[ service_key ] = ( session_key, expires )
-            
-            self._controller.Write( 'hydrus_session', service_key, session_key, expires )
-            
-            return session_key
-            
-        
-    
 class MenuEventIdToActionCache( object ):
     
     def __init__( self ):
@@ -2113,6 +2055,8 @@ class ServicesManager( object ):
     def _SetServices( self, services ):
         
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
+        
+        self._keys_to_services[ CC.TEST_SERVICE_KEY ] = ClientServices.GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, CC.TEST_SERVICE_KEY )
         
         def compare_function( a, b ):
             

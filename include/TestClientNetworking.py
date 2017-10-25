@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientNetworking
 import ClientNetworkingDomain
 import ClientNetworkingLogin
+import ClientServices
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -13,7 +14,7 @@ import threading
 import time
 import unittest
 import HydrusGlobals as HG
-from httmock import all_requests, urlmatch, HTTMock
+from httmock import all_requests, urlmatch, HTTMock, response
 from mock import patch
 
 # some gumpf
@@ -53,12 +54,12 @@ def catch_wew_ok( url, request ):
 @urlmatch( netloc = MOCK_HYDRUS_ADDRESS )
 def catch_hydrus_error( url, request ):
     
-    return { 'status_code' : 500, 'reason' : 'Internal Server Error', 'content' : BAD_RESPONSE }
+    return response( 500, BAD_RESPONSE, { 'Server' : HC.service_string_lookup[ HC.TAG_REPOSITORY ] + '/' + str( HC.NETWORK_VERSION ) }, 'Internal Server Error' )
 
 @urlmatch( netloc = MOCK_HYDRUS_ADDRESS )
 def catch_hydrus_ok( url, request ):
     
-    return GOOD_RESPONSE
+    return response( 200, GOOD_RESPONSE, { 'Server' : HC.service_string_lookup[ HC.TAG_REPOSITORY ] + '/' + str( HC.NETWORK_VERSION ) }, 'OK' )
     
 class TestBandwidthManager( unittest.TestCase ):
     
@@ -539,6 +540,13 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         job.SetForLogin( for_login )
         
         mock_controller = TestConstants.MockController()
+        
+        mock_service = ClientServices.GenerateService( MOCK_HYDRUS_SERVICE_KEY, HC.TAG_REPOSITORY, 'test tag repo' )
+        
+        mock_services_manager = TestConstants.MockServicesManager( ( mock_service, ) )
+        
+        mock_controller.services_manager = mock_services_manager
+        
         bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
         session_manager = ClientNetworking.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()

@@ -1622,6 +1622,25 @@ class Canvas( wx.Window ):
             
         
     
+    def _MediaFocusWentToExternalProgram( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        mime = self._current_media.GetMime()
+        
+        if mime == HC.APPLICATION_FLASH:
+            
+            self._media_container.SetEmbedButton()
+            
+        elif self._current_media.HasDuration():
+            
+            self._media_container.Pause()
+            
+        
+    
     def _MouseIsOverFlash( self ):
         
         if self._current_media is not None and self._current_media.GetMime() == HC.APPLICATION_FLASH:
@@ -1653,10 +1672,7 @@ class Canvas( wx.Window ):
         
         HydrusPaths.LaunchFile( path, launch_path )
         
-        if self._current_media.HasDuration() and mime != HC.APPLICATION_FLASH:
-            
-            self._media_container.Pause()
-            
+        self._MediaFocusWentToExternalProgram()
         
     
     def _PrefetchNeighbours( self ):
@@ -2445,6 +2461,7 @@ class CanvasPanel( Canvas ):
         
         self._page_key = page_key
         
+        HG.client_controller.sub( self, 'MediaFocusWentToExternalProgram', 'media_focus_went_to_external_program' )
         HG.client_controller.sub( self, 'PreviewChanged', 'preview_changed' )
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         
@@ -2567,6 +2584,14 @@ class CanvasPanel( Canvas ):
             HG.client_controller.PopupMenu( self, menu )
             
             event.Skip()
+            
+        
+    
+    def MediaFocusWentToExternalProgram( self, page_key ):
+        
+        if page_key == self._page_key:
+            
+            self._MediaFocusWentToExternalProgram()
             
         
     
@@ -5144,6 +5169,19 @@ class MediaContainer( wx.Window ):
             
         
     
+    def SetEmbedButton( self ):
+        
+        self._HideAnimationBar()
+        
+        self._DestroyThisMediaWindow( self._media_window )
+        
+        self._media_window = None
+        
+        self._embed_button.SetMedia( self._media )
+        
+        self._embed_button.Show()
+        
+    
     def SetMedia( self, media, initial_size, initial_position, show_action ):
         
         self._media = media
@@ -5154,15 +5192,7 @@ class MediaContainer( wx.Window ):
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED ):
             
-            self._HideAnimationBar()
-            
-            self._DestroyThisMediaWindow( self._media_window )
-            
-            self._media_window = None
-            
-            self._embed_button.SetMedia( self._media )
-            
-            self._embed_button.Show()
+            self.SetEmbedButton()
             
         else:
             

@@ -110,7 +110,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
+        self._controller.sub( self, 'NotifyNewImportFolders', 'notify_new_import_folders' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
         self._controller.sub( self, 'NotifyNewPending', 'notify_new_pending' )
         self._controller.sub( self, 'NotifyNewPermissions', 'notify_new_permissions' )
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
@@ -632,6 +634,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _CheckImportFolder( self, name ):
+        
+        try:
+            
+            import_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
+            
+            import_folder.CheckNow()
+            
+            self._controller.WriteSynchronous( 'serialisable', import_folder )
+            
+            self._controller.pub( 'notify_new_import_folders' )
+            
+        except HydrusExceptions.DataMissing:
+            
+            pass
+            
+        
+    
     def _ClearOrphans( self ):
         
         text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
@@ -848,6 +868,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+            import_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+            
+            if len( import_folder_names ) > 0:
+                
+                submenu = wx.Menu()
+                
+                for name in import_folder_names:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Check this import folder now.', self._CheckImportFolder, name )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'check import folder now' )
+                
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
             
@@ -948,6 +982,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         def pages():
+            
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ( total_active_page_count, total_closed_page_count ) = self.GetTotalPageCounts()
+                
+                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ConvertIntToPrettyString( total_active_page_count ) + ' pages open', 'You have this many pages open.' )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
             ClientGUIMenus.AppendMenuItem( self, menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self._ShowHideSplitters )
@@ -1178,8 +1221,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 if service_type == HC.TAG_REPOSITORY:
                     
-                    pending_phrase = 'mappings to upload'
-                    petitioned_phrase = 'mappings to petition'
+                    pending_phrase = 'tag data to upload'
+                    petitioned_phrase = 'tag data to petition'
                     
                 elif service_type == HC.FILE_REPOSITORY:
                     
@@ -2449,6 +2492,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.pub( 'notify_new_undo' )
         
+        self._controller.pub( 'notify_new_pages' )
+        
     
     def _UploadPending( self, service_key ):
         
@@ -3173,11 +3218,29 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._focus_holder.SetFocus()
             
         
+        self._dirty_menus.add( 'pages' )
+        
+        self._menu_updater.Update()
+        
+    
+    def NotifyNewImportFolders( self ):
+        
+        self._dirty_menus.add( 'file' )
+        
+        self._menu_updater.Update()
+        
     
     def NotifyNewOptions( self ):
         
         self._dirty_menus.add( 'services' )
         self._dirty_menus.add( 'help' )
+        
+        self._menu_updater.Update()
+        
+    
+    def NotifyNewPages( self ):
+        
+        self._dirty_menus.add( 'pages' )
         
         self._menu_updater.Update()
         

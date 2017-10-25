@@ -23,6 +23,7 @@ class NetworkException( Exception ): pass
 class BandwidthException( NetworkException ): pass
 class FirewallException( NetworkException ): pass
 class ForbiddenException( NetworkException ): pass
+class LoginException( NetworkException ): pass
 class NetworkVersionException( NetworkException ): pass
 class NoContentException( NetworkException ): pass
 class NotFoundException( NetworkException ): pass
@@ -33,4 +34,5 @@ class ServerBusyException( NetworkException ): pass
 class ServerException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass
+class ValidationException( NetworkException ): pass
 class ShouldReattemptNetworkException( NetworkException ): pass

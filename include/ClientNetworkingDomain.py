@@ -8,11 +8,18 @@ import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
 import os
+import re
 import threading
 import time
 import urlparse
 
 def ConvertDomainIntoAllApplicableDomains( domain ):
+    
+    # is an ip address, possibly with a port
+    if re.search( '^[\d\.):]+$', domain ) is not None:
+        
+        return [ domain ]
+        
     
     domains = []
     

@@ -928,7 +928,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 HydrusPaths.LaunchFile( path, launch_path )
                 
-                self._SetFocussedMedia( None )
+                HG.client_controller.pub( 'media_focus_went_to_external_program', self._page_key )
                 
             
         
@@ -2503,7 +2503,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if result not in ( wx.DragError, wx.DragNone ):
                         
-                        self._SetFocussedMedia( None )
+                        HG.client_controller.pub( 'media_focus_went_to_external_program', self._page_key )
                         
                     
                 
@@ -3681,9 +3681,15 @@ class MediaPanelThumbnails( MediaPanel ):
             
             random.shuffle( hashes )
             
-            changes_made = False
-            
             dcs = {}
+            
+            ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+            
+            y_start = self._GetYStart()
+            
+            earliest_y = y_start * yUnit
+            
+            page_height = self._num_rows_per_canvas_page * thumbnail_span_height
             
             for hash in hashes:
                 
@@ -3763,6 +3769,16 @@ class MediaPanelThumbnails( MediaPanel ):
                             changes_made = True
                             
                         
+                        #
+                        
+                        page_virtual_y = page_height * page_index
+                        
+                        page_client_y = page_virtual_y - earliest_y
+                        
+                        client_y = page_client_y + y
+                        
+                        self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
+                        
                     
                     if delete_entry:
                         
@@ -3782,11 +3798,6 @@ class MediaPanelThumbnails( MediaPanel ):
             if len( self._thumbnails_being_faded_in ) > 0:
                 
                 self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
-                
-            
-            if changes_made:
-                
-                self.Refresh()
                 
             
         except wx.PyDeadObjectError:

@@ -30,9 +30,11 @@ import threading
 import time
 import traceback
 import wx
-from twisted.internet import reactor
-from twisted.internet import defer
 
+if not HG.twisted_is_broke:
+    
+    from twisted.internet import reactor, defer
+    
 class Controller( HydrusController.HydrusController ):
     
     pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
@@ -383,11 +385,6 @@ class Controller( HydrusController.HydrusController ):
         return False
         
     
-    def DoHTTP( self, *args, **kwargs ):
-        
-        return self._http.Request( *args, **kwargs )
-        
-    
     def DoIdleShutdownWork( self ):
         
         stop_time = HydrusData.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
@@ -481,11 +478,6 @@ class Controller( HydrusController.HydrusController ):
         raise NotImplementedError()
         
     
-    def GetClientSessionManager( self ):
-        
-        return self._client_session_manager
-        
-    
     def GetCommandFromShortcut( self, shortcut_names, shortcut ):
         
         return self._shortcuts_manager.GetCommand( shortcut_names, shortcut )
@@ -550,8 +542,6 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_title_text', u'booting db\u2026' )
         
-        self._http = ClientNetworking.HTTPConnectionManager()
-        
         HydrusController.HydrusController.InitModel( self )
         
         self.services_manager = ClientCaches.ServicesManager( self )
@@ -615,8 +605,6 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThreadLongRunning( self.network_engine.MainLoop )
         
         #
-        
-        self._client_session_manager = ClientCaches.HydrusSessionManager( self )
         
         self._shortcuts_manager = ClientCaches.ShortcutsManager( self )
         
@@ -982,7 +970,14 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        reactor.callFromThread( TWISTEDRestartServer )
+        if HG.twisted_is_broke:
+            
+            HydrusData.ShowText( 'Twisted failed to import, so could not restart the booru! Please contact hydrus dev!' )
+            
+        else:
+            
+            reactor.callFromThread( TWISTEDRestartServer )
+            
         
     
     def RestoreDatabase( self ):
