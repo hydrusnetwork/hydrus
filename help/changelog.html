@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 279</h3></li>
+				<ul>
+					<li>moved the hydrus service object over to the new networking engine</li>
+					<li>hydrus services now appear in the bandwidth review panel</li>
+					<li>hydrus requests now obey larger network bandwidth rules (this mostly means 'global')</li>
+					<li>service bandwidth usage and rules are no longer managed from manage services--it is now under review bandwidth usage, like all other network contexts</li>
+					<li>updated some network engine stuff for misc hydrus states like 'server busy'</li>
+					<li>fixed a bug in the server code where the session key cookie had an invalid expiration timestamp--servers should update this week to make sure new clients can log in properly</li>
+					<li>hydrus network requests will force-set User-Agent as 'hydrus client/(network_version)' as the network version is used in the protocol to determine compatibility</li>
+					<li>fleshed out the hydrus specific network job, giving it the various bandwidth tracking and version checking responsibilities the service object used to have</li>
+					<li>moved session cookie decay (only matters for Hentai Foundry atm) to the new session manager (was previously hacked into the login manager)</li>
+					<li>moved some hydrus response parsing stuff around, added content type awareness to the new network job</li>
+					<li>updated several unusual hydrus 'static/test' requests used to test credentials and fetch access key and so on to the new system</li>
+					<li>added a special 'test service' service to better accomodate these requests</li>
+					<li>wrote a static login script for hydrus services</li>
+					<li>polished up login management system overall</li>
+					<li>import folders now support a 'check now' state, like subscriptions, that will cause them to check immediately</li>
+					<li>import folders can be 'check now'ed from the file menu under a new submenu! if you would like to have a 'manual' import folder, try pausing it and just running it from this menu!</li>
+					<li>added an optimisation to the file search algorithm to search ratings queries super fast when they lack tag or file system preds to otherwise speed them up</li>
+					<li>updated the booru presets that now support https to be https</li>
+					<li>added a 'restore defaults' button to the manage boorus dialog--you can restore specifics or all of them</li>
+					<li>optimised how fading thumbnails are blitted to screen, which may provide a huge performance boost for high-res/small-thumb clients</li>
+					<li>pages that have been renamed by the user will no longer be rename-overwritten by any auto-renaming system (currently just thread watchers, I think, but this will expand in future). unfortunately, this is not retroactive--only pages renamed from now on will be aware that they were user-renamed</li>
+					<li>in advanced mode, the pages menu now states how many pages are currently open</li>
+					<li>the 'page of images' downloader will now say '(x already in queue)' when it reports how many urls were found, if any were already in the queue. (this should clear up some confusion where it would previously say '0 new urls' even when it found some stuff)</li>
+					<li>the gallery downloader will do essentially the same, but on a per-page basis. the text is a little crushed, so I may revisit this</li>
+					<li>fixed an issue with the manage services dialog not being able to rename dupe-named services on edit subdialog ok</li>
+					<li>the manage services dialog now uses the new listctrl! the listed services are no longer a horrific unsorted mess!</li>
+					<li>fixed the file import status button not showing on raw url downloader or import folder edit dialog</li>
+					<li>improved how some directory tree merging code deals with read_only files in the source</li>
+					<li>maybe fixed some unusual selection behaviour with the booru selection popup dialog. it now has a real ok button, rather than a mickey-mouse hidden one</li>
+					<li>completely deleted the old networking engine!</li>
+					<li>cleaned out some unused imports from the networking code and related entries from running_from_source.html</li>
+					<li>changed up and fixed some odd bugs in how how repositories test some error/isfunctional stuff vs regular paused status</li>
+					<li>hydrus network contexts now have a prettier name</li>
+					<li>ip address-based network contexts will no longer spam the bandwidth tracker with their useless subdomains</li>
+					<li>network jobs that are unable to attempt validation or login will now error immediately rather than waiting indefinitely</li>
+					<li>fixed up a bunch of test code that was broken due to the mismatch of network engines</li>
+					<li>broke some other test code due to the network engine transfer!</li>
+					<li>the client is more resilient about broken 'twisted' installs, and _should_ be able to boot without it. this may or may not apply to the built release--more work can be done here</li>
+					<li>some network job refactoring</li>
+					<li>clientside service code cleanup</li>
+					<li>misc fix that I can't remember</li>
+					<li>misc cleanup</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 278</h3></li>
 				<ul>
 					<li>fixed the tumblr raw url converter to now point to the data.tumblr.com domain</li>
