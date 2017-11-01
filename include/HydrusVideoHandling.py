@@ -560,11 +560,33 @@ def ParseFFMPEGVideoResolution( lines ):
         
         resolution = list(map(int, line[match.start():match.end()-1].split('x')))
         
+        sar_match = re.search( " SAR [0-9]*:[0-9]* ", line )
+        
+        if sar_match is not None:
+            
+            # ' SAR 2:3 '
+            sar_string = line[ sar_match.start() : sar_match.end() ]
+            
+            # '2:3'
+            sar_string = sar_string[5:-1]
+            
+            ( sar_w, sar_h ) = sar_string.split( ':' )
+            
+            ( sar_w, sar_h ) = ( int( sar_w ), int( sar_h ) )
+            
+            ( x, y ) = resolution
+            
+            x *= sar_w
+            x //= sar_h
+            
+            resolution = ( x, y )
+            
+        
         return resolution
         
     except:
         
-        raise HydrusExceptions.MimeException( 'Error counting number of frames!' )
+        raise HydrusExceptions.MimeException( 'Error parsing resolution!' )
         
     
 # This was built from moviepy's FFMPEG_VideoReader

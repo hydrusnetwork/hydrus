@@ -18,7 +18,6 @@ import traceback
 import time
 
 CONNECTION_REFRESH_TIME = 60 * 30
-TRANSACTION_COMMIT_TIME = 10
 
 def CanVacuum( db_path, stop_time = None ):
     
@@ -108,6 +107,8 @@ class HydrusDB( object ):
     
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 2
+    
+    TRANSACTION_COMMIT_TIME = 10
     
     def __init__( self, controller, db_dir, db_name, no_wal = False ):
         
@@ -526,7 +527,7 @@ class HydrusDB( object ):
                 result = self._Write( action, *args, **kwargs )
                 
             
-            if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + TRANSACTION_COMMIT_TIME ):
+            if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + self.TRANSACTION_COMMIT_TIME ):
                 
                 self._current_status = 'db committing'
                 
@@ -805,7 +806,7 @@ class HydrusDB( object ):
                 
             except Queue.Empty:
                 
-                if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + TRANSACTION_COMMIT_TIME ):
+                if self._transaction_contains_writes and HydrusData.TimeHasPassed( self._transaction_started + self.TRANSACTION_COMMIT_TIME ):
                     
                     self._Commit()
                     

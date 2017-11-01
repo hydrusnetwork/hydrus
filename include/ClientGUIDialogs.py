@@ -10,7 +10,6 @@ import ClientFiles
 import ClientGUIACDropdown
 import ClientGUIFrames
 import ClientGUICommon
-import ClientGUICollapsible
 import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
@@ -457,65 +456,6 @@ class DialogGenerateNewAccounts( Dialog ):
             
             self.EndModal( wx.ID_OK )
             
-        
-    
-class DialogInputTagImportOptions( Dialog ):
-    
-    def __init__( self, parent, pretty_name, gallery_identifier, tag_import_options = None ):
-        
-        Dialog.__init__( self, parent, 'configure default import tag options for ' + pretty_name )
-        
-        #
-        
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-        
-        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self, namespaces = namespaces )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        if tag_import_options is None:
-            
-            new_options = HG.client_controller.GetNewOptions()
-            
-            tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
-            
-        
-        self._tag_import_options.SetOptions( tag_import_options )
-        
-        #
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        x = max( 300, x )
-        y = max( 300, y )
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._tag_import_options.ExpandCollapse )
-        
-    
-    def GetTagImportOptions( self ):
-        
-        tag_import_options = self._tag_import_options.GetOptions()
-        
-        return tag_import_options
         
     
 class DialogInputFileSystemPredicates( Dialog ):

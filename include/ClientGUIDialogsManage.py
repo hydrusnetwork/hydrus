@@ -7,7 +7,6 @@ import ClientDragDrop
 import ClientExporting
 import ClientFiles
 import ClientGUIACDropdown
-import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIListBoxes
 import ClientGUIListCtrl

@@ -25,7 +25,7 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
     
     while domain.count( '.' ) > 0:
         
-        # let's discard www.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
+        # let's discard www.blah.com and www2.blah.com so we don't end up tracking it separately to blah.com--there's not much point!
         startswith_www = domain.count( '.' ) > 1 and domain.startswith( 'www' )
         
         if not startswith_www:
@@ -38,6 +38,10 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
     
     return domains
     
+def ConvertDomainIntoSecondLevelDomain( domain ):
+    
+    return ConvertDomainIntoAllApplicableDomains( domain )[-1]
+    
 def ConvertURLIntoDomain( url ):
     
     parser_result = urlparse.urlparse( url )
@@ -45,6 +49,34 @@ def ConvertURLIntoDomain( url ):
     domain = HydrusData.ToByteString( parser_result.netloc )
     
     return domain
+    
+def GetCookie( cookies, search_domain, name ):
+    
+    existing_domains = cookies.list_domains()
+    
+    for existing_domain in existing_domains:
+        
+        # blah.com is viewable by blah.com
+        matches_exactly = existing_domain == search_domain
+        
+        # .blah.com is viewable by blah.com
+        matches_dot = existing_domain == '.' + search_domain
+        
+        # .blah.com applies to subdomain.blah.com, blah.com does not
+        valid_subdomain = existing_domain.startwith( '.' ) and search_domain.endswith( existing_domain )
+        
+        if matches_exactly or matches_dot or valid_subdomain:
+            
+            cookie_dict = cookies.get_dict( existing_domain )
+            
+            if name in cookie_dict:
+                
+                return cookie_dict[ name ]
+                
+            
+        
+    
+    raise HydrusExceptions.DataMissing( 'Cookie ' + name + ' not found for domain ' + search_domain + '!' )
     
 VALID_DENIED = 0
 VALID_APPROVED = 1

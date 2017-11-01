@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
 import ClientData
+import ClientDefaults
 import ClientDownloading
 import ClientGUIACDropdown
 import ClientGUICommon
@@ -2221,7 +2222,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = new_options
             
             self._tag_import_options = wx.ListBox( self )
-            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventDelete )
+            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
             
             self._add = wx.Button( self, label = 'add' )
             self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
@@ -2296,11 +2297,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    with ClientGUIDialogs.DialogInputTagImportOptions( self, name, gallery_identifier ) as ito_dlg:
+                    new_options = HG.client_controller.GetNewOptions()
+                    
+                    tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
+                    
+                    ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                    
+                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
                         
-                        if ito_dlg.ShowModal() == wx.ID_OK:
+                        panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
+                        
+                        dlg.SetPanel( panel )
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
                             
-                            tag_import_options = ito_dlg.GetTagImportOptions()
+                            tag_import_options = panel.GetValue()
                             
                             self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
                             
@@ -2313,7 +2324,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             selection = self._tag_import_options.GetSelection()
             
-            if selection != wx.NOT_FOUND: self._tag_import_options.Delete( selection )
+            if selection != wx.NOT_FOUND:
+                
+                name = self._tag_import_options.GetString( selection )
+                
+                with ClientGUIDialogs.DialogYesNo( self, 'Delete \'' + name + '\' entry?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        self._tag_import_options.Delete( selection )
+                        
+                    
+                
             
         
         def EventEdit( self, event ):
@@ -2326,11 +2348,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ( gallery_identifier, tag_import_options ) = self._tag_import_options.GetClientData( selection )
                 
-                with ClientGUIDialogs.DialogInputTagImportOptions( self, name, gallery_identifier, tag_import_options ) as dlg:
+                ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
+                    
+                    dlg.SetPanel( panel )
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        tag_import_options = dlg.GetTagImportOptions()
+                        tag_import_options = panel.GetValue()
                         
                         self._tag_import_options.SetClientData( selection, ( gallery_identifier, tag_import_options ) )
                         

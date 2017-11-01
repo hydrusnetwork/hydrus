@@ -12,7 +12,6 @@ import ClientCaches
 import ClientFiles
 import ClientGUIACDropdown
 import ClientGUICanvas
-import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
@@ -1357,8 +1356,12 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         ( file_import_options, tag_import_options, file_limit ) = self._gallery_import.GetOptions()
         
+        gallery_identifier = self._gallery_import.GetGalleryIdentifier()
+        
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self._gallery_downloader_panel )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, self._gallery_import.SetTagImportOptions )
         
         #
         
@@ -1423,20 +1426,11 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         #
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
-        gallery_identifier = self._gallery_import.GetGalleryIdentifier()
-        
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-        
         seed_cache = self._gallery_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
         
-        self._tag_import_options.SetNamespaces( namespaces )
         self._query_input.SetValue( search_value )
-        
-        self._tag_import_options.SetOptions( tag_import_options )
         
         self._file_limit.SetValue( file_limit )
         
@@ -1636,27 +1630,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'tag_import_options_changed':
-                
-                tag_import_options = self._tag_import_options.GetOptions()
-                
-                self._gallery_import.SetTagImportOptions( tag_import_options )
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-    
     def EventPaste( self, event ):
         
         if wx.TheClipboard.Open():
@@ -1820,18 +1793,23 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._page_of_images_panel = ClientGUICommon.StaticBox( self, 'page of images downloader' )
         
-        self._pause_button = wx.BitmapButton( self._page_of_images_panel, bitmap = CC.GlobalBMPs.pause )
-        self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
-        
         #
         
         self._import_queue_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'imports' )
+        
+        self._pause_files_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_files_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
         self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
+        #
+        
         self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
+        
+        self._pause_queue_button = wx.BitmapButton( self._pending_page_urls_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_queue_button.Bind( wx.EVT_BUTTON, self.EventPauseQueue )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._pending_page_urls_panel )
         
@@ -1870,6 +1848,11 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         #
         
+        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.AddF( self._pause_files_button, CC.FLAGS_LONE_BUTTON )
+        
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
         queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_VCENTER )
@@ -1890,14 +1873,10 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._pending_page_urls_panel.AddF( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_page_urls_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._pending_page_urls_panel.AddF( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
-        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._page_of_images_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._page_of_images_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._page_of_images_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1949,7 +1928,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def _UpdateStatus( self ):
         
-        ( pending_page_urls, parser_status, current_action, paused ) = self._page_of_images_import.GetStatus()
+        ( pending_page_urls, parser_status, current_action, queue_paused, files_paused ) = self._page_of_images_import.GetStatus()
         
         if self._pending_page_urls_listbox.GetStrings() != pending_page_urls:
             
@@ -1965,32 +1944,47 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
                 
             
         
-        if paused:
+        if queue_paused:
             
             parser_status = 'paused'
             
         
         self._parser_status.SetLabelText( parser_status )
         
-        if current_action == '' and paused:
+        if current_action == '' and files_paused:
             
             current_action = 'paused'
             
         
         self._current_action.SetLabelText( current_action )
         
-        if paused:
+        if queue_paused:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
+            if self._pause_queue_button.GetBitmap() != CC.GlobalBMPs.play:
                 
-                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+                self._pause_queue_button.SetBitmap( CC.GlobalBMPs.play )
                 
             
         else:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
+            if self._pause_queue_button.GetBitmap() != CC.GlobalBMPs.pause:
                 
-                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+                self._pause_queue_button.SetBitmap( CC.GlobalBMPs.pause )
+                
+            
+        
+        if files_paused:
+            
+            if self._pause_files_button.GetBitmap() != CC.GlobalBMPs.play:
+                
+                self._pause_files_button.SetBitmap( CC.GlobalBMPs.play )
+                
+            
+        else:
+            
+            if self._pause_files_button.GetBitmap() != CC.GlobalBMPs.pause:
+                
+                self._pause_files_button.SetBitmap( CC.GlobalBMPs.pause )
                 
             
         
@@ -2105,9 +2099,16 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
             
         
     
-    def EventPause( self, event ):
+    def EventPauseQueue( self, event ):
         
-        self._page_of_images_import.PausePlay()
+        self._page_of_images_import.PausePlayQueue()
+        
+        self._UpdateStatus()
+        
+    
+    def EventPauseFiles( self, event ):
+        
+        self._page_of_images_import.PausePlayFiles()
         
         self._UpdateStatus()
         
@@ -2189,7 +2190,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         ( thread_url, file_import_options, tag_import_options ) = self._thread_watcher_import.GetOptions()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self._thread_watcher_panel, namespaces = [ 'filename' ] )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._thread_watcher_panel, [ 'filename' ], tag_import_options, self._thread_watcher_import.SetTagImportOptions )
         
         #
         
@@ -2247,8 +2248,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         #
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
         seed_cache = self._thread_watcher_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
@@ -2257,8 +2256,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._thread_watcher_import.SetDownloadControlThread( self._thread_download_control )
         
         self._thread_input.SetValue( thread_url )
-        
-        self._tag_import_options.SetOptions( tag_import_options )
         
         self._UpdateStatus()
         
@@ -2452,27 +2449,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         else:
             
             event.Skip()
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'tag_import_options_changed':
-                
-                tag_import_options = self._tag_import_options.GetOptions()
-                
-                self._thread_watcher_import.SetTagImportOptions( tag_import_options )
-                
-            else:
-                
-                event.Skip()
-                
             
         
     

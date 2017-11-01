@@ -1002,6 +1002,8 @@ class NetworkJob( object ):
         
         self._network_contexts = self._GenerateNetworkContexts()
         
+        ( self._session_network_context, self._login_network_context ) = self._GenerateSpecificNetworkContexts()
+        
     
     def _CanReattemptRequest( self ):
         
@@ -1029,6 +1031,20 @@ class NetworkJob( object ):
         network_contexts.extend( ( NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain ) for domain in domains ) )
         
         return network_contexts
+        
+    
+    def _GenerateSpecificNetworkContexts( self ):
+        
+        # we always store cookies in the larger session
+        # but we can login to a specific subdomain
+        
+        domain = ClientNetworkingDomain.ConvertURLIntoDomain( self._url )
+        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( domain )
+        
+        session_network_context = NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domains[-1] )
+        login_network_context = NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
+        
+        return ( session_network_context, login_network_context )
         
     
     def _SendRequestAndGetResponse( self ):
@@ -1062,23 +1078,18 @@ class NetworkJob( object ):
             self._status_text = u'sending request\u2026'
             
         
-        timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
+        connect_timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
         
-        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = timeout )
+        read_timeout = connect_timeout * 6
+        
+        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
         
         return response
         
     
     def _GetSession( self ):
         
-        session_network_context = self._GetSessionNetworkContext()
-        
-        return self.engine.session_manager.GetSession( session_network_context )
-        
-    
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-1]
+        return self.engine.session_manager.GetSession( self._session_network_context )
         
     
     def _IsCancelled( self ):
@@ -1113,7 +1124,7 @@ class NetworkJob( object ):
     
     def _ObeysBandwidth( self ):
         
-        return not ( self._bandwidth_manual_override or self._for_login )
+        return not ( self._method == 'POST' or self._bandwidth_manual_override or self._for_login )
         
     
     def _OngoingBandwidthOK( self ):
@@ -1303,9 +1314,7 @@ class NetworkJob( object ):
                 
             else:
                 
-                session_network_context = self._GetSessionNetworkContext()
-                
-                return self.engine.login_manager.CanLogin( session_network_context )
+                return self.engine.login_manager.CanLogin( self._login_network_context )
                 
             
         
@@ -1328,9 +1337,7 @@ class NetworkJob( object ):
                 
             else:
                 
-                session_network_context = self._GetSessionNetworkContext()
-                
-                return self.engine.login_manager.GenerateLoginProcess( session_network_context )
+                return self.engine.login_manager.GenerateLoginProcess( self._login_network_context )
                 
             
         
@@ -1459,9 +1466,7 @@ class NetworkJob( object ):
                 
             else:
                 
-                session_network_context = self._GetSessionNetworkContext()
-                
-                return self.engine.login_manager.NeedsLogin( session_network_context )
+                return self.engine.login_manager.NeedsLogin( self._login_network_context )
                 
             
         
@@ -1717,11 +1722,6 @@ class NetworkJobDownloader( NetworkJob ):
         return network_contexts
         
     
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-2] # the domain one
-        
-    
 class NetworkJobDownloaderQuery( NetworkJobDownloader ):
     
     def __init__( self, downloader_page_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None ):
@@ -1738,11 +1738,6 @@ class NetworkJobDownloaderQuery( NetworkJobDownloader ):
         network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, self._downloader_page_key ) )
         
         return network_contexts
-        
-    
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-3] # the domain one
         
     
 class NetworkJobDownloaderQueryTemporary( NetworkJob ):
@@ -1763,11 +1758,6 @@ class NetworkJobDownloaderQueryTemporary( NetworkJob ):
         return network_contexts
         
     
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-2] # the domain one
-        
-    
 class NetworkJobSubscription( NetworkJobDownloader ):
     
     def __init__( self, subscription_key, downloader_key, method, url, body = None, referral_url = None, temp_path = None ):
@@ -1786,11 +1776,6 @@ class NetworkJobSubscription( NetworkJobDownloader ):
         return network_contexts
         
     
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-3] # the domain one
-        
-    
 class NetworkJobSubscriptionTemporary( NetworkJob ):
     
     def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None ):
@@ -1807,11 +1792,6 @@ class NetworkJobSubscriptionTemporary( NetworkJob ):
         network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, self._subscription_key ) )
         
         return network_contexts
-        
-    
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-2] # the domain one
         
     
 class NetworkJobHydrus( NetworkJob ):
@@ -1864,6 +1844,16 @@ class NetworkJobHydrus( NetworkJob ):
         network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key ) )
         
         return network_contexts
+        
+    
+    def _GenerateSpecificNetworkContexts( self ):
+        
+        # we store cookies on and login to the same hydrus-specific context
+        
+        session_network_context = NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
+        login_network_context = session_network_context
+        
+        return ( session_network_context, login_network_context )
         
     
     def _ReportDataUsed( self, num_bytes ):
@@ -1921,11 +1911,6 @@ class NetworkJobThreadWatcher( NetworkJob ):
         network_contexts.append( NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD, self._thread_key ) )
         
         return network_contexts
-        
-    
-    def _GetSessionNetworkContext( self ):
-        
-        return self._network_contexts[-2] # the domain one
         
     
 class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
@@ -2005,6 +1990,14 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     def GetSession( self, network_context ):
         
         with self._lock:
+            
+            # just in case one of these slips through somehow
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                second_level_domain = ClientNetworkingDomain.ConvertDomainIntoSecondLevelDomain( network_context.context_data )
+                
+                network_context = NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, second_level_domain )
+                
             
             if network_context not in self._network_contexts_to_sessions:
                 

@@ -8,6 +8,7 @@ import HydrusGlobals as HG
 import HydrusData
 import HydrusExceptions
 import HydrusSerialisable
+import os
 import json
 import requests
 
@@ -26,11 +27,14 @@ class LoginCredentials( object ):
         
         self._credentials = {} # user-facing name (unique) : string
         
+        self._validity = VALIDITY_UNTESTED
+        
     
-    # get current values
+    def GetCredential( self, name ):
+        
+        return self._credentials[ name ]
+        
     
-    # test current values, including fail for not having enough/having too many
-
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
@@ -42,11 +46,13 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
+        # needs _dirty and setdirty and be on that serialisation check and so on
+        
         self.engine = None
         
         self._lock = threading.Lock()
         
-        self._domains_to_login_scripts = {}
+        self._domains_to_login_scripts_and_credentials = {}
         
         self._hydrus_login_script = LoginScriptHydrus()
         
@@ -66,27 +72,18 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_session_timeouts = {}
         
     
-    def _GetLoginScript( self, network_context ):
+    def _GetLoginNetworkContext( self, network_context ):
         
-        if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+        nc_domain = network_context.context_data
+        
+        domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( nc_domain )
+        
+        for domain in domains:
             
-            nc_domain = network_context.context_data
-            
-            possible_domains = ClientNetworkingDomain.ConvertDomainIntoAllApplicableDomains( nc_domain )
-            
-            for domain in possible_domains:
+            if domain in self._domains_to_login_scripts_and_credentials:
                 
-                if domain in self._domains_to_login_scripts:
-                    
-                    login_script = self._domains_to_login_scripts[ domain ]
-                    
-                    return login_script
-                    
+                return domain
                 
-            
-        elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
-            
-            return self._hydrus_login_script
             
         
         return None
@@ -108,12 +105,18 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                pass
+                login_network_context = self._GetLoginNetworkContext( network_context )
                 
-                # look them up in our structure
-                # if they have a login, is it valid?
-                  # valid means we have tested credentials and it hasn't been invalidated by a parsing error or similar
-                  # I think this just means saying Login.CanLogin( credentials )
+                if login_network_context is None:
+                    
+                    return False
+                    
+                
+                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
+                
+                ( result, reason ) = login_script.CanLogin( credentials )
+                
+                return result
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -139,16 +142,25 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            login_script = self._GetLoginScript( network_context )
-            
-            if login_script is None:
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                login_script = LoginScript()
+                login_network_context = self._GetLoginNetworkContext( network_context )
                 
-            
-            login_process = LoginProcess( self.engine, network_context, login_script )
-            
-            return login_process
+                if login_network_context is None:
+                    
+                    raise HydrusExceptions.DataMissing()
+                    
+                
+                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
+                
+                login_process = LoginProcessDomain( self.engine, login_network_context, login_script, credentials )
+                
+            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                login_process = LoginProcessHydrus( self.engine, network_context, self._hydrus_login_script )
+                
+                return login_process
+                
             
         
     
@@ -156,16 +168,23 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            login_script = self._GetLoginScript( network_context )
-            
-            if login_script is None:
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
-                return False
+                login_network_context = self._GetLoginNetworkContext( network_context )
                 
-            
-            session = self.engine.session_manager.GetSession( network_context )
-            
-            return not login_script.IsLoggedIn( network_context, session )
+                if login_network_context is None:
+                    
+                    return False
+                    
+                
+                ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
+                
+                return login_script.IsLoggedIn( self.engine, login_network_context )
+                
+            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                return not self._hydrus_login_script.IsLoggedIn( self.engine, network_context )
+                
             
         
     
@@ -435,6 +454,11 @@ class LoginProcess( object ):
         self._done = False
         
     
+    def _Start( self ):
+        
+        raise NotImplementedError()
+        
+    
     def IsDone( self ):
         
         return self._done
@@ -444,7 +468,7 @@ class LoginProcess( object ):
         
         try:
             
-            self.login_script.Start( self.engine, self.network_context )
+            self._Start()
             
         finally:
             
@@ -452,23 +476,43 @@ class LoginProcess( object ):
             
         
     
+class LoginProcessDomain( LoginProcess ):
+    
+    def __init__( self, engine, network_context, login_script, credentials ):
+        
+        LoginProcess.__init__( self, engine, network_context, login_script )
+        
+        self.credentials = credentials
+        
+    
+    def _Start( self ):
+        
+        self.login_script.Start( self.engine, self.network_context, self.credentials )
+        
+    
+class LoginProcessHydrus( LoginProcess ):
+    
+    def _Start( self ):
+        
+        self.login_script.Start( self.engine, self.network_context )
+        
+    
 class LoginScriptHydrus( object ):
     
-    def _IsLoggedIn( self, network_context, session ):
+    def _IsLoggedIn( self, session ):
         
         cookies = session.cookies
         
         cookies.clear_expired_cookies()
         
-        # I would normally do cookies_dict = cookies.get_dict( domain ) and then inspect that sub-dict, but domain for hydrus is trickier
-        # the session is cleared on credentials change, so this is no big deal anyway
-        
         return 'session_key' in cookies
         
     
-    def IsLoggedIn( self, network_context, session ):
+    def IsLoggedIn( self, engine, network_context ):
         
-        return self._IsLoggedIn( network_context, session )
+        session = engine.session_manager.GetSession( network_context )
+        
+        return self._IsLoggedIn( session )
         
     
     def Start( self, engine, network_context ):
@@ -497,7 +541,7 @@ class LoginScriptHydrus( object ):
             
             session = engine.session_manager.GetSession( network_context )
             
-            if self._IsLoggedIn( network_context, session ):
+            if self._IsLoggedIn( session ):
                 
                 HydrusData.Print( 'Successfully logged into ' + service.GetName() + '.' )
                 
@@ -517,20 +561,85 @@ class LoginScriptHydrus( object ):
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER ] = NetworkLoginManager
 
 # make this serialisable
-class LoginScript( object ):
+class LoginScriptDomain( object ):
     
     def __init__( self ):
         
-        # cookie stuff to say 'this is a logged in session'
-        
+        self._name = 'gelbooru v2.0 login script'
         self._login_steps = []
         self._validity = VALIDITY_UNTESTED
         self._error_reason = ''
         
+        self._expected_cookies_for_login = [] # [ name, stringmatch ]
+        
     
     def _IsLoggedIn( self, network_context, session ):
         
-        # check session against required cookies
+        # this is more complicated for sadpanda, right?
+        # I may need some way to have an override of some kind that is like 'this login script specifically logs in to one domain, although it applies to others'
+        # need to research sadpanda exact mechanism--is it IP based?
+        
+        # this should also return ( result, reason ) for testing and other purposes
+        
+        cookies = session.cookies
+        
+        cookies.clear_expired_cookies()
+        
+        search_domain = network_context.context_data
+        
+        for ( name, string_match ) in self._expected_cookies_for_login:
+            
+            try:
+                
+                cookie_text = ClientNetworkingDomain.GetCookie( cookies, search_domain, name )
+                
+            except HydrusExceptions.DataMissing as e:
+                
+                return False
+                
+            
+            ( result, reason ) = string_match.Test( cookie_text )
+            
+            if not result:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def CanLogin( self, credentials ):
+        
+        if self._validity == VALIDITY_INVALID:
+            
+            return ( False, 'Script is not valid: ' + self._error_reason )
+            
+        
+        for step in self._login_steps:
+            
+            try:
+                
+                step.TestCredentials( credentials )
+                
+            except HydrusExceptions.ValidationException as e:
+                
+                return ( False, str( e ) )
+                
+            
+        
+        return True
+        
+    
+    def GetExpectedCredentialDestinations( self, domain ):
+        
+        # for step in steps, say where each named credential is going
+        # return a dict like:
+        
+        # login.pixiv.net : username, password
+        # evilsite.bg.cx : username, password
+        
+        # This'll be presented on the cred entering form so it can't be missed
         
         pass
         
@@ -541,18 +650,22 @@ class LoginScript( object ):
         
         for step in self._login_steps:
             
-            required_creds.extend( step.GetRequiredCredentials() ) # user facing [ ( name, string match ) ] with an order
+            required_creds.extend( step.GetRequiredCredentials() ) # [ ( credential_type, name, arg_name, string_match ) ] with an order
             
         
         return required_creds
         
     
-    def IsLoggedIn( self, network_context, session ):
+    def IsLoggedIn( self, engine, network_context ):
+        
+        session = engine.session_manager.GetSession( network_context )
         
         return self._IsLoggedIn( network_context, session )
         
     
-    def Start( self, engine, credentials ):
+    def Start( self, engine, domain, network_context, credentials ):
+        
+        # don't mess with the domain--assume that we are given precisely the right domain
         
         # this maybe takes some job_key or something so it can present to the user login process status
         # this will be needed in the dialog where we test this. we need good feedback on how it is going
@@ -566,15 +679,13 @@ class LoginScript( object ):
                 
                 step.Start( engine, credentials, temp_variables )
                 
-            except HydrusExceptions.VetoException: # or something--invalidscript exception?
+            except HydrusExceptions.ValidationException as e:
                 
-                # set error info
+                self._error_reason = str( e )
                 
                 self._validity = VALIDITY_INVALID
                 
-                # inform login manager that I'm dirty and need to be saved
-                
-                return False
+                engine.login_manager.SetDirty()
                 
             except Exception as e:
                 
@@ -602,33 +713,108 @@ class LoginStep( object ):
     
     def __init__( self ):
         
+        self._name = 'hit home page to establish session'
+        
         self._method = None # get/post
-        self._url = 'blah' # maybe this should be split up more?
+        self._domain_string_converter = None
+        self._query = 'login.php'
         
-        self._statics = [] # type | arg name | string
+        self._statics = [] # arg name | string
         
-        self._credentials = [] # type | user-facing name (unique) | arg name | string match
+        self._required_credentials = [] # type | user-facing name (unique) | arg name | string match
         
-        self._temps = [] # type | arg name
+        self._required_temps = [] # arg name
         
         self._expected_cookies = [] # name | string match
         
-        self._veto_scripts = [] # list of scripts that can veto
-        
-        self._temp_variable_scripts = [] # name | script that produces a single bit of text or vetoes
+        self._content_parsing_nodes = []
         
     
-    def Start( self, engine, credentials, temp_variables ):
+    def _TestCredentials( self, credentials ):
+        
+        for ( credential_type, pretty_name, arg_name, string_match ) in self._required_credentials:
+        
+            if arg_name not in credentials:
+                
+                raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' was missing!' )
+                
+            
+            arg_value = credentials.GetCredential( arg_name )
+            
+            ( result, reason ) = string_match.Test( arg_name )
+            
+            if not result:
+                
+                raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' did not match requirements:' + os.linesep + reason )
+                
+            
+        
+    
+    def GetRequiredCredentials( self ):
+        
+        return list( self._required_credentials )
+        
+    
+    def Start( self, engine, domain, credentials, temp_variables ):
+        
+        # e.g. converting 'website.com' to 'login.website.com'
+        url_base = self._domain_string_converter.Convert( domain )
+        
+        arguments = {}
+        
+        arguments.update( self._statics )
+        
+        self._TestCredentials( credentials )
+        
+        for ( credential_type, pretty_name, arg_name, string_match ) in self._required_credentials:
+            
+            arguments[ arg_name ] = credentials.GetCredential( arg_name )
+            
+        
+        for name in self._required_temps:
+            
+            if name not in temp_variables:
+                
+                raise HydrusExceptions.ValidationException( 'The temporary variable \'' + name + '\' was not found!' )
+                
+            
+            arguments[ name ] = temp_variables[ name ]
+            
+        
+        if self._method == 'POST':
+            
+            pass # make it into body
+            
+        elif self._method == 'GET':
+            
+            pass # make it into query
+            
         
         # construct the url, failing if creds or temps missing
         
         # hit the url, failing on connection fault or whatever
         
-        # throw the response at veto parsing gubbins, failing appropriately
-        
-        # throw the response at variable parsing gubbins, failing appropriately
-        
-        pass
+        for parsing_node in self._content_parsing_nodes:
+            
+            try:
+                
+                parsing_node.Vetoes()
+                
+            except HydrusExceptions.VetoException as e:
+                
+                raise HydrusExceptions.ValidationException( str( e ) )
+                
+            
+            # if content type is a temp variable:
+            
+            # get it and add to temp_variables
+            
+            pass
+            
         
     
+    def TestCredentials( self, credentials ):
+        
+        self._TestCredentials( credentials )
+        
 

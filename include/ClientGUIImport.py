@@ -113,6 +113,11 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         return self._tag_import_options
         
     
+    def SetNamespaces( self, namespaces ):
+        
+        self._namespaces = namespaces
+        
+    
     def SetValue( self, tag_import_options ):
         
         self._SetValue( tag_import_options )

@@ -40,8 +40,6 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 50 ) # don't sync a giant db in one day
-    
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
     
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )

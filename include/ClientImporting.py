@@ -723,6 +723,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         error_occured = False
         
+        num_already_in_seed_cache = 0
+        new_urls = []
+        
         try:
             
             ( page_of_urls, definitely_no_more_pages ) = gallery.GetPage( query, page_index )
@@ -742,9 +745,6 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     self._current_gallery_stream_identifier_found_urls.update( page_of_urls )
                     
                 
-            
-            num_already_in_seed_cache = 0
-            new_urls = []
             
             for url in page_of_urls:
                 
@@ -1928,7 +1928,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_OF_IMAGES_IMPORT
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -1941,7 +1941,8 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         self._file_import_options = file_import_options
         self._download_image_links = True
         self._download_unlinked_images = False
-        self._paused = False
+        self._queue_paused = False
+        self._files_paused = False
         
         self._parser_status = ''
         self._current_action = ''
@@ -1962,17 +1963,31 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         
-        return ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._paused )
+        return ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._queue_paused, self._files_paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._paused ) = serialisable_info
+        ( self._pending_page_urls, serialisable_url_cache, serialisable_file_options, self._download_image_links, self._download_unlinked_images, self._queue_paused, self._files_paused ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( pending_page_urls, serialisable_url_cache, serialisable_file_options, download_image_links, download_unlinked_images, paused ) = old_serialisable_info
+            
+            queue_paused = paused
+            files_paused = paused
+            
+            new_serialisable_info = ( pending_page_urls, serialisable_url_cache, serialisable_file_options, download_image_links, download_unlinked_images, queue_paused, files_paused )
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def _WorkOnFiles( self, page_key ):
         
         file_url = self._urls_cache.GetNextSeed( CC.STATUS_UNKNOWN )
@@ -2260,17 +2275,14 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 5 )
                 
             
-            with self._lock:
-                
-                if len( self._pending_page_urls ) == 0:
-                    
-                    self._parser_status = ''
-                    
-                
-            
             return True
             
         else:
+            
+            with self._lock:
+                
+                self._parser_status = ''
+                
             
             return False
             
@@ -2280,7 +2292,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
+            if self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -2317,7 +2329,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
+            if self._queue_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_page_event.wait( 5 )
                 
@@ -2374,7 +2386,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             finished = not self._urls_cache.WorkToDo() or len( self._pending_page_urls ) > 0
             
-            return not finished and not self._paused
+            return not finished and not self._files_paused
             
         
     
@@ -2424,17 +2436,26 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return ( list( self._pending_page_urls ), self._parser_status, self._current_action, self._paused )
+            return ( list( self._pending_page_urls ), self._parser_status, self._current_action, self._queue_paused, self._files_paused )
             
         
     
-    def PausePlay( self ):
+    def PausePlayFiles( self ):
         
         with self._lock:
             
-            self._paused = not self._paused
+            self._files_paused = not self._files_paused
             
             self._new_files_event.set()
+            
+        
+    
+    def PausePlayQueue( self ):
+        
+        with self._lock:
+            
+            self._queue_paused = not self._queue_paused
+            
             self._new_page_event.set()
             
         

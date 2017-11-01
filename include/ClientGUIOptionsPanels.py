@@ -1,4 +1,3 @@
-import ClientGUICollapsible
 import ClientConstants as CC
 import ClientGUICommon
 import ClientCaches

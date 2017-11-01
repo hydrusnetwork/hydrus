@@ -922,7 +922,7 @@ class GalleryBooru( Gallery ):
                     
                     if link.string is not None:
                         
-                        if link.string.startswith( image_data ):
+                        if link.string.startswith( image_data ) or link.string.endswith( image_data ):
                             
                             ok_link = link[ 'href' ]
                             

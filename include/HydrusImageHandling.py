@@ -120,6 +120,70 @@ def GeneratePILImage( path ):
         raise
         
     
+    if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
+        
+        exif_dict = pil_image._getexif()
+        
+        if exif_dict is not None:
+            
+            EXIF_ORIENTATION = 274
+            
+            if EXIF_ORIENTATION in exif_dict:
+                
+                orientation = exif_dict[ EXIF_ORIENTATION ]
+                
+                if orientation == 1:
+                    
+                    pass # normal
+                    
+                elif orientation == 2:
+                    
+                    # mirrored horizontal
+                    
+                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT )
+                    
+                elif orientation == 3:
+                    
+                    # 180
+                    
+                    pil_image = pil_image.transpose( PILImage.ROTATE_180 )
+                    
+                elif orientation == 4:
+                    
+                    # mirrored vertical
+                    
+                    pil_image = pil_image.transpose( PILImage.FLIP_TOP_BOTTOM )
+                    
+                elif orientation == 5:
+                    
+                    # seems like these 90 degree rotations are wrong, but fliping them works for my posh example images, so I guess the PIL constants are odd
+                    
+                    # mirrored horizontal, then 90 CCW
+                    
+                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_90 )
+                    
+                elif orientation == 6:
+                    
+                    # 90 CW
+                    
+                    pil_image = pil_image.transpose( PILImage.ROTATE_270 )
+                    
+                elif orientation == 7:
+                    
+                    # mirrored horizontal, then 90 CCW
+                    
+                    pil_image = pil_image.transpose( PILImage.FLIP_LEFT_RIGHT ).transpose( PILImage.ROTATE_270 )
+                    
+                elif orientation == 8:
+                    
+                    # 90 CCW
+                    
+                    pil_image = pil_image.transpose( PILImage.ROTATE_90 )
+                    
+                
+            
+        
+    
     if pil_image is None:
         
         raise Exception( 'The file at ' + path + ' could not be rendered!' )

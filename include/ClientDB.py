@@ -9941,6 +9941,25 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_initial_message( message )
             
         
+        if version == 279:
+            
+            bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+            
+            rules = HydrusNetworking.BandwidthRules()
+            
+            rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1048576 ) # don't sync a giant db in one day
+            
+            bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
+            
+            self._SetJSONDump( bandwidth_manager )
+            
+            message = 'Your default hydrus service bandwidth rules have been reset to a new default that works better now the hydrus network runs on the new networking engine.'
+            message += os.linesep * 2
+            message += 'If you don\'t care about bandwidth rules, you do not have to do anything!'
+            
+            self.pub_initial_message( message )
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

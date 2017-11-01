@@ -126,5 +126,10 @@ def GetEventCallable( callable, *args, **kwargs ):
     
 def SanitiseLabel( label ):
     
+    if label == '':
+        
+        label = '-invalid label-'
+        
+    
     return label.replace( '&', '&&' )
     

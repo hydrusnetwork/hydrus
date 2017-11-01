@@ -4,7 +4,6 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientImporting
-import ClientGUICollapsible
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
@@ -1871,7 +1870,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
-        self._tag_import_options = ClientGUICollapsible.CollapsibleOptionsTags( self )
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, namespaces, tag_import_options )
         
         #
         
@@ -1905,8 +1906,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
         self._paused.SetValue( paused )
-        
-        self._tag_import_options.SetOptions( tag_import_options )
         
         if self._last_checked == 0:
             
@@ -2000,8 +1999,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._query.SetValue( search_value )
+        
         self._tag_import_options.SetNamespaces( namespaces )
-        self._tag_import_options.SetOptions( tag_import_options )
+        self._tag_import_options.SetValue( tag_import_options )
         
     
     def _GetGalleryIdentifier( self ):
@@ -2176,7 +2176,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_import_options = self._file_import_options.GetValue()
         
-        tag_import_options = self._tag_import_options.GetOptions()
+        tag_import_options = self._tag_import_options.GetValue()
         
         subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
         

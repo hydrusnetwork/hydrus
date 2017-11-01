@@ -1738,7 +1738,7 @@ class PagesNotebook( wx.Notebook ):
         
         if not HG.no_page_limit_mode:
             
-            MAX_TOTAL_PAGES = 150
+            MAX_TOTAL_PAGES = 200
             
             ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
             
@@ -2202,7 +2202,7 @@ class PagesNotebook( wx.Notebook ):
                         
                         name = dlg.GetValue()
                         
-                        if name in ( 'just a blank page', 'last session' ):
+                        if name in ( '', 'just a blank page', 'last session' ):
                             
                             wx.MessageBox( 'Sorry, you cannot have that name! Try another.' )
                             
