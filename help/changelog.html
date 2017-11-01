@@ -8,6 +8,28 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 280</h3></li>
+				<ul>
+					<li>the client should now recognise EXIF file rotation and flipping in resolution discovery, thumbnail generation, and image rendering. existing files will be borked, so will have to either be manually deleted&reimported, or wait for a maintenance routine that will retroactively fix all these</li>
+					<li>videos with a non 1:1 sample aspect ratio (wew lad) should now import with correct resolutions</li>
+					<li>all 'tag import options' are now managed with the new button</li>
+					<li>deleted all old tag option management gui, including deleting ClientGUICollapsible entirely</li>
+					<li>with the simpler tag import options, increased max page count to 200</li>
+					<li>page of images downloader now has two pause separate buttons for queue and files processing</li>
+					<li>the page of images downloader should no longer too-quickly blank out its parser status at the end of queue processing</li>
+					<li>the default hydrus bandwidth rules now no longer has the choking 'requests per day' limitation that was messing up large mappings uploads. (it is now just 64MB/day)</li>
+					<li>your hydrus default bandwidth rules will reset to this on update</li>
+					<li>POST requests (which in for our purposes are always user-driven) no longer obey bandwidth rules</li>
+					<li>fixed a bug when sometimes hitting the file limit or hitting a siteside 404 in the gallery downloader</li>
+					<li>a rare bug due to empty string menu labels is now no longer possible. empty string labels, if they slip through, will be replaced with 'invalid label'</li>
+					<li>you can no longer choose the empty string as a gui session name</li>
+					<li>improved how network jobs keep track of all applicable network contexts vs the preferred session and login contexts</li>
+					<li>cleaned up a bunch of login code, improved verification testing</li>
+					<li>fleshed out domain login system</li>
+					<li>in the networking engine, the read timeout is now six times the connect timeout--we'll see if this reduces some hydrus and other read timeout problems we've seen</li>
+					<li>increased the server transaction period from 10s to 120s--we'll see if this helps reduce some spiky server POST lag or what</li>
+					<li>the default tag import options panel now edits on double-click, rather than deletes. it also yes/no dialogs on a delete action. this control is still trash, but it now works more like the rest of the program</li>
+				</ul>
 				<li><h3>version 279</h3></li>
 				<ul>
 					<li>moved the hydrus service object over to the new networking engine</li>
