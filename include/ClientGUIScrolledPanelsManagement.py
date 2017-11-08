@@ -1273,6 +1273,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'default file system predicates', 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
+        self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         #self._listbook.AddPage( 'file storage locations', 'file storage locations', self._ClientFilesPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
@@ -1905,9 +1906,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             
-            watcher_options = self._new_options.GetDefaultThreadWatcherOptions()
+            checker_options = self._new_options.GetDefaultThreadCheckerOptions()
             
-            self._thread_watcher_options = ClientGUIScrolledPanelsEdit.EditWatcherOptions( thread_checker, watcher_options )
+            self._thread_checker_options = ClientGUIScrolledPanelsEdit.EditCheckerOptions( thread_checker, checker_options )
             
             #
             
@@ -1946,7 +1947,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
             
             thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            thread_checker.AddF( self._thread_watcher_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            thread_checker.AddF( self._thread_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1966,7 +1967,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
             
-            self._new_options.SetDefaultThreadWatcherOptions( self._thread_watcher_options.GetValue() )
+            self._new_options.SetDefaultThreadCheckerOptions( self._thread_checker_options.GetValue() )
             
             self._new_options.SetNoneableString( 'thread_watcher_not_found_page_string', self._thread_watcher_not_found_page_string.GetValue() )
             self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
@@ -2051,13 +2052,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            text = 'CPU-heavy jobs like maintenance routines and repository synchronisation processing will stutter or lock up your gui, so they do not normally run when you are searching for and looking at files.'
+            text = '***'
+            text += os.linesep
+            text +='If you are a new user or do not completely understand these options, please do not touch them! Do not set the client to be idle all the time unless you know what you are doing or are testing something and are prepared for potential problems!'
+            text += os.linesep
+            text += '***'
             text += os.linesep * 2
-            text += 'You can set them to run only when the client is idle, or only during shutdown, or neither, or both.'
+            text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. Typically, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
             text += os.linesep * 2
-            text += 'If the client switches from idle to not idle, it will try to abandon any jobs it is half way through.'
+            text += 'You can set these jobs to run only when the client is idle, or only during shutdown, or neither, or both. If you leave the client on all the time in the background, focusing on \'idle time\' processing is often ideal. If you have a slow computer, relying on \'shutdown\' processing (which you can manually start when convenient), is often better.'
             text += os.linesep * 2
-            text += 'If the client believes the system is busy, it will not start jobs.'
+            text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back control. This is not always possible, and even when it is, it will sometimes take several minutes, particularly on slower machines or those on HDDs rather than SSDs.'
+            text += os.linesep * 2
+            text += 'If the client believes the system is busy, it will generally not start jobs.'
             
             st = wx.StaticText( self._jobs_panel, label = text )
             
@@ -3004,6 +3011,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._new_options.SetMediaViewOptions( mime, value )
                 
+            
+        
+    
+    class _RegexPanel( wx.Panel ):
+        
+        def __init__( self, parent ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            regex_favourites = HC.options[ 'regex_favourites' ]
+            
+            self._regex_panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( self, regex_favourites )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._regex_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            regex_favourites = self._regex_panel.GetValue()
+            
+            HC.options[ 'regex_favourites' ] = regex_favourites
             
         
     
@@ -4953,41 +4985,45 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
-        columns = [ ( 'name', -1 ), ( 'site', 12 ), ( 'period', 9 ), ( 'last checked', 15 ), ( 'recent error?', 12 ), ( 'recent delay?', 12 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ), ( 'check now?', 10 ) ]
+        subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( self, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ) ]
         
-        self._add = ClientGUICommon.BetterButton( self, 'add', self.Add )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        subscriptions_panel.SetListCtrl( self._subscriptions )
+        
+        subscriptions_panel.AddButton( 'add', self.Add )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
         menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
         
-        self._export = ClientGUICommon.MenuButton( self, 'export', menu_items )
+        subscriptions_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
         menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
         
-        self._import = ClientGUICommon.MenuButton( self, 'import', menu_items )
+        subscriptions_panel.AddMenuButton( 'import', menu_items )
+        subscriptions_panel.AddButton( 'duplicate', self.Duplicate, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
         
-        self._duplicate = ClientGUICommon.BetterButton( self, 'duplicate', self.Duplicate )
-        self._edit = ClientGUICommon.BetterButton( self, 'edit', self.Edit )
-        self._delete = ClientGUICommon.BetterButton( self, 'delete', self.Delete )
+        subscriptions_panel.AddSeparator()
         
-        menu_items = []
+        subscriptions_panel.AddButton( 'merge', self.Merge, enabled_check_func = self._CanMerge )
+        subscriptions_panel.AddButton( 'separate', self.Separate, enabled_check_func = self._CanSeparate )
         
-        menu_items.append( ( 'normal', 'pause/resume', 'Tell all the selected subscriptions to reattempt any failed files.', self.PauseResume ) )
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'retry failures', 'Tell all the selected subscriptions to reattempt any failed files.', self.RetryFailures ) )
-        menu_items.append( ( 'normal', 'scrub delays', 'Tell all the selected subscriptions to reattempt any failed files.', self.ScrubDelays ) )
-        menu_items.append( ( 'normal', 'check for new files now', 'Tell all the selected subscriptions to reattempt any failed files.', self.CheckNow ) )
-        menu_items.append( ( 'separator', None, None, None ) )
-        menu_items.append( ( 'normal', 'reset completely', 'Tell all the selected subscriptions to reset their url cache, as if they were created from new.', self.Reset ) )
+        subscriptions_panel.AddSeparator()
         
-        self._affect_all_selected_button = ClientGUICommon.MenuButton( self, 'affect all selected', menu_items )
+        subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'retry failures', self.RetryFailures, enabled_check_func = self._CanRetryFailures )
+        subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
+        subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
+        subscriptions_panel.AddButton( 'reset', self.Reset, enabled_check_func = self._CanReset )
         
         #
         
@@ -5004,47 +5040,142 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         help_hbox.AddF( st, CC.FLAGS_VCENTER )
         help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
         
-        button_box = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_box.AddF( self._add, CC.FLAGS_VCENTER )
-        button_box.AddF( self._export, CC.FLAGS_VCENTER )
-        button_box.AddF( self._import, CC.FLAGS_VCENTER )
-        button_box.AddF( self._duplicate, CC.FLAGS_VCENTER )
-        button_box.AddF( self._edit, CC.FLAGS_VCENTER )
-        button_box.AddF( self._delete, CC.FLAGS_VCENTER )
-        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( self._subscriptions, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._affect_all_selected_button, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.AddF( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
+    def _CanCheckNow( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanCheckNow() for subscription in subscriptions )
+        
+    
+    def _CanMerge( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        # only subs with queries can be merged
+        
+        subscriptions = [ subscription for subscription in subscriptions if len( subscription.GetQueries() ) > 0 ]
+        
+        gallery_identifiers = { subscription.GetGalleryIdentifier() for subscription in subscriptions }
+        
+        # if there are fewer, there must be dupes, so we must be able to merge
+        
+        return len( gallery_identifiers ) < len( subscriptions )
+        
+    
+    def _CanReset( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanReset() for subscription in subscriptions )
+        
+    
+    def _CanRetryFailures( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanRetryFailures() for subscription in subscriptions )
+        
+    
+    def _CanScrubDelays( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanScrubDelay() for subscription in subscriptions )
+        
+    
+    def _CanSeparate( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            if len( subscription.GetQueries() ) > 1:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, last_checked, last_error, check_now, seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, checker_options, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
         
         pretty_site = gallery_identifier.ToString()
         
-        pretty_last_checked = HydrusData.ConvertTimestampToPrettySync( last_checked )
+        period = 100
+        pretty_period = 'fix this'
         
-        pretty_period = HydrusData.ConvertTimeDeltaToPrettyString( period )
-        
-        error_next_check_time = last_error + HC.UPDATE_DURATION
-        
-        if HydrusData.TimeHasPassed( error_next_check_time ):
+        if len( queries ) > 0:
             
-            pretty_error = ''
+            last_new_file_time = max( ( query.GetLatestAddedTime() for query in queries ) )
+            pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
+            
+            last_checked = max( ( query.GetLastChecked() for query in queries ) )
+            pretty_last_checked = HydrusData.ConvertTimestampToPrettyAgo( last_checked )
             
         else:
             
-            pretty_error = 'yes'
+            last_new_file_time = 0
+            pretty_last_new_file_time = 'n/a'
+            
+            last_checked = 0
+            pretty_last_checked = 'n/a'
             
         
-        ( no_work_until, no_work_until_reason ) = subscription.GetDelayInfo()
+        #
+        
+        num_queries = len( queries )
+        num_dead = 0
+        num_paused = 0
+        
+        for query in queries:
+            
+            if query.IsDead():
+                
+                num_dead += 1
+                
+            elif query.IsPaused():
+                
+                num_paused += 1
+                
+            
+        
+        num_ok = num_queries - ( num_dead + num_paused )
+        
+        status = ( num_queries, num_paused, num_dead )
+        
+        if num_queries == 0:
+            
+            pretty_status = 'no queries'
+            
+        else:
+            
+            status_components = [ HydrusData.ConvertIntToPrettyString( num_ok ) + ' working' ]
+            
+            if num_paused > 0:
+                
+                status_components.append( HydrusData.ConvertIntToPrettyString( num_paused ) + ' paused' )
+                
+            
+            if num_dead > 0:
+                
+                status_components.append( HydrusData.ConvertIntToPrettyString( num_dead ) + ' dead' )
+                
+            
+            pretty_status = ', '.join( status_components )
+            
+        
+        #
         
         if HydrusData.TimeHasPassed( no_work_until ):
             
@@ -5057,11 +5188,31 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             delay = no_work_until - HydrusData.GetNow()
             
         
-        num_urls = seed_cache.GetSeedCount()
-        pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
+        num_urls_done = 0
+        num_urls = 0
+        num_failed = 0
         
-        num_failures = seed_cache.GetSeedCount( CC.STATUS_FAILED )
-        pretty_failures = HydrusData.ConvertIntToPrettyString( num_failures )
+        for query in queries:
+            
+            ( query_num_urls_unknown, query_num_urls, query_num_failed ) = query.GetNumURLsAndFailed()
+            
+            num_urls_done += query_num_urls - query_num_urls_unknown
+            
+            num_urls += query_num_urls
+            
+            num_failed += query_num_failed
+            
+        
+        if num_urls_done == num_urls:
+            
+            pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
+            
+        else:
+            
+            pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_urls_done, num_urls )
+            
+        
+        pretty_failures = HydrusData.ConvertIntToPrettyString( num_failed )
         
         if paused:
             
@@ -5072,17 +5223,8 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_paused = ''
             
         
-        if check_now:
-            
-            pretty_check_now = 'yes'
-            
-        else:
-            
-            pretty_check_now = ''
-            
-        
-        display_tuple = ( name, pretty_site, pretty_period, pretty_last_checked, pretty_error, pretty_delay, pretty_urls, pretty_failures, pretty_paused, pretty_check_now )
-        sort_tuple = ( name, pretty_site, period, last_checked, pretty_error, delay, num_urls, num_failures, paused, check_now )
+        display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_urls, pretty_failures, pretty_paused )
+        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, num_urls, num_failed, paused )
         
         return ( display_tuple, sort_tuple )
         
@@ -5339,6 +5481,45 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    def Merge( self ):
+        
+        message = 'Are you sure you want to merge the selected subscriptions? This will combine all selected subscriptions that share the same downloader, wrapping all their different queries into one subscription.'
+        message += os.linesep * 2
+        message += 'This is a big operation, so if it does not do what you expect, hit cancel afterwards!'
+        message += os.linesep * 2
+        message += 'Please note that if your to-be-merged subscriptions will have any different subscription-specific settings (like name and paused status and file limits and tag options) merged as well, so double-check your merged subs\' settings after the merge.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                to_be_merged_subs = self._subscriptions.GetData( only_selected = True )
+                
+                self._subscriptions.DeleteDatas( to_be_merged_subs )
+                
+                to_be_merged_subs = list( to_be_merged_subs )
+                
+                merged_subs = []
+                
+                while len( to_be_merged_subs ) > 1:
+                    
+                    primary_sub = to_be_merged_subs.pop()
+                    
+                    unmerged_subs = primary_sub.Merge( to_be_merged_subs )
+                    
+                    merged_subs.append( primary_sub )
+                    
+                    to_be_merged_subs = unmerged_subs
+                    
+                
+                self._subscriptions.AddDatas( merged_subs )
+                self._subscriptions.AddDatas( to_be_merged_subs )
+                
+                self._subscriptions.Sort()
+                
+            
+        
+    
     def PauseResume( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -5395,6 +5576,35 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def Separate( self ):
+        
+        message = 'Are you sure you want to separate the selected subscriptions? This will cause all the subscriptions with multiple queries to be split into duplicates that each only have one query.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                to_be_separate_subs = self._subscriptions.GetData( only_selected = True )
+                
+                self._subscriptions.DeleteDatas( to_be_separate_subs )
+                
+                for subscription in to_be_separate_subs:
+                    
+                    separate_subs = subscription.Separate()
+                    
+                    for separate_subscription in separate_subs:
+                        
+                        separate_subscription.SetNonDupeName( self._GetExistingNames() )
+                        
+                        self._subscriptions.AddDatas( ( separate_subscription, ) )
+                        
+                    
+                
+                self._subscriptions.Sort()
+                
+            
         
     
 class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):

@@ -463,7 +463,7 @@ class PopupMessage( PopupWindow ):
             
             hashes = popup_files
             
-            text = 'show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            text = popup_files_name + ' - show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
             
             if self._show_files_button.GetLabelText() != text:
                 

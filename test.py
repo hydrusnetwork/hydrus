@@ -77,7 +77,7 @@ class Controller( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
-        self._new_options = ClientData.ClientOptions( self.db_dir )
+        self.new_options = ClientData.ClientOptions( self.db_dir )
         
         def show_text( text ): pass
         
@@ -211,7 +211,7 @@ class Controller( object ):
     
     def GetNewOptions( self ):
         
-        return self._new_options
+        return self.new_options
         
     
     def GetOptions( self ):

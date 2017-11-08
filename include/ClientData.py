@@ -1057,7 +1057,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = WatcherOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = CheckerOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
         
         #
         
@@ -1355,7 +1355,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultThreadWatcherOptions( self ):
+    def GetDefaultThreadCheckerOptions( self ):
         
         with self._lock:
             
@@ -1616,11 +1616,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultThreadWatcherOptions( self, watcher_options ):
+    def SetDefaultThreadCheckerOptions( self, checker_options ):
         
         with self._lock:
             
-            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = watcher_options
+            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = checker_options
             
         
     
@@ -2730,9 +2730,9 @@ class TagCensor( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_CENSOR ] = TagCensor
 
-class WatcherOptions( HydrusSerialisable.SerialisableBase ):
+class CheckerOptions( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_OPTIONS
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS
     SERIALISABLE_VERSION = 1
     
     def __init__( self, intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
@@ -2875,4 +2875,4 @@ class WatcherOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity )
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_OPTIONS ] = WatcherOptions
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS ] = CheckerOptions

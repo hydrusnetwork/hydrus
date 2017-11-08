@@ -845,18 +845,7 @@ class ReviewServicePanel( wx.Panel ):
             
             service_paused = self._service.IsPaused()
             
-            options = HG.client_controller.GetOptions()
-            
-            all_repo_sync_paused = options[ 'pause_repo_sync' ]
-            
-            if service_paused or all_repo_sync_paused:
-                
-                self._sync_now_button.Disable()
-                
-            else:
-                
-                self._sync_now_button.Enable()
-                
+            self._sync_now_button.Disable()
             
             if service_paused:
                 
@@ -961,6 +950,24 @@ class ReviewServicePanel( wx.Panel ):
                     else:
                         
                         self._reset_button.Enable()
+                        
+                    
+                    processing_work_to_do = processing_value < download_value
+                    
+                    service_paused = self._service.IsPaused()
+                    
+                    options = HG.client_controller.GetOptions()
+                    
+                    all_repo_sync_paused = options[ 'pause_repo_sync' ]
+                    
+                    if service_paused or all_repo_sync_paused or not processing_work_to_do:
+                        
+                        self._sync_now_button.Disable()
+                        
+                    else:
+                        
+                        self._sync_now_button.Enable()
+                        
                         
                     
                 

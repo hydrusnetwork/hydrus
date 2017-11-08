@@ -13,10 +13,16 @@ if cv2.__version__.startswith( '2' ):
     # there's something wrong with these, but I don't have an easy test env for it atm
     # CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.CV_LOAD_IMAGE_ANYDEPTH | cv2.CV_LOAD_IMAGE_ANYCOLOR
     
+    CV_JPEG_THUMBNAIL_ENCODE_PARAMS = []
+    CV_PNG_THUMBNAIL_ENCODE_PARAMS = []
+    
 else:
     
     CV_IMREAD_FLAGS_SUPPORTS_ALPHA = cv2.IMREAD_UNCHANGED
     CV_IMREAD_FLAGS_SUPPORTS_EXIF_REORIENTATION = cv2.IMREAD_ANYDEPTH | cv2.IMREAD_ANYCOLOR # this preserves colour info but does EXIF reorientation and flipping
+    
+    CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
+    CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
     
 cv_interpolation_enum_lookup = {}
 
@@ -25,7 +31,7 @@ cv_interpolation_enum_lookup[ CC.ZOOM_LINEAR ] = cv2.INTER_LINEAR
 cv_interpolation_enum_lookup[ CC.ZOOM_AREA ] = cv2.INTER_AREA
 cv_interpolation_enum_lookup[ CC.ZOOM_CUBIC ] = cv2.INTER_CUBIC
 cv_interpolation_enum_lookup[ CC.ZOOM_LANCZOS4 ] = cv2.INTER_LANCZOS4
-    
+
 def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     ( im_y, im_x, depth ) = numpy_image.shape
@@ -234,6 +240,57 @@ def GenerateShapePerceptualHashes( path, mime ):
     # we good
     
     return phashes
+    
+def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+    
+    mime = HydrusFileHandling.GetMime( path )
+    
+    numpy_image = GenerateNumpyImage( path, mime )
+    
+    thumbnail_numpy_image = EfficientlyThumbnailNumpyImage( numpy_image, dimensions )
+    
+    ( im_y, im_x, depth ) = thumbnail_numpy_image.shape
+    
+    if depth == 4:
+        
+        convert = cv2.COLOR_RGBA2BGRA
+        
+    else:
+        
+        convert = cv2.COLOR_RGB2BGR
+        
+    
+    thumbnail_numpy_image = cv2.cvtColor( thumbnail_numpy_image, convert )
+    
+    if mime == HC.IMAGE_JPEG:
+        
+        ext = '.jpg'
+        
+        params = CV_JPEG_THUMBNAIL_ENCODE_PARAMS
+        
+    else:
+        
+        ext = '.png'
+        
+        params = CV_PNG_THUMBNAIL_ENCODE_PARAMS
+        
+    
+    ( result_success, result_byte_array ) = cv2.imencode( ext, thumbnail_numpy_image, params )
+    
+    if result_success:
+        
+        thumbnail = result_byte_array.tostring()
+        
+        return thumbnail
+        
+    else:
+        
+        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions )
+        
+    
+import HydrusFileHandling
+
+HydrusFileHandling.GenerateThumbnailFromStaticImage = GenerateThumbnailFromStaticImageCV
     
 def ResizeNumpyImage( mime, numpy_image, ( target_x, target_y ) ):
     

@@ -1,6 +1,7 @@
 import gc
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import os
 import psutil
@@ -219,6 +220,11 @@ def FilterFreePaths( paths ):
     free_paths = []
     
     for path in paths:
+        
+        if HG.view_shutdown:
+            
+            raise HydrusExceptions.ShutdownException()
+            
         
         try:
             

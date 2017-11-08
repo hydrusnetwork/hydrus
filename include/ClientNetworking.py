@@ -1148,13 +1148,18 @@ class NetworkJob( object ):
             
         
     
-    def _ReadResponse( self, response, stream_dest ):
+    def _ReadResponse( self, response, stream_dest, max_allowed = None ):
         
         with self._lock:
             
             if 'content-length' in response.headers:
             
                 self._num_bytes_to_read = int( response.headers[ 'content-length' ] )
+                
+                if max_allowed is not None and self._num_bytes_to_read > max_allowed:
+                    
+                    raise HydrusExceptions.NetworkException( 'The url ' + self._url + ' looks too large!' )
+                    
                 
             else:
                 
@@ -1176,6 +1181,11 @@ class NetworkJob( object ):
             with self._lock:
                 
                 self._num_bytes_read += chunk_length
+                
+                if max_allowed is not None and self._num_bytes_read > max_allowed:
+                    
+                    raise HydrusExceptions.NetworkException( 'The url ' + self._url + ' was too large!' )
+                    
                 
             
             self._ReportDataUsed( chunk_length )
@@ -1560,7 +1570,7 @@ class NetworkJob( object ):
                         
                         if self._temp_path is None:
                             
-                            self._ReadResponse( response, self._stream_io )
+                            self._ReadResponse( response, self._stream_io, 104857600 )
                             
                         else:
                             

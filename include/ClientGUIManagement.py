@@ -2179,7 +2179,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._thread_check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._watcher_options_button = ClientGUICommon.BetterButton( checker_panel, 'edit check timings', self._EditWatcherOptions )
+        self._checker_options_button = ClientGUICommon.BetterButton( checker_panel, 'edit check timings', self._EditCheckerOptions )
         
         self._thread_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
         
@@ -2216,7 +2216,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         gridbox.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
         
         checker_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        checker_panel.AddF( self._watcher_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.AddF( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.AddF( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2260,21 +2260,21 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def _EditWatcherOptions( self ):
+    def _EditCheckerOptions( self ):
         
-        watcher_options = self._thread_watcher_import.GetWatcherOptions()
+        checker_options = self._thread_watcher_import.GetCheckerOptions()
         
-        with ClientGUITopLevelWindows.DialogEdit( self._watcher_options_button, 'edit check timings' ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditWatcherOptions( dlg, watcher_options )
+            panel = ClientGUIScrolledPanelsEdit.EditCheckerOptions( dlg, checker_options )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                new_watcher_options = panel.GetValue()
+                new_checker_options = panel.GetValue()
                 
-                self._thread_watcher_import.SetWatcherOptions( new_watcher_options )
+                self._thread_watcher_import.SetCheckerOptions( new_checker_options )
                 
                 self._UpdateStatus()
                 
@@ -2365,11 +2365,11 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._watcher_status.SetLabelText( watcher_status )
         
-        if thread_status == ClientImporting.THREAD_STATUS_404:
+        if thread_status == ClientImporting.CHECKER_STATUS_404:
             
             self._thread_pause_button.Disable()
             
-        elif thread_status == ClientImporting.THREAD_STATUS_DEAD:
+        elif thread_status == ClientImporting.CHECKER_STATUS_DEAD:
             
             self._thread_pause_button.Disable()
             

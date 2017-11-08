@@ -1512,12 +1512,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ImportFiles( self, paths = None ):
         
-        if paths is None: paths = []
+        if paths is None:
+            
+            paths = []
+            
         
-        with ClientGUIDialogs.DialogInputLocalFiles( self, paths ) as dlg:
-            
-            dlg.ShowModal()
-            
+        ClientGUIDialogs.FrameInputLocalFiles( self, paths )
         
     
     def _ImportUpdateFiles( self ):
@@ -1726,12 +1726,40 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageExportFolders( self ):
         
-        with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg: dlg.ShowModal()
+        original_pause_status = HC.options[ 'pause_export_folders_sync' ]
+        
+        HC.options[ 'pause_export_folders_sync' ] = True
+        
+        try:
+            
+            with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+        finally:
+            
+            HC.options[ 'pause_export_folders_sync' ] = original_pause_status
+            
         
     
     def _ManageImportFolders( self ):
         
-        with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg: dlg.ShowModal()
+        original_pause_status = HC.options[ 'pause_import_folders_sync' ]
+        
+        HC.options[ 'pause_import_folders_sync' ] = True
+        
+        try:
+            
+            with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+        finally:
+            
+            HC.options[ 'pause_import_folders_sync' ] = original_pause_status
+            
         
     
     def _ManageNetworkRules( self ):
@@ -3411,8 +3439,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
 class FrameSplash( wx.Frame ):
     
-    WIDTH = 420
-    HEIGHT = 250
+    WIDTH = 480
+    HEIGHT = 280
     
     def __init__( self, controller ):
         
@@ -3425,6 +3453,7 @@ class FrameSplash( wx.Frame ):
         self._dirty = True
         self._title_text = ''
         self._status_text = ''
+        self._status_subtext = ''
         
         self._bmp = wx.EmptyBitmap( self.WIDTH, self.HEIGHT, 24 )
         
@@ -3449,6 +3478,7 @@ class FrameSplash( wx.Frame ):
         
         self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
         self._controller.sub( self, 'SetText', 'splash_set_status_text' )
+        self._controller.sub( self, 'SetSubtext', 'splash_set_status_subtext' )
         
         self.Raise()
         
@@ -3459,6 +3489,8 @@ class FrameSplash( wx.Frame ):
         
         dc.Clear()
         
+        #
+        
         x = ( self.WIDTH - 124 ) / 2
         y = 15
         
@@ -3468,14 +3500,18 @@ class FrameSplash( wx.Frame ):
         
         y += 166 + 15
         
+        #
+        
         ( width, height ) = dc.GetTextExtent( self._title_text )
         
-        text_gap = ( self.HEIGHT - y - height * 2 ) / 3
+        text_gap = ( self.HEIGHT - y - height * 3 ) / 4
         
         x = ( self.WIDTH - width ) / 2
         y += text_gap
         
         dc.DrawText( self._title_text, x, y )
+        
+        #
         
         y += height + text_gap
         
@@ -3485,6 +3521,15 @@ class FrameSplash( wx.Frame ):
         
         dc.DrawText( self._status_text, x, y )
         
+        #
+        
+        y += height + text_gap
+        
+        ( width, height ) = dc.GetTextExtent( self._status_subtext )
+        
+        x = ( self.WIDTH - width ) / 2
+        
+        dc.DrawText( self._status_subtext, x, y )
         
     
     def EventDrag( self, event ):
@@ -3544,7 +3589,17 @@ class FrameSplash( wx.Frame ):
             HydrusData.Print( text )
             
         
+        self._status_subtext = ''
         self._status_text = text
+        
+        self._dirty = True
+        
+        wx.CallAfter( self.Refresh )
+        
+    
+    def SetSubtext( self, text ):
+        
+        self._status_subtext = text
         
         self._dirty = True
         

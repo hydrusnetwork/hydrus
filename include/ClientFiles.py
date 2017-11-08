@@ -1,4 +1,6 @@
 import gc
+import HydrusExceptions
+import HydrusGlobals as HG
 import os
 
 def GetAllPaths( raw_paths ):
@@ -12,6 +14,11 @@ def GetAllPaths( raw_paths ):
         next_paths_to_process = []
         
         for path in paths_to_process:
+            
+            if HG.view_shutdown:
+                
+                raise HydrusExceptions.ShutdownException()
+                
             
             if os.path.isdir( path ):
                 

@@ -122,6 +122,11 @@ class HydrusController( object ):
         return result
         
     
+    def _ReportShutdownDaemonsStatus( self ):
+        
+        pass
+        
+    
     def _ShutdownDaemons( self ):
         
         for daemon in self._daemons:
@@ -130,6 +135,8 @@ class HydrusController( object ):
             
         
         while True in ( daemon.is_alive() for daemon in self._daemons ):
+            
+            self._ReportShutdownDaemonsStatus()
             
             time.sleep( 0.1 )
             

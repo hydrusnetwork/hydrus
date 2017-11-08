@@ -757,13 +757,26 @@ class DialogInputLocalBooruShare( Dialog ):
         return ( self._share_key, name, text, timeout, self._hashes )
         
     
-class DialogInputLocalFiles( Dialog ):
+class FrameInputLocalFiles( wx.Frame ):
     
     def __init__( self, parent, paths = None ):
         
-        if paths is None: paths = []
+        ( pos_x, pos_y ) = parent.GetPositionTuple()
         
-        Dialog.__init__( self, parent, 'importing files' )
+        pos = ( pos_x + 50, pos_y + 50 )
+        
+        style = wx.DEFAULT_FRAME_STYLE | wx.FRAME_FLOAT_ON_PARENT
+        
+        wx.Frame.__init__( self, parent, title = 'importing files', style = style, pos = pos )
+        
+        self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG ) )
+        
+        if paths is None:
+            
+            paths = []
+            
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( filenames_callable = self._AddPathsToList ) )
         
@@ -862,7 +875,7 @@ class DialogInputLocalFiles( Dialog ):
             self._AddPathsToList( paths )
             
         
-        wx.CallAfter( self._add_button.SetFocus )
+        self.Show()
         
     
     def _AddPathsToList( self, paths ):
@@ -966,7 +979,7 @@ class DialogInputLocalFiles( Dialog ):
         
         self._TidyUp()
         
-        self.EndModal( wx.ID_CANCEL )
+        self.Close()
         
     
     def EventDeleteAfterSuccessCheck( self, event ):
@@ -996,7 +1009,7 @@ class DialogInputLocalFiles( Dialog ):
             HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
             
         
-        self.EndModal( wx.ID_OK )
+        self.Close()
         
     
     def EventTags( self, event ):
@@ -1015,7 +1028,7 @@ class DialogInputLocalFiles( Dialog ):
                     
                     HG.client_controller.pub( 'new_hdd_import', self._current_paths, file_import_options, paths_to_tags, delete_after_success )
                     
-                    self.EndModal( wx.ID_OK )
+                    self.Close()
                     
                 
             
@@ -1806,7 +1819,13 @@ class DialogPathsToTags( Dialog ):
         
         ( width, height ) = self.GetMinSize()
         
+        ( d_width, d_height ) = ClientGUITopLevelWindows.GetDisplaySize( self.GetParent() )
+        
+        height = min( height, d_height )
+        
         self.SetInitialSize( ( width, height ) )
+        
+        ClientGUITopLevelWindows.SlideOffScreenTLWUpAndLeft( self )
         
     
     def GetInfo( self ):

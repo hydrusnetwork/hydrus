@@ -913,6 +913,21 @@ class BetterListCtrlPanel( wx.Panel ):
         self._button_infos = []
         
     
+    def _AddButton( self, button, enabled_only_on_selection = False, enabled_check_func = None ):
+        
+        self._buttonbox.AddF( button, CC.FLAGS_VCENTER )
+        
+        if enabled_only_on_selection:
+            
+            enabled_check_func = self._HasSelected
+            
+        
+        if enabled_check_func is not None:
+            
+            self._button_infos.append( ( button, enabled_check_func ) )
+            
+        
+    
     def _HasSelected( self ):
         
         return self._listctrl.HasSelected()
@@ -937,17 +952,19 @@ class BetterListCtrlPanel( wx.Panel ):
         
         button = ClientGUICommon.BetterButton( self, label, clicked_func )
         
-        self._buttonbox.AddF( button, CC.FLAGS_VCENTER )
+        self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         
-        if enabled_only_on_selection:
-            
-            enabled_check_func = self._HasSelected
-            
+    
+    def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
         
-        if enabled_check_func is not None:
-            
-            self._button_infos.append( ( button, enabled_check_func ) )
-            
+        button = ClientGUICommon.MenuButton( self, label, menu_items )
+        
+        self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
+        
+    
+    def AddSeparator( self ):
+        
+        self._buttonbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def AddWindow( self, window ):

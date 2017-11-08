@@ -129,6 +129,7 @@ def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
             tlw.SetSize( ( width, height ) )
             
             SlideOffScreenTLWUpAndLeft( tlw )
+            
         
     
 def MouseIsOnMyDisplay( window ):
@@ -227,6 +228,8 @@ def SetTLWSizeAndPosition( tlw, frame_key ):
             
             tlw.SetPosition( safe_position )
             
+        
+        SlideOffScreenTLWUpAndLeft( tlw )
         
     elif default_position == 'center':
         

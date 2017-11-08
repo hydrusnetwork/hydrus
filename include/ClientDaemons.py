@@ -258,6 +258,11 @@ def DAEMONSynchroniseAccounts( controller ):
     
     for service in services:
         
+        if HG.view_shutdown:
+            
+            return
+            
+        
         service.SyncAccount()
         
     
@@ -267,13 +272,18 @@ def DAEMONSynchroniseRepositories( controller ):
     
     if not options[ 'pause_repo_sync' ]:
         
+        if HG.view_shutdown:
+            
+            return
+            
+        
         services = controller.services_manager.GetServices( HC.REPOSITORIES )
         
         for service in services:
             
             if options[ 'pause_repo_sync' ]:
                 
-                break
+                return
                 
             
             service.Sync( only_process_when_idle = True )

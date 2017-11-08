@@ -4,6 +4,7 @@ import HydrusExceptions
 import HydrusThreading
 import os
 from PIL import _imaging
+from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 import shutil
 import struct
@@ -15,6 +16,10 @@ import HydrusGlobals as HG
 import HydrusPaths
 import warnings
 
+if hasattr( PILImageFile, 'LOAD_TRUNCATED_IMAGES' ):
+    
+    PILImageFile.LOAD_TRUNCATED_IMAGES = True
+    
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     # super old versions don't have this, so let's just make a stub, wew

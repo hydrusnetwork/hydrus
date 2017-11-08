@@ -2411,11 +2411,24 @@ class RegexButton( BetterButton ):
     
     def _ManageFavourites( self ):
         
-        import ClientGUIDialogsManage
+        regex_favourites = HC.options[ 'regex_favourites' ]
         
-        with ClientGUIDialogsManage.DialogManageRegexFavourites( self.GetTopLevelParent() ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( self, 'manage regex favourites' ) as dlg:
             
-            dlg.ShowModal()
+            import ClientGUIScrolledPanelsEdit
+            
+            panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                regex_favourites = panel.GetValue()
+                
+                HC.options[ 'regex_favourites' ] = regex_favourites
+                
+                HG.client_controller.Write( 'save_options', HC.options )
+                
             
         
     

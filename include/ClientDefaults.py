@@ -158,8 +158,8 @@ def GetClientDefaultOptions():
     
     regex_favourites = []
     
-    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', u'\u2026' + r'0074.jpg -> 74 - [1-9]+\d*(?=.{4}$)' ) )
-    regex_favourites.append( ( r'[^' + os.path.sep.encode( 'string_escape' ) + ']+*(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name - [^' + os.path.sep.encode( 'string_escape' ) + ']+(?=\s-)' ) )
+    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', u'\u2026' + r'0074.jpg -> 74' ) )
+    regex_favourites.append( ( r'[^' + os.path.sep.encode( 'string_escape' ) + ']+*(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name' ) )
     
     options[ 'regex_favourites' ] = regex_favourites
     

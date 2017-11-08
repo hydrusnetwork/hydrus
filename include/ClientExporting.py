@@ -286,7 +286,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 while i < len( query_hash_ids ):
                     
-                    if HC.options[ 'pause_export_folders_sync' ]:
+                    if HC.options[ 'pause_export_folders_sync' ] or HG.view_shutdown:
                         
                         return
                         
@@ -314,6 +314,11 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 num_copied = 0
                 
                 for media_result in media_results:
+                    
+                    if HC.options[ 'pause_export_folders_sync' ] or HG.view_shutdown:
+                        
+                        return
+                        
                     
                     hash = media_result.GetHash()
                     mime = media_result.GetMime()

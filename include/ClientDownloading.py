@@ -1842,6 +1842,28 @@ class GalleryTumblr( Gallery ):
                             
                         
                     
+                elif post_type == 'video':
+                    
+                    if 'video-player' in post:
+                        
+                        video_player_html = post[ 'video-player' ]
+                        
+                        try:
+                            
+                            vp_soup = GetSoup( video_player_html )
+                            
+                            vp_source = vp_soup.find( 'source' )
+                            
+                            url = vp_source[ 'src' ]
+                            
+                            urls.append( url )
+                            
+                        except:
+                            
+                            pass
+                            
+                        
+                    
                 
             
         

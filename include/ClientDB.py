@@ -6510,6 +6510,8 @@ class DB( HydrusDB.HydrusDB ):
         
         HG.client_controller.pub( 'splash_set_status_text', 'preparing db caches' )
         
+        HG.client_controller.pub( 'splash_set_status_subtext', 'services' )
+        
         self._local_file_service_id = self._GetServiceId( CC.LOCAL_FILE_SERVICE_KEY )
         self._trash_service_id = self._GetServiceId( CC.TRASH_SERVICE_KEY )
         self._local_update_service_id = self._GetServiceId( CC.LOCAL_UPDATE_SERVICE_KEY )
@@ -6523,7 +6525,9 @@ class DB( HydrusDB.HydrusDB ):
         
         ( self._null_namespace_id, ) = self._c.execute( 'SELECT namespace_id FROM namespaces WHERE namespace = ?;', ( '', ) ).fetchone()
         
-        self._inbox_hash_ids = { id for ( id, ) in self._c.execute( 'SELECT hash_id FROM file_inbox;' ) }
+        HG.client_controller.pub( 'splash_set_status_subtext', 'inbox' )
+        
+        self._inbox_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM file_inbox;' ) )
         
     
     def _InitDiskCache( self ):
@@ -6621,9 +6625,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                     while f.read( HC.READ_BLOCK_SIZE ) != '':
                         
-                        if stop_time is not None and HydrusData.TimeHasPassed( stop_time ):
+                        if stop_time is not None:
                             
-                            return False
+                            HG.client_controller.pub( 'splash_set_status_subtext', 'booting ' + HydrusData.ConvertTimestampToPrettyPending( stop_time ) )
+                            
+                            if HydrusData.TimeHasPassed( stop_time ):
+                                
+                                return False
+                                
                             
                         
                         so_far_read += HC.READ_BLOCK_SIZE

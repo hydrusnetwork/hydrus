@@ -1366,6 +1366,121 @@ class EditNoneableIntegerPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._value.GetValue()
         
     
+class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, regex_favourites ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._regexes = ClientGUIListCtrl.SaneListCtrl( self, 200, [ ( 'regex phrase', 120 ), ( 'description', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        self._add_button = wx.Button( self, label = 'add' )
+        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        
+        self._edit_button = wx.Button( self, label = 'edit' )
+        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        
+        self._delete_button = wx.Button( self, label = 'delete' )
+        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        
+        #
+        
+        for ( regex_phrase, description ) in regex_favourites:
+            
+            self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
+            
+        
+        #
+        
+        regex_buttons = wx.BoxSizer( wx.HORIZONTAL )
+        
+        regex_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
+        regex_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
+        regex_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( regex_buttons, CC.FLAGS_BUTTON_SIZER )
+        
+        self.SetSizer( vbox )
+        
+    
+    def Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._regexes.RemoveAllSelected()
+                
+            
+        
+    
+    def Edit( self ):
+        
+        indices = self._regexes.GetAllSelected()
+        
+        for index in indices:
+            
+            ( regex_phrase, description ) = self._regexes.GetClientData( index )
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    regex_phrase = dlg.GetValue()
+                    
+                    with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
+                        
+                        if dlg_2.ShowModal() == wx.ID_OK:
+                            
+                            description = dlg_2.GetValue()
+                            
+                            self._regexes.UpdateRow( index, ( regex_phrase, description ), ( regex_phrase, description ) )
+                            
+                        
+                    
+                
+            
+        
+    
+    def EventAdd( self, event ):
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter regex.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                regex_phrase = dlg.GetValue()
+                
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter description.' ) as dlg_2:
+                    
+                    if dlg_2.ShowModal() == wx.ID_OK:
+                        
+                        description = dlg_2.GetValue()
+                        
+                        self._regexes.Append( ( regex_phrase, description ), ( regex_phrase, description ) )
+                        
+                    
+                
+            
+        
+    
+    def EventDelete( self, event ):
+        
+        self.Delete()
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        return self._regexes.GetClientData()
+        
+    
 class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, serverside_service ):
@@ -1785,18 +1900,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._name = wx.TextCtrl( self )
+        self._delay_st = ClientGUICommon.BetterStaticText( self )
         
         #
         
-        self._info_panel = ClientGUICommon.StaticBox( self, 'info' )
-        
-        self._last_checked_st = wx.StaticText( self._info_panel )
-        self._next_check_st = wx.StaticText( self._info_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._info_panel, HG.client_controller )
-        
-        #
-        
-        self._query_panel = ClientGUICommon.StaticBox( self, 'site and query' )
+        self._query_panel = ClientGUICommon.StaticBox( self, 'site and queries' )
         
         self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
         
@@ -1817,13 +1925,25 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
         
-        self._query = wx.TextCtrl( self._query_panel )
+        queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
+        
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 8, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file progress', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        
+        queries_panel.SetListCtrl( self._queries )
+        
+        queries_panel.AddButton( 'add', self._AddQuery )
+        queries_panel.AddButton( 'edit', self._EditQuery, enabled_only_on_selection = True )
+        queries_panel.AddButton( 'delete', self._DeleteQuery, enabled_only_on_selection = True )
+        queries_panel.AddSeparator()
+        queries_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
+        queries_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._ListCtrlCanRetryFailed )
+        queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
+        queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
         
         self._booru_selector = wx.ListBox( self._query_panel )
         self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
         
-        self._period = ClientGUICommon.TimeDeltaButton( self._query_panel, min = 3600 * 4, days = True, hours = True )
-        self._period.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventPeriodChanged )
+        self._checker_options_button = ClientGUICommon.BetterButton( self._query_panel, 'edit check timings', self._EditCheckerOptions )
         
         #
         
@@ -1858,15 +1978,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused = wx.CheckBox( self._control_panel )
         
-        self._retry_failures = ClientGUICommon.BetterButton( self._control_panel, 'retry failed', self.RetryFailures )
-        
-        self._check_now_button = ClientGUICommon.BetterButton( self._control_panel, 'force check on dialog ok', self.CheckNow )
-        
-        self._reset_cache_button = ClientGUICommon.BetterButton( self._control_panel, 'reset url cache', self.ResetCache )
-        
         #
         
-        ( name, gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._last_checked, self._last_error, self._check_now, self._seed_cache ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
@@ -1898,49 +2012,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # set gallery_stream_identifiers selection here--some kind of list of checkboxes or whatever
         
-        self._query.SetValue( query )
-        
-        self._period.SetValue( period )
+        self._queries.AddDatas( queries )
         
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
         self._paused.SetValue( paused )
         
-        if self._last_checked == 0:
-            
-            self._reset_cache_button.Disable()
-            
-        
-        if self._check_now:
-            
-            self._check_now_button.Disable()
-            
-        
-        self._seed_cache = self._seed_cache.Duplicate() # so that if it is edited but we cancel, this doesn't screw up
-        
-        self._UpdateCommandButtons()
-        self._UpdateLastNextCheck()
-        self._UpdateSeedInfo()
-        
         #
-        
-        self._info_panel.AddF( self._last_checked_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._info_panel.AddF( self._next_check_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._info_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        rows = []
-        
-        rows.append( ( 'search text: ', self._query ) )
-        rows.append( ( 'check for new files every: ', self._period ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self._query_panel, rows )
         
         self._query_panel.AddF( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.AddF( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._query_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._query_panel.AddF( queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._query_panel.AddF( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1951,6 +2035,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
+        self._options_panel.AddF( ClientGUICommon.BetterStaticText( self._options_panel, 'If you are new to subscriptions, do not set these too high! In general, subscriptions that are larger than a couple of thousand files are a headache if they go wrong!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._options_panel.AddF( cog_button, CC.FLAGS_LONE_BUTTON )
         self._options_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -1963,23 +2048,63 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
         
         self._control_panel.AddF( gridbox, CC.FLAGS_LONE_BUTTON )
-        self._control_panel.AddF( self._retry_failures, CC.FLAGS_LONE_BUTTON )
-        self._control_panel.AddF( self._check_now_button, CC.FLAGS_LONE_BUTTON )
-        self._control_panel.AddF( self._reset_cache_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.AddF( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._delay_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( self._control_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        self._UpdateDelayText()
+        
+    
+    def _AddQuery( self ):
+        
+        gallery_identifier = self._GetGalleryIdentifier()
+        
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
+        query = ClientImporting.SubscriptionQuery( search_value )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
+            
+            panel = EditSubscriptionQueryPanel( dlg, query )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                query = panel.GetValue()
+                
+                self._queries.AddDatas( ( query, ) )
+                
+            
+        
+    
+    def _CheckNow( self ):
+        
+        selected_queries = self._queries.GetData( only_selected = True )
+        
+        for query in selected_queries:
+            
+            query.CheckNow()
+            
+        
+        self._queries.UpdateDatas( selected_queries )
+        
+        self._queries.Sort()
+        
+        self._no_work_until = 0
+        
+        self._UpdateDelayText()
         
     
     def _ConfigureTagImportOptions( self ):
@@ -1994,15 +2119,128 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if gallery_identifier == self._original_subscription.GetGalleryIdentifier():
             
-            search_value = self._original_subscription.GetQuery()
             tag_import_options = self._original_subscription.GetTagImportOptions()
             
-        
-        self._query.SetValue( search_value )
         
         self._tag_import_options.SetNamespaces( namespaces )
         self._tag_import_options.SetValue( tag_import_options )
         
+    
+    def _ConvertQueryToListCtrlTuples( self, query ):
+        
+        ( query_text, check_now, last_check_time, next_check_time, paused, status, seed_cache ) = query.ToTuple()
+        
+        pretty_query_text = query_text
+        
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
+        
+        if status == ClientImporting.CHECKER_STATUS_OK:
+            
+            pretty_status = 'ok'
+            
+        else:
+            
+            pretty_status = 'dead'
+            
+        
+        last_new_file_time = seed_cache.GetLatestAddedTime()
+        
+        pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
+        
+        if last_check_time == 0:
+            
+            pretty_last_check_time = 'initial check has not yet occured'
+            
+        else:
+            
+            pretty_last_check_time = HydrusData.ConvertTimestampToPrettySync( last_check_time )
+            
+        
+        pretty_next_check_time = query.GetNextCheckStatusString()
+        
+        ( file_status, ( num_done, num_total ) ) = seed_cache.GetStatus()
+        
+        file_value_range = ( num_total, num_done )
+        pretty_file_value_range = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
+        
+        pretty_file_status = file_status
+        
+        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_value_range, pretty_file_status )
+        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_value_range, file_status )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DeleteQuery( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Are you sure you want to delete all selected queries?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._queries.DeleteSelected()
+                
+            
+        
+    
+    def _EditCheckerOptions( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
+            
+            panel = EditCheckerOptions( dlg, self._checker_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._checker_options = panel.GetValue()
+                
+                for query in self._queries.GetData():
+                    
+                    query.UpdateNextCheckTime( self._checker_options )
+                    
+                
+                self._queries.UpdateDatas()
+                
+            
+        
+    
+    def _EditQuery( self ):
+        
+        selected_queries = self._queries.GetData( only_selected = True )
+        
+        for old_query in selected_queries:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
+                
+                panel = EditSubscriptionQueryPanel( dlg, old_query )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._queries.DeleteDatas( ( old_query, ) )
+                    
+                    edited_query = panel.GetValue()
+                    
+                    self._queries.AddDatas( ( edited_query, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._queries.Sort()
+        
+    
     
     def _GetGalleryIdentifier( self ):
         
@@ -2032,76 +2270,55 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._get_tags_if_url_known_and_file_redundant = not self._get_tags_if_url_known_and_file_redundant
         
     
-    def _UpdateCommandButtons( self ):
+    def _ListCtrlCanCheckNow( self ):
         
-        on_initial_sync = self._last_checked == 0
-        no_failures = self._seed_cache.GetSeedCount( CC.STATUS_FAILED ) == 0
-        
-        can_check = not ( self._check_now or on_initial_sync )
-        
-        if no_failures:
+        for query in self._queries.GetData( only_selected = True ):
             
-            self._retry_failures.Disable()
-            
-        else:
-            
-            self._retry_failures.Enable()
+            if query.CanCheckNow():
+                
+                return True
+                
             
         
-        if can_check:
-            
-            self._check_now_button.Enable()
-            
-        else:
-            
-            self._check_now_button.Disable()
-            
-        
-        if on_initial_sync:
-            
-            self._reset_cache_button.Disable()
-            
-        else:
-            
-            self._reset_cache_button.Enable()
-            
+        return False
         
     
-    def _UpdateLastNextCheck( self ):
+    def _ListCtrlCanResetCache( self ):
         
-        if self._last_checked == 0:
+        for query in self._queries.GetData( only_selected = True ):
             
-            last_checked_text = 'initial check has not yet occured'
-            
-        else:
-            
-            last_checked_text = 'last checked ' + HydrusData.ConvertTimestampToPrettySync( self._last_checked )
-            
-        
-        self._last_checked_st.SetLabelText( last_checked_text )
-        
-        periodic_next_check_time = self._last_checked + self._period.GetValue()
-        error_next_check_time = self._last_error + HC.UPDATE_DURATION
-        
-        if self._check_now:
-            
-            next_check_text = 'next check as soon as manage subscriptions dialog is closed'
-            
-        elif error_next_check_time > periodic_next_check_time:
-            
-            next_check_text = 'due to an error, next check ' + HydrusData.ConvertTimestampToPrettyPending( error_next_check_time )
-            
-        else:
-            
-            next_check_text = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( periodic_next_check_time )
+            if not query.IsInitialSync():
+                
+                return True
+                
             
         
-        self._next_check_st.SetLabelText( next_check_text )
+        return False
         
     
-    def _UpdateSeedInfo( self ):
+    def _ListCtrlCanRetryFailed( self ):
         
-        self._seed_cache_control.SetSeedCache( self._seed_cache )
+        for query in self._queries.GetData( only_selected = True ):
+            
+            if query.CanRetryFailed():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _PausePlay( self ):
+        
+        selected_queries = self._queries.GetData( only_selected = True )
+        
+        for query in selected_queries:
+            
+            query.PausePlay()
+            
+        
+        self._queries.UpdateDatas( selected_queries )
         
     
     def _PresentForSiteType( self ):
@@ -2131,22 +2348,59 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
-    def CheckNow( self ):
+    def _ResetCache( self ):
         
-        self._check_now = True
+        message = '''Resetting these queries will delete all their cached urls, meaning when the subscription next runs, they will have to download all those links over again. This may be expensive in time and data. Only do this if you know what it means. Do you want to do it?'''
         
-        self._UpdateCommandButtons()
-        self._UpdateLastNextCheck()
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                selected_queries = self._queries.GetData( only_selected = True )
+                
+                for query in selected_queries:
+                    
+                    query.Reset()
+                    
+                
+                self._queries.UpdateDatas( selected_queries )
+                
+            
+        
+    
+    def _RetryFailed( self ):
+        
+        selected_queries = self._queries.GetData( only_selected = True )
+        
+        for query in selected_queries:
+            
+            query.RetryFailures()
+            
+        
+        self._queries.UpdateDatas( selected_queries )
+        
+        self._no_work_until = 0
+        
+        self._UpdateDelayText()
+        
+    
+    def _UpdateDelayText( self ):
+        
+        if HydrusData.TimeHasPassed( self._no_work_until ):
+            
+            status = 'no recent errors'
+            
+        else:
+            
+            status = 'will be able to work again ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until ) + ' because: ' + self._no_work_until_reason
+            
+        
+        self._delay_st.SetLabelText( status )
         
     
     def EventBooruSelected( self, event ):
         
         self._ConfigureTagImportOptions()
-        
-    
-    def EventPeriodChanged( self, event ):
-        
-        self._UpdateLastNextCheck()
         
     
     def EventSiteChanged( self, event ):
@@ -2165,9 +2419,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         # in future, this can be harvested from some checkboxes or whatever for stream selection
         gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
         
-        query = self._query.GetValue()
-        
-        period = self._period.GetValue()
+        queries = self._queries.GetData()
         
         initial_file_limit = self._initial_file_limit.GetValue()
         periodic_file_limit = self._periodic_file_limit.GetValue()
@@ -2178,39 +2430,100 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = self._tag_import_options.GetValue()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, query, period, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._last_checked, self._last_error, self._check_now, self._seed_cache )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
         return subscription
         
     
-    def ResetCache( self ):
+class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, query ):
         
-        message = '''Resetting this subscription's cache will delete ''' + HydrusData.ConvertIntToPrettyString( self._original_subscription.GetSeedCache().GetSeedCount() ) + ''' remembered urls, meaning when the subscription next runs, it will try to download those all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                self._last_checked = 0
-                self._last_error = 0
-                self._seed_cache = ClientImporting.SeedCache()
-                
-                self._UpdateCommandButtons()
-                self._UpdateLastNextCheck()
-                self._UpdateSeedInfo()
-                
-            
+        self._original_query = query
+        
+        self._status_st = ClientGUICommon.BetterStaticText( self )
+        
+        st_width = ClientData.ConvertTextToPixelWidth( self._status_st, 50 )
+        
+        self._status_st.SetMinSize( ( st_width, -1 ) )
+        
+        self._query_text = wx.TextCtrl( self )
+        self._check_now = wx.CheckBox( self )
+        self._paused = wx.CheckBox( self )
+        
+        self._seed_cache_panel = ClientGUISeedCache.SeedCacheStatusControl( self, HG.client_controller )
+        
+        #
+        
+        ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status, seed_cache ) = self._original_query.ToTuple()
+        
+        self._query_text.SetValue( query_text )
+        
+        self._check_now.SetValue( check_now )
+        
+        self._paused.SetValue( paused )
+        
+        self._seed_cache = seed_cache.Duplicate()
+        
+        self._seed_cache_panel.SetSeedCache( self._seed_cache )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'query text: ', self._query_text ) )
+        rows.append( ( 'check now: ', self._check_now ) )
+        rows.append( ( 'paused: ', self._paused ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._seed_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
+        
+        self._UpdateStatus()
         
     
-    def RetryFailures( self ):
+    def _GetValue( self ):
         
-        self._seed_cache.RetryFailures()
+        query = self._original_query.Duplicate()
         
-        self._last_error = 0
+        query.SetQueryAndSeedCache( self._query_text.GetValue(), self._seed_cache )
         
-        self._UpdateCommandButtons()
-        self._UpdateLastNextCheck()
-        self._UpdateSeedInfo()
+        query.SetPaused( self._paused.GetValue() )
+        
+        query.SetCheckNow( self._check_now.GetValue() )
+        
+        return query
+        
+    
+    def _UpdateStatus( self ):
+        
+        query = self._GetValue()
+        
+        self._status_st.SetLabelText( 'next check: ' + query.GetNextCheckStatusString() )
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateStatus()
+        
+    
+    def GetValue( self ):
+        
+        query = self._GetValue()
+        
+        return query
         
     
 class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -2888,9 +3201,9 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         return url_match
         
     
-class EditWatcherOptions( ClientGUIScrolledPanels.EditPanel ):
+class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, watcher_options ):
+    def __init__( self, parent, checker_options ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2911,7 +3224,7 @@ class EditWatcherOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = watcher_options.ToTuple()
+        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
         
         self._intended_files_per_check.SetValue( intended_files_per_check )
         self._never_faster_than.SetValue( never_faster_than )
@@ -2966,6 +3279,6 @@ class EditWatcherOptions( ClientGUIScrolledPanels.EditPanel ):
         never_slower_than = self._never_slower_than.GetValue()
         death_file_velocity = self._death_file_velocity.GetValue()
         
-        return ClientData.WatcherOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
+        return ClientData.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
         
     

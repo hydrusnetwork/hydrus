@@ -99,6 +99,17 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def _ReportShutdownDaemonsStatus( self ):
+        
+        names = { daemon.name for daemon in self._daemons if daemon.is_alive() }
+        
+        names = list( names )
+        
+        names.sort()
+        
+        self.pub( 'splash_set_status_subtext', ', '.join( names ) )
+        
+    
     def CallBlockingToWx( self, func, *args, **kwargs ):
         
         def wx_code( job_key ):
@@ -544,7 +555,13 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
+        self.pub( 'splash_set_status_text', u'initialising managers' )
+        
+        self.pub( 'splash_set_status_subtext', u'services' )
+        
         self.services_manager = ClientCaches.ServicesManager( self )
+        
+        self.pub( 'splash_set_status_subtext', u'options' )
         
         self.options = self.Read( 'options' )
         self.new_options = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
@@ -559,9 +576,13 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
+        self.pub( 'splash_set_status_subtext', u'client files' )
+        
         self.InitClientFilesManager()
         
         #
+        
+        self.pub( 'splash_set_status_subtext', u'network' )
         
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
         
@@ -609,8 +630,17 @@ class Controller( HydrusController.HydrusController ):
         self._shortcuts_manager = ClientCaches.ShortcutsManager( self )
         
         self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
+        
+        self.pub( 'splash_set_status_subtext', u'tag censorship' )
+        
         self._managers[ 'tag_censorship' ] = ClientCaches.TagCensorshipManager( self )
+        
+        self.pub( 'splash_set_status_subtext', u'tag siblings' )
+        
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
+        
+        self.pub( 'splash_set_status_subtext', u'tag parents' )
+        
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
         
@@ -621,6 +651,8 @@ class Controller( HydrusController.HydrusController ):
             
             CC.GlobalBMPs.STATICInitialise()
             
+        
+        self.pub( 'splash_set_status_subtext', u'image caches' )
         
         self.CallBlockingToWx( wx_code )
         
@@ -782,6 +814,8 @@ class Controller( HydrusController.HydrusController ):
                 services = self.services_manager.GetServices()
                 
                 for service in services:
+                    
+                    self.pub( 'splash_set_status_subtext', service.GetName() )
                     
                     try: self.Read( 'service_info', service.GetServiceKey() )
                     except: pass # sometimes this breaks when a service has just been removed and the client is closing, so ignore the error

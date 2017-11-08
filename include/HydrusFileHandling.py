@@ -52,7 +52,7 @@ header_and_mime = [
     ( 0, '\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C', HC.UNDETERMINED_WM )
     ]
 
-def SaveThumbnailToStream( pil_image, dimensions, f ):
+def SaveThumbnailToStreamPIL( pil_image, dimensions, f ):
     
     # when the palette is limited, the thumbnail antialias won't add new colours, so you get nearest-neighbour-like behaviour
     
@@ -96,7 +96,7 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime
                 
                 pil_image = HydrusImageHandling.GeneratePILImage( temp_path )
                 
-                SaveThumbnailToStream( pil_image, dimensions, f )
+                SaveThumbnailToStreamPIL( pil_image, dimensions, f )
                 
             except:
                 
@@ -104,7 +104,7 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime
                 
                 pil_image = HydrusImageHandling.GeneratePILImage( flash_default_path )
                 
-                SaveThumbnailToStream( pil_image, dimensions, f )
+                SaveThumbnailToStreamPIL( pil_image, dimensions, f )
                 
             finally:
                 
@@ -130,7 +130,7 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime
             
             pil_image = HydrusImageHandling.GeneratePILImageFromNumpyImage( numpy_image )
             
-            SaveThumbnailToStream( pil_image, dimensions, f )
+            SaveThumbnailToStreamPIL( pil_image, dimensions, f )
             
         
         f.seek( 0 )
@@ -142,13 +142,13 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime
     
     return thumbnail
     
-def GenerateThumbnailFromStaticImage( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     f = cStringIO.StringIO()
     
     pil_image = HydrusImageHandling.GeneratePILImage( path )
     
-    SaveThumbnailToStream( pil_image, dimensions, f )
+    SaveThumbnailToStreamPIL( pil_image, dimensions, f )
     
     f.seek( 0 )
     
@@ -158,6 +158,8 @@ def GenerateThumbnailFromStaticImage( path, dimensions = HC.UNSCALED_THUMBNAIL_D
     
     return thumbnail
     
+GenerateThumbnailFromStaticImage = GenerateThumbnailFromStaticImagePIL
+
 def GetExtraHashesFromPath( path ):
     
     h_md5 = hashlib.md5()
