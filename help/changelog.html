@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 281</h3></li>
+				<ul>
+					<li>subscriptions can now support multiple queries!</li>
+					<li>subscriptions now use the new thread checker system to set their check periods!</li>
+					<li>improved some check timing calculations to deal with subscription timestamps</li>
+					<li>existing subscriptions will update</li>
+					<li>subscriptions can now see any 'delay' reason on their edit page and can scrub it there as well</li>
+					<li>subscriptions no longer track 'last error'. everything goes through the delay system and keeps track of reason</li>
+					<li>added 'last new file time' to the subscription listctrls</li>
+					<li>subscriptions now generate separate 'file button' popups for each query, and file button popups now include their name in the button label</li>
+					<li>the subscription listctrl is now breddy wide. I will be adding some way of hiding columns (with persistent memory) on the new listctrl at some point in the future, so please bear with it for now</li>
+					<li>manage subs now has a wrapper panel and buttons that disable when invalid</li>
+					<li>tumblr simple 'video' posts should now be supported! turns out they are just mp4s</li>
+					<li>in the client, static image thumbnails are now generated with opencv</li>
+					<li>files that give truncated image errors should now import ok. they'll render with errors. if cv is up to date and working ok, they should have good thumbnails as well (otherwise they will have all-black thumbs)</li>
+					<li>updated manage regex favourites dialog to the new panel system</li>
+					<li>regex favourites are now editable under the new options->regex page</li>
+					<li>ongoing import or export folders will now stop working if their respective manage dialogs are opened</li>
+					<li>import folders can now stop working if the client shuts down during the initial file parse phase</li>
+					<li>export folders will now stop working immediately if the client shuts down</li>
+					<li>export folders can now stop working during the file copy stage</li>
+					<li>the splash screen is now a little wider and taller</li>
+					<li>the splash screen now has a subtext row for misc technical data</li>
+					<li>the boot and exit splash screens show a bit more data about several things</li>
+					<li>the repository sync daemons should be a bit snappier about responding to a client shutdown</li>
+					<li>the import files dialog is now a non-modal frame! (you can now continue to use the client while this frame parses files) you can even open up several at once!</li>
+					<li>the 'import file path tagging' dialog should now never be taller than its spawning screen and also slide up and left if it spawns with its bottom-right corner off-screen (this dialog is still on the old system, however, so the newer sizing stuff that does this stuff automatically is not yet available)</li>
+					<li>sliding up-and-left should now also occur on spawn for frames on the new system</li>
+					<li>the advanced 'process now' repository button will now disable itself if there is no work to do!</li>
+					<li>if simple downloads like gallery pages are larger than 100MB, the client will throw an error (this is a stopgap for an ongoing issue)</li>
+					<li>the 'maintenance and processing' page has a bit more warning text</li>
+					<li>the new listctrl wrapper panel now supports menu buttons</li>
+					<li>libpng's iccp terminal warnings from loading the flash/pdf/zip thumbnails should now be gone!</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 280</h3></li>
 				<ul>
 					<li>the client should now recognise EXIF file rotation and flipping in resolution discovery, thumbnail generation, and image rendering. existing files will be borked, so will have to either be manually deleted&reimported, or wait for a maintenance routine that will retroactively fix all these</li>
