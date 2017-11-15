@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 282</h3></li>
+				<ul>
+					<li>rolled back to an older version of pyinstaller that does not seem to have the embedded flash window problems windows users experienced</li>
+					<li>added an error handler to wx.lib.flashwin import--if it fails to import, the client will print the error to the log and thereafter show 'open externally' buttons instead of the embedded flash window</li>
+					<li>created a 'filename tagging options' object to handle the instance-non-specific auto-tagging parts of the filename tagging dialog</li>
+					<li>moved all the appropriate tag generation code to this new object</li>
+					<li>extracted the simple and advanced panels in the filename tagging dialog to a separate panel</li>
+					<li>wrote a new wrapper panel to edit filename tagging options objects directly</li>
+					<li>cleaned up some tag generation code--it'll now all be siblinged/parented/censored the same way</li>
+					<li>import folders now use the filename tagging options object, harmonising this tag parsing code</li>
+					<li>edit import folder gui now has an add/edit/delete listctrl to manage the new tag_service->filename_tagging_object relationship (this replaces the old .txt management button and summary text)</li>
+					<li>finished the StringConverter class in the new parsing engine. it applies a series of transformations to text</li>
+					<li>wrote a panel to edit string converters</li>
+					<li>wrote a panel to edit string converters' individual transformations</li>
+					<li>updated html formulas to use string converters instead of the old cull_and_add system</li>
+					<li>html formula edit panels can now edit their new string converters</li>
+					<li>file lookup scripts now 'stringconvert' their file identifier strings--this should allow the 'md5:md5_hash' fix we've been talking about (i.e. by first encoding to hex and then prepending 'md5:')</li>
+					<li>the help->about window now shows the client's default temp directory</li>
+					<li>thumbnail regeneration--particularly full-size regen and resized png gen--should be much faster in the client</li>
+					<li>the debug exes are now included in the windows build</li>
+					<li>the debug exes are now included in the non-windows builds</li>
+					<li>the test exe is no longer included in the windows install (can't remember it ever being useful, and it is like 10MB now)</li>
+					<li>unfortunately, a recentish change to how pixiv serves gallery page results has broken the hydrus pixiv downloader. this will have to wait for the downloader overhaul, and even then, it might be _slightly_ tricky. pixiv downloader entries are now hidden, and existing pixiv subscriptions will be paused on update</li>
+					<li>the thumbnail select submenu now clarifies 'all (all in x)' if all are in the inbox or archive</li>
+					<li>you can now archive/delete filter from the thumbnail menu on a single file</li>
+					<li>lowered the http session inactivity timeout even more, to 45 minutes</li>
+					<li>fixed a couple of instances of the new subscription dialogs being unable to mass-retry failures</li>
+					<li>ffmpeg parsing errors now print more info about broken file path</li>
+					<li>some daemons will be snappier about shutting down on application shutdown</li>
+					<li>took out the sometimes invalid 'booting' phrase in the during disk cache population status report</li>
+					<li>the client will now warn you about page instability at 165 pages after one user reported instability at 175. 200 is still the strict limit.</li>
+					<li>downloader pages and subscriptions will fail more gracefully if their downloaders cannot be loaded (e.g. they used a since-deleted booru)</li>
+					<li>fixed listctrl panel button enabled/disabled status when the child listctrl starts empty</li>
+					<li>the new listctrl can now select data in a cleverer way</li>
+					<li>misc fixes</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 281</h3></li>
 				<ul>
 					<li>subscriptions can now support multiple queries!</li>
