@@ -25,6 +25,62 @@ import wx
 
 ID_TIMER_SCRIPT_UPDATE = wx.NewId()
 
+class StringConverterButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, string_converter ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string converter', self._Edit )
+        
+        self._string_converter = string_converter
+        
+        self._UpdateLabel()
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string converter' ) as dlg:
+            
+            panel = EditStringConverterPanel( dlg, self._string_converter )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._string_converter = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        num_rules = len( self._string_converter.transformations )
+        
+        if num_rules == 0:
+            
+            label = 'no string transformations'
+            
+        else:
+            
+            label = HydrusData.ConvertIntToPrettyString( num_rules ) + ' string transformations'
+            
+        
+        self.SetLabelText( label )
+        
+    
+    def GetValue( self ):
+        
+        return self._string_converter
+        
+    
+    def SetValue( self, string_converter ):
+        
+        self._string_converter = string_converter
+        
+        self._UpdateLabel()
+        
+    
 class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, rule ):
@@ -102,11 +158,9 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_rule = wx.TextCtrl( edit_panel )
         
-        self._cull_front = wx.SpinCtrl( edit_panel, min = -65535, max = 65535 )
-        self._cull_back = wx.SpinCtrl( edit_panel, min = -65535, max = 65535 )
+        ( tag_rules, content_rule, string_converter ) = formula.ToTuple()
         
-        self._prepend = wx.TextCtrl( edit_panel )
-        self._append = wx.TextCtrl( edit_panel )
+        self._string_converter_button = StringConverterButton( edit_panel, string_converter )
         
         #
         
@@ -154,8 +208,6 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         #
         
-        ( tag_rules, content_rule, culling_and_adding ) = formula.ToTuple()
-        
         for rule in tag_rules:
             
             pretty_rule = ClientParsing.RenderTagRule( rule )
@@ -169,13 +221,6 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             
         
         self._content_rule.SetValue( content_rule )
-        
-        ( cull_front, cull_back, prepend, append ) = culling_and_adding
-        
-        self._cull_front.SetValue( cull_front )
-        self._cull_back.SetValue( cull_back )
-        self._prepend.SetValue( prepend )
-        self._append.SetValue( append )
         
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
         
@@ -202,10 +247,6 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         rows = []
         
         rows.append( ( 'attribute to fetch: ', self._content_rule ) )
-        rows.append( ( 'remove this number of characters from the beginning: ', self._cull_front ) )
-        rows.append( ( 'remove this number of characters from the end: ', self._cull_back ) )
-        rows.append( ( 'prepend this: ', self._prepend ) )
-        rows.append( ( 'append this: ', self._append ) )
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
@@ -214,6 +255,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         vbox.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         edit_panel.SetSizer( vbox )
         
@@ -334,9 +376,9 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             content_rule = None
             
         
-        culling_and_adding = ( self._cull_front.GetValue(), self._cull_back.GetValue(), self._prepend.GetValue(), self._append.GetValue() )
+        string_converter = self._string_converter_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, culling_and_adding )
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, string_converter )
         
         return formula
         
@@ -1258,7 +1300,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        ( name, url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, children ) = script.ToTuple()
+        ( name, url, query_type, file_identifier_type, file_identifier_string_converter, file_identifier_arg_name, static_args, children ) = script.ToTuple()
         
         #
         
@@ -1290,12 +1332,7 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
             self._file_identifier_type.Append( ClientParsing.file_identifier_string_lookup[ t ], t )
             
         
-        self._file_identifier_encoding = ClientGUICommon.BetterChoice( query_panel )
-        
-        for e in [ HC.ENCODING_RAW, HC.ENCODING_HEX, HC.ENCODING_BASE64 ]:
-            
-            self._file_identifier_encoding.Append( HC.encoding_string_lookup[ e ], e )
-            
+        self._file_identifier_string_converter = StringConverterButton( query_panel, file_identifier_string_converter )
         
         self._file_identifier_arg_name = wx.TextCtrl( query_panel )
         
@@ -1359,7 +1396,6 @@ And pass that html to a number of 'parsing children' that will each look through
         
         self._query_type.SelectClientData( query_type )
         self._file_identifier_type.SelectClientData( file_identifier_type )
-        self._file_identifier_encoding.SelectClientData( file_identifier_encoding )
         self._file_identifier_arg_name.SetValue( file_identifier_arg_name )
         
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
@@ -1371,7 +1407,7 @@ And pass that html to a number of 'parsing children' that will each look through
         rows.append( ( 'url', self._url ) )
         rows.append( ( 'query type: ', self._query_type ) )
         rows.append( ( 'file identifier type: ', self._file_identifier_type ) )
-        rows.append( ( 'file identifier encoding: ', self._file_identifier_encoding ) )
+        rows.append( ( 'file identifier conversion (typically to hex): ', self._file_identifier_string_converter ) )
         rows.append( ( 'file identifier GET/POST argument name: ', self._file_identifier_arg_name ) )
         
         gridbox = ClientGUICommon.WrapInGrid( query_panel, rows )
@@ -1557,14 +1593,649 @@ And pass that html to a number of 'parsing children' that will each look through
         url = self._url.GetValue()
         query_type = self._query_type.GetChoice()
         file_identifier_type = self._file_identifier_type.GetChoice()
-        file_identifier_encoding = self._file_identifier_encoding.GetChoice()
+        file_identifier_string_converter = self._file_identifier_string_converter.GetValue()
         file_identifier_arg_name = self._file_identifier_arg_name.GetValue()
         static_args = self._static_args.GetValue()
         children = self._children.GetValue()
         
-        script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
+        script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children )
         
         return script
+        
+    
+class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_converter ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        transformations_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._transformations = ClientGUIListCtrl.BetterListCtrl( transformations_panel, 'string_converter_transformations', 7, 35, [ ( '#', 3 ), ( 'transformation', 30 ), ( 'result', -1 ) ], self._ConvertTransformationToListCtrlTuple, delete_key_callback = self._DeleteTransformation, activation_callback = self._EditTransformation )
+        
+        transformations_panel.SetListCtrl( self._transformations )
+        
+        transformations_panel.AddButton( 'add', self._AddTransformation )
+        transformations_panel.AddButton( 'edit', self._EditTransformation, enabled_only_on_selection = True )
+        transformations_panel.AddButton( 'delete', self._DeleteTransformation, enabled_only_on_selection = True )
+        
+        transformations_panel.AddSeparator()
+        
+        transformations_panel.AddButton( 'move up', self._MoveUp, enabled_check_func = self._CanMoveUp )
+        transformations_panel.AddButton( 'move down', self._MoveDown, enabled_check_func = self._CanMoveDown )
+        
+        self._example_string = wx.TextCtrl( self )
+        
+        #
+        
+        self._transformations.AddDatas( [ ( i + 1, transformation_type, data ) for ( i, ( transformation_type, data ) ) in enumerate( string_converter.transformations ) ] )
+        self._example_string.SetValue( string_converter.example_string )
+        
+        self._transformations.UpdateDatas() # to refresh, now they are all in the list
+        
+        self._transformations.Sort( 0 )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _AddTransformation( self ):
+        
+        transformation_type = ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT
+        data = ' extra text'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation' ) as dlg:
+            
+            panel = self._TransformationPanel( dlg, transformation_type, data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                number = self._transformations.GetItemCount() + 1
+                
+                ( transformation_type, data ) = panel.GetValue()
+                
+                enumerated_transformation = ( number, transformation_type, data )
+                
+                self._transformations.AddDatas( ( enumerated_transformation, ) )
+                
+            
+        
+        self._transformations.UpdateDatas() # need to refresh string after the insertion, so the new row can be included in the parsing calcs
+        
+        self._transformations.Sort()
+        
+    
+    def _CanMoveDown( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        if len( selected_data ) == 1:
+            
+            ( number, transformation_type, data ) = selected_data[0]
+            
+            if number < self._transformations.GetItemCount():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _CanMoveUp( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        if len( selected_data ) == 1:
+            
+            ( number, transformation_type, data ) = selected_data[0]
+            
+            if number > 1:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _ConvertTransformationToListCtrlTuple( self, transformation ):
+        
+        ( number, transformation_type, data ) = transformation
+        
+        pretty_number = HydrusData.ConvertIntToPrettyString( number )
+        pretty_transformation = ClientParsing.StringConverter.TransformationToUnicode( ( transformation_type, data ) )
+        
+        string_converter = self._GetValue()
+        
+        try:
+            
+            pretty_result = string_converter.Convert( self._example_string.GetValue(), number )
+            
+        except HydrusExceptions.ParseException as e:
+            
+            pretty_result = str( e )
+            
+        
+        display_tuple = ( pretty_number, pretty_transformation, pretty_result )
+        sort_tuple = ( number, number, number )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DeleteTransformation( self ):
+        
+        if len( self._transformations.GetData( only_selected = True ) ) > 0:
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._transformations.DeleteSelected()
+                    
+                
+            
+        
+        # now we need to shuffle up any missing numbers
+        
+        num_rows = self._transformations.GetItemCount()
+        
+        i = 1
+        search_i = i
+        
+        while i <= num_rows:
+            
+            try:
+                
+                transformation = self._GetTransformation( search_i )
+                
+                if search_i != i:
+                    
+                    self._transformations.DeleteDatas( ( transformation, ) )
+                    
+                    ( search_i, transformation_type, data ) = transformation
+                    
+                    transformation = ( i, transformation_type, data )
+                    
+                    self._transformations.AddDatas( ( transformation, ) )
+                    
+                
+                i += 1
+                search_i = i
+                
+            except HydrusExceptions.DataMissing:
+                
+                search_i += 1
+                
+            
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _EditTransformation( self ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        for enumerated_transformation in selected_data:
+            
+            ( number, transformation_type, data ) = enumerated_transformation
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit transformation' ) as dlg:
+                
+                panel = self._TransformationPanel( dlg, transformation_type, data )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._transformations.DeleteDatas( ( enumerated_transformation, ) )
+                    
+                    ( transformation_type, data ) = panel.GetValue()
+                    
+                    enumerated_transformation = ( number, transformation_type, data )
+                    
+                    self._transformations.AddDatas( ( enumerated_transformation, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _GetTransformation( self, desired_number ):
+        
+        for transformation in self._transformations.GetData():
+            
+            ( number, transformation_type, data ) = transformation
+            
+            if number == desired_number:
+                
+                return transformation
+                
+            
+        
+        raise HydrusExceptions.DataMissing()
+        
+    
+    def _GetValue( self ):
+        
+        enumerated_transformations = list( self._transformations.GetData() )
+        
+        enumerated_transformations.sort()
+        
+        transformations = [ ( transformation_type, data ) for ( number, transformation_type, data ) in enumerated_transformations ]
+        
+        example_string = self._example_string.GetValue()
+        
+        string_converter = ClientParsing.StringConverter( transformations, example_string )
+        
+        return string_converter
+        
+    
+    def _MoveDown( self ):
+        
+        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        
+        ( number, transformation_type, data ) = selected_transformation
+        
+        swap_transformation = self._GetTransformation( number + 1 )
+        
+        self._SwapTransformations( selected_transformation, swap_transformation )
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _MoveUp( self ):
+        
+        selected_transformation = self._transformations.GetData( only_selected = True )[0]
+        
+        ( number, transformation_type, data ) = selected_transformation
+        
+        swap_transformation = self._GetTransformation( number - 1 )
+        
+        self._SwapTransformations( selected_transformation, swap_transformation )
+        
+        self._transformations.UpdateDatas()
+        
+        self._transformations.Sort()
+        
+    
+    def _SwapTransformations( self, one, two ):
+        
+        selected_data = self._transformations.GetData( only_selected = True )
+        
+        one_selected = one in selected_data
+        two_selected = two in selected_data
+        
+        self._transformations.DeleteDatas( ( one, two ) )
+        
+        ( number_1, transformation_type_1, data_1 ) = one
+        ( number_2, transformation_type_2, data_2 ) = two
+        
+        one = ( number_2, transformation_type_1, data_1 )
+        two = ( number_1, transformation_type_2, data_2 )
+        
+        self._transformations.AddDatas( ( one, two ) )
+        
+        if one_selected:
+            
+            self._transformations.SelectDatas( ( one, ) )
+            
+        
+        if two_selected:
+            
+            self._transformations.SelectDatas( ( two, ) )
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._transformations.UpdateDatas()
+        
+    
+    def GetValue( self ):
+        
+        string_converter = self._GetValue()
+        
+        try:
+            
+            string_converter.Convert( self._example_string.GetValue() )
+            
+        except HydrusExceptions.ParseException:
+            
+            wx.MessageBox( 'Please enter an example text that can be converted!' )
+            
+            raise HydrusExceptions.VetoException()
+            
+        
+        return string_converter
+        
+    
+    class _TransformationPanel( ClientGUIScrolledPanels.EditPanel ):
+        
+        def __init__( self, parent, transformation_type, data ):
+            
+            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            
+            self._transformation_type = ClientGUICommon.BetterChoice( self )
+            
+            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE ):
+                
+                self._transformation_type.Append( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
+                
+            
+            self._data_text = wx.TextCtrl( self )
+            self._data_number = wx.SpinCtrl( self, min = 0, max = 65535 )
+            self._data_encoding = ClientGUICommon.BetterChoice( self )
+            
+            for e in ( 'hex', 'base64' ):
+                
+                self._data_encoding.Append( e, e )
+                
+            
+            #
+            
+            self._transformation_type.SelectClientData( transformation_type )
+            
+            self._UpdateDataControls()
+            
+            #
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_ENCODE ):
+                
+                self._data_encoding.SelectClientData( data )
+                
+            elif data is not None:
+                
+                if isinstance( data, int ):
+                    
+                    self._data_number.SetValue( data )
+                    
+                else:
+                    
+                    self._data_text.SetValue( data )
+                    
+                
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'string data: ', self._data_text ) )
+            rows.append( ( 'number data: ', self._data_number ) )
+            rows.append( ( 'encoding data: ', self._data_encoding ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.AddF( self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+            #
+            
+            self._transformation_type.Bind( wx.EVT_CHOICE, self.EventChoice )
+            
+        
+        def _UpdateDataControls( self ):
+            
+            self._data_text.Disable()
+            self._data_number.Disable()
+            self._data_encoding.Disable()
+            
+            transformation_type = self._transformation_type.GetChoice()
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+                
+                self._data_encoding.Enable()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
+                
+                self._data_text.Enable()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ):
+                
+                self._data_number.Enable()
+                
+            
+        
+        def EventChoice( self, event ):
+            
+            self._UpdateDataControls()
+            
+        
+        def GetValue( self ):
+            
+            transformation_type = self._transformation_type.GetChoice()
+            
+            if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE ):
+                
+                data = self._data_encoding.GetChoice()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT ):
+                
+                data = self._data_text.GetValue()
+                
+            elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ):
+                
+                data = self._data_number.GetValue()
+                
+            else:
+                
+                data = None
+                
+            
+            return ( transformation_type, data )
+            
+        
+    
+class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_match ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._match_type = ClientGUICommon.BetterChoice( self )
+        
+        self._match_type.Append( ClientParsing.STRING_MATCH_ANY, 'any characters' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_FIXED, 'fixed characters' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_FLEXIBLE, 'character set' )
+        self._match_type.Append( ClientParsing.STRING_MATCH_REGEX, 'regex' )
+        
+        self._match_value_text_input = wx.TextCtrl( self )
+        
+        self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
+        
+        self._match_value_flexible_input.Append( ClientParsing.ALPHA, 'alphabetic characters (a-zA-Z)' )
+        self._match_value_flexible_input.Append( ClientParsing.ALPHANUMERIC, 'alphanumeric characters (a-zA-Z0-9)' )
+        self._match_value_flexible_input.Append( ClientParsing.NUMERIC, 'numeric characters (0-9)' )
+        
+        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        
+        self._example_string = wx.TextCtrl( self )
+        
+        self._example_string_matches = ClientGUICommon.BetterStaticText( self )
+        
+        #
+        
+        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
+        
+        self._match_type.SetClientData( match_type )
+        
+        if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_flexible_input.SetClientData( match_value )
+            
+        else:
+            
+            self._match_value_flexible_input.SetClientData( ClientParsing.ALPHA )
+            
+            self._match_value_text_input.SetValue( match_value )
+            
+        
+        self._UpdateControls()
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'match type: ', self._match_type ) )
+        rows.append( ( 'match text: ', self._match_value_text_input ) )
+        rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
+        rows.append( ( 'minumum allowed number of characters: ', self._min_chars ) )
+        rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
+        rows.append( ( 'example string: ', self._example_string ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._match_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._match_value_text_input.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self._match_value_flexible_input.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._min_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._max_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
+        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
+        
+    
+    def _GetValue( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            match_value = ''
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            match_value = self._match_value_flexible_input.GetChoice()
+            
+        else:
+            
+            match_value = self._match_value_text_input.GetValue()
+            
+        
+        min_chars = self._min_chars.GetValue()
+        max_chars = self._max_chars.GetValue()
+        
+        example_string = self._example_string.GetValue()
+        
+        string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
+        
+        return string_match
+        
+    
+    def _UpdateControls( self ):
+        
+        match_type = self._match_type.GetChoice()
+        
+        if match_type == ClientParsing.STRING_MATCH_ANY:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Disable()
+            
+        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
+            
+            self._match_value_text_input.Disable()
+            self._match_value_flexible_input.Enable()
+            
+        else:
+            
+            self._match_value_text_input.Enable()
+            self._match_value_flexible_input.Disable()
+            
+        
+        if match_type == ClientParsing.STRING_MATCH_FIXED:
+            
+            self._min_chars.SetValue( None )
+            self._max_chars.SetValue( None )
+            
+            self._min_chars.Disable()
+            self._max_chars.Disable()
+            
+            self._example_string.SetValue( self._match_value_text_input.GetValue() )
+            
+            self._example_string_matches.SetLabelText( '' )
+            
+        else:
+            
+            self._min_chars.Enable()
+            self._max_chars.Enable()
+            
+            string_match = self._GetValue()
+            
+            ( result, reason ) = string_match.Test( self._example_string.GetValue() )
+            
+            if result:
+                
+                self._example_string_matches.SetLabelText( 'Example matches ok!' )
+                self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
+                
+            else:
+                
+                self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
+                self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
+                
+            
+        
+    
+    def EventUpdate( self, event ):
+        
+        self._UpdateControls()
+        
+    
+    def GetValue( self ):
+        
+        string_match = self._GetValue()
+        
+        ( result, reason ) = string_match.Test( self._example_string.GetValue() )
+        
+        if not result:
+            
+            wx.MessageBox( 'Please enter an example text that matches the given rules!' )
+            
+            raise HydrusExceptions.VetoException()
+            
+        
+        return string_match
         
     
 class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -1704,14 +2375,14 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         url = ''
         query_type = HC.GET
         file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-        file_identifier_encoding = HC.ENCODING_BASE64
+        file_identifier_string_converter = ClientParsing.StringConverter( [ ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ], 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
         children = []
         
         dlg_title = 'edit file metadata lookup script'
         
-        empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_encoding = file_identifier_encoding, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
+        empty_script = ClientParsing.ParseRootFileLookup( name, url = url, query_type = query_type, file_identifier_type = file_identifier_type, file_identifier_string_converter = file_identifier_string_converter, file_identifier_arg_name = file_identifier_arg_name, static_args = static_args, children = children)
         
         panel_class = EditParsingScriptFileLookupPanel
         

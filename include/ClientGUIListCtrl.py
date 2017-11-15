@@ -832,6 +832,19 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
     
+    def SelectDatas( self, datas ):
+        
+        for data in datas:
+            
+            if data in self._data_to_indices:
+                
+                index = self._data_to_indices[ data ]
+                
+                self.Select( index )
+                
+            
+        
+    
     def SetData( self, datas ):
         
         datas = set( datas )
@@ -954,12 +967,16 @@ class BetterListCtrlPanel( wx.Panel ):
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         
+        self._UpdateButtons()
+        
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
         
         button = ClientGUICommon.MenuButton( self, label, menu_items )
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
+        
+        self._UpdateButtons()
         
     
     def AddSeparator( self ):

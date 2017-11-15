@@ -2354,7 +2354,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             if watcher_status == '':
                 
-                watcher_status = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
+                watcher_status = 'next check in ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
                 
             
             if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.pause:

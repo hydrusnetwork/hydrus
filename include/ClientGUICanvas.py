@@ -28,9 +28,22 @@ import urlparse
 import webbrowser
 import wx
 
+FLASHWIN_OK = False
+
 if HC.PLATFORM_WINDOWS:
     
-    import wx.lib.flashwin
+    try:
+        
+        import wx.lib.flashwin
+        
+        FLASHWIN_OK = True
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'Flashwin did not load OK:' )
+        
+        HydrusData.PrintException( e )
+        
     
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_CURSOR_HIDE = wx.NewId()
@@ -4905,6 +4918,11 @@ class MediaContainer( wx.Window ):
         
         ( media_initial_size, media_initial_position ) = ( self.GetClientSize(), ( 0, 0 ) )
         
+        if self._media.GetMime() == HC.APPLICATION_FLASH and not FLASHWIN_OK:
+            
+            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+        
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
             raise Exception( 'This media should not be shown in the media viewer!' )
@@ -5383,7 +5401,7 @@ class EmbedButton( wx.Window ):
             hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
+            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
             
             self._thumbnail_bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             
@@ -5414,7 +5432,7 @@ class OpenExternallyPanel( wx.Panel ):
             hash = self._media.GetHash()
             mime = self._media.GetMime()
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash )
+            thumbnail_path = HG.client_controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
             
             bmp = ClientRendering.GenerateHydrusBitmap( thumbnail_path, mime ).GetWxBitmap()
             

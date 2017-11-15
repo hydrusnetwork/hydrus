@@ -55,7 +55,7 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path, mime ):
     
-    if HG.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
+    if mime == HC.IMAGE_GIF or HG.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
         
         # a regular cv.imread call, can crash the whole process on random thumbs, hooray, so have this as backup
         # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
@@ -241,9 +241,17 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     return phashes
     
-def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
-    mime = HydrusFileHandling.GetMime( path )
+    if mime is None:
+        
+        mime = HydrusFileHandling.GetMime( path )
+        
+    
+    if mime == HC.IMAGE_GIF:
+        
+        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions, mime )
+        
     
     numpy_image = GenerateNumpyImage( path, mime )
     
@@ -285,7 +293,7 @@ def GenerateThumbnailFromStaticImageCV( path, dimensions = HC.UNSCALED_THUMBNAIL
         
     else:
         
-        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions )
+        return HydrusFileHandling.GenerateThumbnailFromStaticImagePIL( path, dimensions, mime )
         
     
 import HydrusFileHandling

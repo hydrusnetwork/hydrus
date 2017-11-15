@@ -258,7 +258,7 @@ def DAEMONSynchroniseAccounts( controller ):
     
     for service in services:
         
-        if HG.view_shutdown:
+        if HydrusThreading.IsThreadShuttingDown():
             
             return
             
@@ -272,7 +272,7 @@ def DAEMONSynchroniseRepositories( controller ):
     
     if not options[ 'pause_repo_sync' ]:
         
-        if HG.view_shutdown:
+        if HydrusThreading.IsThreadShuttingDown():
             
             return
             

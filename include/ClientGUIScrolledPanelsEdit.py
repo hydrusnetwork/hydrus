@@ -1708,185 +1708,6 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
-    
-    def __init__( self, parent, string_match ):
-        
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        self._match_type = ClientGUICommon.BetterChoice( self )
-        
-        self._match_type.Append( ClientParsing.STRING_MATCH_ANY, 'any characters' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_FIXED, 'fixed characters' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_FLEXIBLE, 'character set' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_REGEX, 'regex' )
-        
-        self._match_value_text_input = wx.TextCtrl( self )
-        
-        self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
-        
-        self._match_value_flexible_input.Append( ClientParsing.ALPHA, 'alphabetic characters (a-zA-Z)' )
-        self._match_value_flexible_input.Append( ClientParsing.ALPHANUMERIC, 'alphanumeric characters (a-zA-Z0-9)' )
-        self._match_value_flexible_input.Append( ClientParsing.NUMERIC, 'numeric characters (0-9)' )
-        
-        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
-        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
-        
-        self._example_string = wx.TextCtrl( self )
-        
-        self._example_string_matches = ClientGUICommon.BetterStaticText( self )
-        
-        #
-        
-        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
-        
-        self._match_type.SetClientData( match_type )
-        
-        if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
-            
-            self._match_value_flexible_input.SetClientData( match_value )
-            
-        else:
-            
-            self._match_value_flexible_input.SetClientData( ClientParsing.ALPHA )
-            
-            self._match_value_text_input.SetValue( match_value )
-            
-        
-        self._UpdateControls()
-        
-        #
-        
-        rows = []
-        
-        rows.append( ( 'match type: ', self._match_type ) )
-        rows.append( ( 'match text: ', self._match_value_text_input ) )
-        rows.append( ( 'match value (character set): ', self._match_value_flexible_input ) )
-        rows.append( ( 'minumum allowed number of characters: ', self._min_chars ) )
-        rows.append( ( 'maximum allowed number of characters: ', self._max_chars ) )
-        rows.append( ( 'example string: ', self._example_string ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        self._match_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._match_value_text_input.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._match_value_flexible_input.Bind( wx.EVT_CHOICE, self.EventUpdate )
-        self._min_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
-        self._max_chars.Bind( wx.EVT_SPINCTRL, self.EventUpdate )
-        self._example_string.Bind( wx.EVT_TEXT, self.EventUpdate )
-        
-    
-    def _GetValue( self ):
-        
-        match_type = self._match_type.GetChoice()
-        
-        if match_type == ClientParsing.STRING_MATCH_ANY:
-            
-            match_value = ''
-            
-        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
-            
-            match_value = self._match_value_flexible_input.GetChoice()
-            
-        else:
-            
-            match_value = self._match_value_text_input.GetValue()
-            
-        
-        min_chars = self._min_chars.GetValue()
-        max_chars = self._max_chars.GetValue()
-        
-        example_string = self._example_string.GetValue()
-        
-        string_match = ClientParsing.StringMatch( match_type = match_type, match_value = match_value, min_chars = min_chars, max_chars = max_chars, example_string = example_string )
-        
-        return string_match
-        
-    
-    def _UpdateControls( self ):
-        
-        match_type = self._match_type.GetChoice()
-        
-        if match_type == ClientParsing.STRING_MATCH_ANY:
-            
-            self._match_value_text_input.Disable()
-            self._match_value_flexible_input.Disable()
-            
-        elif match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
-            
-            self._match_value_text_input.Disable()
-            self._match_value_flexible_input.Enable()
-            
-        else:
-            
-            self._match_value_text_input.Enable()
-            self._match_value_flexible_input.Disable()
-            
-        
-        if match_type == ClientParsing.STRING_MATCH_FIXED:
-            
-            self._min_chars.SetValue( None )
-            self._max_chars.SetValue( None )
-            
-            self._min_chars.Disable()
-            self._max_chars.Disable()
-            
-            self._example_string.SetValue( self._match_value_text_input.GetValue() )
-            
-            self._example_string_matches.SetLabelText( '' )
-            
-        else:
-            
-            self._min_chars.Enable()
-            self._max_chars.Enable()
-            
-            string_match = self._GetValue()
-            
-            ( result, reason ) = string_match.Test( self._example_string.GetValue() )
-            
-            if result:
-                
-                self._example_string_matches.SetLabelText( 'Example matches ok!' )
-                self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
-                
-            else:
-                
-                self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
-                self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
-                
-            
-        
-    
-    def EventUpdate( self, event ):
-        
-        self._UpdateControls()
-        
-    
-    def GetValue( self ):
-        
-        string_match = self._GetValue()
-        
-        ( result, reason ) = string_match.Test( self._example_string.GetValue() )
-        
-        if not result:
-            
-            wx.MessageBox( 'Please enter an example text that matches the given rules!' )
-            
-            raise HydrusExceptions.VetoException()
-            
-        
-        return string_match
-        
-    
 class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, subscription ):
@@ -1914,8 +1735,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
         site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
         site_types.append( HC.SITE_TYPE_NEWGROUNDS )
-        site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
-        site_types.append( HC.SITE_TYPE_PIXIV_TAG )
+        # pixiv is broke atm
+        #site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+        #site_types.append( HC.SITE_TYPE_PIXIV_TAG )
         site_types.append( HC.SITE_TYPE_TUMBLR )
         
         for site_type in site_types:
@@ -2013,6 +1835,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         # set gallery_stream_identifiers selection here--some kind of list of checkboxes or whatever
         
         self._queries.AddDatas( queries )
+        
+        self._queries.Sort()
         
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
@@ -2392,7 +2216,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status = 'will be able to work again ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until ) + ' because: ' + self._no_work_until_reason
+            status = 'delaying for ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.SetLabelText( status )
@@ -3130,7 +2954,9 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
             
-            panel = EditStringMatchPanel( dlg, string_match )
+            import ClientGUIParsing
+            
+            panel = ClientGUIParsing.EditStringMatchPanel( dlg, string_match )
             
             dlg.SetPanel( panel )
             

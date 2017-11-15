@@ -507,12 +507,12 @@ def ConvertTimestampToPrettyPending( timestamp ):
     if years == 1: y = '1 year'
     else: y = str( years ) + ' years'
     
-    if years > 0: return 'in ' + ' '.join( ( y, mo ) )
-    elif months > 0: return 'in ' + ' '.join( ( mo, d ) )
-    elif days > 0: return 'in ' + ' '.join( ( d, h ) )
-    elif hours > 0: return 'in ' + ' '.join( ( h, m ) )
-    elif minutes > 0: return 'in ' + ' '.join( ( m, s ) )
-    else: return 'in ' + s
+    if years > 0: return ' '.join( ( y, mo ) )
+    elif months > 0: return ' '.join( ( mo, d ) )
+    elif days > 0: return ' '.join( ( d, h ) )
+    elif hours > 0: return ' '.join( ( h, m ) )
+    elif minutes > 0: return ' '.join( ( m, s ) )
+    else: return s
     
 def ConvertTimestampToPrettySync( timestamp ):
     

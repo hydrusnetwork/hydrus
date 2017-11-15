@@ -2451,9 +2451,9 @@ class MediaPanelThumbnails( MediaPanel ):
                             
                         
                     
-                    if do_temp_dnd:
-                        
-                        temp_dir = HG.client_controller.temp_dir
+                    temp_dir = HG.client_controller.temp_dir
+                    
+                    if do_temp_dnd and os.path.exists( temp_dir ):
                         
                         dnd_paths = []
                         
@@ -2743,7 +2743,20 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( self._selected_media ) < len( self._sorted_media ):
                     
-                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
+                    if media_has_archive and not media_has_inbox:
+                        
+                        all_label = 'all (all in archive)'
+                        
+                    elif media_has_inbox and not media_has_archive:
+                        
+                        all_label = 'all (all in inbox)'
+                        
+                    else:
+                        
+                        all_label = 'all'
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
                     
                     if len( self._selected_media ) > 0:
                         
@@ -3188,7 +3201,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 #
                 
-                if selection_has_local and multiple_selected:
+                if selection_has_local:
                     
                     ClientGUIMenus.AppendMenuItem( self, menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._ArchiveDeleteFilter )
                     
@@ -3381,52 +3394,63 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                if len( self._sorted_media ) > 0:
+                select_menu = wx.Menu()
+                
+                if len( self._selected_media ) < len( self._sorted_media ):
                     
-                    select_menu = wx.Menu()
-                    
-                    if len( self._selected_media ) < len( self._sorted_media ):
+                    if media_has_archive and not media_has_inbox:
                         
-                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'all', 'Select everything.', self._Select, 'all' )
+                        all_label = 'all (all in archive)'
                         
-                        if len( self._selected_media ) > 0:
-                            
-                            ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
-                            
+                    elif media_has_inbox and not media_has_archive:
                         
-                    
-                    if media_has_archive and media_has_inbox:
+                        all_label = 'all (all in inbox)'
                         
-                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'inbox', 'Select everything in the inbox.', self._Select, 'inbox' )
-                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'archive', 'Select everything that is archived.', self._Select, 'archive' )
+                    else:
+                        
+                        all_label = 'all'
                         
                     
-                    if len( all_specific_file_domains ) > 1:
-                        
-                        selectable_file_domains = list( all_local_file_domains )
-                        
-                        if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                            
-                            selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
-                            
-                        
-                        selectable_file_domains.extend( all_file_repos )
-                        
-                        for service_key in selectable_file_domains:
-                            
-                            name = services_manager.GetName( service_key )
-                            
-                            ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
-                            
-                        
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
                     
                     if len( self._selected_media ) > 0:
                         
-                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'none', 'Deselect everything.', self._Select, 'none' )
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, 'invert', 'Swap what is and is not selected.', self._Select, 'invert' )
                         
                     
-                    ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+                
+                if media_has_archive and media_has_inbox:
                     
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'inbox', 'Select everything in the inbox.', self._Select, 'inbox' )
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'archive', 'Select everything that is archived.', self._Select, 'archive' )
+                    
+                
+                if len( all_specific_file_domains ) > 1:
+                    
+                    selectable_file_domains = list( all_local_file_domains )
+                    
+                    if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
+                        
+                        selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
+                        
+                    
+                    selectable_file_domains.extend( all_file_repos )
+                    
+                    for service_key in selectable_file_domains:
+                        
+                        name = services_manager.GetName( service_key )
+                        
+                        ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
+                        
+                    
+                
+                if len( self._selected_media ) > 0:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, 'none', 'Deselect everything.', self._Select, 'none' )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+                
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 

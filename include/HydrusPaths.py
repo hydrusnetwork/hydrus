@@ -3,6 +3,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
+import HydrusThreading
 import os
 import psutil
 import send2trash
@@ -221,7 +222,7 @@ def FilterFreePaths( paths ):
     
     for path in paths:
         
-        if HG.view_shutdown:
+        if HydrusThreading.IsThreadShuttingDown():
             
             raise HydrusExceptions.ShutdownException()
             

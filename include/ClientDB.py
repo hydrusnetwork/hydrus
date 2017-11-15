@@ -3163,10 +3163,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteYAMLDump( self, dump_type, dump_name = None ):
         
-        if dump_name is None: self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
-        else:
+        if dump_name is None:
             
-            if dump_type == YAML_DUMP_ID_SUBSCRIPTION and dump_name in self._subscriptions_cache: del self._subscriptions_cache[ dump_name ]
+            self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
+            
+        else:
             
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
@@ -6318,8 +6319,6 @@ class DB( HydrusDB.HydrusDB ):
             
         else:
             
-            if dump_type == YAML_DUMP_ID_SUBSCRIPTION and dump_name in self._subscriptions_cache: return self._subscriptions_cache[ dump_name ]
-            
             if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
             
             result = self._c.execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
@@ -6331,9 +6330,10 @@ class DB( HydrusDB.HydrusDB ):
                     raise HydrusExceptions.DataMissing( dump_name + ' was not found!' )
                     
                 
-            else: ( result, ) = result
-            
-            if dump_type == YAML_DUMP_ID_SUBSCRIPTION: self._subscriptions_cache[ dump_name ] = result
+            else:
+                
+                ( result, ) = result
+                
             
         
         return result
@@ -6627,7 +6627,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if stop_time is not None:
                             
-                            HG.client_controller.pub( 'splash_set_status_subtext', 'booting ' + HydrusData.ConvertTimestampToPrettyPending( stop_time ) )
+                            HG.client_controller.pub( 'splash_set_status_subtext', HydrusData.ConvertTimestampToPrettyPending( stop_time ) )
                             
                             if HydrusData.TimeHasPassed( stop_time ):
                                 
@@ -8369,8 +8369,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _SetYAMLDump( self, dump_type, dump_name, data ):
         
-        if dump_type == YAML_DUMP_ID_SUBSCRIPTION: self._subscriptions_cache[ dump_name ] = data
-        
         if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.encode( 'hex' )
         
         self._c.execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
@@ -9965,6 +9963,37 @@ class DB( HydrusDB.HydrusDB ):
             message = 'Your default hydrus service bandwidth rules have been reset to a new default that works better now the hydrus network runs on the new networking engine.'
             message += os.linesep * 2
             message += 'If you don\'t care about bandwidth rules, you do not have to do anything!'
+            
+            self.pub_initial_message( message )
+            
+        
+        if version == 281:
+            
+            try:
+                
+                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                for subscription in subscriptions:
+                    
+                    g_i = subscription._gallery_identifier
+                    
+                    if g_i.GetSiteType() in ( HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
+                        
+                        subscription._paused = True
+                        
+                        self._SetJSONDump( subscription )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'While attempting to pause all pixiv subs, I had this problem:' )
+                HydrusData.PrintException( e )
+                
+            
+            message = 'The pixiv downloader is currently broken due to a dynamic result loading rewrite on their end. Pixiv has been hidden from the available downloader page choices, and any existing pixiv subscriptions have been paused.'
+            message += os.linesep * 2
+            message += 'Hopefully, the new downloader engine will be clever enough to fix this.'
             
             self.pub_initial_message( message )
             

@@ -257,20 +257,29 @@ class ClientFilesManager( object ):
         return path
         
     
-    def _GenerateFullSizeThumbnail( self, hash ):
+    def _GenerateFullSizeThumbnail( self, hash, mime = None ):
+        
+        if mime is None:
+            
+            try:
+                
+                file_path = self._LookForFilePath( hash )
+                
+            except HydrusExceptions.FileMissingException:
+                
+                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
+                
+            
+            mime = HydrusFileHandling.GetMime( file_path )
+            
+        else:
+            
+            file_path = self._GenerateExpectedFilePath( hash, mime )
+            
         
         try:
             
-            file_path = self._LookForFilePath( hash )
-            
-        except HydrusExceptions.FileMissingException:
-            
-            raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated because the original file was also missing. This event could indicate hard drive corruption or an unplugged external drive. Please check everything is ok.' )
-            
-        
-        try:
-            
-            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path, mime )
             
         except Exception as e:
             
@@ -296,7 +305,7 @@ class ClientFilesManager( object ):
             
         
     
-    def _GenerateResizedThumbnail( self, hash ):
+    def _GenerateResizedThumbnail( self, hash, mime ):
         
         full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
@@ -304,9 +313,18 @@ class ClientFilesManager( object ):
         
         thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
         
+        if mime in ( HC.IMAGE_GIF, HC.IMAGE_PNG ):
+            
+            fullsize_thumbnail_mime = HC.IMAGE_PNG
+            
+        else:
+            
+            fullsize_thumbnail_mime = HC.IMAGE_JPEG
+            
+        
         try:
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
             
         except:
             
@@ -319,9 +337,9 @@ class ClientFilesManager( object ):
                 raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was found, but it would not render. An attempt to delete it was made, but that failed as well. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
                 
             
-            self._GenerateFullSizeThumbnail( hash )
+            self._GenerateFullSizeThumbnail( hash, mime )
             
-            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions )
+            thumbnail_resized = HydrusFileHandling.GenerateThumbnailFromStaticImage( full_size_path, thumbnail_dimensions, fullsize_thumbnail_mime )
             
         
         resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
@@ -1036,7 +1054,7 @@ class ClientFilesManager( object ):
         return path
         
     
-    def GetFullSizeThumbnailPath( self, hash ):
+    def GetFullSizeThumbnailPath( self, hash, mime = None ):
         
         with self._lock:
             
@@ -1044,7 +1062,7 @@ class ClientFilesManager( object ):
             
             if not os.path.exists( path ):
                 
-                self._GenerateFullSizeThumbnail( hash )
+                self._GenerateFullSizeThumbnail( hash, mime )
                 
                 if not self._bad_error_occured:
                     
@@ -1058,7 +1076,7 @@ class ClientFilesManager( object ):
             
         
     
-    def GetResizedThumbnailPath( self, hash ):
+    def GetResizedThumbnailPath( self, hash, mime ):
         
         with self._lock:
             
@@ -1066,7 +1084,7 @@ class ClientFilesManager( object ):
             
             if not os.path.exists( path ):
                 
-                self._GenerateResizedThumbnail( hash )
+                self._GenerateResizedThumbnail( hash, mime )
                 
             
             return path
@@ -1154,11 +1172,11 @@ class ClientFilesManager( object ):
             
         
     
-    def RegenerateResizedThumbnail( self, hash ):
+    def RegenerateResizedThumbnail( self, hash, mime ):
         
         with self._lock:
             
-            self._GenerateResizedThumbnail( hash )
+            self._GenerateResizedThumbnail( hash, mime )
             
         
     
@@ -1227,7 +1245,7 @@ class ClientFilesManager( object ):
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS:
                         
-                        self._GenerateFullSizeThumbnail( hash )
+                        self._GenerateFullSizeThumbnail( hash, mime )
                         
                         thumbnail_resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
                         
@@ -1743,6 +1761,7 @@ class ThumbnailCache( object ):
             
         
         hash = display_media.GetHash()
+        mime = display_media.GetMime()
         
         locations_manager = display_media.GetLocationsManager()
         
@@ -1750,11 +1769,11 @@ class ThumbnailCache( object ):
             
             if full_size:
                 
-                path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash )
+                path = self._controller.client_files_manager.GetFullSizeThumbnailPath( hash, mime )
                 
             else:
                 
-                path = self._controller.client_files_manager.GetResizedThumbnailPath( hash )
+                path = self._controller.client_files_manager.GetResizedThumbnailPath( hash, mime )
                 
             
         except HydrusExceptions.FileMissingException as e:
@@ -1779,7 +1798,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                self._controller.client_files_manager.RegenerateResizedThumbnail( hash )
+                self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
                 
                 try:
                     
@@ -1814,7 +1833,7 @@ class ThumbnailCache( object ):
         
         if too_large or ( too_small and not small_original_image ):
             
-            self._controller.client_files_manager.RegenerateResizedThumbnail( hash )
+            self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
             
             hydrus_bitmap = ClientRendering.GenerateHydrusBitmap( path, mime )
             
@@ -1866,7 +1885,7 @@ class ThumbnailCache( object ):
                     
                     options = self._controller.GetOptions()
                     
-                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, options[ 'thumbnail_dimensions' ] )
+                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, options[ 'thumbnail_dimensions' ], HC.IMAGE_PNG )
                     
                     with open( temp_path, 'wb' ) as f:
                         

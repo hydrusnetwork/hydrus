@@ -5184,7 +5184,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            pretty_delay = 'working again ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until ) + ' - ' + no_work_until_reason
+            pretty_delay = 'delaying for ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until ) + ' - ' + no_work_until_reason
             delay = no_work_until - HydrusData.GetNow()
             
         
@@ -5487,7 +5487,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         message += os.linesep * 2
         message += 'This is a big operation, so if it does not do what you expect, hit cancel afterwards!'
         message += os.linesep * 2
-        message += 'Please note that if your to-be-merged subscriptions will have any different subscription-specific settings (like name and paused status and file limits and tag options) merged as well, so double-check your merged subs\' settings after the merge.'
+        message += 'Please note that all other subscription settings settings (like name and paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings after the merge.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -5558,9 +5558,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for subscription in subscriptions:
             
-            seed_cache = subscription.GetSeedCache()
-            
-            seed_cache.RetryFailures()
+            subscription.RetryFailures()
             
         
         self._subscriptions.UpdateDatas( subscriptions )

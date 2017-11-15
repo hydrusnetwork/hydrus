@@ -269,12 +269,15 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             entries.append( ( 'menu', 'hentai foundry' ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
+            # pixiv is broke atm
+            '''
             result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
                 
                 entries.append( ( 'menu', 'pixiv' ) )
                 
+            '''
             
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_TUMBLR ) )
             
@@ -1738,7 +1741,8 @@ class PagesNotebook( wx.Notebook ):
         
         if not HG.no_page_limit_mode:
             
-            MAX_TOTAL_PAGES = 200
+            WARNING_TOTAL_PAGES = 200
+            MAX_TOTAL_PAGES = 165
             
             ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
             
@@ -1754,7 +1758,7 @@ class PagesNotebook( wx.Notebook ):
                 return
                 
             
-            if total_active_page_count == MAX_TOTAL_PAGES - 5:
+            if total_active_page_count == WARNING_TOTAL_PAGES - 5:
                 
                 HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before system stability is affected! Please close some now!' )
                 

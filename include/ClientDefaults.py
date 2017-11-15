@@ -284,9 +284,16 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
             
         else:
             
-            booru = HG.client_controller.Read( 'remote_booru', name )
-            
-            namespaces = booru.GetNamespaces()
+            try:
+                
+                booru = HG.client_controller.Read( 'remote_booru', name )
+                
+                namespaces = booru.GetNamespaces()
+                
+            except:
+                
+                namespaces = []
+                
             
         
         search_value = 'search tags'

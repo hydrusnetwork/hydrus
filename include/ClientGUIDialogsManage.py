@@ -2401,7 +2401,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now ) = self._import_folder.ToTuple()
+        ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2461,19 +2461,17 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, [], tag_import_options )
         
-        self._txt_parse_st = wx.StaticText( self._tag_box, label = '' )
+        filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._tag_box )
+        
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, [ ( 'filename tagging options services', -1 ) ], self._ConvertFilenameTaggingOptionsToListctrlTuple, delete_key_callback = self._DeleteFilenameTaggingOptions, activation_callback = self._EditFilenameTaggingOptions )
+        
+        filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
+        
+        filename_tagging_options_panel.AddButton( 'add', self._AddFilenameTaggingOptions )
+        filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_selection = True )
+        filename_tagging_options_panel.AddButton( 'delete', self._DeleteFilenameTaggingOptions, enabled_only_on_selection = True )
         
         services_manager = HG.client_controller.services_manager
-        
-        self._txt_parse_tag_service_keys = services_manager.FilterValidServiceKeys( txt_parse_tag_service_keys )
-        
-        self._RefreshTxtParseText()
-        
-        self._txt_parse_button = wx.Button( self._tag_box, label = 'edit .txt parsing' )
-        self._txt_parse_button.Bind( wx.EVT_BUTTON, self.EventEditTxtParsing )
-        
-        txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._tag_box, CC.GlobalBMPs.help, self._ShowTXTHelp )
-        txt_files_help_button.SetToolTipString( 'Show help regarding importing tags from .txt files.' )
         
         #
         
@@ -2518,6 +2516,12 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
             self._location_failed.SetPath( action_locations[ CC.STATUS_FAILED ] )
             
+        
+        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items() if HG.client_controller.services_manager.ServiceExists( service_key ) }
+        
+        self._filename_tagging_options.AddDatas( good_tag_service_keys_to_filename_tagging_options.items() )
+        
+        self._filename_tagging_options.Sort()
         
         #
         
@@ -2565,18 +2569,12 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._file_box.AddF( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._file_box.AddF( self._file_import_options, CC.FLAGS_LONE_BUTTON )
+        self._file_box.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        txt_hbox.AddF( self._txt_parse_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        txt_hbox.AddF( txt_files_help_button, CC.FLAGS_VCENTER )
-        
-        self._tag_box.AddF( self._tag_import_options, CC.FLAGS_LONE_BUTTON )
-        self._tag_box.AddF( self._txt_parse_st, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._tag_box.AddF( txt_hbox, CC.FLAGS_SIZER_VCENTER )
+        self._tag_box.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._tag_box.AddF( filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -2614,6 +2612,43 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._CheckLocations()
         
         wx.CallAfter( self._ok.SetFocus )
+        
+    
+    def _AddFilenameTaggingOptions( self ):
+        
+        service_key = ClientGUIDialogs.SelectServiceKey( HC.TAG_SERVICES )
+        
+        if service_key is None:
+            
+            return
+            
+        
+        existing_service_keys = { service_key for ( service_key, filename_tagging_options ) in self._filename_tagging_options.GetData() }
+        
+        if service_key in existing_service_keys:
+            
+            wx.MessageBox( 'You already have an entry for that service key! Please try editing it instead!' )
+            
+            return
+            
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+            
+            filename_tagging_options = ClientImporting.FilenameTaggingOptions()
+            
+            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                filename_tagging_options = panel.GetValue()
+                
+                self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
+                
+                self._filename_tagging_options.Sort()
+                
+            
         
     
     def _CheckLocations( self ):
@@ -2655,67 +2690,62 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
     
-    def _RefreshTxtParseText( self ):
+    def _ConvertFilenameTaggingOptionsToListctrlTuple( self, data ):
         
-        services_manager = HG.client_controller.services_manager
+        ( service_key, filename_tagging_options ) = data
         
-        services = [ services_manager.GetService( service_key ) for service_key in self._txt_parse_tag_service_keys ]
+        name = HG.client_controller.services_manager.GetName( service_key )
         
-        service_names = [ service.GetName() for service in services ]
+        display_tuple = ( name, )
+        sort_tuple = ( name, )
         
-        if len( service_names ) > 0:
-            
-            service_names.sort()
-            
-            text = 'Loading tags from neighbouring .txt files for ' + ', '.join( service_names ) + '.'
-            
-        else:
-            
-            text = 'Not loading tags from neighbouring .txt files for any tag services.'
-            
-        
-        self._txt_parse_st.SetLabelText( text )
+        return ( display_tuple, sort_tuple )
         
     
-    def _ShowTXTHelp( self ):
+    def _DeleteFilenameTaggingOptions( self ):
         
-        message = 'If you would like to add custom tags with your files, add a .txt file beside the file like so:'
-        message += os.linesep * 2
-        message += 'my_file.jpg'
-        message += os.linesep
-        message += 'my_file.jpg.txt'
-        message += os.linesep * 2
-        message += 'And include your tags inside the .txt file in a newline-separated list (if you know how to script, generating these files automatically from another source of tags can save a lot of time!).'
-        message += os.linesep * 2
-        message += 'If you are not absolutely comfortable with this, practise it through the manual import process.'
+        with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._filename_tagging_options.DeleteSelected()
+                
+            
         
-        wx.MessageBox( message )
+    
+    def _EditFilenameTaggingOptions( self ):
+        
+        selected_data = self._filename_tagging_options.GetData( only_selected = True )
+        
+        for data in selected_data:
+            
+            ( service_key, filename_tagging_options ) = data
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+                
+                panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._filename_tagging_options.DeleteDatas( ( data, ) )
+                    
+                    filename_tagging_options = panel.GetValue()
+                    
+                    self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
         
     
     def EventCheckLocations( self, event ):
         
         self._CheckLocations()
-        
-    
-    def EventEditTxtParsing( self, event ):
-        
-        services_manager = HG.client_controller.services_manager
-        
-        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
-        
-        list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._txt_parse_tag_service_keys ) for service in tag_services ]
-        
-        list_of_tuples.sort()
-        
-        with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._txt_parse_tag_service_keys = dlg.GetChecked()
-                
-                self._RefreshTxtParseText()
-                
-            
         
     
     def EventOK( self, event ):
@@ -2809,7 +2839,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         check_now = self._check_now.GetValue()
         
-        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, self._txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now )
+        tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
+        
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now )
         
         return self._import_folder
         

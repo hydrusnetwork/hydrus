@@ -3169,14 +3169,16 @@ class DB( HydrusDB.HydrusDB ):
                             file_path = os.path.join( dir, filename )
                             thumbnail_path = file_path + '.thumbnail'
                             
-                            if HydrusFileHandling.GetMime( file_path ) in ( HC.IMAGE_PNG, HC.IMAGE_GIF ):
+                            mime = HydrusFileHandling.GetMime( file_path )
+                            
+                            if mime in ( HC.IMAGE_PNG, HC.IMAGE_GIF ):
                                 
                                 if os.path.exists( thumbnail_path ):
                                     
                                     os.remove( thumbnail_path )
                                     
                                 
-                                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path )
+                                thumbnail = HydrusFileHandling.GenerateThumbnail( file_path, mime )
                                 
                                 with open( thumbnail_path, 'wb' ) as f:
                                     

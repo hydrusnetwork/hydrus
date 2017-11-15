@@ -15,6 +15,7 @@ class DBAccessException( Exception ): pass
 class FileMissingException( Exception ): pass
 class MimeException( Exception ): pass
 class NameException( Exception ): pass
+class ParseException( Exception ): pass
 class ShutdownException( Exception ): pass
 class SizeException( Exception ): pass
 class VetoException( Exception ): pass

@@ -245,7 +245,7 @@ def ParseFileArguments( path ):
         
         try:
             
-            thumbnail = HydrusFileHandling.GenerateThumbnail( path )
+            thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime )
             
         except Exception as e:
             
@@ -452,11 +452,6 @@ class HydrusResource( Resource ):
             size = os.path.getsize( path )
             
             mime = response_context.GetMime()
-            
-            if mime == HC.APPLICATION_UNKNOWN:
-                
-                mime = HydrusFileHandling.GetMime( path )
-                
             
             content_type = HC.mime_string_lookup[ mime ]
             

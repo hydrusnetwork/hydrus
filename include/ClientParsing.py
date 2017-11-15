@@ -157,59 +157,39 @@ def RenderTagRule( ( name, attrs, index ) ):
 class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, tag_rules = None, content_rule = None, culling_and_adding = None ):
+    def __init__( self, tag_rules = None, content_rule = None, string_converter = None ):
         
         if tag_rules is None:
             
             tag_rules = [ ( 'a', {}, None ) ]
             
         
-        if culling_and_adding is None:
+        if string_converter is None:
             
-            culling_and_adding = ( 0, 0, '', '' )
+            string_converter = StringConverter( example_string = 'parsed information' )
             
         
         self._tag_rules = tag_rules
         
         self._content_rule = content_rule
         
-        self._culling_and_adding = culling_and_adding
-        
-    
-    def _CullAndAdd( self, text ):
-        
-        ( cull_front, cull_back, prepend, append ) = self._culling_and_adding
-        
-        if cull_front != 0:
-            
-            text = text[ cull_front : ]
-            
-        
-        if cull_back != 0:
-            
-            text = text[ : - cull_back ]
-            
-        
-        if text == '':
-            
-            return None
-            
-        
-        text = prepend + text + append
-        
-        return text
+        self._string_converter = string_converter
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._tag_rules, self._content_rule, self._culling_and_adding )
+        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        
+        return ( self._tag_rules, self._content_rule, serialisable_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._tag_rules, self._content_rule, self._culling_and_adding ) = serialisable_info
+        ( self._tag_rules, self._content_rule, serialisable_string_converter ) = serialisable_info
+        
+        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -223,6 +203,51 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( tag_rules, content_rule, culling_and_adding )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( tag_rules, content_rule, culling_and_adding ) = old_serialisable_info
+            
+            ( cull_front, cull_back, prepend, append ) = culling_and_adding
+            
+            transformations = []
+            
+            if cull_front > 0:
+                
+                transformations.append( ( STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, cull_front ) )
+                
+            elif cull_front < 0:
+                
+                transformations.append( ( STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, cull_front ) )
+                
+            
+            if cull_back > 0:
+                
+                transformations.append( ( STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, cull_back ) )
+                
+            elif cull_back < 0:
+                
+                transformations.append( ( STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, cull_back ) )
+                
+            
+            if prepend != '':
+                
+                transformations.append( ( STRING_TRANSFORMATION_PREPEND_TEXT, prepend ) )
+                
+            
+            if append != '':
+                
+                transformations.append( ( STRING_TRANSFORMATION_APPEND_TEXT, append ) )
+                
+            
+            string_converter = StringConverter( transformations, 'parsed information' )
+            
+            serialisable_string_converter = string_converter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( tag_rules, content_rule, serialisable_string_converter )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -267,7 +292,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            return self._CullAndAdd( result )
+            return self._string_converter.Convert( result )
             
         
     
@@ -353,49 +378,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             pretty_strings.append( 'get the ' + self._content_rule + ' attribute of those tags' )
             
         
-        cull_munge_strings = []
-        
-        ( cull_front, cull_back, prepend, append ) = self._culling_and_adding
-        
-        if cull_front > 0:
-            
-            cull_munge_strings.append( 'the first ' + HydrusData.ConvertIntToPrettyString( cull_front ) + ' characters' )
-            
-        elif cull_front < 0:
-            
-            cull_munge_strings.append( 'all but the last ' + HydrusData.ConvertIntToPrettyString( abs( cull_front ) ) + ' characters' )
-            
-        
-        if cull_back > 0:
-            
-            cull_munge_strings.append( 'the last ' + HydrusData.ConvertIntToPrettyString( cull_back ) + ' characters' )
-            
-        elif cull_back < 0:
-            
-            cull_munge_strings.append( 'all but the first ' + HydrusData.ConvertIntToPrettyString( abs( cull_back ) ) + ' characters' )
-            
-        
-        if len( cull_munge_strings ) > 0:
-            
-            pretty_strings.append( 'remove ' + ' and '.join( cull_munge_strings ) )
-            
-        
-        add_munge_strings = []
-        
-        if prepend != '':
-            
-            add_munge_strings.append( 'prepend "' + prepend + '"' )
-            
-        
-        if append != '':
-            
-            add_munge_strings.append( 'append "' + append + '"' )
-            
-        
-        if len( add_munge_strings ) > 0:
-            
-            pretty_strings.append( ' and '.join( add_munge_strings ) )
-            
+        pretty_strings.extend( self._string_converter.GetTransformationStrings() )
         
         separator = os.linesep + 'and then '
         
@@ -406,7 +389,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._tag_rules, self._content_rule, self._culling_and_adding )
+        return ( self._tag_rules, self._content_rule, self._string_converter )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
@@ -688,16 +671,16 @@ file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_USER_INPUT ] = 'custom user 
 class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, name, url = None, query_type = None, file_identifier_type = None, file_identifier_encoding = None, file_identifier_arg_name = None, static_args = None, children = None ):
+    def __init__( self, name, url = None, query_type = None, file_identifier_type = None, file_identifier_string_converter = None, file_identifier_arg_name = None, static_args = None, children = None ):
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
         self._url = url
         self._query_type = query_type
         self._file_identifier_type = file_identifier_type
-        self._file_identifier_encoding = file_identifier_encoding
+        self._file_identifier_string_converter = file_identifier_string_converter
         self._file_identifier_arg_name = file_identifier_arg_name
         self._static_args = static_args
         self._children = children
@@ -706,17 +689,49 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     def _GetSerialisableInfo( self ):
         
         serialisable_children = [ child.GetSerialisableTuple() for child in self._children ]
+        serialisable_file_identifier_string_converter = self._file_identifier_string_converter.GetSerialisableTuple()
         
-        return ( self._url, self._query_type, self._file_identifier_type, self._file_identifier_encoding, self._file_identifier_arg_name, self._static_args, serialisable_children )
+        return ( self._url, self._query_type, self._file_identifier_type, serialisable_file_identifier_string_converter, self._file_identifier_arg_name, self._static_args, serialisable_children )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._url, self._query_type, self._file_identifier_type, self._file_identifier_encoding, self._file_identifier_arg_name, self._static_args, serialisable_children ) = serialisable_info
+        ( self._url, self._query_type, self._file_identifier_type, serialisable_file_identifier_string_converter, self._file_identifier_arg_name, self._static_args, serialisable_children ) = serialisable_info
         
         self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
+        self._file_identifier_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_identifier_string_converter )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( url, query_type, file_identifier_type, file_identifier_encoding, file_identifier_arg_name, static_args, serialisable_children ) = old_serialisable_info
+            
+            transformations = []
+            
+            if file_identifier_encoding == HC.ENCODING_RAW:
+                
+                pass
+                
+            elif file_identifier_encoding == HC.ENCODING_HEX:
+                
+                transformations.append( ( STRING_TRANSFORMATION_ENCODE, 'hex' ) )
+                
+            elif file_identifier_encoding == HC.ENCODING_BASE64:
+                
+                transformations.append( ( STRING_TRANSFORMATION_ENCODE, 'base64' ) )
+                
+            
+            file_identifier_string_converter = StringConverter( transformations, 'some hash bytes' )
+            
+            serialisable_file_identifier_string_converter = file_identifier_string_converter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( url, query_type, file_identifier_type, serialisable_file_identifier_string_converter, file_identifier_arg_name, static_args, serialisable_children )
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def ConvertMediaToFileIdentifier( self, media ):
         
         if self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT:
@@ -783,7 +798,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._file_identifier_type != FILE_IDENTIFIER_TYPE_FILE:
             
-            request_args[ self._file_identifier_arg_name ] = HydrusData.EncodeBytes( self._file_identifier_encoding, file_identifier )
+            request_args[ self._file_identifier_arg_name ] = self._file_identifier_string_converter.Convert( file_identifier )
             
         
         if self._query_type == HC.GET:
@@ -932,93 +947,191 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._url, self._query_type, self._file_identifier_type, self._file_identifier_encoding,  self._file_identifier_arg_name, self._static_args, self._children )
+        return ( self._name, self._url, self._query_type, self._file_identifier_type, self._file_identifier_string_converter,  self._file_identifier_arg_name, self._static_args, self._children )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ] = ParseRootFileLookup
 
-STRING_TRANSFORMATION_CUT_TEXT_FROM_BEGINNING = 0
-STRING_TRANSFORMATION_CUT_TEXT_FROM_END = 1
+STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING = 0
+STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END = 1
 STRING_TRANSFORMATION_PREPEND_TEXT = 2
 STRING_TRANSFORMATION_APPEND_TEXT = 3
 STRING_TRANSFORMATION_ENCODE = 4
 STRING_TRANSFORMATION_DECODE = 5
-STRING_TRANSFORMATION_SELECT_TEXT_FROM_BEGINNING = 6
-STRING_TRANSFORMATION_SELECT_TEXT_FROM_END = 7
+STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING = 6
+STRING_TRANSFORMATION_CLIP_TEXT_FROM_END = 7
 STRING_TRANSFORMATION_REVERSE = 8
 
-# make this serialisable
-class StringConverter( object ):
-    
-    def __init__( self ):
-        
-        # write the gui to edit this and update the 'culling_and_adding' stuff above to be one of these
-        
-        self._transformations = [] # type | data
-        
-        self._example_input = None
-        
-        pass
-        
+transformation_type_str_lookup = {}
 
-    def Convert( self, s ):
+transformation_type_str_lookup[ STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING ] = 'remove text from beginning of string'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END ] = 'remove text from end of string'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_PREPEND_TEXT ] = 'prepend text'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_APPEND_TEXT ] = 'append text'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_ENCODE ] = 'encode'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_DECODE ] = 'decode'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING ] = 'take the start of the string'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
+
+class StringConverter( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, transformations = None, example_string = None ):
         
-        for ( transformation_type, data ) in self._transformations:
+        if transformations is None:
             
-            if transformation_type == STRING_TRANSFORMATION_CUT_TEXT_FROM_BEGINNING:
-                
-                num_chars = data
-                
-                s = s[ num_chars : ]
-                
-            elif transformation_type == STRING_TRANSFORMATION_CUT_TEXT_FROM_END:
-                
-                num_chars = data
-                
-                s = s[ : - num_chars ]
-                
-            elif transformation_type == STRING_TRANSFORMATION_SELECT_TEXT_FROM_BEGINNING:
-                
-                num_chars = data
-                
-                s = s[ : num_chars ]
-                
-            elif transformation_type == STRING_TRANSFORMATION_SELECT_TEXT_FROM_END:
-                
-                num_chars = data
-                
-                s = s[ - num_chars : ]
-                
-            elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
-                
-                text = data
-                
-                s = text + s
-                
-            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
-                
-                text = data
-                
-                s = s + text
-                
-            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
-                
-                encode_type = data
-                
-                s = s.encode( encode_type )
-                
-            elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
-                
-                encode_type = data
-                
-                s = s.decode( encode_type )
-                
-            elif transformation_type == STRING_TRANSFORMATION_REVERSE:
-                
-                s = s[::-1]
-                
+            transformations = []
             
         
+        if example_string is None:
+            
+            example_string = 'example string'
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.transformations = transformations
+        
+        self.example_string = example_string
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self.transformations, self.example_string )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.transformations, self.example_string ) = serialisable_info
+        
+    
+    def Convert( self, s, max_steps_allowed = None ):
+        
+        for ( i, transformation ) in enumerate( self.transformations ):
+            
+            try:
+                
+                ( transformation_type, data ) = transformation
+                
+                if transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+                    
+                    num_chars = data
+                    
+                    s = s[ num_chars : ]
+                    
+                elif transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+                    
+                    num_chars = data
+                    
+                    s = s[ : - num_chars ]
+                    
+                elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+                    
+                    num_chars = data
+                    
+                    s = s[ : num_chars ]
+                    
+                elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+                    
+                    num_chars = data
+                    
+                    s = s[ - num_chars : ]
+                    
+                elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
+                    
+                    text = data
+                    
+                    s = text + s
+                    
+                elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+                    
+                    text = data
+                    
+                    s = s + text
+                    
+                elif transformation_type == STRING_TRANSFORMATION_ENCODE:
+                    
+                    encode_type = data
+                    
+                    s = s.encode( encode_type )
+                    
+                elif transformation_type == STRING_TRANSFORMATION_DECODE:
+                    
+                    encode_type = data
+                    
+                    s = s.decode( encode_type )
+                    
+                elif transformation_type == STRING_TRANSFORMATION_REVERSE:
+                    
+                    s = s[::-1]
+                    
+                
+            except:
+                
+                raise HydrusExceptions.ParseException( 'ERROR: Could not apply "' + self.TransformationToUnicode( transformation ) + '" to string "' + repr( s ) + '".' )
+                
+            
+            if max_steps_allowed is not None and i + 1 >= max_steps_allowed:
+                
+                return s
+                
+            
+        
+        return s
+        
+    
+    def GetTransformationStrings( self ):
+        
+        return [ self.TransformationToUnicode( transformation ) for transformation in self.transformations ]
+        
+    
+    @staticmethod
+    def TransformationToUnicode( transformation ):
+        
+        ( transformation_type, data ) = transformation
+        
+        if transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
+            
+            return 'remove the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            
+        elif transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
+            
+            return 'remove the last ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            
+        elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
+            
+            return 'take the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            
+        elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
+            
+            return 'take the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            
+        elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
+            
+            return 'prepend with "' + data + '"'
+            
+        elif transformation_type == STRING_TRANSFORMATION_APPEND_TEXT:
+            
+            return 'append with "' + data + '"'
+            
+        elif transformation_type == STRING_TRANSFORMATION_ENCODE:
+            
+            return 'encode to ' + data
+            
+        elif transformation_type == STRING_TRANSFORMATION_DECODE:
+            
+            return 'decode from ' + data
+            
+        elif transformation_type == STRING_TRANSFORMATION_REVERSE:
+            
+            return transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ]
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER ] = StringConverter
 
 STRING_MATCH_FIXED = 0
 STRING_MATCH_FLEXIBLE = 1

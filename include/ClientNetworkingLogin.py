@@ -40,7 +40,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
     SERIALISABLE_VERSION = 1
     
-    SESSION_TIMEOUT = 60 * 60
+    SESSION_TIMEOUT = 60 * 45
     
     def __init__( self ):
         

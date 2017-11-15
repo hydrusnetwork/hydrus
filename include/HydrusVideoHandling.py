@@ -40,6 +40,7 @@ def CheckFFMPEGError( lines ):
         
     
 def GetFFMPEGVersion():
+    
     # open the file in a pipe, provoke an error, read output
     
     cmd = [ FFMPEG_PATH, '-version' ]
@@ -170,7 +171,16 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False ):
     
     lines = info.splitlines()
     
-    CheckFFMPEGError( lines )
+    try:
+        
+        CheckFFMPEGError( lines )
+        
+    except:
+        
+        HydrusData.Print( 'FFMPEG had problem with file: ' + path )
+        
+        raise
+        
     
     return lines
     

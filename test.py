@@ -174,6 +174,8 @@ class Controller( object ):
         
         CC.GlobalBMPs.STATICInitialise()
         
+        self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
+        
     
     def pub( self, topic, *args, **kwargs ):
         

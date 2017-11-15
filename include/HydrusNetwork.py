@@ -1711,7 +1711,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 update_due = self._GetNextUpdateDueTime( from_client )
                 
-                return 'next update due ' + HydrusData.ConvertTimestampToPrettyPending( update_due )
+                return 'next update due in ' + HydrusData.ConvertTimestampToPrettyPending( update_due )
                 
             
         
@@ -1798,7 +1798,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 next_update_time = self._next_update_due + delay
                 
-                status = 'metadata synchronised up to ' + HydrusData.ConvertTimestampToPrettyAgo( biggest_end ) + ' ago, next update due ' + HydrusData.ConvertTimestampToPrettyPending( next_update_time )
+                status = 'metadata synchronised up to ' + HydrusData.ConvertTimestampToPrettyAgo( biggest_end ) + ' ago, next update due in ' + HydrusData.ConvertTimestampToPrettyPending( next_update_time )
                 
             
             return ( num_update_hashes, status )

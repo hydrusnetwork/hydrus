@@ -71,16 +71,11 @@ def SaveThumbnailToStreamPIL( pil_image, dimensions, f ):
         pil_image.save( f, 'JPEG', quality = 92 )
         
     
-def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
-    
-    if mime is None:
-        
-        mime = GetMime( path )
-        
+def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
     
     if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF ):
         
-        thumbnail = GenerateThumbnailFromStaticImage( path, dimensions )
+        thumbnail = GenerateThumbnailFromStaticImage( path, dimensions, mime )
         
     else:
         
@@ -142,7 +137,7 @@ def GenerateThumbnail( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime
     
     return thumbnail
     
-def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS ):
+def GenerateThumbnailFromStaticImagePIL( path, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS, mime = None ):
     
     f = cStringIO.StringIO()
     

@@ -21,6 +21,7 @@ import HydrusTags
 import json
 import os
 import random
+import re
 import shutil
 import threading
 import time
@@ -388,7 +389,7 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime = mime )
+            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime )
             
         
         if mime in HC.MIMES_WE_CAN_PHASH:
@@ -532,7 +533,24 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             return network_job
             
         
-        gallery = ClientDownloading.GetGallery( self._gallery_identifier )
+        try:
+            
+            gallery = ClientDownloading.GetGallery( self._gallery_identifier )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            with self._lock:
+                
+                self._files_paused = True
+                self._gallery_paused = True
+                
+                HydrusData.ShowText( 'A downloader could not load its gallery! It has been paused and the full error has been written to the log!' )
+                
+                return
+                
+            
         
         gallery.SetNetworkJobFactory( network_job_factory )
         
@@ -715,7 +733,24 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 return network_job
                 
             
-            gallery = ClientDownloading.GetGallery( self._current_gallery_stream_identifier )
+            try:
+                
+                gallery = ClientDownloading.GetGallery( self._current_gallery_stream_identifier )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                with self._lock:
+                    
+                    self._files_paused = True
+                    self._gallery_paused = True
+                    
+                    HydrusData.ShowText( 'A downloader could not load its gallery! It has been paused and the full error has been written to the log!' )
+                    
+                    return
+                    
+                
             
             gallery.SetNetworkJobFactory( network_job_factory )
             
@@ -1077,6 +1112,255 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IMPORT ] = GalleryImport
+
+class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self._tags_for_all = set()
+        
+        self._load_from_neighbouring_txt_files = False
+        
+        self._add_filename = ( False, '' )
+        self._add_first_directory = ( False, '' )
+        self._add_second_directory = ( False, '' )
+        self._add_third_directory = ( False, '' )
+        
+        self._quick_namespaces = []
+        self._regexes = []
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( list( self._tags_for_all ), self._load_from_neighbouring_txt_files, self._add_filename, self._add_first_directory, self._add_second_directory, self._add_third_directory, self._quick_namespaces, self._regexes )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( tags_for_all_list, self._load_from_neighbouring_txt_files, self._add_filename, self._add_first_directory, self._add_second_directory, self._add_third_directory, self._quick_namespaces, self._regexes ) = serialisable_info
+        
+        self._tags_for_all = set( tags_for_all_list )
+        
+    
+    def AdvancedSetTuple( self, quick_namespaces, regexes ):
+        
+        self._quick_namespaces = quick_namespaces
+        self._regexes = regexes
+        
+    
+    def AdvancedToTuple( self ):
+        
+        return ( self._quick_namespaces, self._regexes )
+        
+    
+    def GetTags( self, service_key, path ):
+        
+        tags = set()
+        
+        tags.update( self._tags_for_all )
+        
+        if self._load_from_neighbouring_txt_files:
+            
+            txt_path = path + '.txt'
+            
+            if os.path.exists( txt_path ):
+                
+                with open( txt_path, 'rb' ) as f:
+                    
+                    txt_tags_string = f.read()
+                    
+                
+                try:
+                    
+                    txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
+                    
+                    if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
+                        
+                        HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
+                        
+                        raise Exception()
+                        
+                    
+                    tags.update( txt_tags )
+                    
+                except:
+                    
+                    HydrusData.ShowText( 'Could not parse the tags from ' + txt_path + '!' )
+                    
+                    tags.add( '___had problem parsing .txt file' )
+                    
+                
+            
+        
+        ( base, filename ) = os.path.split( path )
+        
+        ( filename, any_ext_gumpf ) = os.path.splitext( filename )
+        
+        ( filename_boolean, filename_namespace ) = self._add_filename
+        
+        if filename_boolean:
+            
+            if filename_namespace != '':
+                
+                tag = filename_namespace + ':' + filename
+                
+            else:
+                
+                tag = filename
+                
+            
+            tags.add( tag )
+            
+        
+        ( drive, dirs ) = os.path.splitdrive( base )
+        
+        while dirs.startswith( os.path.sep ):
+            
+            dirs = dirs[1:]
+            
+        
+        dirs = dirs.split( os.path.sep )
+        
+        ( dir_1_boolean, dir_1_namespace ) = self._add_first_directory
+        
+        if len( dirs ) > 0 and dir_1_boolean:
+            
+            if dir_1_namespace != '':
+                
+                tag = dir_1_namespace + ':' + dirs[0]
+                
+            else:
+                
+                tag = dirs[0]
+                
+            
+            tags.add( tag )
+            
+        
+        ( dir_2_boolean, dir_2_namespace ) = self._add_second_directory
+        
+        if len( dirs ) > 1 and dir_2_boolean:
+            
+            if dir_2_namespace != '':
+                
+                tag = dir_2_namespace + ':' + dirs[1]
+                
+            else:
+                
+                tag = dirs[1]
+                
+            
+            tags.add( tag )
+            
+        
+        ( dir_3_boolean, dir_3_namespace ) = self._add_third_directory
+        
+        if len( dirs ) > 2 and dir_3_boolean:
+            
+            if dir_3_namespace != '':
+                
+                tag = dir_3_namespace + ':' + dirs[2]
+                
+            else:
+                
+                tag = dirs[2]
+                
+            
+            tags.add( tag )
+            
+        
+        #
+        
+        for regex in self._regexes:
+            
+            try:
+                
+                result = re.findall( regex, path )
+                
+                for match in result:
+                    
+                    if isinstance( match, tuple ):
+                        
+                        for submatch in match:
+                            
+                            tags.add( submatch )
+                            
+                        
+                    else:
+                        
+                        tags.add( match )
+                        
+                    
+                
+            except:
+                
+                pass
+                
+            
+        
+        for ( namespace, regex ) in self._quick_namespaces:
+            
+            try:
+                
+                result = re.findall( regex, path )
+                
+                for match in result:
+                    
+                    if isinstance( match, tuple ):
+                        
+                        for submatch in match:
+                            
+                            tags.add( namespace + ':' + submatch )
+                            
+                        
+                    else:
+                        
+                        tags.add( namespace + ':' + match )
+                        
+                    
+                
+            except:
+                
+                pass
+                
+            
+        
+        #
+        
+        tags = HydrusTags.CleanTags( tags )
+        
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+        
+        tags = siblings_manager.CollapseTags( service_key, tags )
+        tags = parents_manager.ExpandTags( service_key, tags )
+        tags = tag_censorship_manager.FilterTags( service_key, tags )
+        
+        return tags
+        
+    
+    def SimpleSetTuple( self, tags_for_all, load_from_neighbouring_txt_files, add_filename, add_first_directory, add_second_directory, add_third_directory ):
+        
+        self._tags_for_all = tags_for_all
+        self._load_from_neighbouring_txt_files = load_from_neighbouring_txt_files
+        self._add_filename = add_filename
+        self._add_first_directory = add_first_directory
+        self._add_second_directory = add_second_directory
+        self._add_third_directory = add_third_directory
+        
+    
+    def SimpleToTuple( self ):
+        
+        return ( self._tags_for_all, self._load_from_neighbouring_txt_files, self._add_filename, self._add_first_directory, self._add_second_directory, self._add_third_directory )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS ] = FilenameTaggingOptions    
 
 class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -1447,9 +1731,9 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, txt_parse_tag_service_keys = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
+    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
         
         if mimes is None:
             
@@ -1468,9 +1752,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
             
         
-        if txt_parse_tag_service_keys is None:
+        if tag_service_keys_to_filename_tagging_options is None:
             
-            txt_parse_tag_service_keys = []
+            tag_service_keys_to_filename_tagging_options = {}
             
         
         if actions is None:
@@ -1494,7 +1778,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._mimes = mimes
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
-        self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
+        self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
@@ -1621,26 +1905,26 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
-        serialisable_txt_parse_tag_service_keys = [ service_key.encode( 'hex' ) for service_key in self._txt_parse_tag_service_keys ]
+        serialisable_tag_service_keys_to_filename_tagging_options = [ ( service_key.encode( 'hex' ), filename_tagging_options.GetSerialisableTuple() ) for ( service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items() ]
         serialisable_path_cache = self._path_cache.GetSerialisableTuple()
         
         # json turns int dict keys to strings
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now )
+        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_service_keys, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now ) = serialisable_info
+        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
-        self._txt_parse_tag_service_keys = [ service_key.decode( 'hex' ) for service_key in serialisable_txt_parse_service_keys ]
+        self._tag_service_keys_to_filename_tagging_options = dict( [ ( encoded_service_key.decode( 'hex' ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
         self._path_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_cache )
         
     
@@ -1686,6 +1970,30 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused, check_now )
             
             return ( 4, new_serialisable_info )
+            
+        
+        if version == 4:
+            
+            ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_txt_parse_tag_service_keys, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused, check_now ) = old_serialisable_info
+            
+            txt_parse_tag_service_keys = [ service_key.decode( 'hex' ) for service_key in serialisable_txt_parse_tag_service_keys ]
+            
+            tag_service_keys_to_filename_tagging_options = {}
+            
+            for service_key in txt_parse_tag_service_keys:
+                
+                filename_tagging_options = FilenameTaggingOptions()
+                
+                filename_tagging_options._load_from_neighbouring_txt_files = True
+                
+                tag_service_keys_to_filename_tagging_options[ service_key ] = filename_tagging_options
+                
+            
+            serialisable_tag_service_keys_to_filename_tagging_options = [ ( service_key.encode( 'hex' ), filename_tagging_options.GetSerialisableTuple() ) for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items() ]
+            
+            new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused, check_now )
+            
+            return ( 5, new_serialisable_info )
             
         
     
@@ -1790,45 +2098,37 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                                     
                                 
-                                txt_path = path + '.txt'
+                                service_keys_to_tags = {}
                                 
-                                if len( self._txt_parse_tag_service_keys ) > 0 and os.path.exists( txt_path ):
+                                for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
+                                    
+                                    if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                                        
+                                        continue
+                                        
                                     
                                     try:
                                         
-                                        with open( txt_path, 'rb' ) as f:
+                                        tags = filename_tagging_options.GetTags( tag_service_key, path )
+                                        
+                                        if len( tags ) > 0:
                                             
-                                            txt_tags_string = f.read()
-                                            
-                                        
-                                        txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
-                                        
-                                        if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
-                                            
-                                            HydrusData.ShowText( 'Tags were too long--I think this was not a regular text file!' )
-                                            
-                                            raise Exception()
-                                            
-                                        
-                                        txt_tags = HydrusTags.CleanTags( txt_tags )
-                                        
-                                        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-                                        
-                                        service_keys_to_tags = { service_key : siblings_manager.CollapseTags( service_key, txt_tags ) for service_key in self._txt_parse_tag_service_keys }
-                                        
-                                        service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                                        
-                                        if len( service_keys_to_content_updates ) > 0:
-                                            
-                                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                            service_keys_to_tags[ tag_service_key ] = tags
                                             
                                         
                                     except Exception as e:
                                         
-                                        HydrusData.ShowText( 'Trying to load tags from the .txt file "' + txt_path + '" in the import folder "' + self._name + '" threw an error!' )
+                                        HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
                                         
                                         HydrusData.ShowException( e )
                                         
+                                    
+                                
+                                if len( service_keys_to_tags ) > 0:
+                                    
+                                    service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                                    
+                                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                                     
                                 
                             
@@ -1896,7 +2196,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._txt_parse_tag_service_keys, self._actions, self._action_locations, self._period, self._open_popup, self._paused, self._check_now )
+        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._tag_service_keys_to_filename_tagging_options, self._actions, self._action_locations, self._period, self._open_popup, self._paused, self._check_now )
         
     
     def SetSeedCache( self, seed_cache ):
@@ -1904,7 +2204,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_cache = seed_cache
         
     
-    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, txt_parse_tag_service_keys, actions, action_locations, period, open_popup, paused, check_now ):
+    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now ):
         
         if path != self._path:
             
@@ -1921,7 +2221,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._mimes = mimes
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
-        self._txt_parse_tag_service_keys = txt_parse_tag_service_keys
+        self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
@@ -3420,7 +3720,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             return network_job
             
         
-        gallery = ClientDownloading.GetGallery( self._gallery_identifier )
+        try:
+            
+            gallery = ClientDownloading.GetGallery( self._gallery_identifier )
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
+            
+            self._DelayWork( HC.UPDATE_DURATION, 'gallery would not load' )
+            
+            self._paused = True
+            
+            HydrusData.ShowText( 'The subscription ' + self._name + ' could not load its gallery! It has been paused and the full error has been written to the log!' )
+            
+            return
+            
         
         gallery.SetNetworkJobFactory( network_job_factory )
         
@@ -3685,7 +4000,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             urls_to_add = set()
             urls_to_add_ordered = []
             
-            prefix = 'synchronising gallery query'
+            prefix = 'synchronising "' + query_text + '"'
             
             job_key.SetVariable( 'popup_text_1', prefix )
             
@@ -3726,7 +4041,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     return network_job
                     
                 
-                gallery = ClientDownloading.GetGallery( gallery_stream_identifier )
+                try:
+                    
+                    gallery = ClientDownloading.GetGallery( gallery_stream_identifier )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    self._DelayWork( HC.UPDATE_DURATION, 'gallery would not load' )
+                    
+                    self._paused = True
+                    
+                    HydrusData.ShowText( 'The subscription ' + self._name + ' could not load its gallery! It has been paused and the full error has been written to the log!' )
+                    
+                    return
+                    
                 
                 gallery.SetNetworkJobFactory( network_job_factory )
                 
@@ -3938,6 +4268,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def RetryFailures( self ):
+        
+        for query in self._queries:
+            
+            query.RetryFailures()
+            
+        
+    
     def Separate( self ):
         
         subscriptions = []
@@ -4121,7 +4459,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         if self._paused:
             
-            return 'paused, but would be ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
+            return 'paused, but would be in ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
             
         elif self._check_now:
             
@@ -4133,7 +4471,7 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            return HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
+            return 'in ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
             
         
     
@@ -4145,6 +4483,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     def GetQueryAndSeedCache( self ):
         
         return ( self._query, self._seed_cache )
+        
+    
+    def GetSeedCache( self ):
+        
+        return self._seed_cache
         
     
     def IsDead( self ):
@@ -4182,6 +4525,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         self._paused = False
         
         self._seed_cache = SeedCache()
+        
+    
+    def RetryFailures( self ):
+        
+        self._seed_cache.RetryFailures()    
         
     
     def SetCheckNow( self, check_now ):

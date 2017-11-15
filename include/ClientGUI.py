@@ -152,7 +152,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         aboutinfo = wx.AboutDialogInfo()
         
-        aboutinfo.SetIcon( wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG ) )
+        aboutinfo.SetIcon( self._controller.frame_icon )
         aboutinfo.SetName( 'hydrus client' )
         aboutinfo.SetVersion( str( HC.SOFTWARE_VERSION ) + ', using network version ' + str( HC.NETWORK_VERSION ) )
         
@@ -180,6 +180,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         library_versions.append( ( 'wx', wx.version() ) )
+        library_versions.append( ( 'temp dir', HydrusPaths.tempfile.gettempdir() ) )
         
         description = 'This client is the media management application of the hydrus software suite.'
         
@@ -1105,6 +1106,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
             
+            #pixiv is broke atm
+            '''
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
@@ -1116,7 +1119,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
-            
+            '''
             ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ), on_deepest_notebook = True )
             
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )

@@ -1274,7 +1274,7 @@ class NetworkJob( object ):
                         
                         waiting_str = HydrusData.ConvertTimestampToPrettyPending( pending_timestamp )
                         
-                        self._status_text = u'bandwidth free ' + waiting_str + u'\u2026'
+                        self._status_text = u'bandwidth free in ' + waiting_str + u'\u2026'
                         
                     
                     if waiting_duration > 1200:

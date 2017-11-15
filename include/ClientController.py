@@ -651,6 +651,8 @@ class Controller( HydrusController.HydrusController ):
             
             CC.GlobalBMPs.STATICInitialise()
             
+            self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
+            
         
         self.pub( 'splash_set_status_subtext', u'image caches' )
         
