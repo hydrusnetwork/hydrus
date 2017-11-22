@@ -1735,8 +1735,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
         site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
         site_types.append( HC.SITE_TYPE_NEWGROUNDS )
-        # pixiv is broke atm
-        #site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+        site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
         #site_types.append( HC.SITE_TYPE_PIXIV_TAG )
         site_types.append( HC.SITE_TYPE_TUMBLR )
         
@@ -2444,6 +2443,10 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetSizer( vbox )
         
+        #
+        
+        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
+        
     
     def _AddBlacklist( self ):
         
@@ -2546,6 +2549,11 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_tag_censor = tag_censor.ToPermittedString()
         
         self._status_st.SetLabelText( 'current: ' + pretty_tag_censor )
+        
+    
+    def EventListBoxChanged( self, event ):
+        
+        self._UpdateStatus()
         
     
     def EventKeyDownBlacklist( self, event ):
@@ -2992,14 +3000,16 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         url_match = self._GetValue()
         
-        ( result, reason ) = url_match.Test( self._example_url.GetValue() )
-        
-        if result:
+        try:
+            
+            url_match.Test( self._example_url.GetValue() )
             
             self._example_url_matches.SetLabelText( 'Example matches ok!' )
             self._example_url_matches.SetForegroundColour( ( 0, 128, 0 ) )
             
-        else:
+        except HydrusExceptions.URLMatchException as e:
+            
+            reason = unicode( e )
             
             self._example_url_matches.SetLabelText( 'Example does not match - ' + reason )
             self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )
@@ -3015,9 +3025,11 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         url_match = self._GetValue()
         
-        ( result, reason ) = url_match.Test( self._example_url.GetValue() )
-        
-        if not result:
+        try:
+            
+            url_match.Test( self._example_url.GetValue() )
+            
+        except HydrusExceptions.URLMatchException:
             
             wx.MessageBox( 'Please enter an example url that matches the given rules!' )
             

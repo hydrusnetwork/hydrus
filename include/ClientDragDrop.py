@@ -1,11 +1,14 @@
+import ClientGUICommon
 import HydrusGlobals as HG
 import wx
 
 class FileDropTarget( wx.PyDropTarget ):
     
-    def __init__( self, filenames_callable = None, url_callable = None, page_callable = None ):
+    def __init__( self, parent, filenames_callable = None, url_callable = None, page_callable = None ):
         
         wx.PyDropTarget.__init__( self )
+        
+        self._parent = parent
         
         self._filenames_callable = filenames_callable
         self._url_callable = url_callable
@@ -78,6 +81,21 @@ class FileDropTarget( wx.PyDropTarget ):
             
         
         return result
+        
+    
+    def OnDrop( self, x, y ):
+        
+        drop_tlp = ClientGUICommon.GetXYTopTLP( x, y )
+        my_tlp = ClientGUICommon.GetTLP( self._parent )
+        
+        if drop_tlp == my_tlp:
+            
+            return True
+            
+        else:
+            
+            return False
+            
         
     
     # setting OnDragOver to return copy gives Linux trouble with page tab drops with shift held down

@@ -45,6 +45,49 @@ def GetTLP( window ):
         return window.GetTopLevelParent()
         
     
+def GetTLPParents( window ):
+    
+    if not isinstance( window, wx.TopLevelWindow ):
+        
+        window = GetTLP( window )
+        
+    
+    parents = []
+    
+    parent = window.GetParent()
+    
+    while parent is not None:
+        
+        parents.append( parent )
+        
+        parent = parent.GetParent()
+        
+    
+    return parents
+    
+def GetXYTopTLP( x, y ):
+    
+    tlps = wx.GetTopLevelWindows()
+    
+    hittest_tlps = [ tlp for tlp in tlps if tlp.HitTest( ( x, y ) ) == wx.HT_WINDOW_INSIDE ]
+    
+    if len( hittest_tlps ) == 0:
+        
+        return None
+        
+    
+    most_childish = hittest_tlps[0]
+    
+    for tlp in hittest_tlps[1:]:
+        
+        if most_childish in GetTLPParents( tlp ):
+            
+            most_childish = tlp
+            
+        
+    
+    return most_childish
+    
 def IsWXAncestor( child, ancestor ):
     
     parent = child
@@ -2959,7 +3002,7 @@ class TimeDeltaCtrl( wx.Panel ):
         
         if self._show_days:
             
-            self._days = wx.SpinCtrl( self, min = 0, max = 360, size = ( 50, -1 ) )
+            self._days = wx.SpinCtrl( self, min = 0, max = 3653, size = ( 50, -1 ) )
             self._days.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
             hbox.AddF( self._days, CC.FLAGS_VCENTER )

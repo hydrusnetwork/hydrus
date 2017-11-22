@@ -1144,6 +1144,8 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         
         ( tags_for_all_list, self._load_from_neighbouring_txt_files, self._add_filename, self._add_first_directory, self._add_second_directory, self._add_third_directory, self._quick_namespaces, self._regexes ) = serialisable_info
         
+        # converting [ namespace, regex ] to ( namespace, regex ) for listctrl et al to handle better
+        self._quick_namespaces = [ tuple( item ) for item in self._quick_namespaces ]
         self._tags_for_all = set( tags_for_all_list )
         
     
@@ -1487,7 +1489,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     
                     s = os.stat( path )
                     
-                    source_time = min( s.st_mtime, s.st_ctime )
+                    source_time = int( min( s.st_mtime, s.st_ctime ) )
                     
                     self._paths_cache.UpdateSeedSourceTime( path, source_time )
                     
@@ -3291,7 +3293,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                 
                 source_timestamp = self._GetSourceTimestamp( seed )
                 
-                if source_timestamp > since:
+                if source_timestamp >= since:
                     
                     num_files += 1
                     
@@ -3741,9 +3743,26 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_count = 0
         
-        for query in self._queries:
+        # do it randomly so we don't have the first one choking the others for bandwidth over and over
+        
+        random_queries = list( self._queries )
+        
+        random.shuffle( random_queries )
+        
+        for query in random_queries:
             
             ( query_text, seed_cache ) = query.GetQueryAndSeedCache()
+            
+            text_1 = 'downloading files'
+            file_popup_text = self._name
+            
+            if query_text != self._name:
+                
+                text_1 += ' for "' + query_text + '"'
+                file_popup_text += ': ' + query_text
+                
+            
+            job_key.SetVariable( 'popup_text_1', text_1 )
             
             num_urls = seed_cache.GetSeedCount()
             
@@ -3783,7 +3802,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if p4:
                         
-                        job_key.SetVariable( 'popup_text_1', 'no more bandwidth to download files, so stopping for now' )
+                        job_key.SetVariable( 'popup_text_2', 'no more bandwidth to download files, so stopping for now' )
                         
                         time.sleep( 2 )
                         
@@ -3795,8 +3814,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_urls ) + ': '
                     
-                    job_key.SetVariable( 'popup_text_1', x_out_of_y + 'checking url status' )
-                    job_key.SetVariable( 'popup_gauge_1', ( num_done, num_urls ) )
+                    job_key.SetVariable( 'popup_text_2', x_out_of_y + 'checking url status' )
+                    job_key.SetVariable( 'popup_gauge_2', ( num_done, num_urls ) )
                     
                     ( status, hash, note ) = HG.client_controller.Read( 'url_status', url )
                     
@@ -3815,7 +3834,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         if self._get_tags_if_url_known_and_file_redundant and self._tag_import_options.InterestedInTags():
                             
-                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'found file in db, fetching tags' )
+                            job_key.SetVariable( 'popup_text_2', x_out_of_y + 'found file in db, fetching tags' )
                             
                             downloaded_tags = gallery.GetTags( url )
                             
@@ -3826,7 +3845,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         try:
                             
-                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'downloading file' )
+                            job_key.SetVariable( 'popup_text_2', x_out_of_y + 'downloading file' )
                             
                             if self._tag_import_options.InterestedInTags():
                                 
@@ -3837,7 +3856,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 gallery.GetFile( temp_path, url )
                                 
                             
-                            job_key.SetVariable( 'popup_text_1', x_out_of_y + 'importing file' )
+                            job_key.SetVariable( 'popup_text_2', x_out_of_y + 'importing file' )
                             
                             file_import_job = FileImportJob( temp_path, self._file_import_options )
                             
@@ -3849,17 +3868,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             if status == CC.STATUS_SUCCESSFUL:
                                 
-                                job_key.SetVariable( 'popup_text_1', x_out_of_y + 'import successful' )
+                                job_key.SetVariable( 'popup_text_2', x_out_of_y + 'import successful' )
                                 
                                 successful_hashes.add( hash )
                                 
                             elif status == CC.STATUS_DELETED:
                                 
-                                job_key.SetVariable( 'popup_text_1', x_out_of_y + 'previously deleted' )
+                                job_key.SetVariable( 'popup_text_2', x_out_of_y + 'previously deleted' )
                                 
                             elif status == CC.STATUS_REDUNDANT:
                                 
-                                job_key.SetVariable( 'popup_text_1', x_out_of_y + 'already in db' )
+                                job_key.SetVariable( 'popup_text_2', x_out_of_y + 'already in db' )
                                 
                             
                         finally:
@@ -3896,7 +3915,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     status = CC.STATUS_FAILED
                     
-                    job_key.SetVariable( 'popup_text_1', x_out_of_y + 'file failed' )
+                    job_key.SetVariable( 'popup_text_2', x_out_of_y + 'file failed' )
                     
                     if isinstance( e, HydrusExceptions.NotFoundException ):
                         
@@ -3924,7 +3943,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if len( successful_hashes ) > 0:
                     
-                    job_key.SetVariable( 'popup_files', ( set( successful_hashes ), self._name + ' ' + query_text ) )
+                    job_key.SetVariable( 'popup_files', ( set( successful_hashes ), file_popup_text ) )
                     
                 
                 time.sleep( 0.1 )
@@ -3936,7 +3955,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 files_job_key = ClientThreading.JobKey()
                 
-                files_job_key.SetVariable( 'popup_files', ( set( successful_hashes ), self._name + ' - ' + query_text ) )
+                files_job_key.SetVariable( 'popup_files', ( set( successful_hashes ), file_popup_text ) )
                 
                 HG.client_controller.pub( 'message', files_job_key )
                 
@@ -3944,7 +3963,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         job_key.DeleteVariable( 'popup_files' )
         job_key.DeleteVariable( 'popup_text_1' )
-        job_key.DeleteVariable( 'popup_gauge_1' )
+        job_key.DeleteVariable( 'popup_text_2' )
+        job_key.DeleteVariable( 'popup_gauge_2' )
         
     
     def _WorkOnFilesCanDoWork( self ):
@@ -4000,7 +4020,12 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             urls_to_add = set()
             urls_to_add_ordered = []
             
-            prefix = 'synchronising "' + query_text + '"'
+            prefix = 'synchronising'
+            
+            if query_text != self._name:
+                
+                prefix += ' "' + query_text + '"'
+                
             
             job_key.SetVariable( 'popup_text_1', prefix )
             
@@ -4167,6 +4192,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             query.RegisterSyncComplete()
             query.UpdateNextCheckTime( self._checker_options )
+            
+            if query.IsDead():
+                
+                HydrusData.ShowText( 'The query "' + query_text + '" for subscription ' + self._name + ' appears to be dead!' )
+                
             
             urls_to_add_ordered.reverse()
             

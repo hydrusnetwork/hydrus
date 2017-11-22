@@ -2659,7 +2659,7 @@ class CanvasWithDetails( Canvas ):
         
         if self._current_media is None:
             
-            text = 'No media to display'
+            text = self._GetNoMediaText()
             
             ( width, height ) = dc.GetTextExtent( text )
             
@@ -2890,6 +2890,11 @@ class CanvasWithDetails( Canvas ):
         info_string = ' | '.join( lines )
         
         return info_string
+        
+    
+    def _GetNoMediaText( self ):
+        
+        return 'No media to display'
         
     
 class CanvasWithHovers( CanvasWithDetails ):
@@ -3359,6 +3364,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 return 'B - ' + index_string
                 
             
+        
+    
+    def _GetNoMediaText( self ):
+        
+        return 'Looking for pairs to compare--please wait.'
         
     
     def _GetNumCommittableDecisions( self ):
@@ -4738,7 +4748,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( self, menu, 'return to inbox', 'Put this file back in the inbox.', self._Inbox )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'remove', 'Remove this file from the list you are viewing.', self._Remove )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
             
             if CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent():
                 

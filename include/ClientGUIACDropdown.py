@@ -614,7 +614,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         services.append( services_manager.GetService( CC.TRASH_SERVICE_KEY ) )
         services.append( services_manager.GetService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
         services.extend( services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) )
-        services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
+        
+        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        
+        if advanced_mode:
+            
+            services.append( services_manager.GetService( CC.COMBINED_FILE_SERVICE_KEY ) )
+            
         
         menu = wx.Menu()
         

@@ -1,6 +1,24 @@
 import struct
 import zlib
 
+LZMA_OK = True
+
+try:
+    
+    import pylzma as lzma
+    
+except:
+    
+    try:
+        
+        import lzma
+        
+    except:
+        
+        LZMA_OK = False
+        
+
+# hydrus_dev added ZWS support
 
 def parse(input):
     """Parses the header information from an SWF file."""
@@ -22,11 +40,11 @@ def parse(input):
 
     # Read the 3-byte signature field
     signature = ''.join(struct.unpack('<3c', input.read(3)))
-    if signature not in ('FWS', 'CWS'):
+    if signature not in ('FWS', 'CWS', 'ZWS'):
         raise ValueError('Invalid SWF signature: %s' % signature)
 
     # Compression
-    header['compressed'] = signature.startswith('C')
+    header['compressed'] = signature.startswith('C') or signature.startswith( 'Z' )
 
     # Version
     header['version'] = read_ui8(input.read(1))
@@ -35,10 +53,27 @@ def parse(input):
     header['size'] = read_ui32(input.read(4))
 
     # Payload
-    buffer = input.read(header['size'])
-    if header['compressed']:
+    if signature.startswith( 'F' ):
+        
+        buffer = input.read(header['size'])
+        
+    elif signature.startswith( 'C' ):
+        buffer = input.read(header['size'])
         # Unpack the zlib compression
         buffer = zlib.decompress(buffer)
+    elif signature.startswith( 'Z' ):
+        
+        uncompressed_size = input.read( 4 )
+        
+        if LZMA_OK:
+            
+            buffer = lzma.decompress( input.read() )
+            
+        else:
+            
+            raise Exception( 'LZMA library not available, so ZWS flash files cannot be parsed.' )
+            
+        
 
     # Containing rectangle (struct RECT)
 

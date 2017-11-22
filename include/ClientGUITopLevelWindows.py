@@ -586,9 +586,9 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
     
 class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent, title, frame_key = 'regular_dialog' ):
         
-        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title )
+        DialogThatTakesScrollablePanelApplyCancel.__init__( self, parent, title, frame_key = frame_key )
         
     
     def DoOK( self ):

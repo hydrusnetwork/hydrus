@@ -393,7 +393,10 @@ class HydrusController( object ):
                 
             
         
-        HydrusPaths.DeletePath( self.temp_dir )
+        if hasattr( self, 'temp_dir' ):
+            
+            HydrusPaths.DeletePath( self.temp_dir )
+            
         
     
     def ShutdownView( self ):

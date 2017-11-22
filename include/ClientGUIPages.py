@@ -269,15 +269,13 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             entries.append( ( 'menu', 'hentai foundry' ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
-            # pixiv is broke atm
-            '''
             result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
                 
                 entries.append( ( 'menu', 'pixiv' ) )
                 
-            '''
+            
             
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_TUMBLR ) )
             
@@ -289,7 +287,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         elif menu_keyword == 'pixiv':
             
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_TAG ) )
+            #entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_TAG ) )
             
         elif menu_keyword == 'petitions':
             
@@ -480,6 +478,20 @@ class Page( wx.SplitterWindow ):
         self._controller.pub( 'set_focus', self._page_key, None )
         
     
+    def GetDisplayName( self ):
+        
+        name = self._management_controller.GetPageName()
+        
+        if name.startswith( USER_PAGE_NAME_PREFIX ):
+            
+            return name.replace( USER_PAGE_NAME_PREFIX, '', 1 )
+            
+        else:
+            
+            return name
+            
+        
+    
     def GetHashes( self ):
         
         if self._initialised:
@@ -640,7 +652,12 @@ class Page( wx.SplitterWindow ):
         wx.CallAfter( self._management_panel.Start ) # importand this is callafter, so it happens after a heavy session load is done
         
     
-    def SetName( self, name ):
+    def SetName( self, name, from_user = False ):
+        
+        if from_user:
+            
+            name = USER_PAGE_NAME_PREFIX + name
+            
         
         return self._management_controller.SetPageName( name )
         
@@ -1039,7 +1056,7 @@ class PagesNotebook( wx.Notebook ):
         
         insertion_tab_index = min( insertion_tab_index, dest_notebook.GetPageCount() )
         
-        dest_notebook.InsertPage( insertion_tab_index, page, page.GetName(), select = follow_dropped_page )
+        dest_notebook.InsertPage( insertion_tab_index, page, page.GetDisplayName(), select = follow_dropped_page )
         
         if follow_dropped_page:
             
@@ -1096,12 +1113,7 @@ class PagesNotebook( wx.Notebook ):
         
         page = self.GetPage( index )
         
-        page_name = page.GetName()
-        
-        if page_name.startswith( USER_PAGE_NAME_PREFIX ):
-            
-            page_name = page_name.replace( USER_PAGE_NAME_PREFIX, '' )
-            
+        page_name = page.GetDisplayName()
         
         if len( page_name ) > max_page_name_chars:
             
@@ -1130,12 +1142,7 @@ class PagesNotebook( wx.Notebook ):
         
         page = self.GetPage( index )
         
-        current_name = page.GetName()
-        
-        if current_name.startswith( USER_PAGE_NAME_PREFIX ):
-            
-            current_name = current_name.replace( USER_PAGE_NAME_PREFIX, '' )
-            
+        current_name = page.GetDisplayName()
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the new name.', default = current_name, allow_blank = False ) as dlg:
             
@@ -1145,9 +1152,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 new_name = self.EscapeMnemonics( new_name )
                 
-                new_name = USER_PAGE_NAME_PREFIX + new_name
-                
-                page.SetName( new_name )
+                page.SetName( new_name, from_user = True )
                 
                 self._controller.pub( 'refresh_page_name', page.GetPageKey() )
                 
@@ -1591,6 +1596,18 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def GetDisplayName( self ):
+        
+        if self._name.startswith( USER_PAGE_NAME_PREFIX ):
+            
+            return self._name.replace( USER_PAGE_NAME_PREFIX, '', 1 )
+            
+        else:
+            
+            return self._name
+            
+        
+    
     def GetMediaPages( self, only_my_level = False ):
         
         return self._GetMediaPages( only_my_level )
@@ -1792,7 +1809,7 @@ class PagesNotebook( wx.Notebook ):
             insertion_index = forced_insertion_index
             
         
-        page_name = page.GetName()
+        page_name = page.GetDisplayName()
         
         # in some unusual circumstances, this gets out of whack
         insertion_index = min( insertion_index, self.GetPageCount() )
@@ -1939,7 +1956,7 @@ class PagesNotebook( wx.Notebook ):
             insertion_index = forced_insertion_index
             
         
-        page_name = page.GetName()
+        page_name = page.GetDisplayName()
         
         self.InsertPage( insertion_index, page, page_name, select = True )
         
@@ -1965,7 +1982,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 insert_index = min( index, self.GetPageCount() )
                 
-                name = page.GetName()
+                name = page.GetDisplayName()
                 
                 self.InsertPage( insert_index, page, name, True )
                 
@@ -2266,7 +2283,12 @@ class PagesNotebook( wx.Notebook ):
         self._controller.pub( 'notify_new_sessions' )
         
     
-    def SetName( self, name ):
+    def SetName( self, name, from_user = False ):
+        
+        if from_user:
+            
+            name = USER_PAGE_NAME_PREFIX + name
+            
         
         self._name = name
         

@@ -2859,7 +2859,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     archive_phrase = 'archive selected'
                     inbox_phrase = 'return selected to inbox'
-                    remove_phrase = 'remove selected'
+                    remove_phrase = 'remove selected from view'
                     local_delete_phrase = 'delete selected'
                     trash_delete_phrase = 'delete selected from trash now'
                     undelete_phrase = 'undelete selected'
@@ -2888,7 +2888,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     archive_phrase = 'archive'
                     inbox_phrase = 'return to inbox'
-                    remove_phrase = 'remove'
+                    remove_phrase = 'remove from view'
                     local_delete_phrase = 'delete'
                     trash_delete_phrase = 'delete from trash now'
                     undelete_phrase = 'undelete'

@@ -3,13 +3,24 @@ import HydrusConstants as HC
 import HydrusGlobals as HG
 import wx
 
+FLASHWIN_OK = False
+
 if HC.PLATFORM_WINDOWS:
     
-    import wx.lib.flashwin
+    try:
+        
+        import wx.lib.flashwin
+        
+        FLASHWIN_OK = True
+        
+    except Exception as e:
+        
+        pass
+        
     
 def IShouldCatchCharHook( evt_handler ):
     
-    if HC.PLATFORM_WINDOWS:
+    if HC.PLATFORM_WINDOWS and FLASHWIN_OK:
         
         window = wx.FindWindowAtPointer()
         

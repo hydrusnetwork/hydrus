@@ -30,6 +30,7 @@ header_and_mime = [
     ( 0, 'BM', HC.IMAGE_BMP ),
     ( 0, 'CWS', HC.APPLICATION_FLASH ),
     ( 0, 'FWS', HC.APPLICATION_FLASH ),
+    ( 0, 'ZWS', HC.APPLICATION_FLASH ),
     ( 0, 'FLV', HC.VIDEO_FLV ),
     ( 0, '%PDF', HC.APPLICATION_PDF ),
     ( 0, 'PK\x03\x04', HC.APPLICATION_ZIP ),

@@ -130,7 +130,7 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         
         self.SetSizer( vbox )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( filenames_callable = self.Import ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self.Import ) )
     
         ( x, y ) = self.GetEffectiveMinSize()
         

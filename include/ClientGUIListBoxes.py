@@ -233,6 +233,8 @@ class QueueListBox( wx.Panel ):
         return datas
         
     
+( ListBoxEvent, EVT_LIST_BOX ) = wx.lib.newevent.NewCommandEvent()
+
 class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3
@@ -341,6 +343,8 @@ class ListBox( wx.ScrolledWindow ):
             
             self._SetDirty()
             
+        
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Deselect( self, index ):

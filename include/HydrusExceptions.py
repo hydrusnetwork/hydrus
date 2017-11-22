@@ -15,10 +15,14 @@ class DBAccessException( Exception ): pass
 class FileMissingException( Exception ): pass
 class MimeException( Exception ): pass
 class NameException( Exception ): pass
-class ParseException( Exception ): pass
 class ShutdownException( Exception ): pass
 class SizeException( Exception ): pass
 class VetoException( Exception ): pass
+
+class ParseException( Exception ): pass
+class StringConvertException( ParseException ): pass
+class StringMatchException( ParseException ): pass
+class URLMatchException( ParseException ): pass
 
 class NetworkException( Exception ): pass
 class BandwidthException( NetworkException ): pass

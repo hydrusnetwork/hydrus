@@ -134,11 +134,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             for url_match in url_matches:
                 
-                ( result_bool, result_reason ) = url_match.Test( url )
-                
-                if result_bool:
+                try:
                     
-                    return url_match
+                    url_match.Test( url )
+                    
+                    return url_match.Normalise( url )
+                    
+                except HydrusExceptions.URLMatchException:
+                    
+                    continue
                     
                 
             
@@ -580,16 +584,18 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( url_path_components ) < len( self._path_components ):
             
-            return ( False, p.path + ' did not have ' + str( len( self._path_components ) ) + ' components' )
+            raise HydrusExceptions.URLMatchException( p.path + ' did not have ' + str( len( self._path_components ) ) + ' components' )
             
         
         for ( url_path_component, expected_path_component ) in zip( url_path_components, self._path_components ):
             
-            ( bool_result, reason ) = expected_path_component.Test( url_path_component )
-            
-            if not bool_result:
+            try:
                 
-                return ( bool_result, reason )
+                expected_path_component.Test( url_path_component )
+                
+            except HydrusExceptions.StringMatchException as e:
+                
+                raise HydrusExceptions.URLMatchException( unicode( e ) )
                 
             
         
@@ -597,27 +603,27 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( url_parameters_list ) < len( self._parameters ):
             
-            return ( False, p.query + ' did not have ' + str( len( self._parameters ) ) + ' value pairs' )
+            raise HydrusExceptions.URLMatchException( p.query + ' did not have ' + str( len( self._parameters ) ) + ' value pairs' )
             
         
         for ( key, url_value ) in url_parameters_list:
             
             if key not in self._parameters:
                 
-                return ( False, key + ' not found in ' + p.query )
+                raise HydrusExceptions.URLMatchException( key + ' not found in ' + p.query )
                 
             
             expected_value = self._parameters[ key ]
             
-            ( bool_result, reason ) = expected_value.Test( url_value )
-            
-            if not bool_result:
+            try:
                 
-                return ( bool_result, reason )
+                expected_value.Test( url_value )
+                
+            except HydrusExceptions.StringMatchException as e:
+                
+                raise HydrusExceptions.URLMatchException( unicode( e ) )
                 
             
-        
-        return ( True, 'good' )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT ] = URLMatch

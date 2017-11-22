@@ -1044,17 +1044,13 @@ class TestClientDB( unittest.TestCase ):
         
         service_key = HydrusData.GenerateKey()
         
-        info = {}
+        services = self._read( 'services' )
         
-        info[ 'host' ] = 'example_host'
-        info[ 'port' ] = 80
-        info[ 'access_key' ] = HydrusData.GenerateKey() 
+        old_services = list( services )
         
-        new_tag_repo = ( service_key, HC.TAG_REPOSITORY, 'new tag repo', info )
+        services.append( ClientServices.GenerateService( service_key, HC.TAG_REPOSITORY, 'new tag repo' ) )
         
-        edit_log = [ HydrusData.EditLogActionAdd( new_tag_repo ) ]
-        
-        self._write( 'update_services', edit_log )
+        self._write( 'update_services', services )
         
         #
         
@@ -1078,9 +1074,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        edit_log = [ HydrusData.EditLogActionDelete( service_key ) ]
-        
-        self._write( 'update_services', edit_log )
+        self._write( 'update_services', old_services )
         
     
     def test_pixiv_account( self ):
@@ -1160,110 +1154,27 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        def test_written_services( written_services, service_tuples ):
-            
-            self.assertEqual( len( written_services ), len( service_tuples ) )
-            
-            keys_to_service_tuples = { service_key : ( service_type, name, info ) for ( service_key, service_type, name, info ) in service_tuples }
-            
-            for service in written_services:
-                
-                service_key = service.GetServiceKey()
-                
-                self.assertIn( service_key, keys_to_service_tuples )
-                
-                ( service_type, name, info ) = keys_to_service_tuples[ service_key ]
-                
-                self.assertEqual( service_type, service.GetServiceType() )
-                self.assertEqual( name, service.GetName() )
-                
-                for ( k, v ) in service.GetInfo().items():
-                    
-                    if k != 'account': self.assertEqual( v, info[ k ] )
-                    
-                
-            
+        NUM_DEFAULT_SERVICES = 8
         
-        info = {}
+        services = self._read( 'services' )
         
-        info[ 'host' ] = 'example_host'
-        info[ 'port' ] = 80
-        info[ 'access_key' ] = HydrusData.GenerateKey() 
+        self.assertEqual( len( services ), NUM_DEFAULT_SERVICES )
         
-        new_tag_repo = ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'new tag repo', info )
+        old_services = list( services )
         
-        info = {}
+        services.append( ClientServices.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'new service' ) )
         
-        info[ 'host' ] = 'example_host2'
-        info[ 'port' ] = 80
-        info[ 'access_key' ] = HydrusData.GenerateKey()
+        self._write( 'update_services', services )
         
-        other_new_tag_repo = ( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'new tag repo2', info )
+        services = self._read( 'services' )
         
-        info = {}
+        self.assertEqual( len( services ), NUM_DEFAULT_SERVICES + 1 )
         
-        info[ 'shape' ] = ClientRatings.CIRCLE
-        info[ 'colours' ] = ClientRatings.default_like_colours
+        self._write( 'update_services', old_services )
         
-        new_local_like = ( HydrusData.GenerateKey(), HC.LOCAL_RATING_LIKE, 'new local rating', info )
+        services = self._read( 'services' )
         
-        info = {}
-        
-        info[ 'shape' ] = ClientRatings.CIRCLE
-        info[ 'colours' ] = ClientRatings.default_numerical_colours
-        info[ 'num_stars' ] = 5
-        
-        new_local_numerical = ( HydrusData.GenerateKey(), HC.LOCAL_RATING_NUMERICAL, 'new local numerical', info )
-        
-        edit_log = []
-        
-        edit_log.append( HydrusData.EditLogActionAdd( new_tag_repo ) )
-        edit_log.append( HydrusData.EditLogActionAdd( other_new_tag_repo ) )
-        edit_log.append( HydrusData.EditLogActionAdd( new_local_like ) )
-        edit_log.append( HydrusData.EditLogActionAdd( new_local_numerical ) )
-        
-        self._write( 'update_services', edit_log )
-        
-        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
-        
-        test_written_services( written_services, ( new_tag_repo, other_new_tag_repo, new_local_like, new_local_numerical ) )
-        
-        #
-        
-        ( service_key, service_type, name, info ) = other_new_tag_repo
-        
-        name = 'a better name'
-        
-        info = dict( info )
-        
-        info[ 'host' ] = 'corrected host'
-        info[ 'port' ] = 85
-        info[ 'access_key' ] = HydrusData.GenerateKey()
-        
-        other_new_tag_repo_updated = ( service_key, service_type, name, info )
-        
-        edit_log = []
-        
-        edit_log.append( HydrusData.EditLogActionDelete( new_local_like[0] ) )
-        edit_log.append( HydrusData.EditLogActionEdit( other_new_tag_repo_updated[0], other_new_tag_repo_updated ) )
-        
-        self._write( 'update_services', edit_log )
-        
-        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
-        
-        test_written_services( written_services, ( new_tag_repo, other_new_tag_repo_updated, new_local_numerical ) )
-        
-        #
-        
-        edit_log = []
-        
-        edit_log.append( HydrusData.EditLogActionDelete( other_new_tag_repo_updated[0] ) )
-        
-        self._write( 'update_services', edit_log )
-        
-        written_services = set( self._read( 'services', ( HC.TAG_REPOSITORY, HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ) )
-        
-        test_written_services( written_services, ( new_tag_repo, new_local_numerical ) )
+        self.assertEqual( len( services ), NUM_DEFAULT_SERVICES )
         
     
     def test_sessions( self ):

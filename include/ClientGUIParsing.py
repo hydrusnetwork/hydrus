@@ -81,6 +81,53 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
+class StringMatchButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, string_match ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string match', self._Edit )
+        
+        self._string_match = string_match
+        
+        self._UpdateLabel()
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string match' ) as dlg:
+            
+            panel = EditStringMatchPanel( dlg, self._string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._string_match = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        label = self._string_match.ToUnicode()
+        
+        self.SetLabelText( label )
+        
+    
+    def GetValue( self ):
+        
+        return self._string_match
+        
+    
+    def SetValue( self, string_match ):
+        
+        self._string_match = string_match
+        
+        self._UpdateLabel()
+        
+    
 class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, rule ):
@@ -158,7 +205,9 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_rule = wx.TextCtrl( edit_panel )
         
-        ( tag_rules, content_rule, string_converter ) = formula.ToTuple()
+        ( tag_rules, content_rule, string_match, string_converter ) = formula.ToTuple()
+        
+        self._string_match_button = StringMatchButton( edit_panel, string_match )
         
         self._string_converter_button = StringConverterButton( edit_panel, string_converter )
         
@@ -255,6 +304,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         vbox.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         edit_panel.SetSizer( vbox )
@@ -376,9 +426,11 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             content_rule = None
             
         
+        string_match = self._string_match_button.GetValue()
+        
         string_converter = self._string_converter_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, string_converter )
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, string_match, string_converter )
         
         return formula
         
@@ -1730,7 +1782,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_result = string_converter.Convert( self._example_string.GetValue(), number )
             
-        except HydrusExceptions.ParseException as e:
+        except HydrusExceptions.StringConvertException as e:
             
             pretty_result = str( e )
             
@@ -1929,7 +1981,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             string_converter.Convert( self._example_string.GetValue() )
             
-        except HydrusExceptions.ParseException:
+        except HydrusExceptions.StringConvertException:
             
             wx.MessageBox( 'Please enter an example text that can be converted!' )
             
@@ -2067,18 +2119,18 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_type = ClientGUICommon.BetterChoice( self )
         
-        self._match_type.Append( ClientParsing.STRING_MATCH_ANY, 'any characters' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_FIXED, 'fixed characters' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_FLEXIBLE, 'character set' )
-        self._match_type.Append( ClientParsing.STRING_MATCH_REGEX, 'regex' )
+        self._match_type.Append( 'any characters', ClientParsing.STRING_MATCH_ANY )
+        self._match_type.Append( 'fixed characters', ClientParsing.STRING_MATCH_FIXED )
+        self._match_type.Append( 'character set', ClientParsing.STRING_MATCH_FLEXIBLE )
+        self._match_type.Append( 'regex', ClientParsing.STRING_MATCH_REGEX )
         
         self._match_value_text_input = wx.TextCtrl( self )
         
         self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
         
-        self._match_value_flexible_input.Append( ClientParsing.ALPHA, 'alphabetic characters (a-zA-Z)' )
-        self._match_value_flexible_input.Append( ClientParsing.ALPHANUMERIC, 'alphanumeric characters (a-zA-Z0-9)' )
-        self._match_value_flexible_input.Append( ClientParsing.NUMERIC, 'numeric characters (0-9)' )
+        self._match_value_flexible_input.Append( 'alphabetic characters (a-zA-Z)', ClientParsing.ALPHA )
+        self._match_value_flexible_input.Append( 'alphanumeric characters (a-zA-Z0-9)', ClientParsing.ALPHANUMERIC )
+        self._match_value_flexible_input.Append( 'numeric characters (0-9)', ClientParsing.NUMERIC )
         
         self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
@@ -2091,18 +2143,23 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
         
-        self._match_type.SetClientData( match_type )
+        self._match_type.SelectClientData( match_type )
         
         if match_type == ClientParsing.STRING_MATCH_FLEXIBLE:
             
-            self._match_value_flexible_input.SetClientData( match_value )
+            self._match_value_flexible_input.SelectClientData( match_value )
             
         else:
             
-            self._match_value_flexible_input.SetClientData( ClientParsing.ALPHA )
+            self._match_value_flexible_input.SelectClientData( ClientParsing.ALPHA )
             
             self._match_value_text_input.SetValue( match_value )
             
+        
+        self._min_chars.SetValue( min_chars )
+        self._max_chars.SetValue( max_chars )
+        
+        self._example_string.SetValue( example_string )
         
         self._UpdateControls()
         
@@ -2202,14 +2259,16 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             string_match = self._GetValue()
             
-            ( result, reason ) = string_match.Test( self._example_string.GetValue() )
-            
-            if result:
+            try:
+                
+                string_match.Test( self._example_string.GetValue() )
                 
                 self._example_string_matches.SetLabelText( 'Example matches ok!' )
                 self._example_string_matches.SetForegroundColour( ( 0, 128, 0 ) )
                 
-            else:
+            except HydrusExceptions.StringMatchException as e:
+                
+                reason = unicode( e )
                 
                 self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
                 self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )
@@ -2221,14 +2280,18 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdateControls()
         
+        event.Skip()
+        
     
     def GetValue( self ):
         
         string_match = self._GetValue()
         
-        ( result, reason ) = string_match.Test( self._example_string.GetValue() )
-        
-        if not result:
+        try:
+            
+            string_match.Test( self._example_string.GetValue() )
+            
+        except HydrusExceptions.StringMatchException:
             
             wx.MessageBox( 'Please enter an example text that matches the given rules!' )
             

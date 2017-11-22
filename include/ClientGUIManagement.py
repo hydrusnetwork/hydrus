@@ -2925,7 +2925,9 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             for content in contents:
                 
-                self._contents.Append( content.ToString(), content )
+                content_string = self._contents.EscapeMnemonics( content.ToString() )
+                
+                self._contents.Append( content_string, content )
                 
             
             self._contents.SetChecked( range( self._contents.GetCount() ) )

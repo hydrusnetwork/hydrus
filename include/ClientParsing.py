@@ -157,13 +157,18 @@ def RenderTagRule( ( name, attrs, index ) ):
 class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, tag_rules = None, content_rule = None, string_converter = None ):
+    def __init__( self, tag_rules = None, content_rule = None, string_match = None, string_converter = None ):
         
         if tag_rules is None:
             
             tag_rules = [ ( 'a', {}, None ) ]
+            
+        
+        if string_match is None:
+            
+            string_match = StringMatch()
             
         
         if string_converter is None:
@@ -175,21 +180,90 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         
         self._content_rule = content_rule
         
+        self._string_match = string_match
         self._string_converter = string_converter
         
     
     def _GetSerialisableInfo( self ):
         
+        serialisable_string_match = self._string_match.GetSerialisableTuple()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        return ( self._tag_rules, self._content_rule, serialisable_string_converter )
+        return ( self._tag_rules, self._content_rule, serialisable_string_match, serialisable_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._tag_rules, self._content_rule, serialisable_string_converter ) = serialisable_info
+        ( self._tag_rules, self._content_rule, serialisable_string_match, serialisable_string_converter ) = serialisable_info
         
+        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        
+    
+    def _ParseContent( self, root ):
+        
+        if self._content_rule is None:
+            
+            result = root.string
+            
+        else:
+            
+            if root.has_attr( self._content_rule ):
+                
+                unknown_attr_result = root[ self._content_rule ]
+                
+                # 'class' attr returns a list because it has multiple values under html spec, wew
+                if isinstance( unknown_attr_result, list ):
+                    
+                    if len( unknown_attr_result ) == 0:
+                        
+                        result = None
+                        
+                    else:
+                        
+                        result = ' '.join( unknown_attr_result )
+                        
+                    
+                else:
+                    
+                    result = unknown_attr_result
+                    
+                
+            else:
+                
+                result = None
+                
+            
+        
+        if result is None or result == '':
+            
+            raise HydrusExceptions.ParseException( 'No results found!' )
+            
+        else:
+            
+            self._string_match.Test( result )
+            
+            return self._string_converter.Convert( result )
+            
+        
+    
+    def _ParseTags( self, root, name, attrs, index ):
+        
+        results = root.find_all( name = name, attrs = attrs )
+        
+        if index is not None:
+            
+            if len( results ) < index + 1:
+                
+                results = []
+                
+            else:
+                
+                results = [ results[ index ] ]
+                
+            
+        
+        return results
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -250,69 +324,18 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
-    
-    def _ParseContent( self, root ):
-        
-        if self._content_rule is None:
+        if version == 3:
             
-            result = root.string
+            ( tag_rules, content_rule, serialisable_string_converter ) = old_serialisable_info
             
-        else:
+            string_match = StringMatch()
             
-            if root.has_attr( self._content_rule ):
-                
-                unknown_attr_result = root[ self._content_rule ]
-                
-                # 'class' attr returns a list because it has multiple values under html spec, wew
-                if isinstance( unknown_attr_result, list ):
-                    
-                    if len( unknown_attr_result ) == 0:
-                        
-                        result = None
-                        
-                    else:
-                        
-                        result = ' '.join( unknown_attr_result )
-                        
-                    
-                else:
-                    
-                    result = unknown_attr_result
-                    
-                
-            else:
-                
-                result = None
-                
+            serialisable_string_match = string_match.GetSerialisableTuple()
             
-        
-        if result == '' or result is None:
+            new_serialisable_info = ( tag_rules, content_rule, serialisable_string_match, serialisable_string_converter )
             
-            return None
+            return ( 4, new_serialisable_info )
             
-        else:
-            
-            return self._string_converter.Convert( result )
-            
-        
-    
-    def _ParseTags( self, root, name, attrs, index ):
-        
-        results = root.find_all( name = name, attrs = attrs )
-        
-        if index is not None:
-            
-            if len( results ) < index + 1:
-                
-                results = []
-                
-            else:
-                
-                results = [ results[ index ] ]
-                
-            
-        
-        return results
         
     
     def Parse( self, html ):
@@ -333,9 +356,21 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             roots = next_roots
             
         
-        contents = [ self._ParseContent( root ) for root in roots ]
+        contents = []
         
-        contents = [ content for content in contents if content is not None ]
+        for root in roots:
+            
+            try:
+                
+                content = self._ParseContent( root )
+                
+                contents.append( content )
+                
+            except HydrusExceptions.ParseException:
+                
+                continue
+                
+            
         
         return contents
         
@@ -389,7 +424,7 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._tag_rules, self._content_rule, self._string_converter )
+        return ( self._tag_rules, self._content_rule, self._string_match, self._string_converter )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
@@ -1071,7 +1106,7 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                 
             except:
                 
-                raise HydrusExceptions.ParseException( 'ERROR: Could not apply "' + self.TransformationToUnicode( transformation ) + '" to string "' + repr( s ) + '".' )
+                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.TransformationToUnicode( transformation ) + '" to string "' + repr( s ) + '".' )
                 
             
             if max_steps_allowed is not None and i + 1 >= max_steps_allowed:
@@ -1147,7 +1182,7 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, match_type = STRING_MATCH_FIXED, match_value = 'post', min_chars = None, max_chars = None, example_string = 'post' ):
+    def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = 'example string' ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         # make a gui control that accepts one of these. displays expected input on the right and colours red/green (and does isvalid) based on current input
@@ -1190,23 +1225,19 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
         
         if self._min_chars is not None and text_len < self._min_chars:
             
-            return ( False, presentation_text + ' had fewer than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
+            raise HydrusExceptions.StringMatchException( presentation_text + ' had fewer than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
             
         
         if self._max_chars is not None and text_len > self._max_chars:
             
-            return ( False, presentation_text + ' had more than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
+            raise HydrusExceptions.StringMatchException( presentation_text + ' had more than ' + HydrusData.ConvertIntToPrettyString( self._max_chars ) + ' characters' )
             
         
         if self._match_type == STRING_MATCH_FIXED:
             
-            if text == self._match_value:
+            if text != self._match_value:
                 
-                return ( True, 'good' )
-                
-            else:
-                
-                return ( False, presentation_text + ' did not exactly match "' + self._match_value + '"' )
+                raise HydrusExceptions.StringMatchException( presentation_text + ' did not exactly match "' + self._match_value + '"' )
                 
             
         elif self._match_type in ( STRING_MATCH_FLEXIBLE, STRING_MATCH_REGEX ):
@@ -1238,37 +1269,45 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
             
             if re.search( r, text, flags = re.UNICODE ) is None:
                 
-                return ( False, presentation_text + fail_reason )
-                
-            else:
-                
-                return ( True, 'good' )
+                raise HydrusExceptions.StringMatchException( presentation_text + fail_reason )
                 
             
         elif self._match_type == STRING_MATCH_ANY:
             
-            return ( True, 'good' )
+            pass
             
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
         
     
     def ToUnicode( self ):
         
         result = ''
         
-        if self._min_chars is not None:
+        if self._min_chars is None:
             
-            if self._max_chars is not None:
+            if self._max_chars is None:
                 
-                result += 'between ' + HydrusData.ToUnicode( self._min_chars ) + ' and ' + HydrusData.ToUnicode( self._max_chars ) + ' '
+                result += 'any number of '
                 
             else:
                 
-                result += 'at least ' + HydrusData.ToUnicode( self._min_chars ) + ' '
+                result += 'at most ' + HydrusData.ToUnicode( self._max_chars ) + ' '
                 
             
         else:
             
-            result += 'at most ' + HydrusData.ToUnicode( self._max_chars ) + ' '
+            if self._max_chars is None:
+                
+                result += 'at least ' + HydrusData.ToUnicode( self._min_chars ) + ' '
+                
+            else:
+                
+                result += 'between ' + HydrusData.ToUnicode( self._min_chars ) + ' and ' + HydrusData.ToUnicode( self._max_chars ) + ' '
+                
             
         
         show_example = True
@@ -1277,9 +1316,11 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
             
             result += 'characters'
             
+            show_example = False
+            
         elif self._match_type == STRING_MATCH_FIXED:
             
-            result += self._match_value
+            result = self._match_value
             
             show_example = False
             
@@ -1305,7 +1346,7 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
         
         if show_example:
             
-            result += ', such as ' + self._example_string
+            result += ', such as "' + self._example_string + '"'
             
         
         return result

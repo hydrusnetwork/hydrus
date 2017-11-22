@@ -598,9 +598,11 @@ class LoginScriptDomain( object ):
                 return False
                 
             
-            ( result, reason ) = string_match.Test( cookie_text )
-            
-            if not result:
+            try:
+                
+                string_match.Test( cookie_text )
+                
+            except HydrusExceptions.StringMatchException:
                 
                 return False
                 
@@ -741,9 +743,13 @@ class LoginStep( object ):
             
             arg_value = credentials.GetCredential( arg_name )
             
-            ( result, reason ) = string_match.Test( arg_name )
-            
-            if not result:
+            try:
+                
+                string_match.Test( arg_name )
+                
+            except HydrusExceptions.StringMatchException as e:
+                
+                reason = unicode( e )
                 
                 raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' did not match requirements:' + os.linesep + reason )
                 

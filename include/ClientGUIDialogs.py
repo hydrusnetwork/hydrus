@@ -778,7 +778,7 @@ class FrameInputLocalFiles( wx.Frame ):
             paths = []
             
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( filenames_callable = self._AddPathsToList ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self._AddPathsToList ) )
         
         listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
         
@@ -1018,11 +1018,15 @@ class FrameInputLocalFiles( wx.Frame ):
             
             file_import_options = self._file_import_options.GetValue()
             
-            with DialogPathsToTags( self, self._current_paths ) as dlg:
+            with ClientGUITopLevelWindows.DialogEdit( self, 'filename tagging', frame_key = 'local_import_filename_tagging' ) as dlg:
+                
+                panel = ClientGUIImport.EditLocalImportFilenameTaggingPanel( dlg, self._current_paths )
+                
+                dlg.SetPanel( panel )
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    paths_to_tags = dlg.GetInfo()
+                    paths_to_tags = panel.GetValue()
                     
                     delete_after_success = self._delete_after_success.GetValue()
                     
@@ -1761,173 +1765,6 @@ class DialogModifyAccounts( Dialog ):
             
         
     
-class DialogPathsToTags( Dialog ):
-    
-    def __init__( self, parent, paths ):
-        
-        Dialog.__init__( self, parent, 'path tagging' )
-        
-        self._paths = paths
-        
-        self._tag_repositories = ClientGUICommon.ListBook( self )
-        
-        self._add_button = wx.Button( self, id = wx.ID_OK, label = 'Import Files' )
-        self._add_button.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Back to File Selection' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        services = HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
-        
-        for service in services:
-            
-            if service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_CREATE ):
-                
-                service_key = service.GetServiceKey()
-                
-                name = service.GetName()
-                
-                self._tag_repositories.AddPageArgs( name, service_key, self._Panel, ( self._tag_repositories, service_key, paths ), {} )
-                
-            
-        
-        page = self._Panel( self._tag_repositories, CC.LOCAL_TAG_SERVICE_KEY, paths )
-        
-        name = CC.LOCAL_TAG_SERVICE_KEY
-        
-        self._tag_repositories.AddPage( name, name, page )
-        
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-        
-        self._tag_repositories.Select( default_tag_repository_key )
-        
-        #
-        
-        buttons = wx.BoxSizer( wx.HORIZONTAL )
-        
-        buttons.AddF( self._add_button, CC.FLAGS_SMALL_INDENT )
-        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( width, height ) = self.GetMinSize()
-        
-        ( d_width, d_height ) = ClientGUITopLevelWindows.GetDisplaySize( self.GetParent() )
-        
-        height = min( height, d_height )
-        
-        self.SetInitialSize( ( width, height ) )
-        
-        ClientGUITopLevelWindows.SlideOffScreenTLWUpAndLeft( self )
-        
-    
-    def GetInfo( self ):
-        
-        paths_to_tags = collections.defaultdict( dict )
-        
-        for page in self._tag_repositories.GetActivePages():
-            
-            ( service_key, page_of_paths_to_tags ) = page.GetInfo()
-            
-            for ( path, tags ) in page_of_paths_to_tags.items(): paths_to_tags[ path ][ service_key ] = tags
-            
-        
-        return paths_to_tags
-        
-    
-    class _Panel( wx.Panel ):
-        
-        def __init__( self, parent, service_key, paths ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._service_key = service_key
-            self._paths = paths
-            
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 25, 40, [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ], self._ConvertDataToListCtrlTuples )
-            
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
-            
-            #
-            
-            self._filename_tagging_panel = ClientGUIImport.FilenameTaggingOptionsPanel( self, self._service_key, self.RefreshFileList, present_for_accompanying_file_list = True )
-            
-            #
-            
-            # i.e. ( index, path )
-            self._paths_list.AddDatas( list( enumerate( self._paths ) ) )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def _ConvertDataToListCtrlTuples( self, data ):
-            
-            ( index, path ) = data
-            
-            tags = self._GetTags( index, path )
-            
-            pretty_index = HydrusData.ConvertIntToPrettyString( index + 1 )
-            
-            pretty_path = path
-            pretty_tags = ', '.join( tags )
-            
-            display_tuple = ( pretty_index, pretty_path, pretty_tags )
-            sort_tuple = ( index, path, tags )
-            
-            return ( display_tuple, sort_tuple )
-            
-        
-        def _GetTags( self, index, path ):
-            
-            filename_tagging_options = self._filename_tagging_panel.GetFilenameTaggingOptions()
-            
-            tags = filename_tagging_options.GetTags( self._service_key, path )
-            
-            tags.update( self._filename_tagging_panel.GetTags( index, path ) )
-            
-            tags = list( tags )
-            
-            tags.sort()
-            
-            return tags
-            
-        
-        def EventItemSelected( self, event ):
-            
-            paths = [ path for ( index, path ) in self._paths_list.GetData( only_selected = True ) ]
-            
-            self._filename_tagging_panel.SetSelectedPaths( paths )
-            
-            event.Skip()
-            
-        
-        def GetInfo( self ):
-            
-            paths_to_tags = { path : self._GetTags( index, path ) for ( index, path ) in self._paths_list.GetData() }
-            
-            return ( self._service_key, paths_to_tags )
-            
-        
-        def RefreshFileList( self ):
-            
-            self._paths_list.UpdateDatas()
-            
-        
 class DialogSelectBooru( Dialog ):
     
     def __init__( self, parent ):

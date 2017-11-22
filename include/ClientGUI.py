@@ -91,7 +91,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
-        self.SetDropTarget( ClientDragDrop.FileDropTarget( self.ImportFiles, self.ImportURL, self._notebook.PageDragAndDropDropped ) )
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURL, self._notebook.PageDragAndDropDropped ) )
         
         wx.GetApp().SetTopWindow( self )
         
@@ -411,6 +411,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             admin_service = ClientServices.GenerateService( admin_service_key, service_type, name )
             
+            all_services = list( self._controller.services_manager.GetServices() )
+            
+            all_services.append( admin_service )
+            
+            self._controller.SetServices( all_services )
+            
+            admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
+            
             credentials = HydrusNetwork.Credentials( host, port )
             
             admin_service.SetCredentials( credentials )
@@ -424,14 +432,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             admin_service.SetCredentials( credentials )
             
             #
-            
-            all_services = list( self._controller.services_manager.GetServices() )
-            
-            all_services.append( admin_service )
-            
-            self._controller.SetServices( all_services )
-            
-            admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
             
             HydrusData.ShowText( 'Admin service initialised.' )
             
@@ -635,22 +635,27 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _CheckImportFolder( self, name ):
+    def _CheckImportFolder( self, name = None ):
         
-        try:
+        if name is None:
+            
+            import_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+            
+        else:
             
             import_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
+            
+            import_folders = [ import_folder ]
+            
+        
+        for import_folder in import_folders:
             
             import_folder.CheckNow()
             
             self._controller.WriteSynchronous( 'serialisable', import_folder )
             
-            self._controller.pub( 'notify_new_import_folders' )
-            
-        except HydrusExceptions.DataMissing:
-            
-            pass
-            
+        
+        self._controller.pub( 'notify_new_import_folders' )
         
     
     def _ClearOrphans( self ):
@@ -875,6 +880,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 submenu = wx.Menu()
                 
+                if len( import_folder_names ) > 1:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, 'check all', 'Check all import folders.', self._CheckImportFolder )
+                    
+                    ClientGUIMenus.AppendSeparator( submenu )
+                    
+                
                 for name in import_folder_names:
                     
                     ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Check this import folder now.', self._CheckImportFolder, name )
@@ -958,7 +970,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                         for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
                             
-                            name = page.GetName()
+                            name = page.GetDisplayName()
                             
                             args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
                             
@@ -1106,8 +1118,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
             
-            #pixiv is broke atm
-            '''
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
             if result is not None:
@@ -1115,11 +1125,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 pixiv_submenu = wx.Menu()
                 
                 ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ), on_deepest_notebook = True )
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ), on_deepest_notebook = True )
+                #ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ), on_deepest_notebook = True )
                 
                 ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
                 
-            '''
+            
             ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ), on_deepest_notebook = True )
             
             ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
