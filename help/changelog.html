@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 283</h3></li>
+				<ul>
+					<li>subscription popups show a bit more info about their individual queries</li>
+					<li>subscription popups hide the sub-query info in text and file buttons if it is the same as the subscription name</li>
+					<li>subscriptions now work through their queries' downloading phases in random order (so a heavy query named 'aardvark' won't repeatedly choke the sub's other queries if bandwidth is tight)</li>
+					<li>if a subscription query dies, a notification popup will now be made</li>
+					<li>changed a logical edge case that may have been killing some subscription queries after the first sync</li>
+					<li>re-enabled pixiv artist search, as it still uses the old gallery style</li>
+					<li>added tentative support for 'ZWS' flash files</li>
+					<li>if there is more than one import folder, the 'check import folder now' submenu now has a 'check all' entry</li>
+					<li>TimeDelta controls that have the 'days' entry (as in thread/subscription checker options panels) now have a max period of 10 years for those _really_ slow threads</li>
+					<li>fixed an issue where the 'quick namespaces' section of the new filename tagging options panel was not initialising correctly when it loaded data from a previously serialised import folder (this was the "unhashable type: 'list'" bug in the edit import folder panel)</li>
+					<li>the filename tagging dialog now works on the new panel system. it also has an entry under options->gui: 'local_import_filename_tagging'</li>
+					<li>polished StringMatch object</li>
+					<li>polished EditStringMatchPanel</li>
+					<li>html formulas now have a string match object</li>
+					<li>improved parsing error system</li>
+					<li>miscellaneous improvements to the parsing system</li>
+					<li>misc fixes to StringMatch and parsing system</li>
+					<li>the main gui will no longer interpret text drops on child frames as url drops. this fix just quashes the drop--it doesn't allow the initially desired drop on the child frame to occur. I will keep thinking about this</li>
+					<li>the dupe filter's 'no media to display' text now says 'Looking for more pairs--please wait'</li>
+					<li>the 'remove' media action is now labelled 'remove from view' to reduce 'is it a delete?' confusion</li>
+					<li>fixed an icon initialisation order problem that meant pre-boot errors were unable to display</li>
+					<li>fixed a graceful-shutdown-on-boot-error bug</li>
+					<li>the custom 'listboxtags' controls now post an event on their contents changing</li>
+					<li>the tag censorship panel now updates its status text when its listboxes change due to a mouse double-click event</li>
+					<li>fixed file import 'source time' column sometimes showing '3e-05 years' kind of garbage that was due to a missed float->int conversion</li>
+					<li>cleaned up how some page names are thrown around, which should stop some stray [USER] prefixes slipping though</li>
+					<li>the adminside petition management checklistbox will now escape mnemonic characters (typically '&') and hence display them correctly on sibling pairs and so on</li>
+					<li>wrote a 'help my client will not boot.txt' that explains the new debug builds and some other common fixes to try</li>
+					<li>'all known files' file search domain is now hidden behind advanced mode</li>
+					<li>fixed another instance of flashwin causing a failed boot</li>
+					<li>cleaned up some old broken unit tests</li>
+					<li>some misc help improvements</li>
+					<li>updated Windows build to new version of sqlite</li>
+				</ul>
 				<li><h3>version 282</h3></li>
 				<ul>
 					<li>rolled back to an older version of pyinstaller that does not seem to have the embedded flash window problems windows users experienced</li>
