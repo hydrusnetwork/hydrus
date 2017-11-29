@@ -59,6 +59,7 @@ SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER = 53
 SERIALISABLE_TYPE_SUBSCRIPTION_QUERY = 54
 SERIALISABLE_TYPE_STRING_CONVERTER = 55
 SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS = 56
+SERIALISABLE_TYPE_SEED = 57
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -103,6 +104,7 @@ def CreateFromSerialisableTuple( obj_tuple ):
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
+    SERIALISABLE_NAME = 'Base Serialisable Object'
     SERIALISABLE_VERSION = 1
     
     def _GetSerialisableInfo( self ):
@@ -157,6 +159,7 @@ class SerialisableBase( object ):
 class SerialisableBaseNamed( SerialisableBase ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE_NAMED
+    SERIALISABLE_NAME = 'Named Base Serialisable Object'
     
     def __init__( self, name ):
         
@@ -194,6 +197,7 @@ class SerialisableBaseNamed( SerialisableBase ):
 class SerialisableDictionary( SerialisableBase, dict ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_DICTIONARY
+    SERIALISABLE_NAME = 'Serialisable Dictionary'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, *args, **kwargs ):
@@ -288,6 +292,7 @@ SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_DICTIONARY ] = Serialisabl
 class SerialisableBytesDictionary( SerialisableBase, dict ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BYTES_DICT
+    SERIALISABLE_NAME = 'Serialisable Dictionary With Bytestring Key/Value Support'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, *args, **kwargs ):
@@ -357,6 +362,7 @@ SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_BYTES_DICT ] = Serialisabl
 class SerialisableList( SerialisableBase, list ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_LIST
+    SERIALISABLE_NAME = 'Serialisable List'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, *args, **kwargs ):

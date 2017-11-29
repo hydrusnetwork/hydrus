@@ -22,54 +22,76 @@ class TestData( unittest.TestCase ):
         
         for i in range( 50 ):
             
-            seed = os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            
+            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            
+            seed.source_time = one_day_before - 10
             
             seed_cache.AddSeeds( ( seed, ) )
-            
-            seed_cache.UpdateSeedSourceTime( seed, one_day_before - 10 )
             
         
         for i in range( 50 ):
             
-            seed = os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            
+            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            
+            seed.source_time = last_check_time - 600
             
             seed_cache.AddSeeds( ( seed, ) )
-            
-            seed_cache.UpdateSeedSourceTime( seed, last_check_time - 600 )
             
         
         bare_seed_cache = ClientImporting.SeedCache()
         
-        bare_seed_cache.AddSeeds( ( 'early', ) )
-        bare_seed_cache.AddSeeds( ( 'in_time_delta', ) )
+        url = 'https://wew.lad/' + 'early'
         
-        bare_seed_cache.UpdateSeedSourceTime( 'early', one_day_before - 10 )
-        bare_seed_cache.UpdateSeedSourceTime( 'in_time_delta', one_day_before + 10 )
+        seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+        
+        seed.source_time = one_day_before - 10
+        
+        bare_seed_cache.AddSeeds( ( seed, ) )
+        
+        url = 'https://wew.lad/' + 'in_time_delta'
+        
+        seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+        
+        seed.source_time = one_day_before + 10
+        
+        bare_seed_cache.AddSeeds( ( seed, ) )
         
         busy_seed_cache = ClientImporting.SeedCache()
         
-        busy_seed_cache.AddSeeds( ( 'early', ) )
+        url = 'https://wew.lad/' + 'early'
         
-        busy_seed_cache.UpdateSeedSourceTime( 'early', one_day_before - 10 )
+        seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+        
+        seed.source_time = one_day_before - 10
+        
+        busy_seed_cache.AddSeeds( ( seed, ) )
         
         for i in range( 8640 ):
             
-            seed = os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            
+            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            
+            seed.source_time = one_day_before + ( ( i + 1 ) * 10 ) - 1
             
             busy_seed_cache.AddSeeds( ( seed, ) )
-            
-            busy_seed_cache.UpdateSeedSourceTime( seed, one_day_before + ( ( i + 1 ) * 10 ) - 1 )
             
         
         new_thread_seed_cache = ClientImporting.SeedCache()
         
         for i in range( 10 ):
             
-            seed = os.urandom( 16 ).encode( 'hex' )
+            url = 'https://wew.lad/' + os.urandom( 16 ).encode( 'hex' )
+            
+            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            
+            seed.source_time = last_check_time - 600
             
             new_thread_seed_cache.AddSeeds( ( seed, ) )
-            
-            new_thread_seed_cache.UpdateSeedSourceTime( seed, last_check_time - 600 )
             
         
         # empty

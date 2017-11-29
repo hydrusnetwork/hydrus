@@ -2759,6 +2759,11 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             return
             
         
+        if not os.path.exists( path ):
+            
+            wx.MessageBox( 'The path you have entered--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+            
+        
         if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
             
             wx.MessageBox( 'You cannot set an import path that includes your install or database directory!' )
@@ -2766,32 +2771,72 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             return
             
         
-        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_successful.GetPath() in ( '', None ):
+        if self._action_successful.GetChoice() == CC.IMPORT_FOLDER_MOVE:
             
-            wx.MessageBox( 'You must enter a path for your successful file move location!' )
+            path = self._location_successful.GetPath()
             
-            return
+            if path in ( '', None ):
+                
+                wx.MessageBox( 'You must enter a path for your successful file move location!' )
+                
+                return
+                
             
-        
-        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_redundant.GetPath() in ( '', None ):
-            
-            wx.MessageBox( 'You must enter a path for your redundant file move location!' )
-            
-            return
-            
-        
-        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_deleted.GetPath() in ( '', None ):
-            
-            wx.MessageBox( 'You must enter a path for your deleted file move location!' )
-            
-            return
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your successful file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
             
         
-        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE and self._location_failed.GetPath() in ( '', None ):
+        if self._action_redundant.GetChoice() == CC.IMPORT_FOLDER_MOVE:
             
-            wx.MessageBox( 'You must enter a path for your failed file move location!' )
+            path = self._location_redundant.GetPath()
             
-            return
+            if path in ( '', None ):
+                
+                wx.MessageBox( 'You must enter a path for your redundant file move location!' )
+                
+                return
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your redundant file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+        if self._action_deleted.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_deleted.GetPath()
+            
+            if path in ( '', None ):
+                
+                wx.MessageBox( 'You must enter a path for your deleted file move location!' )
+                
+                return
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your deleted file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
+            
+        
+        if self._action_failed.GetChoice() == CC.IMPORT_FOLDER_MOVE:
+            
+            path = self._location_failed.GetPath()
+            
+            if path in ( '', None ):
+                
+                wx.MessageBox( 'You must enter a path for your failed file move location!' )
+                
+                return
+                
+            
+            if not os.path.exists( path ):
+                
+                wx.MessageBox( 'The path you have entered for your failed file move location--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                
             
         
         self.EndModal( wx.ID_OK )

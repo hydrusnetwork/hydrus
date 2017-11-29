@@ -67,9 +67,11 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
             os.remove( temp_path )
             
-        except OSError:
+        except OSError as e:
             
             HydrusData.Print( 'Could not delete the temporary file ' + temp_path )
+            
+            HydrusData.PrintException( e )
             
         
     

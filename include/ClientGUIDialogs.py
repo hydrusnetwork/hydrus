@@ -913,7 +913,7 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 self._job_key = ClientThreading.JobKey()
                 
-                HG.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key )
+                HG.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key, self._progress_updater )
                 
             
         
@@ -969,6 +969,11 @@ class FrameInputLocalFiles( wx.Frame ):
         
     
     def DoneParsing( self ):
+        
+        if not self:
+            
+            return
+            
         
         self._currently_parsing = False
         
@@ -1083,9 +1088,9 @@ class FrameInputLocalFiles( wx.Frame ):
         self._tag_button.Enable()
         
     
-    def THREADParseImportablePaths( self, raw_paths, job_key ):
+    def THREADParseImportablePaths( self, raw_paths, job_key, progress_updater ):
         
-        self._progress_updater.Update( 'Finding all files', None, None )
+        progress_updater.Update( 'Finding all files', None, None )
         
         file_paths = ClientFiles.GetAllPaths( raw_paths )
         
@@ -1108,7 +1113,7 @@ class FrameInputLocalFiles( wx.Frame ):
             
             message = 'Parsed ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths )
             
-            self._progress_updater.Update( message, i, num_file_paths )
+            progress_updater.Update( message, i, num_file_paths )
             
             ( i_paused, should_quit ) = job_key.WaitIfNeeded()
             
@@ -1196,7 +1201,7 @@ class FrameInputLocalFiles( wx.Frame ):
         
         HydrusData.Print( message )
         
-        self._progress_updater.Update( message, num_file_paths, num_file_paths )
+        progress_updater.Update( message, num_file_paths, num_file_paths )
         
         self._done_parsing_updater.Update()
         

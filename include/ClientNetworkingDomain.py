@@ -91,6 +91,7 @@ valid_str_lookup[ VALID_UNKNOWN ] = 'unknown'
 class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER
+    SERIALISABLE_NAME = 'Domain Manager'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -266,6 +267,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetURLMatches( self ):
+        
+        with self._lock:
+            
+            return list( self._url_matches )
+            
+        
+    
     def IsDirty( self ):
         
         with self._lock:
@@ -355,6 +364,18 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetURLMatches( self, url_matches ):
+        
+        with self._lock:
+            
+            self._url_matches = HydrusSerialisable.SerialisableList()
+            
+            self._url_matches.extend( url_matches )
+            
+            self._SetDirty()
+            
+        
+    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
 
 class DomainValidationPopupProcess( object ):
@@ -430,9 +451,15 @@ class DomainValidationPopupProcess( object ):
 class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
+    SERIALISABLE_NAME = 'URL Match'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name, preferred_scheme = 'https', netloc = 'hostname.com', subdomain_is_important = False, path_components = None, parameters = None, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__( self, name, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', allow_subdomains = False, keep_subdomains = False, path_components = None, parameters = None, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+        
+        if url_type is None:
+            
+            url_type = HC.URL_TYPE_POST
+            
         
         if path_components is None:
             
@@ -450,14 +477,18 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '123456' )
             
         
-        # an edit dialog panel for this that has example url and testing of current values
-        # a parent panel or something that lists all current urls in the db that match and how they will be clipped, is this ok? kind of thing.
+        # if the args are not serialisable stuff, lets overwrite here
+        
+        path_components = HydrusSerialisable.SerialisableList( path_components )
+        parameters = HydrusSerialisable.SerialisableDictionary( parameters )
         
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
+        self._url_type = url_type
         self._preferred_scheme = preferred_scheme
         self._netloc = netloc
-        self._subdomain_is_important = subdomain_is_important
+        self._allow_subdomains = allow_subdomains
+        self._keep_subdomains = keep_subdomains
         self._path_components = path_components
         self._parameters = parameters
         
@@ -466,7 +497,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ClipNetLoc( self, netloc ):
         
-        if self._subdomain_is_important:
+        if self._keep_subdomains:
             
             # for domains like artistname.website.com, where removing the subdomain may break the url, we leave it alone
             
@@ -475,7 +506,6 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         else:
             
             # for domains like mediaserver4.website.com, where multiple subdomains serve the same content as the larger site
-            # if the main site doesn't deliver the same content as the subdomain, then subdomain_is_important
             
             netloc = self._netloc
             
@@ -488,12 +518,12 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_path_components = self._path_components.GetSerialisableTuple()
         serialisable_parameters = self._parameters.GetSerialisableTuple()
         
-        return ( self._preferred_scheme, self._netloc, self._subdomain_is_important, serialisable_path_components, serialisable_parameters, self._example_url )
+        return ( self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, serialisable_path_components, serialisable_parameters, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._preferred_scheme, self._netloc, self._subdomain_is_important, serialisable_path_components, serialisable_parameters, self._example_url ) = serialisable_info
+        ( self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, serialisable_path_components, serialisable_parameters, self._example_url ) = serialisable_info
         
         self._path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components )
         self._parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters )
@@ -550,6 +580,16 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         return ConvertURLIntoDomain( self._example_url )
         
     
+    def GetExampleURL( self ):
+        
+        return self._example_url
+        
+    
+    def GetURLType( self ):
+        
+        return self._url_type
+        
+    
     def Normalise( self, url ):
         
         p = urlparse.urlparse( url )
@@ -568,10 +608,22 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Test( self, url ):
         
-        # split the url into parts according to urlparse
         p = urlparse.urlparse( url )
         
-        # test p.netloc with netloc, taking subdomain_is_important into account
+        if self._allow_subdomains:
+            
+            if p.netloc != self._netloc and not p.netloc.endswith( '.' + self._netloc ):
+                
+                raise HydrusExceptions.URLMatchException( p.netloc + ' (potentially excluding subdomains) did not match ' + self._netloc )
+                
+            
+        else:
+            
+            if p.netloc != self._netloc:
+                
+                raise HydrusExceptions.URLMatchException( p.netloc + ' did not match ' + self._netloc )
+                
+            
         
         url_path = p.path
         
@@ -580,11 +632,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             url_path = url_path[ 1 : ]
             
         
-        url_path_components = p.path.split( '/' )
+        url_path_components = url_path.split( '/' )
         
         if len( url_path_components ) < len( self._path_components ):
             
-            raise HydrusExceptions.URLMatchException( p.path + ' did not have ' + str( len( self._path_components ) ) + ' components' )
+            raise HydrusExceptions.URLMatchException( url_path + ' did not have ' + str( len( self._path_components ) ) + ' components' )
             
         
         for ( url_path_component, expected_path_component ) in zip( url_path_components, self._path_components ):
@@ -601,23 +653,25 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         url_parameters_list = urlparse.parse_qsl( p.query )
         
-        if len( url_parameters_list ) < len( self._parameters ):
+        url_parameters = dict( url_parameters_list )
+        
+        if len( url_parameters ) < len( self._parameters ):
             
             raise HydrusExceptions.URLMatchException( p.query + ' did not have ' + str( len( self._parameters ) ) + ' value pairs' )
             
         
-        for ( key, url_value ) in url_parameters_list:
+        for ( key, string_match ) in self._parameters.items():
             
-            if key not in self._parameters:
+            if key not in url_parameters:
                 
                 raise HydrusExceptions.URLMatchException( key + ' not found in ' + p.query )
                 
             
-            expected_value = self._parameters[ key ]
+            value = url_parameters[ key ]
             
             try:
                 
-                expected_value.Test( url_value )
+                string_match.Test( value )
                 
             except HydrusExceptions.StringMatchException as e:
                 
@@ -626,5 +680,10 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT ] = URLMatch
+    def ToTuple( self ):
+        
+        return ( self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, self._path_components, self._parameters, self._example_url )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH ] = URLMatch
 

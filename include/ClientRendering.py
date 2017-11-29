@@ -634,8 +634,14 @@ class HydrusBitmap( object ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB: return wx.BitmapFromBuffer( width, height, self._GetData() )
-        else: return wx.BitmapFromBufferRGBA( width, height, self._GetData() )
+        if self._format == wx.BitmapBufferFormat_RGB:
+            
+            return wx.BitmapFromBuffer( width, height, self._GetData() )
+            
+        else:
+            
+            return wx.BitmapFromBufferRGBA( width, height, self._GetData() )
+            
         
     
     def GetWxImage( self ):
@@ -663,5 +669,8 @@ class HydrusBitmap( object ):
         return len( self._data )
         
     
-    def GetSize( self ): return self._size
+    def GetSize( self ):
+        
+        return self._size
+        
     

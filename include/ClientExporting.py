@@ -215,6 +215,7 @@ def ParseExportPhrase( phrase ):
 class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER
+    SERIALISABLE_NAME = 'Export Folder'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, name, path = '', export_type = HC.EXPORT_FOLDER_TYPE_REGULAR, file_search_context = None, period = 3600, phrase = None ):

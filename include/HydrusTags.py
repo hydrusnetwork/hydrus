@@ -88,8 +88,14 @@ def ConvertTagToSortable( t ):
         
         for character in t:
             
-            if character.isdecimal(): int_component += character
-            else: break
+            if character.isdecimal():
+                
+                int_component += character
+                
+            else:
+                
+                break
+                
             
             i += 1
             
@@ -97,7 +103,6 @@ def ConvertTagToSortable( t ):
         str_component = t[i:]
         
         number = int( int_component )
-        
         
         return ( number, str_component )
         

@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 283
+SOFTWARE_VERSION = 284
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -650,6 +650,18 @@ site_type_string_lookup[ SITE_TYPE_PIXIV_ARTIST_ID ] = 'pixiv artist id'
 site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
 site_type_string_lookup[ SITE_TYPE_THREAD_WATCHER ] = 'thread watcher'
+
+URL_TYPE_POST = 0
+URL_TYPE_API = 1
+URL_TYPE_FILE = 2
+URL_TYPE_GALLERY = 3
+
+url_type_string_lookup = {}
+
+url_type_string_lookup[ URL_TYPE_POST ] = 'post url'
+url_type_string_lookup[ URL_TYPE_API ] = 'api url'
+url_type_string_lookup[ URL_TYPE_FILE ] = 'file url'
+url_type_string_lookup[ URL_TYPE_GALLERY ] = 'gallery url'
 
 # default options
 

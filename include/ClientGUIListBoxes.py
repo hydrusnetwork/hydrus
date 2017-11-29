@@ -14,6 +14,8 @@ import HydrusTags
 import os
 import wx
 
+( ListBoxEvent, EVT_LIST_BOX ) = wx.lib.newevent.NewCommandEvent()
+
 class QueueListBox( wx.Panel ):
     
     def __init__( self, parent, data_to_pretty_callable, add_callable, edit_callable ):
@@ -24,7 +26,7 @@ class QueueListBox( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._listbox = wx.ListBox( self, style = wx.LB_MULTIPLE )
+        self._listbox = wx.ListBox( self, style = wx.LB_EXTENDED )
         
         self._up_button = ClientGUICommon.BetterButton( self, u'\u2191', self._Up )
         
@@ -63,6 +65,7 @@ class QueueListBox( wx.Panel ):
         #
         
         self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
+        self._listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventEdit )
         
     
     def _Add( self ):
@@ -84,14 +87,14 @@ class QueueListBox( wx.Panel ):
     
     def _Delete( self ):
         
-        indices = self._listbox.GetSelections()
-        
-        indices.sort( reverse = True )
+        indices = list( self._listbox.GetSelections() )
         
         if len( indices ) == 0:
             
             return
             
+        
+        indices.sort( reverse = True )
         
         import ClientGUIDialogs
         
@@ -106,16 +109,18 @@ class QueueListBox( wx.Panel ):
                 
             
         
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
     
     def _Down( self ):
         
-        indices = self._listbox.GetSelections()
+        indices = list( self._listbox.GetSelections() )
         
         indices.sort( reverse = True )
         
         for i in indices:
             
-            if i > 0:
+            if i < self._listbox.GetCount() - 1:
                 
                 if not self._listbox.IsSelected( i + 1 ): # is the one below not selected?
                     
@@ -123,6 +128,8 @@ class QueueListBox( wx.Panel ):
                     
                 
             
+        
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Edit( self ):
@@ -144,7 +151,7 @@ class QueueListBox( wx.Panel ):
                 
                 pretty_new_data = self._data_to_pretty_callable( new_data )
                 
-                self._listbox.Set( pretty_new_data, i, new_data )
+                self._listbox.Insert( pretty_new_data, i, new_data )
                 
             else:
                 
@@ -152,8 +159,13 @@ class QueueListBox( wx.Panel ):
                 
             
         
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
     
     def _SwapRows( self, index_a, index_b ):
+        
+        a_was_selected = self._listbox.IsSelected( index_a )
+        b_was_selected = self._listbox.IsSelected( index_b )
         
         data_a = self._listbox.GetClientData( index_a )
         data_b = self._listbox.GetClientData( index_b )
@@ -166,6 +178,16 @@ class QueueListBox( wx.Panel ):
         
         self._listbox.Delete( index_b )
         self._listbox.Insert( pretty_data_a, index_b, data_a )
+        
+        if b_was_selected:
+            
+            self._listbox.Select( index_a )
+            
+        
+        if a_was_selected:
+            
+            self._listbox.Select( index_b )
+            
         
     
     def _Up( self ):
@@ -183,6 +205,8 @@ class QueueListBox( wx.Panel ):
                 
             
         
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
     
     def AddDatas( self, datas ):
         
@@ -191,15 +215,22 @@ class QueueListBox( wx.Panel ):
             self._AddData( data )
             
         
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
     
     def Bind( self, event, handler ):
         
         self._listbox.Bind( event, handler )
         
     
+    def EventEdit( self, event ):
+        
+        self._Edit()
+        
+    
     def EventSelection( self, event ):
         
-        if self._listbox.GetSelection() == wx.NOT_FOUND:
+        if len( self._listbox.GetSelections() ) == 0:
             
             self._up_button.Disable()
             self._delete_button.Disable()
@@ -233,8 +264,6 @@ class QueueListBox( wx.Panel ):
         return datas
         
     
-( ListBoxEvent, EVT_LIST_BOX ) = wx.lib.newevent.NewCommandEvent()
-
 class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3

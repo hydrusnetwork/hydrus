@@ -157,6 +157,7 @@ def RenderTagRule( ( name, attrs, index ) ):
 class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
+    SERIALISABLE_NAME = 'HTML Parsing Formula'
     SERIALISABLE_VERSION = 4
     
     def __init__( self, tag_rules = None, content_rule = None, string_match = None, string_converter = None ):
@@ -432,6 +433,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT
+    SERIALISABLE_NAME = 'Content Parsing Node'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
@@ -538,6 +540,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK
+    SERIALISABLE_NAME = 'Content Parsing Link'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, name = None, formula = None, children = None ):
@@ -706,6 +709,7 @@ file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_USER_INPUT ] = 'custom user 
 class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
+    SERIALISABLE_NAME = 'File Lookup Script'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, name, url = None, query_type = None, file_identifier_type = None, file_identifier_string_converter = None, file_identifier_arg_name = None, static_args = None, children = None ):
@@ -1012,6 +1016,7 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
 class StringConverter( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
+    SERIALISABLE_NAME = 'String Converter'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, transformations = None, example_string = None ):
@@ -1180,6 +1185,7 @@ NUMERIC = 2
 class StringMatch( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
+    SERIALISABLE_NAME = 'String Match'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = 'example string' ):

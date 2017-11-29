@@ -57,28 +57,34 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertSeedToListCtrlTuples( self, seed ):
         
-        sort_tuple = self._seed_cache.GetSeedInfo( seed )
+        seed_index = self._seed_cache.GetSeedIndex( seed )
         
-        ( seed_index, seed, status, added_timestamp, last_modified_timestamp, source_timestamp, note ) = sort_tuple
+        seed_data = seed.seed_data
+        status = seed.status
+        added = seed.created
+        modified = seed.modified
+        source_time = seed.source_time
+        note = seed.note
         
         pretty_seed_index = HydrusData.ConvertIntToPrettyString( seed_index )
-        pretty_seed = HydrusData.ToUnicode( seed )
+        pretty_seed_data = HydrusData.ToUnicode( seed_data )
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added_timestamp ) + ' ago'
-        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( last_modified_timestamp ) + ' ago'
+        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added ) + ' ago'
+        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( modified ) + ' ago'
         
-        if source_timestamp is None:
+        if source_time is None:
             
             pretty_source_time = 'unknown'
             
         else:
             
-            pretty_source_time = HydrusData.ConvertTimestampToHumanPrettyTime( source_timestamp )
+            pretty_source_time = HydrusData.ConvertTimestampToHumanPrettyTime( source_time )
             
         
         pretty_note = note.split( os.linesep )[0]
         
-        display_tuple = ( pretty_seed_index, pretty_seed, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
+        display_tuple = ( pretty_seed_index, pretty_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
+        sort_tuple = ( seed_index, seed_data, status, added, modified, source_time, note )
         
         return ( display_tuple, sort_tuple )
         
@@ -89,7 +95,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for seed in self._list_ctrl.GetData( only_selected = True ):
             
-            ( seed_index, seed, status, added_timestamp, last_modified_timestamp, source_timestamp, note ) = self._seed_cache.GetSeedInfo( seed )
+            note = seed.note
             
             if note != '':
                 
@@ -107,7 +113,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _CopySelectedSeeds( self ):
+    def _CopySelectedSeedData( self ):
         
         seeds = self._list_ctrl.GetData( only_selected = True )
         
@@ -115,7 +121,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             separator = os.linesep * 2
             
-            text = separator.join( seeds )
+            text = separator.join( ( seed.seed_data for seed in seeds ) )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -141,9 +147,14 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetSelected( self, status_to_set ):
         
-        seeds_to_set = self._list_ctrl.GetData( only_selected = True )
+        seeds = self._list_ctrl.GetData( only_selected = True )
         
-        self._seed_cache.UpdateSeedsStatus( seeds_to_set, status_to_set )
+        for seed in seeds:
+            
+            seed.SetStatus( status_to_set )
+            
+        
+        self._seed_cache.NotifySeedsUpdated( seeds )
         
     
     def _ShowMenuIfNeeded( self ):
@@ -152,7 +163,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeeds )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeedData )
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
             
             ClientGUIMenus.AppendSeparator( menu )

@@ -494,7 +494,7 @@ class ServiceRemote( Service ):
         
         if not HydrusData.TimeHasPassed( self._no_requests_until ):
             
-            return ( False, self._no_requests_reason + ' - next request in ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
+            return ( False, self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
             
         
         example_nj = ClientNetworking.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
@@ -662,7 +662,7 @@ class ServiceRestricted( ServiceRemote ):
     
     def GetNextAccountSyncStatus( self ):
         
-        return 'next account sync in ' + HydrusData.ConvertTimestampToPrettyPending( self._next_account_sync )
+        return 'next account sync ' + HydrusData.ConvertTimestampToPrettyPending( self._next_account_sync )
         
     
     def HasPermission( self, content_type, action ):

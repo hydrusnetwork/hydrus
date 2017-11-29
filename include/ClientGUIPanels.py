@@ -361,6 +361,11 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
+            if not self:
+                
+                return
+                
+            
             name = self._service.GetName()
             service_type = self._service.GetServiceType()
             
@@ -405,6 +410,11 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
+            if not self:
+                
+                return
+                
+            
             HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
@@ -422,10 +432,12 @@ class ReviewServicePanel( wx.Panel ):
             
             def wx_code( text ):
                 
-                if self:
+                if not self:
                     
-                    self._file_info_st.SetLabelText( text )
+                    return
                     
+                
+                self._file_info_st.SetLabelText( text )
                 
             
             service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
@@ -476,6 +488,11 @@ class ReviewServicePanel( wx.Panel ):
             
         
         def _Refresh( self ):
+            
+            if not self:
+                
+                return
+                
             
             credentials = self._service.GetCredentials()
             
@@ -580,6 +597,11 @@ class ReviewServicePanel( wx.Panel ):
             
         
         def _Refresh( self ):
+            
+            if not self:
+                
+                return
+                
             
             account = self._service.GetAccount()
             
@@ -843,6 +865,11 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
+            if not self:
+                
+                return
+                
+            
             service_paused = self._service.IsPaused()
             
             self._sync_now_button.Disable()
@@ -924,51 +951,52 @@ class ReviewServicePanel( wx.Panel ):
             
             def wx_code( download_text, download_value, processing_text, processing_value, range ):
                 
-                if self:
+                if not self:
                     
-                    self._download_progress.SetValue( download_text, download_value, range )
-                    self._processing_progress.SetValue( processing_text, processing_value, range )
+                    return
                     
-                    if processing_value == download_value:
-                        
-                        self._sync_now_button.Disable()
-                        
+                
+                self._download_progress.SetValue( download_text, download_value, range )
+                self._processing_progress.SetValue( processing_text, processing_value, range )
+                
+                if processing_value == download_value:
                     
-                    if download_value == 0:
-                        
-                        self._export_updates_button.Disable()
-                        
-                    else:
-                        
-                        self._export_updates_button.Enable()
-                        
+                    self._sync_now_button.Disable()
                     
-                    if processing_value == 0:
-                        
-                        self._reset_button.Disable()
-                        
-                    else:
-                        
-                        self._reset_button.Enable()
-                        
+                
+                if download_value == 0:
                     
-                    processing_work_to_do = processing_value < download_value
+                    self._export_updates_button.Disable()
                     
-                    service_paused = self._service.IsPaused()
+                else:
                     
-                    options = HG.client_controller.GetOptions()
+                    self._export_updates_button.Enable()
                     
-                    all_repo_sync_paused = options[ 'pause_repo_sync' ]
+                
+                if processing_value == 0:
                     
-                    if service_paused or all_repo_sync_paused or not processing_work_to_do:
-                        
-                        self._sync_now_button.Disable()
-                        
-                    else:
-                        
-                        self._sync_now_button.Enable()
-                        
-                        
+                    self._reset_button.Disable()
+                    
+                else:
+                    
+                    self._reset_button.Enable()
+                    
+                
+                processing_work_to_do = processing_value < download_value
+                
+                service_paused = self._service.IsPaused()
+                
+                options = HG.client_controller.GetOptions()
+                
+                all_repo_sync_paused = options[ 'pause_repo_sync' ]
+                
+                if service_paused or all_repo_sync_paused or not processing_work_to_do:
+                    
+                    self._sync_now_button.Disable()
+                    
+                else:
+                    
+                    self._sync_now_button.Enable()
                     
                 
             
@@ -1091,6 +1119,11 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
+            if not self:
+                
+                return
+                
+            
             HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
@@ -1194,18 +1227,20 @@ class ReviewServicePanel( wx.Panel ):
             
             def wx_code( ipfs_shares ):
                 
-                if self:
+                if not self:
                     
-                    self._ipfs_shares.DeleteAllItems()
+                    return
                     
-                    for ( multihash, num_files, total_size, note ) in ipfs_shares:
-                        
-                        sort_tuple = ( multihash, num_files, total_size, note )
-                        
-                        display_tuple = self._GetDisplayTuple( sort_tuple )
-                        
-                        self._ipfs_shares.Append( display_tuple, sort_tuple )
-                        
+                
+                self._ipfs_shares.DeleteAllItems()
+                
+                for ( multihash, num_files, total_size, note ) in ipfs_shares:
+                    
+                    sort_tuple = ( multihash, num_files, total_size, note )
+                    
+                    display_tuple = self._GetDisplayTuple( sort_tuple )
+                    
+                    self._ipfs_shares.Append( display_tuple, sort_tuple )
                     
                 
             
@@ -1239,6 +1274,11 @@ class ReviewServicePanel( wx.Panel ):
             
         
         def _Refresh( self ):
+            
+            if not self:
+                
+                return
+                
             
             self._name_and_type.SetLabelText( 'This is a Local Booru service. This box will regain its old information and controls in a later version.' )
             

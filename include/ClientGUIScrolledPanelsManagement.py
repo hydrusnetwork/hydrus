@@ -2590,6 +2590,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_thumbnail_title_banner = wx.CheckBox( self )
             self._show_thumbnail_page = wx.CheckBox( self )
             
+            self._thumbnail_fill = wx.CheckBox( self )
+            
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
             self._thumbnail_visibility_scroll_percent.SetToolTipString( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
@@ -2665,6 +2667,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
             
+            self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
+            
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
             
             self._discord_dnd_fix.SetValue( self._new_options.GetBoolean( 'discord_dnd_fix' ) )
@@ -2703,6 +2707,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
             rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
+            rows.append( ( 'Zoom thumbnails so they \'fill\' their space (experimental): ', self._thumbnail_fill ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
@@ -2797,6 +2802,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
             self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
+            self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
             
             self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
             
@@ -5184,7 +5190,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            pretty_delay = 'delaying for ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until ) + ' - ' + no_work_until_reason
+            pretty_delay = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until, prefix = 'for' ) + ' - ' + no_work_until_reason
             delay = no_work_until - HydrusData.GetNow()
             
         

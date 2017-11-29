@@ -1,7 +1,12 @@
 import ClientConstants as CC
 import ClientData
 import ClientGUICommon
+import ClientSerialisable
+import HydrusData
 import HydrusExceptions
+import HydrusGlobals as HG
+import HydrusSerialisable
+import os
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 from wx.lib.mixins.listctrl import ColumnSorterMixin
@@ -923,6 +928,9 @@ class BetterListCtrlPanel( wx.Panel ):
         
         self._listctrl = None
         
+        self._permitted_object_types = []
+        self._import_add_callable = lambda x: None
+        
         self._button_infos = []
         
     
@@ -941,9 +949,175 @@ class BetterListCtrlPanel( wx.Panel ):
             
         
     
+    def _Duplicate( self ):
+        
+        dupe_data = self._GetExportObject()
+        
+        if dupe_data is not None:
+            
+            dupe_data = dupe_data.Duplicate()
+            
+            self._ImportObject( dupe_data )
+            
+        
+    
+    def _ExportToClipboard( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', json )
+            
+        
+    
+    def _ExportToPng( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            import ClientGUITopLevelWindows
+            import ClientGUISerialisable
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def _GetExportObject( self ):
+        
+        to_export = HydrusSerialisable.SerialisableList()
+        
+        for obj in self._listctrl.GetData( only_selected = True ):
+            
+            to_export.append( obj )
+            
+        
+        if len( to_export ) == 0:
+            
+            return None
+            
+        elif len( to_export ) == 1:
+            
+            return to_export[0]
+            
+        else:
+            
+            return to_export
+            
+        
+    
     def _HasSelected( self ):
         
         return self._listctrl.HasSelected()
+        
+    
+    def _ImportFromClipboard( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            raw_text = data.GetText()
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text )
+                
+                self._ImportObject( obj )
+                
+            except Exception as e:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        
+    
+    def _ImportFromPng( self ):
+        
+        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                try:
+                    
+                    payload = ClientSerialisable.LoadFromPng( path )
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
+                    
+                    return
+                    
+                
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                    
+                    self._ImportObject( obj )
+                    
+                except:
+                    
+                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    
+                
+            
+        
+    
+    def _ImportObject( self, obj ):
+        
+        bad_object_types = set()
+        
+        if isinstance( obj, HydrusSerialisable.SerialisableList ):
+            
+            for sub_obj in obj:
+                
+                self._ImportObject( sub_obj )
+                
+            
+        else:
+            
+            if isinstance( obj, self._permitted_object_types ):
+                
+                self._import_add_callable( obj )
+                
+            else:
+                
+                bad_object_types.add( type( obj ).__name__ )
+                
+            
+        
+        if len( bad_object_types ) > 0:
+            
+            message = 'The imported objects included these types:'
+            message += os.linesep * 2
+            message += os.linesep.join( bad_object_types )
+            message += os.linesep * 2
+            message += 'Whereas this control only allows:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( o.__name__ for o in self._permitted_object_types ) )
+            
+            wx.MessageBox( message )
+            
         
     
     def _UpdateButtons( self ):
@@ -968,6 +1142,26 @@ class BetterListCtrlPanel( wx.Panel ):
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         
         self._UpdateButtons()
+        
+    
+    def AddImportExportButtons( self, permitted_object_types, import_add_callable ):
+        
+        self._permitted_object_types = permitted_object_types
+        self._import_add_callable = import_add_callable
+        
+        export_menu_items = []
+        
+        export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
+        export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
+        
+        import_menu_items = []
+        
+        import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
+        import_menu_items.append( ( 'normal', 'from png', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        
+        self.AddMenuButton( 'export', export_menu_items, enabled_only_on_selection = True )
+        self.AddMenuButton( 'import', import_menu_items )
+        self.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):

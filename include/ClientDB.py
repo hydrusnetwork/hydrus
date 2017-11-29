@@ -6627,7 +6627,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if stop_time is not None:
                             
-                            HG.client_controller.pub( 'splash_set_status_subtext', HydrusData.ConvertTimestampToPrettyPending( stop_time ) )
+                            HG.client_controller.pub( 'splash_set_status_subtext', HydrusData.ConvertTimestampToPrettyPending( stop_time, prefix = '' ) )
                             
                             if HydrusData.TimeHasPassed( stop_time ):
                                 
@@ -9996,6 +9996,64 @@ class DB( HydrusDB.HydrusDB ):
             message += 'Hopefully, the new downloader engine will be clever enough to fix this.'
             
             self.pub_initial_message( message )
+            
+        
+        if version == 283:
+            
+            have_heavy_subs = False
+            
+            some_revived = False
+            
+            try:
+                
+                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                for subscription in subscriptions:
+                    
+                    save_it = False
+                    
+                    if len( subscription._queries ) > 1:
+                        
+                        have_heavy_subs = True
+                        
+                    
+                    for query in subscription._queries:
+                        
+                        if query.IsDead():
+                            
+                            query.CheckNow()
+                            
+                            save_it = True
+                            
+                        
+                    
+                    if save_it:
+                        
+                        self._SetJSONDump( subscription )
+                        
+                        some_revived = True
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'While attempting to revive dead subscription queries, I had this problem:' )
+                HydrusData.PrintException( e )
+                
+            
+            if some_revived:
+                
+                message = 'The old subscription syncing code was setting many new queries \'dead\' after their first sync. All your dead subscription queries have been set to check again in case they can revive.'
+                
+                self.pub_initial_message( message )
+                
+            
+            if have_heavy_subs:
+                
+                message = 'The way subscriptions consume bandwidth has changed to stop heavy subs with many queries from being throttled so often. If you have big subscriptions with a bunch of work to do, they may catch up right now!'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

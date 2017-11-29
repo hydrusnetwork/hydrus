@@ -206,6 +206,35 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         return datas
         
     
+class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, url_matches, network_contexts_to_custom_header_dicts ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._notebook = wx.Notebook( self )
+        
+        self._url_matches_panel = EditURLMatchesPanel( self._notebook, url_matches )
+        self._network_contexts_to_custom_header_dicts_panel = EditNetworkContextCustomHeadersPanel( self._notebook, network_contexts_to_custom_header_dicts )
+        
+        self._notebook.AddPage( self._url_matches_panel, 'url classes', select = True )
+        self._notebook.AddPage( self._network_contexts_to_custom_header_dicts_panel, 'custom headers', select = False )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def GetValue( self ):
+        
+        url_matches = self._url_matches_panel.GetValue()
+        network_contexts_to_custom_header_dicts = self._network_contexts_to_custom_header_dicts_panel.GetValue()
+        
+        return ( url_matches, network_contexts_to_custom_header_dicts )
+        
+    
 class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, duplicate_action, duplicate_action_options ):
@@ -1207,6 +1236,8 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
+                ( network_context, key, value, approved, reason ) = panel.GetValue()
+                
                 data = ( network_context, ( key, value ), approved, reason )
                 
                 self._list_ctrl.AddDatas( ( data, ) )
@@ -1748,7 +1779,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 8, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file progress', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 8, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'file progress', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -1988,6 +2019,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_next_check_time = query.GetNextCheckStatusString()
         
+        file_velocity = self._checker_options.GetRawCurrentVelocity( query.GetSeedCache(), last_check_time )
+        pretty_file_velocity = self._checker_options.GetPrettyCurrentVelocity( query.GetSeedCache(), last_check_time, no_prefix = True )
+        
         ( file_status, ( num_done, num_total ) ) = seed_cache.GetStatus()
         
         file_value_range = ( num_total, num_done )
@@ -1995,8 +2029,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_file_status = file_status
         
-        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_value_range, pretty_file_status )
-        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_value_range, file_status )
+        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_file_value_range, pretty_file_status )
+        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, file_value_range, file_status )
         
         return ( display_tuple, sort_tuple )
         
@@ -2215,7 +2249,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status = 'delaying for ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until ) + ' because: ' + self._no_work_until_reason
+            status = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until, prefix = 'for' ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.SetLabelText( status )
@@ -2807,13 +2841,20 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
         return tag_import_options
         
     
-class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
+class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, url_match ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._name = wx.TextCtrl( self )
+        
+        self._url_type = ClientGUICommon.BetterChoice( self )
+        
+        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_API, HC.URL_TYPE_FILE ):
+            
+            self._url_type.Append( HC.url_type_string_lookup[ url_type ], url_type )
+            
         
         self._preferred_scheme = ClientGUICommon.BetterChoice( self )
         
@@ -2822,7 +2863,8 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         self._netloc = wx.TextCtrl( self )
         
-        self._subdomain_is_important = wx.CheckBox( self )
+        self._keep_subdomains= wx.CheckBox( self )
+        self._allow_subdomains = wx.CheckBox( self )
         
         #
         
@@ -2834,9 +2876,15 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_panel = ClientGUICommon.StaticBox( self, 'parameters' )
         
-        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_panel, 'url_match_path_components', 5, 20, [ ( 'key', 14 ), ( 'value', -1 ) ], self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        # parameter buttons, do it with a new wrapper panel class
+        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, 'url_match_path_components', 5, 45, [ ( 'key', 14 ), ( 'value', -1 ) ], self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        
+        parameters_listctrl_panel.SetListCtrl( self._parameters )
+        
+        parameters_listctrl_panel.AddButton( 'add', self._AddParameters )
+        parameters_listctrl_panel.AddButton( 'edit', self._EditParameters, enabled_only_on_selection = True )
+        parameters_listctrl_panel.AddButton( 'delete', self._DeleteParameters, enabled_only_on_selection = True )
         
         #
         
@@ -2844,42 +2892,65 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url_matches = ClientGUICommon.BetterStaticText( self )
         
+        self._normalised_url = wx.TextCtrl( self )
+        self._normalised_url.Disable()
+        
         #
         
         name = url_match.GetName()
         
         self._name.SetValue( name )
         
-        ( preferred_scheme, netloc, subdomain_is_important, path_components, parameters, example_url ) = url_match.ToTuple()
+        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, example_url ) = url_match.ToTuple()
+        
+        self._url_type.SelectClientData( url_type )
         
         self._preferred_scheme.SelectClientData( preferred_scheme )
         
         self._netloc.SetValue( netloc )
         
-        self._subdomain_is_important.SetValue( subdomain_is_important )
+        self._allow_subdomains.SetValue( allow_subdomains )
+        self._keep_subdomains.SetValue( keep_subdomains )
         
         self._path_components.AddDatas( path_components )
-        00
+        
         self._parameters.AddDatas( parameters.items() )
+        
+        self._parameters.Sort()
         
         self._example_url.SetValue( example_url )
         
+        example_url_width = ClientData.ConvertTextToPixelWidth( self._example_url, 75 )
+        
+        self._example_url.SetMinSize( ( example_url_width, -1 ) )
+        
         self._UpdateControls()
+        
+        #
+        
+        path_components_panel.AddF( self._path_components, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        parameters_panel.AddF( parameters_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
         rows = []
         
         rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'url type: ', self._url_type ) )
         rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
         rows.append( ( 'network location: ', self._netloc ) )
-        rows.append( ( 'keep subdomains?: ', self._subdomain_is_important ) )
+        rows.append( ( 'allow subdomains?: ', self._allow_subdomains ) )
+        rows.append( ( 'keep subdomains?: ', self._keep_subdomains ) )
         
         gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
         
         rows = []
         
         rows.append( ( 'example url: ', self._example_url ) )
+        rows.append( ( 'normalised url: ', self._normalised_url ) )
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -2897,20 +2968,59 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
         
         self._preferred_scheme.Bind( wx.EVT_CHOICE, self.EventUpdate )
         self._netloc.Bind( wx.EVT_TEXT, self.EventUpdate )
-        self._subdomain_is_important.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
+        self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
+        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
         
     
     def _AddParameters( self ):
         
-        # throw up a dialog to take key text
-          # warn on key conflict I guess
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = 'key', allow_blank = False ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                key = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
         
-        # throw up a string match dialog to take value
+        existing_keys = self._GetExistingKeys()
         
-        # add it
+        if key in existing_keys:
+            
+            wx.MessageBox( 'That key already exists!' )
+            
+            return
+            
         
-        pass
+        import ClientGUIParsing
+        
+        string_match = ClientParsing.StringMatch()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
+            
+            panel = ClientGUIParsing.EditStringMatchPanel( dlg, string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                string_match = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        self._parameters.AddDatas( ( key, string_match ) )
+        
+        self._parameters.Sort()
+        
+        self._UpdateControls()
         
     
     def _AddPathComponent( self ):
@@ -2943,19 +3053,77 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
     
     def _DeleteParameters( self ):
         
-        # ask for certain, then do it
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._parameters.DeleteSelected()
+                
+            
         
-        pass
+        self._UpdateControls()
         
     
     def _EditParameters( self ):
         
-        # for each in list, throw up dialog for key, value
-        # delete and readd
-        # break on cancel, etc...
-        # sort at the end
+        selected_params = self._parameters.GetData( only_selected = True )
         
-        pass
+        for parameter in selected_params:
+            
+            ( original_key, original_string_match ) = parameter
+            
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = original_key, allow_blank = False ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    key = dlg.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            if key != original_key:
+                
+                existing_keys = self._GetExistingKeys()
+                
+                if key in existing_keys:
+                    
+                    wx.MessageBox( 'That key already exists!' )
+                    
+                    return
+                    
+                
+            
+            import ClientGUIParsing
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
+                
+                panel = ClientGUIParsing.EditStringMatchPanel( dlg, original_string_match )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    string_match = panel.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            self._parameters.DeleteDatas( ( parameter, ) )
+            
+            new_parameter = ( key, string_match )
+            
+            self._parameters.AddDatas( ( new_parameter, ) )
+            
+        
+        self._parameters.Sort()
+        
+        self._UpdateControls()
         
     
     def _EditPathComponent( self, string_match ):
@@ -2968,7 +3136,7 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
             
             dlg.SetPanel( panel )
             
-            if dlg.Showmodal() == wx.ID_OK:
+            if dlg.ShowModal() == wx.ID_OK:
                 
                 new_string_match = panel.GetValue()
                 
@@ -2981,22 +3149,43 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _GetExistingKeys( self ):
+        
+        params = self._parameters.GetData()
+        
+        keys = { key for ( key, string_match ) in params }
+        
+        return keys
+        
+    
     def _GetValue( self ):
         
         name = self._name.GetValue()
+        url_type = self._url_type.GetChoice()
         preferred_scheme = self._preferred_scheme.GetChoice()
         netloc = self._netloc.GetValue()
-        subdomain_is_important = self._subdomain_is_important.GetValue()
+        allow_subdomains = self._allow_subdomains.GetValue()
+        keep_subdomains = self._keep_subdomains.GetValue()
         path_components = self._path_components.GetData()
-        parameters = self._parameters.GetData()
+        parameters = dict( self._parameters.GetData() )
         example_url = self._example_url.GetValue()
         
-        url_match = ClientNetworkingDomain.URLMatch( name, preferred_scheme = preferred_scheme, netloc = netloc, subdomain_is_important = subdomain_is_important, path_components = path_components, parameters = parameters, example_url = example_url )
+        url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
         
         return url_match
         
     
     def _UpdateControls( self ):
+        
+        if self._allow_subdomains.GetValue():
+            
+            self._keep_subdomains.Enable()
+            
+        else:
+            
+            self._keep_subdomains.SetValue( False )
+            self._keep_subdomains.Disable()
+            
         
         url_match = self._GetValue()
         
@@ -3007,12 +3196,16 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
             self._example_url_matches.SetLabelText( 'Example matches ok!' )
             self._example_url_matches.SetForegroundColour( ( 0, 128, 0 ) )
             
+            self._normalised_url.SetValue( url_match.Normalise( self._example_url.GetValue() ) )
+            
         except HydrusExceptions.URLMatchException as e:
             
             reason = unicode( e )
             
             self._example_url_matches.SetLabelText( 'Example does not match - ' + reason )
             self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )
+            
+            self._normalised_url.SetValue( '' )
             
         
     
@@ -3037,6 +3230,143 @@ class EditURLMatch( ClientGUIScrolledPanels.EditPanel ):
             
         
         return url_match
+        
+    
+class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, url_matches ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        self._list_ctrl_panel.AddButton( 'add', self._Add )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddSeparator()
+        self._list_ctrl_panel.AddImportExportButtons( ClientNetworkingDomain.URLMatch, self._AddURLMatch )
+        self._list_ctrl_panel.AddSeparator()
+        self._list_ctrl_panel.AddButton( 'add the hf examples', self._AddHFExamples )
+        
+        self._list_ctrl.Sort( 0 )
+        
+        #
+        
+        self._list_ctrl.AddDatas( url_matches )
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        url_match = ClientNetworkingDomain.URLMatch( 'new url class' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit url class' ) as dlg:
+            
+            panel = EditURLMatchPanel( dlg, url_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                url_match = panel.GetValue()
+                
+                self._AddURLMatch( url_match )
+                
+            
+        
+    
+    def _AddHFExamples( self ):
+        
+        for url_match in ClientDefaults.GetDefaultURLMatches():
+            
+            self._AddURLMatch( url_match )
+            
+        
+    
+    def _AddURLMatch( self, url_match ):
+        
+        ClientGUIListCtrl.SetNonDupeName( url_match, self._GetExistingNames() )
+        
+        self._list_ctrl.AddDatas( ( url_match, ) )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, url_match ):
+        
+        name = url_match.GetName()
+        example_url = url_match.GetExampleURL()
+        
+        pretty_name = name
+        pretty_example_url = example_url
+        
+        display_tuple = ( pretty_name, pretty_example_url )
+        sort_tuple = ( name, example_url )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._list_ctrl.DeleteSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for url_match in self._list_ctrl.GetData( only_selected = True ):
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit url class' ) as dlg:
+                
+                panel = EditURLMatchPanel( dlg, url_match )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._list_ctrl.DeleteDatas( ( url_match, ) )
+                    
+                    url_match = panel.GetValue()
+                    
+                    ClientGUIListCtrl.SetNonDupeName( url_match, self._GetExistingNames() )
+                    
+                    self._list_ctrl.AddDatas( ( url_match, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _GetExistingNames( self ):
+        
+        url_matches = self._list_ctrl.GetData()
+        
+        names = { url_match.GetName() for url_match in url_matches }
+        
+        return names
+        
+    
+    def GetValue( self ):
+        
+        url_matches = self._list_ctrl.GetData()
+        
+        return url_matches
         
     
 class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):

@@ -272,14 +272,14 @@ def DAEMONSynchroniseRepositories( controller ):
     
     if not options[ 'pause_repo_sync' ]:
         
-        if HydrusThreading.IsThreadShuttingDown():
-            
-            return
-            
-        
         services = controller.services_manager.GetServices( HC.REPOSITORIES )
         
         for service in services:
+            
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                return
+                
             
             if options[ 'pause_repo_sync' ]:
                 
@@ -288,8 +288,13 @@ def DAEMONSynchroniseRepositories( controller ):
             
             service.Sync( only_process_when_idle = True )
             
-        
-        time.sleep( 5 )
+            if HydrusThreading.IsThreadShuttingDown():
+                
+                return
+                
+            
+            time.sleep( 3 )
+            
         
     
 

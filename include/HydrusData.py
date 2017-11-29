@@ -469,7 +469,7 @@ def ConvertTimestampToPrettyExpires( timestamp ):
         else: return 'expires in ' + ' '.join( ( m, s ) )
         
     
-def ConvertTimestampToPrettyPending( timestamp ):
+def ConvertTimestampToPrettyPending( timestamp, prefix = 'in' ):
     
     if timestamp is None: return ''
     if timestamp == 0: return 'imminent'
@@ -507,12 +507,17 @@ def ConvertTimestampToPrettyPending( timestamp ):
     if years == 1: y = '1 year'
     else: y = str( years ) + ' years'
     
-    if years > 0: return ' '.join( ( y, mo ) )
-    elif months > 0: return ' '.join( ( mo, d ) )
-    elif days > 0: return ' '.join( ( d, h ) )
-    elif hours > 0: return ' '.join( ( h, m ) )
-    elif minutes > 0: return ' '.join( ( m, s ) )
-    else: return s
+    if prefix != '':
+        
+        prefix += ' '
+        
+    
+    if years > 0: return prefix + ' '.join( ( y, mo ) )
+    elif months > 0: return prefix + ' '.join( ( mo, d ) )
+    elif days > 0: return prefix + ' '.join( ( d, h ) )
+    elif hours > 0: return prefix + ' '.join( ( h, m ) )
+    elif minutes > 0: return prefix + ' '.join( ( m, s ) )
+    else: return prefix + s
     
 def ConvertTimestampToPrettySync( timestamp ):
     
@@ -1390,6 +1395,7 @@ sqlite3.register_adapter( Account, yaml.safe_dump )
 class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER
+    SERIALISABLE_NAME = 'Account Identifier'
     SERIALISABLE_VERSION = 1
     
     TYPE_ACCOUNT_KEY = 1

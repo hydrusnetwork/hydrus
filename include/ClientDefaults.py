@@ -754,3 +754,181 @@ def GetDefaultShortcuts():
     shortcuts.append( media_viewer )
     
     return shortcuts
+    
+def GetDefaultURLMatches():
+    
+    import ClientNetworkingDomain
+    import ClientParsing
+    
+    url_matches = []
+    
+    #
+    
+    name = 'hentai foundry artist pictures gallery page base'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'daruak' ) )
+    
+    parameters = {}
+    example_url = 'https://www.hentai-foundry.com/pictures/user/daruak'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry artist pictures gallery page'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'daruak' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'page', example_string = 'page' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '2' ) )
+    
+    parameters = {}
+    example_url = 'https://www.hentai-foundry.com/pictures/user/daruak/page/2'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry artist scraps gallery page base'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Sparrow' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'scraps', example_string = 'scraps' ) )
+    
+    parameters = {}
+    example_url = 'https://www.hentai-foundry.com/pictures/user/Sparrow/scraps'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry artist scraps gallery page'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Sparrow' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'scraps', example_string = 'scraps' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'page', example_string = 'page' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '3' ) )
+    
+    parameters = {}
+    example_url = 'https://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/3'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry tag search gallery page base'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'search', example_string = 'search' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index', example_string = 'index' ) )
+    
+    parameters = {}
+    
+    parameters[ 'query' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'thick_thighs' )
+    
+    example_url = 'https://www.hentai-foundry.com/search/index?query=thick_thighs'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry tag search gallery page'
+    url_type = HC.URL_TYPE_GALLERY
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'search', example_string = 'search' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index', example_string = 'index' ) )
+    
+    parameters = {}
+    
+    parameters[ 'query' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'thick_thighs' )
+    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '5' )
+    
+    example_url = 'https://www.hentai-foundry.com/search/index?query=thick_thighs&page=5'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = 'hentai foundry file page'
+    url_type = HC.URL_TYPE_POST
+    preferred_scheme = 'https'
+    netloc = 'www.hentai-foundry.com'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'LittlePaw' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '554706' ) )
+    
+    parameters = {}
+    example_url = 'https://www.hentai-foundry.com/pictures/user/LittlePaw/554706/Serpent-Girl'
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    return url_matches
+    

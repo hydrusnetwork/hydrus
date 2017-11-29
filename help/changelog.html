@@ -8,6 +8,44 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 284</h3></li>
+				<ul>
+					<li>fixed subscription queries turning dead on the initial sync</li>
+					<li>all dead subscription queries have been set to check again in case they can revive</li>
+					<li>added query file velocity to edit subscription panel</li>
+					<li>subscription network contexts now reflect the new multiple subscription query system, and are named "sub_name: query_text". as every query now counts as its own separate subscription network context, this will stop query-heavy subscriptions from throttling so much on bandwidth limits</li>
+					<li>finished URLMatch object, which matches and normalises URLs into certain 'classes' like 'gelbooru post url'</li>
+					<li>expanded some URLMatch subdomain options</li>
+					<li>fixed some test logic in URLMatch</li>
+					<li>finished the last of the EditURLMatchPanel</li>
+					<li>split the 'manage network rules' dialog into two panels--it now has a 'url classes' tab</li>
+					<li>wrote a panel for managing url matches</li>
+					<li>added export/import/duplicate buttons to EditURLMatchesPanel</li>
+					<li>wrote some URLMatches for hentai-foundry as an initial test of the system and added a temp button to add them--please check them out to see how it all works</li>
+					<li>all, invert, inbox, and archive (and none, lol) thumbnail 'select' menu items now have counts</li>
+					<li>invert is now at the bottom</li>
+					<li>the thumbnail select menu now has local/remote entries if applicable (this typically is only true in 'all known files' file domain)</li>
+					<li>added png/clipboard export/import/duplicate code to the generic new listctrl button wrapper panel, which will save a bunch of time as the png/clipboard sharing system expands</li>
+					<li>added a human-facing serialisable name to all objects on the new serialisation system and tied the new import/export code into it for png presentation</li>
+					<li>the edit import folder dialog will now complain (but not veto) on an ok event if any of the entered paths do not exist</li>
+					<li>if you attempt to manually run an import folder while import folders are globally paused, you'll get a little popup telling you so</li>
+					<li>added an experimental 'thumbnail fill' setting to options->gui. it zooms the existing thumbnails so they fill the whole thumb space. feedback on this from those who would be interested in a prettier system would be appreciated</li>
+					<li>added 'paste tags' buttons to filename tagging options panel</li>
+					<li>the paths/urls in the file import cache are now their own object that holds the creation/modified/source times and current status and note. this object can also hold prospective urls, tags, and hashes for future use</li>
+					<li>a bunch of file import actions are faster</li>
+					<li>all the different importers now use this new file import object</li>
+					<li>fixed a screen position calculation in the new drag and drop filtering code that was accidentally including too many possible drop candidates on drops in the top-left corner of the main gui (if you had trouble moving tabs to the left, this should be it fixed!)</li>
+					<li>fixed a problem display volume/chapter/page tags that included unicode characters in thumbnail banners and media viewers</li>
+					<li>fixed a rare media display bug in the dupe filter</li>
+					<li>fixed some 'C++ part of panel has been deleted' bugs in review services if the frame is shut down before delayed db info is fetched</li>
+					<li>cleaned up some more 'C++ deleted' errors in import files selection dialog</li>
+					<li>fixed the network context custom header panel 'add' action, which wasn't saving the value of the panel</li>
+					<li>fixed a bunch of bugs in the newish QueueListBox class</li>
+					<li>SynchroniseRepositories daemon will be better about quitting early on application shutdown</li>
+					<li>cleaned up some pending pretty timestamp grammar</li>
+					<li>when the client cannot clean up a temporary file, it will print more error information</li>
+					<li>added pylzma to the 'running from source' library recommendations. this is not required, but if available it adds ZWS flash support</li>
+				</ul>
 				<li><h3>version 283</h3></li>
 				<ul>
 					<li>subscription popups show a bit more info about their individual queries</li>

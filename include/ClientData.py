@@ -643,6 +643,7 @@ def SortTagsList( tags, sort_type ):
 class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
+    SERIALISABLE_NAME = 'Application Command'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, command_type = None, data = None ):
@@ -780,6 +781,7 @@ sqlite3.register_adapter( Booru, yaml.safe_dump )
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
+    SERIALISABLE_NAME = 'Client Options'
     SERIALISABLE_VERSION = 3
     
     def __init__( self, db_dir = None ):
@@ -854,6 +856,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'reverse_page_shift_drag_behaviour' ] = False
         
         self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
+        
+        self._dictionary[ 'booleans' ][ 'thumbnail_fill' ] = False
         
         #
         
@@ -1825,6 +1829,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
 class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
+    SERIALISABLE_NAME = 'Duplicate Action Options'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, tag_service_actions = None, rating_service_actions = None, delete_second_file = False, sync_archive = False, delete_both_files = False ):
@@ -2190,6 +2195,7 @@ sqlite3.register_adapter( Imageboard, yaml.safe_dump )
 class Shortcut( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT
+    SERIALISABLE_NAME = 'Shortcut'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, shortcut_type = None, shortcut_key = None, modifiers = None ):
@@ -2300,6 +2306,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class Shortcuts( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS
+    SERIALISABLE_NAME = 'Shortcuts'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, name ):
@@ -2534,6 +2541,7 @@ def ConvertMouseEventToShortcut( event ):
 class TagCensor( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_CENSOR
+    SERIALISABLE_NAME = 'Tag Censorship Rules'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -2734,6 +2742,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class CheckerOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS
+    SERIALISABLE_NAME = 'Checker Timing Options'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
@@ -2754,17 +2763,17 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         
         current_files_found = seed_cache.GetNumNewFilesSince( since )
         
-        if len( seed_cache ) == 0:
+        # when a thread is only 30mins old (i.e. first file was posted 30 mins ago), we don't want to calculate based on a longer delete time delta
+        # we want next check to be like 30mins from now, not 12 hours
+        # so we'll say "5 files in 30 mins" rather than "5 files in 24 hours"
+        
+        earliest_source_time = seed_cache.GetEarliestSourceTime()
+        
+        if earliest_source_time is None:
             
             current_time_delta = death_time_delta
             
         else:
-            
-            # when a thread is only 30mins old (i.e. first file was posted 30 mins ago), we don't want to calculate based on a longer delete time delta
-            # we want next check to be like 30mins from now, not 12 hours
-            # so we'll say "5 files in 30 mins" rather than "5 files in 24 hours"
-            
-            earliest_source_time = seed_cache.GetEarliestSourceTime()
             
             early_time_delta = max( last_check_time - earliest_source_time, 30 )
             
@@ -2829,7 +2838,12 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetPrettyCurrentVelocity( self, seed_cache, last_check_time ):
+    def GetRawCurrentVelocity( self, seed_cache, last_check_time ):
+        
+        return self._GetCurrentFilesVelocity( seed_cache, last_check_time )
+        
+    
+    def GetPrettyCurrentVelocity( self, seed_cache, last_check_time, no_prefix = False ):
         
         if len( seed_cache ) == 0:
             
@@ -2844,9 +2858,18 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
+            if no_prefix:
+                
+                pretty_current_velocity = ''
+                
+            else:
+                
+                pretty_current_velocity = 'at last check, found '
+                
+            
             ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( seed_cache, last_check_time )
             
-            pretty_current_velocity = 'at last check, found ' + HydrusData.ConvertIntToPrettyString( current_files_found ) + ' files in previous ' + HydrusData.ConvertTimeDeltaToPrettyString( current_time_delta )
+            pretty_current_velocity += HydrusData.ConvertIntToPrettyString( current_files_found ) + ' files in previous ' + HydrusData.ConvertTimeDeltaToPrettyString( current_time_delta )
             
         
         return pretty_current_velocity

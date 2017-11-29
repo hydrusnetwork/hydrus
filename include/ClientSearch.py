@@ -263,6 +263,7 @@ class FileQueryResult( object ):
 class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT
+    SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, file_service_key = CC.COMBINED_FILE_SERVICE_KEY, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, include_current_tags = True, include_pending_tags = True, predicates = None ):
@@ -707,6 +708,7 @@ class FileSystemPredicates( object ):
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
+    SERIALISABLE_NAME = 'File Search Predicate'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, predicate_type = None, value = None, inclusive = True, min_current_count = 0, min_pending_count = 0, max_current_count = None, max_pending_count = None ):

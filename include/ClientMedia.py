@@ -462,6 +462,11 @@ class LocationsManager( object ):
         return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
         
     
+    def IsRemote( self ):
+        
+        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current
+        
+    
     def IsTrashed( self ):
         
         return CC.TRASH_SERVICE_KEY in self._current
@@ -713,12 +718,21 @@ class MediaList( object ):
     
     def _GetNext( self, media ):
         
-        if media is None: return None
+        if media is None:
+            
+            return None
+            
         
         next_index = self._sorted_media.index( media ) + 1
         
-        if next_index == len( self._sorted_media ): return self._GetFirst()
-        else: return self._sorted_media[ next_index ]
+        if next_index == len( self._sorted_media ):
+            
+            return self._GetFirst()
+            
+        else:
+            
+            return self._sorted_media[ next_index ]
+            
         
     
     def _GetPrevious( self, media ):
@@ -1733,13 +1747,13 @@ class MediaSingleton( Media ):
                 
                 ( volume, ) = volumes
                 
-                title_string_append = 'volume ' + str( volume )
+                title_string_append = 'volume ' + HydrusData.ToUnicode( volume )
                 
             else:
                 
                 volumes_sorted = HydrusTags.SortNumericTags( volumes )
                 
-                title_string_append = 'volumes ' + str( volumes_sorted[0] ) + '-' + str( volumes_sorted[-1] )
+                title_string_append = 'volumes ' + HydrusData.ToUnicode( volumes_sorted[0] ) + '-' + HydrusData.ToUnicode( volumes_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1752,13 +1766,13 @@ class MediaSingleton( Media ):
                 
                 ( chapter, ) = chapters
                 
-                title_string_append = 'chapter ' + str( chapter )
+                title_string_append = 'chapter ' + HydrusData.ToUnicode( chapter )
                 
             else:
                 
                 chapters_sorted = HydrusTags.SortNumericTags( chapters )
                 
-                title_string_append = 'chapters ' + str( chapters_sorted[0] ) + '-' + str( chapters_sorted[-1] )
+                title_string_append = 'chapters ' + HydrusData.ToUnicode( chapters_sorted[0] ) + '-' + HydrusData.ToUnicode( chapters_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1771,13 +1785,13 @@ class MediaSingleton( Media ):
                 
                 ( page, ) = pages
                 
-                title_string_append = 'page ' + str( page )
+                title_string_append = 'page ' + HydrusData.ToUnicode( page )
                 
             else:
                 
                 pages_sorted = HydrusTags.SortNumericTags( pages )
                 
-                title_string_append = 'pages ' + str( pages_sorted[0] ) + '-' + str( pages_sorted[-1] )
+                title_string_append = 'pages ' + HydrusData.ToUnicode( pages_sorted[0] ) + '-' + HydrusData.ToUnicode( pages_sorted[-1] )
                 
             
             if len( title_string ) > 0: title_string += ' - ' + title_string_append
@@ -1940,6 +1954,7 @@ class MediaResult( object ):
 class MediaSort( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT
+    SERIALISABLE_NAME = 'Media Sort'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, sort_type = None, sort_asc = None ):

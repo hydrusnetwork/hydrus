@@ -72,6 +72,7 @@ def GetLocalConnection( port, https = False ):
 class BandwidthRules( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES
+    SERIALISABLE_NAME = 'Bandwidth Rules'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -280,6 +281,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER
+    SERIALISABLE_NAME = 'Bandwidth Tracker'
     SERIALISABLE_VERSION = 1
     
     # I want to track and query using smaller periods even when the total time delta is larger than the next step up to increase granularity

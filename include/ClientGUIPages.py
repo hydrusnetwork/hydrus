@@ -2325,6 +2325,7 @@ class PagesNotebook( wx.Notebook ):
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION
+    SERIALISABLE_NAME = 'GUI Session'
     SERIALISABLE_VERSION = 3
     
     def __init__( self, name ):

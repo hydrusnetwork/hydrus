@@ -38,6 +38,7 @@ class LoginCredentials( object ):
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
+    SERIALISABLE_NAME = 'Login Manager'
     SERIALISABLE_VERSION = 1
     
     SESSION_TIMEOUT = 60 * 45

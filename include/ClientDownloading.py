@@ -460,6 +460,7 @@ def ParsePageForURLs( html, starting_url ):
 class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER
+    SERIALISABLE_NAME = 'Gallery Identifier'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, site_type = None, additional_info = None ):

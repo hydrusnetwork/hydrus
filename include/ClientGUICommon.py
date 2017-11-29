@@ -65,11 +65,11 @@ def GetTLPParents( window ):
     
     return parents
     
-def GetXYTopTLP( x, y ):
+def GetXYTopTLP( screen_position ):
     
     tlps = wx.GetTopLevelWindows()
     
-    hittest_tlps = [ tlp for tlp in tlps if tlp.HitTest( ( x, y ) ) == wx.HT_WINDOW_INSIDE ]
+    hittest_tlps = [ tlp for tlp in tlps if tlp.HitTest( tlp.ScreenToClient( screen_position ) ) == wx.HT_WINDOW_INSIDE and tlp.IsShown() ]
     
     if len( hittest_tlps ) == 0:
         
@@ -2795,9 +2795,15 @@ class RadioBox( StaticBox ):
             
         
     
-    def SetSelection( self, index ): self._indices_to_radio_buttons[ index ].SetValue( True )
+    def SetSelection( self, index ):
+        
+        self._indices_to_radio_buttons[ index ].SetValue( True )
+        
     
-    def SetString( self, index, text ): self._indices_to_radio_buttons[ index ].SetLabelText( text )
+    def SetString( self, index, text ):
+        
+        self._indices_to_radio_buttons[ index ].SetLabelText( text )
+        
     
 class TextAndGauge( wx.Panel ):
     
@@ -2817,6 +2823,11 @@ class TextAndGauge( wx.Panel ):
         
     
     def SetValue( self, text, value, range ):
+        
+        if not self:
+            
+            return
+            
         
         if text != self._st.GetLabelText():
             

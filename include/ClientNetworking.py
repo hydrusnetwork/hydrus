@@ -108,6 +108,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
 class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER
+    SERIALISABLE_NAME = 'Bandwidth Manager'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -511,6 +512,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT
+    SERIALISABLE_NAME = 'Network Context'
     SERIALISABLE_VERSION = 2
     
     def __init__( self, context_type = None, context_data = None ):
@@ -1788,6 +1790,8 @@ class NetworkJobSubscription( NetworkJobDownloader ):
     
 class NetworkJobSubscriptionTemporary( NetworkJob ):
     
+    # temporary because we will move to the downloader_key stuff when that is available
+    
     def __init__( self, subscription_key, method, url, body = None, referral_url = None, temp_path = None ):
         
         self._subscription_key = subscription_key
@@ -1926,6 +1930,7 @@ class NetworkJobThreadWatcher( NetworkJob ):
 class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER
+    SERIALISABLE_NAME = 'Session Manager'
     SERIALISABLE_VERSION = 1
     
     SESSION_TIMEOUT = 60 * 60

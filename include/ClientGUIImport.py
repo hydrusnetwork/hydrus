@@ -451,6 +451,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, service_key )
             
+            self._tags_paste_button = ClientGUICommon.BetterButton( self._tags_panel, 'paste tags', self._PasteTags )
+            
             #
             
             self._single_tags_panel = ClientGUICommon.StaticBox( self, 'tags just for selected files' )
@@ -458,6 +460,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._paths_to_single_tags = collections.defaultdict( set )
             
             self._single_tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._single_tags_panel, self._service_key, self.SingleTagsRemoved )
+            
+            self._single_tags_paste_button = ClientGUICommon.BetterButton( self._single_tags_panel, 'paste tags', self._PasteSingleTags )
             
             expand_parents = True
             
@@ -530,9 +534,11 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._tags_panel.AddF( self._tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._single_tags_panel.AddF( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -584,6 +590,69 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._dir_checkbox_2.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
             self._dir_namespace_3.Bind( wx.EVT_TEXT, self.EventRefresh )
             self._dir_checkbox_3.Bind( wx.EVT_CHECKBOX, self.EventRefresh )
+            
+        
+        def _GetTagsFromClipboard( self ):
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject()
+                
+                wx.TheClipboard.GetData( data )
+                
+                wx.TheClipboard.Close()
+                
+                text = data.GetText()
+                
+                try:
+                    
+                    tags = HydrusData.DeserialisePrettyTags( text )
+                    
+                    tags = HydrusTags.CleanTags( tags )
+                    
+                    return tags
+                    
+                except:
+                    
+                    raise Exception( 'I could not understand what was in the clipboard' )
+                    
+                
+            else:
+                
+                raise Exception( 'I could not get permission to access the clipboard.' )
+                
+            
+        
+        def _PasteTags( self ):
+            
+            try:
+                
+                tags = self._GetTagsFromClipboard()
+                
+            except Exception as e:
+                
+                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                
+                return
+                
+            
+            self.EnterTags( tags )
+            
+        
+        def _PasteSingleTags( self ):
+            
+            try:
+                
+                tags = self._GetTagsFromClipboard()
+                
+            except Exception as e:
+                
+                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                
+                return
+                
+            
+            self.EnterTagsSingle( tags )
             
         
         def _ShowTXTHelp( self ):
@@ -699,10 +768,12 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                     
                 
                 self._single_tag_box.Enable()
+                self._single_tags_paste_button.Enable()
                 
             else:
                 
                 self._single_tag_box.Disable()
+                self._single_tags_paste_button.Disable()
                 
             
             self._single_tags.SetTags( single_tags )

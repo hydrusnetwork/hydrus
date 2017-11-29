@@ -637,6 +637,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _CheckImportFolder( self, name = None ):
         
+        options = self._controller.GetOptions()
+        
+        if options[ 'pause_import_folders_sync' ]:
+            
+            HydrusData.ShowText( 'Import folders are currently paused under the \'services\' menu. Please unpause them and try this again.' )
+            
+        
         if name is None:
             
             import_folders = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
@@ -1785,16 +1792,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             domain_manager = self._controller.network_engine.domain_manager
             
+            url_matches = domain_manager.GetURLMatches()
             network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
             
-            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextCustomHeadersPanel( dlg, network_contexts_to_custom_header_dicts )
+            panel = ClientGUIScrolledPanelsEdit.EditDomainManagerInfoPanel( dlg, url_matches, network_contexts_to_custom_header_dicts )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                network_contexts_to_custom_header_dicts = panel.GetValue()
+                ( url_matches, network_contexts_to_custom_header_dicts ) = panel.GetValue()
                 
+                domain_manager.SetURLMatches( url_matches )
                 domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
                 
             

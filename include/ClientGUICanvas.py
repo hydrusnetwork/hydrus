@@ -3625,7 +3625,16 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._current_media is not None:
             
-            self.SetMedia( self._media_list.GetNext( self._current_media ) )
+            try:
+                
+                other_media = self._media_list.GetNext( self._current_media )
+                
+                self.SetMedia( other_media )
+                
+            except HydrusExceptions.DataMissing:
+                
+                return
+                
             
         
     
@@ -3802,24 +3811,28 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         def wx_close():
             
-            if self:
+            if not self:
                 
-                wx.CallAfter( wx.MessageBox, 'All pairs have been filtered!' )
+                return
                 
-                self._Close()
-                
+            
+            wx.CallAfter( wx.MessageBox, 'All pairs have been filtered!' )
+            
+            self._Close()
             
         
         def wx_continue( unprocessed_pairs ):
             
-            if self:
+            if not self:
                 
-                self._unprocessed_pairs = unprocessed_pairs
+                return
                 
-                self._currently_fetching_pairs = False
-                
-                self._ShowNewPair()
-                
+            
+            self._unprocessed_pairs = unprocessed_pairs
+            
+            self._currently_fetching_pairs = False
+            
+            self._ShowNewPair()
             
         
         result = HG.client_controller.Read( 'unique_duplicate_pairs', self._file_service_key, HC.DUPLICATE_UNKNOWN )
@@ -3961,7 +3974,10 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         next_media = self._GetNext( self._current_media )
         
-        if next_media == self._current_media: next_media = None
+        if next_media == self._current_media:
+            
+            next_media = None
+            
         
         hashes = { self._current_media.GetHash() }
         
@@ -4050,7 +4066,10 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
             next_media = self._GetNext( self._current_media )
             
-            if next_media == self._current_media: next_media = None
+            if next_media == self._current_media:
+                
+                next_media = None
+                
             
         else:
             

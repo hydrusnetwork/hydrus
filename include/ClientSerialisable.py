@@ -182,22 +182,22 @@ def DumpToPng( width, payload, title, payload_description, text, path ):
         
         HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
-    
+
 def GetPayloadTypeString( payload_obj ):
     
     if isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
         
-        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] ) + 's'
+        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
         
     else:
         
-        if isinstance( payload_obj, ClientParsing.ParseRootFileLookup ):
+        if isinstance( payload_obj, HydrusSerialisable.SerialisableBase ):
             
-            return 'File Lookup Script'
+            return payload_obj.SERIALISABLE_NAME
             
-        elif isinstance( payload_obj, ClientImporting.Subscription ):
+        else:
             
-            return 'Subscription'
+            return repr( type( payload_obj ) )
             
         
     
