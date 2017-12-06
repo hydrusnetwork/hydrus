@@ -220,7 +220,7 @@ def RenderTag( tag, render_for_user ):
         
         if render_for_user:
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             if new_options.GetBoolean( 'show_namespaces' ):
                 

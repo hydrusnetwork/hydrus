@@ -62,7 +62,7 @@ class GIFRenderer( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if new_options.GetBoolean( 'disable_cv_for_gifs' ) or cv2.__version__.startswith( '2' ):
             

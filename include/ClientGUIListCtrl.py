@@ -9,7 +9,6 @@ import HydrusSerialisable
 import os
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
-from wx.lib.mixins.listctrl import ColumnSorterMixin
 
 def SetNonDupeName( obj, disallowed_names ):
     
@@ -26,8 +25,10 @@ def SetNonDupeName( obj, disallowed_names ):
         
     
     obj.SetName( new_name )
-    
-class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
+
+# This used to be ColumnSorterMixin, but it was crashing on sort-click on clients with many pages open
+# I've disabled it for now because it was still catching people. The transition to BetterListCtrl will nuke the whole thing eventually.
+class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def __init__( self, parent, height, columns, delete_key_callback = None, activation_callback = None ):
         
@@ -35,7 +36,6 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin, ColumnSorterMixin ):
         
         wx.ListCtrl.__init__( self, parent, style = wx.LC_REPORT )
         ListCtrlAutoWidthMixin.__init__( self )
-        ColumnSorterMixin.__init__( self, num_columns )
         
         self.itemDataMap = {}
         self._data_indices_to_sort_indices = {}

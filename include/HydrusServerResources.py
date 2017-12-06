@@ -586,7 +586,7 @@ class HydrusResource( Resource ):
             
             response_context = ResponseContext( 403, mime = default_mime, body = default_encoding( failure.value ) )
             
-        elif failure.type in ( HydrusExceptions.NotFoundException, HydrusExceptions.DataMissing ):
+        elif failure.type in ( HydrusExceptions.NotFoundException, HydrusExceptions.DataMissing, HydrusExceptions.FileMissingException ):
             
             response_context = ResponseContext( 404, mime = default_mime, body = default_encoding( failure.value ) )
             

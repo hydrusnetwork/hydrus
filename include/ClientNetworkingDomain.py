@@ -92,7 +92,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER
     SERIALISABLE_NAME = 'Domain Manager'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self ):
         
@@ -102,6 +102,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._url_matches = HydrusSerialisable.SerialisableList()
         self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
+        
+        self._url_match_names_to_display = {}
+        self._url_match_names_to_page_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
+        self._url_match_names_to_gallery_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
         
         self._domains_to_url_matches = collections.defaultdict( list )
         
@@ -115,23 +119,21 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     def _GetSerialisableInfo( self ):
         
         serialisable_url_matches = self._url_matches.GetSerialisableTuple()
+        serialisable_url_match_names_to_display = self._url_match_names_to_display.items()
+        serialisable_url_match_names_to_page_parsing_keys = self._url_match_names_to_page_parsing_keys.GetSerialisableTuple()
+        serialisable_url_match_names_to_gallery_parsing_keys = self._url_match_names_to_gallery_parsing_keys.GetSerialisableTuple()
         serialisable_network_contexts_to_custom_header_dicts = [ ( network_context.GetSerialisableTuple(), custom_header_dict.items() ) for ( network_context, custom_header_dict ) in self._network_contexts_to_custom_header_dicts.items() ]
         
-        return ( serialisable_url_matches, serialisable_network_contexts_to_custom_header_dicts )
+        return ( serialisable_url_matches, serialisable_url_match_names_to_display, serialisable_url_match_names_to_page_parsing_keys, serialisable_url_match_names_to_gallery_parsing_keys, serialisable_network_contexts_to_custom_header_dicts )
         
     
     def _GetURLMatch( self, url ):
         
-        domain = ConvertURLIntoDomain( url )
+        domain = ConvertDomainIntoSecondLevelDomain( ConvertURLIntoDomain( url ) )
         
         if domain in self._domains_to_url_matches:
             
             url_matches = self._domains_to_url_matches[ domain ]
-            
-            # it would be nice to somehow sort these based on descending complexity
-            # maybe by length of example url
-            # in this way, url matches can have overlapping desmaign
-            # e.g. 'post url' vs 'post url, manga subpage'
             
             for url_match in url_matches:
                 
@@ -139,7 +141,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     url_match.Test( url )
                     
-                    return url_match.Normalise( url )
+                    return url_match
                     
                 except HydrusExceptions.URLMatchException:
                     
@@ -153,9 +155,13 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_matches, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
+        ( serialisable_url_matches, serialisable_url_match_names_to_display, serialisable_url_match_names_to_page_parsing_keys, serialisable_url_match_names_to_gallery_parsing_keys, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
         
         self._url_matches = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_matches )
+        
+        self._url_match_names_to_display = dict( serialisable_url_match_names_to_display )
+        self._url_match_names_to_page_parsing_keys = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_match_names_to_page_parsing_keys )
+        self._url_match_names_to_gallery_parsing_keys = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_match_names_to_gallery_parsing_keys )
         
         self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
         
@@ -179,10 +185,93 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._domains_to_url_matches[ domain ].append( url_match )
             
         
+        # we now sort them in descending complexity so that
+        # post url/manga subpage
+        # is before
+        # post url
+        
+        def key( u_m ):
+            
+            return len( u_m.GetExampleURL() )
+            
+        
+        for url_matches in self._domains_to_url_matches.values():
+            
+            url_matches.sort( key = key, reverse = True )
+            
+        
     
     def _SetDirty( self ):
         
         self._dirty = True
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( serialisable_url_matches, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
+            
+            url_matches = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_matches )
+            
+            url_match_names_to_display = {}
+            url_match_names_to_page_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
+            url_match_names_to_gallery_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
+            
+            for url_match in url_matches:
+                
+                name = url_match.GetName()
+                
+                if url_match.IsPostURL():
+                    
+                    url_match_names_to_display[ name ] = True
+                    
+                    url_match_names_to_page_parsing_keys[ name ] = None
+                    
+                
+                if url_match.IsGalleryURL():
+                    
+                    url_match_names_to_gallery_parsing_keys[ name ] = None
+                    
+                
+            
+            serialisable_url_match_names_to_display = url_match_names_to_display.items()
+            serialisable_url_match_names_to_page_parsing_keys = url_match_names_to_page_parsing_keys.GetSerialisableTuple()
+            serialisable_url_match_names_to_gallery_parsing_keys = url_match_names_to_gallery_parsing_keys.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_url_matches, serialisable_url_match_names_to_display, serialisable_url_match_names_to_page_parsing_keys, serialisable_url_match_names_to_gallery_parsing_keys, serialisable_network_contexts_to_custom_header_dicts )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
+    def _UpdateURLMatchLinks( self ):
+        
+        for url_match in self._url_matches:
+            
+            name = url_match.GetName()
+            
+            if url_match.IsPostURL():
+                
+                if name not in self._url_match_names_to_display:
+                    
+                    self._url_match_names_to_display[ name ] = True
+                    
+                
+                if name not in self._url_match_names_to_page_parsing_keys:
+                    
+                    self._url_match_names_to_page_parsing_keys[ name ] = None
+                    
+                
+            
+            if url_match.IsGalleryURL():
+                
+                if name not in self._url_match_names_to_gallery_parsing_keys:
+                    
+                    self._url_match_names_to_gallery_parsing_keys[ name ] = None
+                    
+                
+            
         
     
     def CanValidateInPopup( self, network_contexts ):
@@ -190,6 +279,47 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         # we can always do this for headers
         
         return True
+        
+    
+    def ConvertURLsToMediaViewerTuples( self, urls ):
+        
+        url_tuples = []
+        
+        with self._lock:
+            
+            for url in urls:
+                
+                url_match = self._GetURLMatch( url )
+                
+                if url_match is None:
+                    
+                    domain = ConvertURLIntoDomain( url )
+                    
+                    url_tuples.append( ( domain, url ) )
+                    
+                else:
+                    
+                    name = url_match.GetName()
+                    
+                    if url_match.IsPostURL() and name in self._url_match_names_to_display:
+                        
+                        if self._url_match_names_to_display[ name ]:
+                            
+                            url_tuples.append( ( name, url ) )
+                            
+                        
+                    
+                
+                if len( url_tuples ) == 10:
+                    
+                    break
+                    
+                
+            
+        
+        url_tuples.sort()
+        
+        return url_tuples
         
     
     def GenerateValidationPopupProcess( self, network_contexts ):
@@ -275,6 +405,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetURLMatchLinks( self ):
+        
+        with self._lock:
+            
+            return ( dict( self._url_match_names_to_display ), dict( self._url_match_names_to_page_parsing_keys ), dict( self._url_match_names_to_gallery_parsing_keys ) )
+            
+        
+    
+    def Initialise( self ):
+        
+        self._RecalcCache()
+        
+    
     def IsDirty( self ):
         
         with self._lock:
@@ -307,9 +450,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
     
     def NormaliseURL( self, url ):
-        
-        # call this before an entry into a seed cache or the db
-        # use it in the dialog to review mass db-level changes
         
         with self._lock:
             
@@ -371,6 +511,26 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_matches = HydrusSerialisable.SerialisableList()
             
             self._url_matches.extend( url_matches )
+            
+            self._UpdateURLMatchLinks()
+            
+            self._RecalcCache()
+            
+            self._SetDirty()
+            
+        
+    
+    def SetURLMatchLinks( self, url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ):
+        
+        with self._lock:
+            
+            self._url_match_names_to_display = {}
+            self._url_match_names_to_page_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
+            self._url_match_names_to_gallery_parsing_keys = HydrusSerialisable.SerialisableBytesDictionary()
+            
+            self._url_match_names_to_display.update( url_match_names_to_display )
+            self._url_match_names_to_page_parsing_keys.update( url_match_names_to_page_parsing_keys )
+            self._url_match_names_to_gallery_parsing_keys.update( url_match_names_to_gallery_parsing_keys )
             
             self._SetDirty()
             
@@ -577,7 +737,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetDomain( self ):
         
-        return ConvertURLIntoDomain( self._example_url )
+        return ConvertDomainIntoSecondLevelDomain( HydrusData.ToByteString( self._netloc ) )
         
     
     def GetExampleURL( self ):
@@ -588,6 +748,16 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     def GetURLType( self ):
         
         return self._url_type
+        
+    
+    def IsGalleryURL( self ):
+        
+        return self._url_type == HC.URL_TYPE_GALLERY
+        
+    
+    def IsPostURL( self ):
+        
+        return self._url_type == HC.URL_TYPE_POST
         
     
     def Normalise( self, url ):

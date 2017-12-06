@@ -55,7 +55,7 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
 def GenerateNumpyImage( path, mime ):
     
-    if mime == HC.IMAGE_GIF or HG.client_controller.GetNewOptions().GetBoolean( 'load_images_with_pil' ):
+    if mime == HC.IMAGE_GIF or HG.client_controller.new_options.GetBoolean( 'load_images_with_pil' ):
         
         # a regular cv.imread call, can crash the whole process on random thumbs, hooray, so have this as backup
         # it was just the read that was the problem, so this seems to work fine, even if pil is only about half as fast
@@ -302,7 +302,7 @@ HydrusFileHandling.GenerateThumbnailFromStaticImage = GenerateThumbnailFromStati
     
 def ResizeNumpyImage( mime, numpy_image, ( target_x, target_y ) ):
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )
     

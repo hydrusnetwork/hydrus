@@ -118,9 +118,7 @@ def GenerateExportFilename( destination_directory, media, terms ):
     
 def GetExportPath():
     
-    options = HG.client_controller.GetOptions()
-    
-    portable_path = options[ 'export_path' ]
+    portable_path = HG.client_controller.options[ 'export_path' ]
     
     if portable_path is None:
         
@@ -229,9 +227,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if phrase is None:
             
-            new_options = HG.client_controller.GetNewOptions()
-            
-            phrase = new_options.GetString( 'export_phrase' )
+            phrase = HG.client_controller.new_options.GetString( 'export_phrase' )
             
         
         self._path = path

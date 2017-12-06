@@ -276,9 +276,7 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def _UpdateBackgroundColour( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
-        
-        colour = new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
+        colour = HG.client_controller.new_options.GetColour( CC.COLOUR_AUTOCOMPLETE_BACKGROUND )
         
         if not self._intercept_key_events:
             

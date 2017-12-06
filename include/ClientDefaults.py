@@ -253,10 +253,8 @@ def GetDefaultHentaiFoundryInfo():
     
 def GetDefaultFileImportOptions():
     
-    options = HG.client_controller.GetOptions()
-    
     automatic_archive = False
-    exclude_deleted = options[ 'exclude_deleted_files' ]
+    exclude_deleted = HG.client_controller.options[ 'exclude_deleted_files' ]
     min_size = None
     min_resolution = None
     

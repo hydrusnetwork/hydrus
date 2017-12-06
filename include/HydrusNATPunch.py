@@ -44,7 +44,10 @@ def GetExternalIP():
         
         ( output, error ) = p.communicate()
         
-        if error is not None and len( error ) > 0: raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+        if error is not None and len( error ) > 0:
+            
+            raise Exception( 'Problem while trying to fetch External IP:' + os.linesep * 2 + HydrusData.ToUnicode( error ) )
+            
         else:
             
             try:

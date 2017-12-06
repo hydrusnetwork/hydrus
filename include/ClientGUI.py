@@ -55,7 +55,7 @@ ID_TIMER_GUI_BANDWIDTH = wx.NewId()
 
 # Sizer Flags
 
-MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'services', 'help' ]
+MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'pending', 'network', 'services', 'help' ]
 
 class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
@@ -63,7 +63,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller = controller
         
-        title = self._controller.GetNewOptions().GetString( 'main_gui_title' )
+        title = self._controller.new_options.GetString( 'main_gui_title' )
         
         if title is None or title == '':
             
@@ -637,9 +637,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _CheckImportFolder( self, name = None ):
         
-        options = self._controller.GetOptions()
-        
-        if options[ 'pause_import_folders_sync' ]:
+        if self._controller.options[ 'pause_import_folders_sync' ]:
             
             HydrusData.ShowText( 'Import folders are currently paused under the \'services\' menu. Please unpause them and try this again.' )
             
@@ -873,8 +871,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         menu = wx.Menu()
         
-        p = self._controller.PrepStringForDisplay
-        
         def file():
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'import files', 'Add new files to the database.', self._ImportFiles )
@@ -931,7 +927,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'exit', 'Shut the client down.', self.Exit )
             
-            return ( menu, p( '&File' ), True )
+            return ( menu, '&file', True )
             
         
         def undo():
@@ -998,7 +994,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 show = False
                 
             
-            return ( menu, p( '&Undo' ), show )
+            return ( menu, '&undo', show )
             
         
         def pages():
@@ -1168,7 +1164,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
-            return ( menu, p( '&Pages' ), True )
+            return ( menu, '&pages', True )
             
         
         def database():
@@ -1223,7 +1219,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
-            return ( menu, p( '&Database' ), True )
+            return ( menu, '&database', True )
             
         
         def pending():
@@ -1295,7 +1291,40 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             show = total_num_pending > 0
             
-            return ( menu, p( '&Pending (' + HydrusData.ConvertIntToPrettyString( total_num_pending ) + ')' ), show )
+            return ( menu, '&pending (' + HydrusData.ConvertIntToPrettyString( total_num_pending ) + ')', show )
+            
+        
+        def network():
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            # and transition this to 'manage logins'
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
+            # manage downloaders, or maybe just rename the parsing scripts stuff
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
+            
+            return ( menu, '&network', True )
             
         
         def services():
@@ -1411,11 +1440,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage network rules (under construction)', 'Configure how the client talks to the network.', self._ManageNetworkRules )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
             ClientGUIMenus.AppendMenuItem( self, menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1424,21 +1448,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
             
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
-            
-            return ( menu, p( '&Services' ), True )
+            return ( menu, '&services', True )
             
         
         def help():
@@ -1513,13 +1523,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'hardcoded shortcuts', 'Review some currently hardcoded shortcuts.', wx.MessageBox, CC.SHORTCUT_HELP )
             ClientGUIMenus.AppendMenuItem( self, menu, 'about', 'See this client\'s version and other information.', self._AboutWindow )
             
-            return ( menu, p( '&Help' ), True )
+            return ( menu, '&help', True )
             
         
         if name == 'file': return file()
         elif name == 'undo': return undo()
         elif name == 'pages': return pages()
         elif name == 'database': return database()
+        elif name == 'network': return network()
         elif name == 'pending': return pending()
         elif name == 'services': return services()
         elif name == 'help': return help()
@@ -1782,28 +1793,24 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ManageNetworkRules( self ):
+    def _ManageNetworkHeaders( self ):
         
-        title = 'manage network rules'
+        title = 'manage network headers'
         
         with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
             
-            # eventually make this a proper management panel with several notebook pages or something
-            
             domain_manager = self._controller.network_engine.domain_manager
             
-            url_matches = domain_manager.GetURLMatches()
             network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
             
-            panel = ClientGUIScrolledPanelsEdit.EditDomainManagerInfoPanel( dlg, url_matches, network_contexts_to_custom_header_dicts )
+            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextCustomHeadersPanel( dlg, network_contexts_to_custom_header_dicts )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( url_matches, network_contexts_to_custom_header_dicts ) = panel.GetValue()
+                network_contexts_to_custom_header_dicts = panel.GetValue()
                 
-                domain_manager.SetURLMatches( url_matches )
                 domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
                 
             
@@ -1939,6 +1946,54 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _ManageTagSiblings( self ):
         
         with ClientGUIDialogsManage.DialogManageTagSiblings( self ) as dlg: dlg.ShowModal()
+        
+    
+    def _ManageURLMatches( self ):
+        
+        title = 'manage url classes'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            url_matches = domain_manager.GetURLMatches()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditURLMatchesPanel( dlg, url_matches )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                url_matches = panel.GetValue()
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+            
+        
+    
+    def _ManageURLMatchLinks( self ):
+        
+        title = 'manage url class links'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            # eventually make this a proper management panel with several notebook pages or something
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ) = domain_manager.GetURLMatchLinks()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ) = panel.GetValue()
+                
+                domain_manager.SetURLMatchLinks( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
+                
+            
         
     
     def _ManageUPnP( self ):
@@ -3190,6 +3245,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportFiles( self, paths ):
         
+        # can more easily do this when seeds are doing their own tags
+        
+        # get current media page
+        # if it is an import page, ask user if they want to add it to the page or make a new one
+        # if using existing, then load the panel without file import options
+        # think about how to merge 'delete_after_success' or not--maybe this can be handled by seeds as well
+        
         paths = [ HydrusData.ToUnicode( path ) for path in paths ]
         
         self._ImportFiles( paths )
@@ -3306,6 +3368,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._dirty_menus.add( 'pages' )
         self._dirty_menus.add( 'services' )
+        self._dirty_menus.add( 'network' )
         
         self._menu_updater.Update()
         
@@ -3314,6 +3377,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._dirty_menus.add( 'pages' )
         self._dirty_menus.add( 'services' )
+        self._dirty_menus.add( 'network' )
         
         self._menu_updater.Update()
         

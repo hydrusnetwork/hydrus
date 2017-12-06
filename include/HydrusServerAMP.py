@@ -1,5 +1,4 @@
 import collections
-import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
 import HydrusExceptions

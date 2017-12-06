@@ -91,7 +91,7 @@ def CalculateCanvasZooms( canvas, media, show_action ):
         return ( 1.0, 1.0 )
         
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas.GetClientSize() )
     
@@ -378,7 +378,7 @@ class Animation( wx.Window ):
     
     def _DrawWhite( self, dc ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
@@ -439,7 +439,7 @@ class Animation( wx.Window ):
                     
                     path = client_files_manager.GetFilePath( hash, mime )
                     
-                    new_options = HG.client_controller.GetNewOptions()
+                    new_options = HG.client_controller.new_options
                     
                     launch_path = new_options.GetMimeLaunch( mime )
                     
@@ -1183,7 +1183,7 @@ class Canvas( wx.Window ):
         self._reserved_shortcut_names.append( 'media' )
         self._reserved_shortcut_names.append( 'media_viewer' )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self._custom_shortcut_names = self._new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
         
@@ -1711,6 +1711,10 @@ class Canvas( wx.Window ):
             elif action == 'manage_file_tags':
                 
                 self._ManageTags()
+                
+            elif action == 'manage_file_urls':
+                
+                self._ManageURLs()
                 
             elif action == 'archive_file':
                 
@@ -2824,21 +2828,13 @@ class CanvasWithDetails( Canvas ):
             
             urls = self._current_media.GetLocationsManager().GetURLs()
             
-            urls = list( urls )
+            url_tuples = HG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
             
-            urls.sort()
-            
-            urls = urls[ : 10 ]
-            
-            for url in urls:
+            for ( display_string, url ) in url_tuples:
                 
-                parse = urlparse.urlparse( url )
+                ( text_width, text_height ) = dc.GetTextExtent( display_string )
                 
-                url_string = parse.hostname
-                
-                ( text_width, text_height ) = dc.GetTextExtent( url_string )
-                
-                dc.DrawText( url_string, client_width - text_width - 3, current_y )
+                dc.DrawText( display_string, client_width - text_width - 3, current_y )
                 
                 current_y += text_height + 4
                 
@@ -3243,7 +3239,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 duplicate_type = dlg_1.GetChoice()
                 
-                new_options = HG.client_controller.GetNewOptions()
+                new_options = HG.client_controller.new_options
                 
                 duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
                 
@@ -3333,7 +3329,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                new_options = HG.client_controller.GetNewOptions()
+                new_options = HG.client_controller.new_options
                 
                 duplicate_intensity = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
                 
@@ -3484,7 +3480,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if duplicate_action_options is None:
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
             
@@ -5294,7 +5290,7 @@ class EmbedButton( wx.Window ):
         center_y = y / 2
         radius = min( 50, center_x, center_y ) - 5
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
@@ -5448,7 +5444,7 @@ class OpenExternallyPanel( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( self._new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) )
         
@@ -5529,7 +5525,7 @@ class StaticImage( wx.Window ):
     
     def _DrawBackground( self, dc ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         

@@ -250,7 +250,7 @@ class TestServer( unittest.TestCase ):
         with open( file_path, 'wb' ) as f: f.write( EXAMPLE_FILE )
         with open( thumbnail_path, 'wb' ) as f: f.write( EXAMPLE_THUMBNAIL )
         
-        local_booru_manager = HG.test_controller.GetManager( 'local_booru' )
+        local_booru_manager = HG.client_controller.local_booru_manager
         
         #
         

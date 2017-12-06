@@ -16,6 +16,7 @@ import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientGUIScrolledPanelsEdit
 import ClientGUISeedCache
+import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -1173,7 +1174,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
     
     def _AddFolder( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         phrase = new_options.GetString( 'export_phrase' )
         
@@ -1350,7 +1351,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._period_box = ClientGUICommon.StaticBox( self, 'export period' )
         
-        self._period = ClientGUICommon.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        self._period = ClientGUITime.TimeDeltaButton( self._period_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         #
         
@@ -2413,7 +2414,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._open_popup = wx.CheckBox( self._folder_box )
         
-        self._period = ClientGUICommon.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
+        self._period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         self._paused = wx.CheckBox( self._folder_box )
         
@@ -4836,6 +4837,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) )
         
+        self._status_st = ClientGUICommon.BetterStaticText( self )
+        
         self._mappings_list_ctrl = ClientGUIListCtrl.SaneListCtrl( self, 480, [ ( 'description', -1 ), ( 'internal ip', 100 ), ( 'internal port', 80 ), ( 'external ip', 100 ), ( 'external port', 80 ), ( 'protocol', 80 ), ( 'lease', 80 ) ], delete_key_callback = self.RemoveMappings, activation_callback = self.EditMappings )
         
         self._add_custom = wx.Button( self, label = 'add custom mapping' )
@@ -4853,10 +4856,6 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         #
         
-        self._RefreshMappings()
-        
-        #
-        
         edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
         edit_buttons.AddF( self._add_custom, CC.FLAGS_VCENTER )
@@ -4865,6 +4864,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._mappings_list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.AddF( edit_buttons, CC.FLAGS_BUTTON_SIZER )
         vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
@@ -4877,21 +4877,53 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self.SetInitialSize( ( x, y ) )
         
-        wx.CallAfter( self._ok.SetFocus )
+        #
+        
+        self._RefreshMappings()
         
     
     def _RefreshMappings( self ):
-    
+        
+        def THREADdo_it():
+            
+            def wx_code( mappings ):
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._mappings = mappings
+                
+                for mapping in self._mappings:
+                    
+                    self._mappings_list_ctrl.Append( mapping, mapping )
+                    
+                
+                self._status_st.SetLabelText( '' )
+                
+            
+            try:
+                
+                mappings = HydrusNATPunch.GetUPnPMappings()
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                wx.CallAfter( wx.MessageBox, 'Could not load mappings:' + os.linesep * 2 + str( e ) )
+                
+                return
+                
+            
+            wx.CallAfter( wx_code, mappings )
+            
+        
+        self._status_st.SetLabelText( 'Refreshing mappings--please wait...' )
+        
         self._mappings_list_ctrl.DeleteAllItems()
         
-        self._mappings = HydrusNATPunch.GetUPnPMappings()
-        
-        for mapping in self._mappings:
-            
-            self._mappings_list_ctrl.Append( mapping, mapping )
-            
-        
-        #self._mappings_list_ctrl.SortListItems( 1 )
+        HG.client_controller.CallToThread( THREADdo_it )
         
     
     def EditMappings( self ):
@@ -4919,7 +4951,10 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
             
         
-        if do_refresh: self._RefreshMappings()
+        if do_refresh:
+            
+            self._RefreshMappings()
+            
         
     
     def EventAddCustomMapping( self, event ):
@@ -4956,7 +4991,10 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
             
         
-        if do_refresh: self._RefreshMappings()
+        if do_refresh:
+            
+            self._RefreshMappings()
+            
         
     
     def EventEditMapping( self, event ):
@@ -4987,5 +5025,8 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             do_refresh = True
             
         
-        if do_refresh: self._RefreshMappings()
+        if do_refresh:
+            
+            self._RefreshMappings()
+            
         

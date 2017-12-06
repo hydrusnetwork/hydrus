@@ -8,6 +8,38 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 285</h3></li>
+				<ul>
+					<li>added 'network' main gui menu and moved network stuff from services to it</li>
+					<li>split the new domain manager stuff up into separate dialogs and menu entries on the new network menu</li>
+					<li>manage url classes dialog now lists url type in the listctrl</li>
+					<li>added url class links info (which will permit client-specific settings and downloader mappings for url classes) to the domain manager</li>
+					<li>wrote a 'url class links' dialog and added it to the new network menu (only the 'display on media viewer' part works atm)</li>
+					<li>the domain manager now filters urls on the media viewer depending on whether they have a url match and are set to display in the new links panel</li>
+					<li>updated the local booru service code to the new service system</li>
+					<li>the local booru's shares can be reviewed again under review services</li>
+					<li>the local booru's port and bandwidth settings can be set again under manage services</li>
+					<li>the different gui parts of the local booru are updated to new controls</li>
+					<li>fixed a local booru 404 reporting error</li>
+					<li>the edit subscription panel now has a 'paste queries' button that lets you add queries en masse</li>
+					<li>added 'manage_file_urls' to shortcuts system</li>
+					<li>added several 'get_similar_to_x' actions to the shortcuts system</li>
+					<li>the manage upnp dialog now initialises its mappings on another thread and fails better when UpnP mappings cannot be fetched</li>
+					<li>connection and readtimeout network exceptions are now recognised more specifically by the client. subscriptions will only delay for an hour on one of these exceptions</li>
+					<li>improved the resilience of the HF login code after wake from sleep (when networking is often not available for a couple of seconds)</li>
+					<li>like the recent subscription query randomisation update, subscriptions themselves are now synced in random order (this stops a subscription named 'aadvark' always getting first bite into available bandwidth)</li>
+					<li>fixed import for jpegs that have unparsable exif data</li>
+					<li>fixed a bug in 'next month' bandwidth estimate calculation when the month is December, wew</li>
+					<li>fixed some logic that was setting max page at 165 rather than the intended 200 and added a dialog that even lets you engage the debug override at 200 if you are insane</li>
+					<li>all audio mime detection and duration parsing is now done through ffmpeg. hsaudiotag is no longer needed to run the program</li>
+					<li>since the old listctrl sort crash bug is still hitting some people, I've disabled sort on the old listctrl class. feel free to try to sort any listctrls now, no matter your situation. I will continue replacing the old class with the new working class over time</li>
+					<li>updated another listctrl</li>
+					<li>a ton of misc controller options/manager access refactoring</li>
+					<li>cleared out some old code</li>
+					<li>moved Time controls to their own file and added velocity and checker options stuff as well</li>
+					<li>wrote a new edit panel for single controls and updated the time delta button to use it</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 284</h3></li>
 				<ul>
 					<li>fixed subscription queries turning dead on the initial sync</li>

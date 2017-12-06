@@ -373,7 +373,7 @@ class FileImportJob( object ):
         
         mime = HydrusFileHandling.GetMime( self._temp_path )
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if mime in HC.DECOMPRESSION_BOMB_IMAGES and new_options.GetBoolean( 'do_not_import_decompression_bombs' ):
             
@@ -430,7 +430,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._pending_queries = []
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         self._get_tags_if_url_known_and_file_redundant = new_options.GetBoolean( 'get_tags_if_url_known_and_file_redundant' )
         
@@ -1766,7 +1766,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if tag_import_options is None:
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
             
@@ -3717,7 +3717,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         self._tag_import_options = new_options.GetDefaultTagImportOptions( self._gallery_identifier )
         
@@ -4478,12 +4478,21 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.NetworkException as e:
                 
+                if isinstance( e, HydrusExceptions.NetworkInfrastructureException ):
+                    
+                    delay = 3600
+                    
+                else:
+                    
+                    delay = HC.UPDATE_DURATION
+                    
+                
                 HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
                 HydrusData.PrintException( e )
                 
                 job_key.SetVariable( 'popup_text_1', 'Encountered a network error, will retry again later' )
                 
-                self._DelayWork( HC.UPDATE_DURATION, 'network error: ' + HydrusData.ToUnicode( e ) )
+                self._DelayWork( delay, 'network error: ' + HydrusData.ToUnicode( e ) )
                 
                 time.sleep( 5 )
                 
@@ -4936,7 +4945,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         file_import_options = ClientDefaults.GetDefaultFileImportOptions()
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
         
@@ -5148,7 +5157,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _PublishPageName( self, page_key ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         cannot_rename = not new_options.GetBoolean( 'permit_watchers_to_name_their_pages' )
         

@@ -1633,7 +1633,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CacheSimilarFilesMaintenanceDue( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
@@ -1644,7 +1644,7 @@ class DB( HydrusDB.HydrusDB ):
                 return True
                 
             
-            search_distance = HG.client_controller.GetNewOptions().GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            search_distance = new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
             ( count, ) = self._c.execute( 'SELECT COUNT( * ) FROM shape_search_cache WHERE searched_distance IS NULL or searched_distance < ?;', ( search_distance, ) ).fetchone()
             
@@ -3731,9 +3731,7 @@ class DB( HydrusDB.HydrusDB ):
             
             show_inbox_and_archive = True
             
-            new_options = self._controller.GetNewOptions()
-            
-            if new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) and ( num_inbox == 0 or num_archive == 0 ):
+            if self._controller.new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) and ( num_inbox == 0 or num_archive == 0 ):
                 
                 show_inbox_and_archive = False
                 
@@ -5511,7 +5509,7 @@ class DB( HydrusDB.HydrusDB ):
         
         newest_first.sort( key = sort_key, reverse = True )
         
-        num_we_want = HG.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' )
+        num_we_want = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
         
         if num_we_want == None:
             
@@ -6662,9 +6660,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # vacuum
         
-        new_options = self._controller.GetNewOptions()
-        
-        maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
+        maintenance_vacuum_period_days = self._controller.new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
         
         if maintenance_vacuum_period_days is not None:
             
@@ -6839,9 +6835,7 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 ( file_info_manager, multihash ) = row
                                 
-                                hash = file_info_manager.GetHash()
-                                
-                                hash_id = self._GetHashId( hash )
+                                hash_id = self._GetHashId( file_info_manager.hash )
                                 
                                 self._SetServiceFilename( service_id, hash_id, multihash )
                                 
@@ -8315,11 +8309,9 @@ class DB( HydrusDB.HydrusDB ):
             password = hashlib.sha256( password_bytes ).digest()
             
         
-        options = self._controller.GetOptions()
+        self._controller.options[ 'password' ] = password
         
-        options[ 'password' ] = password
-        
-        self._SaveOptions( options )
+        self._SaveOptions( self._controller.options )
         
     
     def _SetServiceFilename( self, service_id, hash_id, filename ):
@@ -10503,7 +10495,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _Vacuum( self, stop_time = None, force_vacuum = False ):
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         maintenance_vacuum_period_days = new_options.GetNoneableInteger( 'maintenance_vacuum_period_days' )
         

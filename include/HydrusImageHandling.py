@@ -127,7 +127,14 @@ def GeneratePILImage( path ):
     
     if pil_image.format == 'JPEG' and hasattr( pil_image, '_getexif' ):
         
-        exif_dict = pil_image._getexif()
+        try:
+            
+            exif_dict = pil_image._getexif()
+            
+        except:
+            
+            exif_dict = None
+            
         
         if exif_dict is not None:
             

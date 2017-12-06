@@ -22,7 +22,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         self._activate_callable = activate_callable
         
-        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        width = HG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
         
         if width is not None:
             
@@ -53,7 +53,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         self._activate_callable = activate_callable
         
-        width = HG.client_controller.GetNewOptions().GetInteger( 'suggested_tags_width' )
+        width = HG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
         
         self.SetMinSize( ( width, -1 ) )
         
@@ -96,7 +96,7 @@ class RecentTagsPanel( wx.Panel ):
         self._service_key = service_key
         self._canvas_key = canvas_key
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -150,7 +150,7 @@ class RelatedTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -258,7 +258,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             self._script_choice.Append( script.GetName(), script )
             
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
         
@@ -376,7 +376,7 @@ class SuggestedTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         layout_mode = self._new_options.GetNoneableString( 'suggested_tags_layout' )
         

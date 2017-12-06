@@ -932,9 +932,7 @@ class ServiceRepository( ServiceRestricted ):
             return False
             
         
-        options = HG.client_controller.GetOptions()
-        
-        if options[ 'pause_repo_sync' ]:
+        if HG.client_controller.options[ 'pause_repo_sync' ]:
             
             return False
             
@@ -967,8 +965,6 @@ class ServiceRepository( ServiceRestricted ):
     def CanDoIdleShutdownWork( self ):
         
         with self._lock:
-            
-            options = HG.client_controller.GetOptions()
             
             if not self._CanSync():
                 

@@ -9,6 +9,7 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIPanels
 import ClientGUIPopupMessages
+import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientTags
@@ -308,8 +309,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._history_time_delta_threshold = ClientGUICommon.TimeDeltaButton( self, days = True, hours = True, minutes = True, seconds = True )
-        self._history_time_delta_threshold.Bind( ClientGUICommon.EVT_TIME_DELTA, self.EventTimeDeltaChanged )
+        self._history_time_delta_threshold = ClientGUITime.TimeDeltaButton( self, days = True, hours = True, minutes = True, seconds = True )
+        self._history_time_delta_threshold.Bind( ClientGUITime.EVT_TIME_DELTA, self.EventTimeDeltaChanged )
         
         self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
         self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
@@ -567,7 +568,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
         
         self._time_delta_usage_bandwidth_type = ClientGUICommon.BetterChoice( usage_panel )
-        self._time_delta_usage_time_delta = ClientGUICommon.TimeDeltaButton( usage_panel, days = True, hours = True, minutes = True, seconds = True )
+        self._time_delta_usage_time_delta = ClientGUITime.TimeDeltaButton( usage_panel, days = True, hours = True, minutes = True, seconds = True )
         self._time_delta_usage_st = ClientGUICommon.BetterStaticText( usage_panel )
         
         #
@@ -985,7 +986,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller = controller
         
-        self._new_options = self._controller.GetNewOptions()
+        self._new_options = self._controller.new_options
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         

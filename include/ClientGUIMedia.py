@@ -464,7 +464,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _EditDuplicateActionOptions( self, duplicate_type ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
@@ -490,7 +490,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             display_media = self._focussed_media.GetDisplayMedia()
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             media_show_action = new_options.GetMediaShowAction( display_media.GetMime() )
             
@@ -503,7 +503,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = HG.client_controller.GetNewOptions()
+                new_options = HG.client_controller.new_options
                 
                 launch_path = new_options.GetMimeLaunch( mime )
                 
@@ -922,7 +922,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = HG.client_controller.GetNewOptions()
+                new_options = HG.client_controller.new_options
                 
                 launch_path = new_options.GetMimeLaunch( mime )
                 
@@ -1034,6 +1034,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._ManageTags()
                 
+            elif action == 'manage_file_urls':
+                
+                self._ManageURLs()
+                
             elif action == 'archive_file':
                 
                 self._Archive()
@@ -1049,6 +1053,22 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             elif action == 'remove_file_from_view':
                 
                 self._Remove()
+                
+            elif action == 'get_similar_to_exact':
+                
+                self._GetSimilarTo( HC.HAMMING_EXACT_MATCH )
+                
+            elif action == 'get_similar_to_very_similar':
+                
+                self._GetSimilarTo( HC.HAMMING_VERY_SIMILAR )
+                
+            elif action == 'get_similar_to_similar':
+                
+                self._GetSimilarTo( HC.HAMMING_SIMILAR )
+                
+            elif action == 'get_similar_to_speculative':
+                
+                self._GetSimilarTo( HC.HAMMING_SPECULATIVE )
                 
             elif action == 'open_file_in_external_program':
                 
@@ -1282,7 +1302,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             yes_no_text = 'set all pair relationships to ' + HC.duplicate_type_string_lookup[ duplicate_type ] + ' (with default duplicate action/merge options)'
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
             
@@ -1358,7 +1378,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 duplicate_type = dlg_1.GetChoice()
                 
-                new_options = HG.client_controller.GetNewOptions()
+                new_options = HG.client_controller.new_options
                 
                 duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
                 
@@ -1517,7 +1537,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _UpdateBackgroundColour( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) )
         
@@ -1865,7 +1885,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         dc = wx.MemoryDC( bmp )
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND ) ) )
         
@@ -2326,7 +2346,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / float( 100 )
             
@@ -2460,7 +2480,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     do_temp_dnd = False
                     
-                    new_options = HG.client_controller.GetNewOptions()
+                    new_options = HG.client_controller.new_options
                     
                     if new_options.GetBoolean( 'discord_dnd_fix' ):
                         
@@ -2718,7 +2738,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventShowMenu( self, event ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         advanced_mode = new_options.GetBoolean( 'advanced_mode' )
         
@@ -3871,7 +3891,7 @@ class Thumbnail( Selectable ):
         
         dc = wx.MemoryDC( bmp )
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if not local:
             
@@ -3947,7 +3967,7 @@ class Thumbnail( Selectable ):
         chapters = namespaces[ 'chapter' ]
         pages = namespaces[ 'page' ]
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if new_options.GetBoolean( 'show_thumbnail_page' ):
             

@@ -39,9 +39,7 @@ class HydrusResourceBooruFile( HydrusResourceBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HG.client_controller.GetManager( 'local_booru' )
-        
-        local_booru_manager.CheckFileAuthorised( share_key, hash )
+        HG.client_controller.local_booru_manager.CheckFileAuthorised( share_key, hash )
         
         client_files_manager = HG.client_controller.client_files_manager
         
@@ -61,7 +59,7 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
         
         share_key = request.hydrus_args[ 'share_key' ]
         
-        local_booru_manager = HG.client_controller.GetManager( 'local_booru' )
+        local_booru_manager = HG.client_controller.local_booru_manager
         
         local_booru_manager.CheckShareAuthorised( share_key )
         
@@ -143,7 +141,7 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HG.client_controller.GetManager( 'local_booru' )
+        local_booru_manager = HG.client_controller.local_booru_manager
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         
@@ -232,7 +230,7 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
         share_key = request.hydrus_args[ 'share_key' ]
         hash = request.hydrus_args[ 'hash' ]
         
-        local_booru_manager = HG.client_controller.GetManager( 'local_booru' )
+        local_booru_manager = HG.client_controller.local_booru_manager
         
         local_booru_manager.CheckFileAuthorised( share_key, hash )
         

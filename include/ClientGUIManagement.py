@@ -1,5 +1,4 @@
 import HydrusConstants as HC
-import HydrusAudioHandling
 import ClientDownloading
 import HydrusExceptions
 import HydrusPaths
@@ -21,6 +20,7 @@ import ClientGUIMedia
 import ClientGUIMenus
 import ClientGUIScrolledPanelsEdit
 import ClientGUISeedCache
+import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
@@ -67,7 +67,7 @@ def CreateManagementController( page_name, management_type, file_service_key = N
         file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
         
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     management_controller = ManagementController( page_name )
     
@@ -867,7 +867,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         self._search_distance_spinctrl.SetValue( new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' ) )
         
@@ -1148,7 +1148,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         search_distance = self._search_distance_spinctrl.GetValue()
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         new_options.SetInteger( 'similar_files_duplicate_pairs_search_distance', search_distance )
         
@@ -2267,7 +2267,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditCheckerOptions( dlg, checker_options )
+            panel = ClientGUITime.EditCheckerOptions( dlg, checker_options )
             
             dlg.SetPanel( panel )
             

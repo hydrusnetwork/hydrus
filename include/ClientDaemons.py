@@ -16,15 +16,13 @@ import wx
 
 def DAEMONCheckExportFolders( controller ):
     
-    options = controller.GetOptions()
-    
-    if not options[ 'pause_export_folders_sync' ]:
+    if not controller.options[ 'pause_export_folders_sync' ]:
         
         export_folders = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
         for export_folder in export_folders:
             
-            if options[ 'pause_export_folders_sync' ]:
+            if controller.options[ 'pause_export_folders_sync' ]:
                 
                 break
                 
@@ -35,9 +33,7 @@ def DAEMONCheckExportFolders( controller ):
     
 def DAEMONCheckImportFolders( controller ):
     
-    options = controller.GetOptions()
-    
-    if not options[ 'pause_import_folders_sync' ]:
+    if not controller.options[ 'pause_import_folders_sync' ]:
         
         import_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
@@ -45,7 +41,7 @@ def DAEMONCheckImportFolders( controller ):
             
             import_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
             
-            if options[ 'pause_import_folders_sync' ]:
+            if controller.options[ 'pause_import_folders_sync' ]:
                 
                 break
                 
@@ -268,9 +264,7 @@ def DAEMONSynchroniseAccounts( controller ):
     
 def DAEMONSynchroniseRepositories( controller ):
     
-    options = controller.GetOptions()
-    
-    if not options[ 'pause_repo_sync' ]:
+    if not controller.options[ 'pause_repo_sync' ]:
         
         services = controller.services_manager.GetServices( HC.REPOSITORIES )
         
@@ -281,7 +275,7 @@ def DAEMONSynchroniseRepositories( controller ):
                 return
                 
             
-            if options[ 'pause_repo_sync' ]:
+            if controller.options[ 'pause_repo_sync' ]:
                 
                 return
                 
@@ -300,13 +294,13 @@ def DAEMONSynchroniseRepositories( controller ):
 
 def DAEMONSynchroniseSubscriptions( controller ):
     
-    options = controller.GetOptions()
+    subscription_names = list( controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ) )
     
-    subscription_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+    random.shuffle( subscription_names )
     
     for name in subscription_names:
         
-        p1 = options[ 'pause_subs_sync' ]
+        p1 = controller.options[ 'pause_subs_sync' ]
         p2 = controller.ViewIsShutdown()
         
         if p1 or p2:

@@ -499,11 +499,6 @@ class Controller( HydrusController.HydrusController ):
         return self.gui
         
     
-    def GetOptions( self ):
-        
-        return self.options
-        
-    
     def GetNewOptions( self ):
         
         return self.new_options
@@ -619,6 +614,8 @@ class Controller( HydrusController.HydrusController ):
             wx.MessageBox( 'Your domain manager was missing on boot! I have recreated a new empty one. Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             
         
+        domain_manager.Initialise()
+        
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
@@ -629,7 +626,7 @@ class Controller( HydrusController.HydrusController ):
         
         self._shortcuts_manager = ClientCaches.ShortcutsManager( self )
         
-        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
+        self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         
         self.pub( 'splash_set_status_subtext', u'tag censorship' )
         
@@ -1359,7 +1356,10 @@ class Controller( HydrusController.HydrusController ):
     
     def Write( self, action, *args, **kwargs ):
         
-        if action == 'content_updates': self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+        if action == 'content_updates':
+            
+            self._managers[ 'undo' ].AddCommand( 'content_updates', *args, **kwargs )
+            
         
         return HydrusController.HydrusController.Write( self, action, *args, **kwargs )
         

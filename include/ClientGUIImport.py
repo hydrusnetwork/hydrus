@@ -606,7 +606,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
                 
                 try:
                     
-                    tags = HydrusData.DeserialisePrettyTags( text )
+                    tags = HydrusData.DeserialiseNewlinedTexts( text )
                     
                     tags = HydrusTags.CleanTags( tags )
                     

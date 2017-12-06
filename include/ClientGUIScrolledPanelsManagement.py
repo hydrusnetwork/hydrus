@@ -22,6 +22,7 @@ import ClientMedia
 import ClientRatings
 import ClientSerialisable
 import ClientServices
+import ClientGUITime
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -1046,35 +1047,35 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 ClientGUICommon.StaticBox.__init__( self, parent, 'local booru' )
                 
-                #dictionary[ 'port' ] = None
-                #dictionary[ 'upnp_port' ] = None
-                #dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
-                
-                self._st = ClientGUICommon.BetterStaticText( self )
-                '''
-            if service_type == HC.LOCAL_BOORU:
-                
                 self._booru_options_panel = ClientGUICommon.StaticBox( self, 'options' )
                 
                 self._port = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'booru local port', none_phrase = 'do not run local booru service', min = 1, max = 65535 )
                 
                 self._upnp = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'upnp port', none_phrase = 'do not forward port', max = 65535 )
                 
-                self._max_monthly_data = ClientGUICommon.NoneableSpinCtrl( self._booru_options_panel, 'max monthly MB', multiplier = 1024 * 1024 )
-                
-            '''
-                #
-                
-                self._st.SetLabelText( 'This is a Local Booru service. This box will get regain its port options in a future update.' )
+                self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._booru_options_panel, dictionary[ 'bandwidth_rules' ] )
                 
                 #
                 
-                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._port.SetValue( dictionary[ 'port' ] )
+                self._upnp.SetValue( dictionary[ 'upnp_port' ] )
+                
+                #
+                
+                self._booru_options_panel.AddF( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.AddF( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self.AddF( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
             def GetValue( self ):
                 
                 dictionary_part = {}
+                
+                dictionary_part[ 'port' ] = self._port.GetValue()
+                dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
+                dictionary_part[ 'bandwidth_rules' ] = self._bandwidth_rules.GetValue()
                 
                 return dictionary_part
                 
@@ -1259,7 +1260,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self._listbook = ClientGUICommon.ListBook( self )
         
@@ -1311,7 +1312,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
             
@@ -1574,7 +1575,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._current_colourset = ClientGUICommon.BetterChoice( self )
             
@@ -1773,7 +1774,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._external_host.SetValue( HC.options[ 'external_host' ] )
                 
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
             
@@ -1908,7 +1909,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             checker_options = self._new_options.GetDefaultThreadCheckerOptions()
             
-            self._thread_checker_options = ClientGUIScrolledPanelsEdit.EditCheckerOptions( thread_checker, checker_options )
+            self._thread_checker_options = ClientGUITime.EditCheckerOptions( thread_checker, checker_options )
             
             #
             
@@ -1980,7 +1981,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             self._maintenance_panel = ClientGUICommon.StaticBox( self, 'maintenance period' )
@@ -2304,7 +2305,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    new_options = HG.client_controller.GetNewOptions()
+                    new_options = HG.client_controller.new_options
                     
                     tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
                     
@@ -2424,7 +2425,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             for mime in HC.SEARCHABLE_MIMES:
                 
@@ -2616,7 +2617,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._main_gui_title.SetValue( self._new_options.GetString( 'main_gui_title' ) )
             
@@ -2826,7 +2827,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
@@ -3065,7 +3066,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             try:
                 
@@ -5885,7 +5886,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
-            self._new_options = HG.client_controller.GetNewOptions()
+            self._new_options = HG.client_controller.new_options
             
             self._add_parents_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'auto-add entered tags\' parents' )
             self._add_parents_checkbox.SetValue( self._new_options.GetBoolean( 'add_parents_on_manage_tags' ) )
@@ -6238,7 +6239,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            if len( recent_tags ) > 0 and HG.client_controller.GetNewOptions().GetNoneableInteger( 'num_recent_tags' ) is not None:
+            if len( recent_tags ) > 0 and HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
                 
                 HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 
@@ -6377,7 +6378,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    tags = HydrusData.DeserialisePrettyTags( text )
+                    tags = HydrusData.DeserialiseNewlinedTexts( text )
                     
                     tags = HydrusTags.CleanTags( tags )
                     

@@ -190,7 +190,7 @@ class RasterContainerVideo( RasterContainer ):
         
         ( x, y ) = self._target_resolution
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         video_buffer_size_mb = new_options.GetInteger( 'video_buffer_size_mb' )
         

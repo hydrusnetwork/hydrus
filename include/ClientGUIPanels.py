@@ -111,129 +111,6 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        if service_type == HC.LOCAL_BOORU:
-            
-            booru_shares = self._controller.Read( 'local_booru_shares' )
-            
-            self._booru_shares.DeleteAllItems()
-            
-            for ( share_key, info ) in booru_shares.items():
-                
-                name = info[ 'name' ]
-                text = info[ 'text' ]
-                timeout = info[ 'timeout' ]
-                hashes = info[ 'hashes' ]
-                
-                self._booru_shares.Append( ( name, text, HydrusData.ConvertTimestampToPrettyExpires( timeout ), len( hashes ) ), ( name, text, timeout, ( len( hashes ), hashes, share_key ) ) )
-                
-            
-        
-    
-    def DeleteBoorus( self ):
-        
-        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
-                    
-                    self._controller.Write( 'delete_local_booru_share', share_key )
-                    
-                
-                self._booru_shares.RemoveAllSelected()
-                
-            
-        
-    
-    def EditBoorus( self ):
-    
-        writes = []
-        
-        for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
-            
-            with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = False) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    ( share_key, name, text, timeout, hashes ) = dlg.GetInfo()
-                    
-                    info = {}
-                    
-                    info[ 'name' ] = name
-                    info[ 'text' ] = text
-                    info[ 'timeout' ] = timeout
-                    info[ 'hashes' ] = hashes
-                    
-                    writes.append( ( share_key, info ) )
-                    
-                
-            
-        
-        for ( share_key, info ) in writes:
-            
-            self._controller.Write( 'local_booru_share', share_key, info )
-            
-        
-    
-    def EventBooruDelete( self, event ):
-        
-        self.DeleteBoorus()
-        
-    
-    def EventBooruEdit( self, event ):
-        
-        self.EditBoorus()
-        
-    
-    def EventBooruOpenSearch( self, event ):
-        
-        for ( name, text, timeout, ( num_hashes, hashes, share_key ) ) in self._booru_shares.GetSelectedClientData():
-            
-            self._controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'booru share' )
-            
-        
-    
-    def EventCopyExternalShareURL( self, event ):
-        
-        shares = self._booru_shares.GetSelectedClientData()
-        
-        if len( shares ) > 0:
-            
-            ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
-            
-            info = self._service.GetInfo()
-            
-            external_ip = HydrusNATPunch.GetExternalIP() # eventually check for optional host replacement here
-            
-            external_port = info[ 'upnp' ]
-            
-            if external_port is None: external_port = info[ 'port' ]
-            
-            url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
-            
-            self._controller.pub( 'clipboard', 'text', url )
-            
-        
-    
-    def EventCopyInternalShareURL( self, event ):
-        
-        shares = self._booru_shares.GetSelectedClientData()
-        
-        if len( shares ) > 0:
-            
-            ( name, text, timeout, ( num_hashes, hashes, share_key ) ) = shares[0]
-            
-            info = self._service.GetInfo()
-            
-            internal_ip = '127.0.0.1'
-            
-            internal_port = info[ 'port' ]
-            
-            url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
-            
-            self._controller.pub( 'clipboard', 'text', url )
-            
-        
     
     def EventDeleteLocalDeleted( self, event ):
         
@@ -329,11 +206,6 @@ class ReviewServicePanel( wx.Panel ):
     def GetServiceKey( self ):
         
         return self._service.GetServiceKey()
-        
-    
-    def RefreshLocalBooruShares( self ):
-        
-        self._DisplayService()
         
     
     class _ServicePanel( ClientGUICommon.StaticBox ):
@@ -748,7 +620,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             if not new_options.GetBoolean( 'advanced_mode' ):
                 
@@ -986,9 +858,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 service_paused = self._service.IsPaused()
                 
-                options = HG.client_controller.GetOptions()
-                
-                all_repo_sync_paused = options[ 'pause_repo_sync' ]
+                all_repo_sync_paused = HG.client_controller.options[ 'pause_repo_sync' ]
                 
                 if service_paused or all_repo_sync_paused or not processing_work_to_do:
                     
@@ -1258,9 +1128,26 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service = service
             
+            self._share_key_info = {}
+            
             self._my_updater = ClientGUICommon.ThreadToGUIUpdater( self, self._Refresh )
             
-            self._name_and_type = ClientGUICommon.BetterStaticText( self )
+            self._service_status = ClientGUICommon.BetterStaticText( self )
+            
+            booru_search_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ], self._ConvertDataToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            
+            booru_search_panel.SetListCtrl( self._booru_shares )
+            
+            booru_search_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+            booru_search_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+            booru_search_panel.AddSeparator()
+            booru_search_panel.AddButton( 'open in new page', self._OpenSearch, enabled_only_on_selection = True )
+            booru_search_panel.AddButton( 'copy internal share url', self._CopyInternalShareURL, enabled_check_func = self._CanCopyURL )
+            booru_search_panel.AddButton( 'copy external share url', self._CopyExternalShareURL, enabled_check_func = self._CanCopyURL )
+            
+            self._booru_shares.Sort()
             
             #
             
@@ -1268,9 +1155,171 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.AddF( booru_search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
+            
+        
+        def _CanCopyURL( self ):
+            
+            has_selected = self._booru_shares.HasSelected()
+            service_is_running = self._service.GetPort() is not None
+            
+            return has_selected and service_is_running
+            
+        
+        def _ConvertDataToListCtrlTuple( self, share_key ):
+            
+            info = self._share_key_info[ share_key ]
+            
+            name = info[ 'name' ]
+            text = info[ 'text' ]
+            timeout = info[ 'timeout' ]
+            hashes = info[ 'hashes' ]
+            
+            num_hashes = len( hashes )
+            
+            pretty_name = name
+            pretty_text = text
+            pretty_timeout = HydrusData.ConvertTimestampToPrettyExpires( timeout )
+            pretty_hashes = HydrusData.ConvertIntToPrettyString( num_hashes )
+            
+            display_tuple = ( pretty_name, pretty_text, pretty_timeout, pretty_hashes )
+            sort_tuple = ( name, text, timeout, num_hashes )
+            
+            return ( display_tuple, sort_tuple )
+            
+        
+        def _CopyExternalShareURL( self ):
+            
+            try:
+                
+                external_ip = HydrusNATPunch.GetExternalIP()
+                
+            except Exception as e:
+                
+                wx.MessageBox( unicode( e ) )
+                
+                return
+                
+            
+            internal_port = self._service.GetPort()
+            
+            if internal_port is None:
+                
+                wx.MessageBox( 'The local booru is not currently running!' )
+                
+            
+            external_port = self._service.GetUPnPPort()
+            
+            if external_port is None:
+                
+                external_port = internal_port
+                
+            
+            urls = []
+            
+            for share_key in self._booru_shares.GetData( only_selected = True ):
+                
+                url = 'http://' + external_ip + ':' + HydrusData.ToUnicode( external_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                
+                urls.append( url )
+                
+            
+            text = os.linesep.join( urls )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+        def _CopyInternalShareURL( self ):
+            
+            internal_ip = '127.0.0.1'
+            
+            internal_port = self._service.GetPort()
+            
+            if internal_port is None:
+                
+                wx.MessageBox( 'The local booru is not currently running!' )
+                
+            
+            urls = []
+            
+            for share_key in self._booru_shares.GetData( only_selected = True ):
+                
+                url = 'http://' + internal_ip + ':' + str( internal_port ) + '/gallery?share_key=' + share_key.encode( 'hex' )
+                
+                urls.append( url )
+                
+            
+            text = os.linesep.join( urls )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+        def _Delete( self ):
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    for share_key in self._booru_shares.GetData( only_selected = True ):
+                        
+                        HG.client_controller.Write( 'delete_local_booru_share', share_key )
+                        
+                    
+                    self._booru_shares.DeleteSelected()
+                    
+                
+            
+        
+        def _Edit( self ):
+            
+            for share_key in self._booru_shares.GetData( only_selected = True ):
+                
+                info = self._share_key_info[ share_key ]
+                
+                name = info[ 'name' ]
+                text = info[ 'text' ]
+                timeout = info[ 'timeout' ]
+                hashes = info[ 'hashes' ]
+                
+                with ClientGUIDialogs.DialogInputLocalBooruShare( self, share_key, name, text, timeout, hashes, new_share = False) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        ( share_key, name, text, timeout, hashes ) = dlg.GetInfo()
+                        
+                        info = {}
+                        
+                        info[ 'name' ] = name
+                        info[ 'text' ] = text
+                        info[ 'timeout' ] = timeout
+                        info[ 'hashes' ] = hashes
+                        
+                        HG.client_controller.Write( 'local_booru_share', share_key, info )
+                        
+                    else:
+                        
+                        break
+                        
+                    
+                
+            
+            self._Refresh()
+            
+        
+        def _OpenSearch( self ):
+            
+            for share_key in self._booru_shares.GetData( only_selected = True ):
+                
+                info = self._share_key_info[ share_key ]
+                
+                name = info[ 'name' ]
+                hashes = info[ 'hashes' ]
+                
+                HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = 'booru share: ' + name )
+                
             
         
         def _Refresh( self ):
@@ -1280,7 +1329,20 @@ class ReviewServicePanel( wx.Panel ):
                 return
                 
             
-            self._name_and_type.SetLabelText( 'This is a Local Booru service. This box will regain its old information and controls in a later version.' )
+            port = self._service.GetPort()
+            
+            if port is None:
+                
+                status = 'The local booru is not running.'
+                
+            else:
+                
+                status = 'The local booru should be running on port ' + str( port ) + '.'
+                
+            
+            self._service_status.SetLabelText( status )
+            
+            HG.client_controller.CallToThread( self.THREADFetchInfo )
             
         
         def ServiceUpdated( self, service ):
@@ -1291,6 +1353,27 @@ class ReviewServicePanel( wx.Panel ):
                 
                 self._my_updater.Update()
                 
+            
+        
+        def THREADFetchInfo( self ):
+            
+            def wx_code( booru_shares ):
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._share_key_info.update( booru_shares )
+                
+                self._booru_shares.SetData( booru_shares.keys() )
+                
+                self._booru_shares.Sort()
+                
+            
+            booru_shares = HG.client_controller.Read( 'local_booru_shares' )
+            
+            wx.CallAfter( wx_code, booru_shares )
             
         
     
@@ -1368,7 +1451,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             advanced_mode = new_options.GetBoolean( 'advanced_mode' )
             

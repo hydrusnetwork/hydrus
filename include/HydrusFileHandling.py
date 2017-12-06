@@ -1,10 +1,5 @@
 import gc
 import hashlib
-import hsaudiotag
-import hsaudiotag.auto
-import hsaudiotag.flac
-import hsaudiotag.mpeg
-import hsaudiotag.ogg
 import HydrusAudioHandling
 import HydrusConstants as HC
 import HydrusDocumentHandling
@@ -219,21 +214,13 @@ def GetFileInfo( path, mime = None ):
         
         num_words = HydrusDocumentHandling.GetPDFNumWords( path )
         
-    elif mime == HC.AUDIO_MP3:
+    elif mime in HC.AUDIO:
         
-        duration = HydrusAudioHandling.GetMP3Duration( path )
+        ffmpeg_lines = HydrusVideoHandling.GetFFMPEGInfoLines( path )
         
-    elif mime == HC.AUDIO_OGG:
+        duration_in_s = HydrusVideoHandling.ParseFFMPEGDuration( ffmpeg_lines )
         
-        duration = HydrusAudioHandling.GetOGGVorbisDuration( path )
-        
-    elif mime == HC.AUDIO_FLAC:
-        
-        duration = HydrusAudioHandling.GetFLACDuration( path )
-        
-    elif mime == HC.AUDIO_WMA:
-        
-        duration = HydrusAudioHandling.GetWMADuration( path )
+        duration = int( duration_in_s * 1000 )
         
     
     return ( size, mime, width, height, duration, num_frames, num_words )
@@ -318,16 +305,6 @@ def GetMime( path ):
         
         HydrusData.Print( 'FFMPEG couldn\'t figure out the mime for: ' + path )
         HydrusData.PrintException( e, do_wait = False )
-        
-    
-    hsaudio_object = hsaudiotag.auto.File( path )
-    
-    if hsaudio_object.valid:
-        
-        if isinstance( hsaudio_object.original, hsaudiotag.mpeg.Mpeg ): return HC.AUDIO_MP3
-        elif isinstance( hsaudio_object.original, hsaudiotag.flac.FLAC ): return HC.AUDIO_FLAC
-        elif isinstance( hsaudio_object.original, hsaudiotag.ogg.Vorbis ): return HC.AUDIO_OGG
-        elif isinstance( hsaudio_object.original, hsaudiotag.wma.WMADecoder ): return HC.AUDIO_WMA
         
     
     return HC.APPLICATION_UNKNOWN

@@ -13,6 +13,7 @@ import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
+import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingDomain
@@ -1784,6 +1785,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.SetListCtrl( self._queries )
         
         queries_panel.AddButton( 'add', self._AddQuery )
+        queries_panel.AddButton( 'paste queries', self._PasteQueries )
         queries_panel.AddButton( 'edit', self._EditQuery, enabled_only_on_selection = True )
         queries_panel.AddButton( 'delete', self._DeleteQuery, enabled_only_on_selection = True )
         queries_panel.AddSeparator()
@@ -1967,7 +1969,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
         
@@ -2050,7 +2052,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
             
-            panel = EditCheckerOptions( dlg, self._checker_options )
+            panel = ClientGUITime.EditCheckerOptions( dlg, self._checker_options )
             
             dlg.SetPanel( panel )
             
@@ -2164,6 +2166,47 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return False
+        
+    
+    def _PasteQueries( self ):
+        
+        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Is that ok?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() != wx.ID_YES:
+                
+                return
+                
+            
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            text = data.GetText()
+            
+            try:
+                
+                query_texts = HydrusData.DeserialiseNewlinedTexts( text )
+                
+                queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in query_texts ]
+                
+                self._queries.AddDatas( queries )
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
+                
+            
+        else:
+            
+            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
         
     
     def _PausePlay( self ):
@@ -2851,7 +2894,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_type = ClientGUICommon.BetterChoice( self )
         
-        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_API, HC.URL_TYPE_FILE ):
+        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_FILE ):
             
             self._url_type.Append( HC.url_type_string_lookup[ url_type ], url_type )
             
@@ -3240,7 +3283,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -3303,13 +3346,15 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ConvertDataToListCtrlTuples( self, url_match ):
         
         name = url_match.GetName()
+        url_type = url_match.GetURLType()
         example_url = url_match.GetExampleURL()
         
         pretty_name = name
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
         pretty_example_url = example_url
         
-        display_tuple = ( pretty_name, pretty_example_url )
-        sort_tuple = ( name, example_url )
+        display_tuple = ( pretty_name, pretty_url_type, pretty_example_url )
+        sort_tuple = ( name, url_type, example_url )
         
         return ( display_tuple, sort_tuple )
         
@@ -3369,84 +3414,193 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         return url_matches
         
     
-class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
+class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, checker_options ):
+    def __init__( self, parent, network_engine, url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTipString( 'Show help regarding these checker options.' )
+        self._network_engine = network_engine
         
-        # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
-        # or indeed this could just take the seed cache and last check of the caller, if there is one
-        # this would be more useful to the user, to know 'right, on ok, it'll refresh in 30 mins'
+        self._display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._intended_files_per_check = wx.SpinCtrl( self, min = 1, max = 1000 )
+        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_names_to_display', 15, 36, [ ( 'url class', -1 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
         
-        self._never_faster_than = ClientGUICommon.TimeDeltaCtrl( self, min = 30, days = True, hours = True, minutes = True, seconds = True )
+        self._display_list_ctrl_panel.SetListCtrl( self._display_list_ctrl )
         
-        self._never_slower_than = ClientGUICommon.TimeDeltaCtrl( self, min = 600, days = True, hours = True, minutes = True )
+        self._display_list_ctrl_panel.AddButton( 'edit', self._EditDisplay, enabled_only_on_selection = True )
         
-        self._death_file_velocity = ClientGUICommon.VelocityCtrl( self, min_time_delta = 60, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
+        self._page_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._page_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._page_list_ctrl_panel, 'url_match_names_to_page_parsing_keys', 15, 36, [ ( 'url class', -1 ), ( 'page parser', 36 ) ], self._ConvertPageDataToListCtrlTuples, activation_callback = self._EditPage )
+        
+        self._page_list_ctrl_panel.SetListCtrl( self._page_list_ctrl )
+        
+        self._page_list_ctrl_panel.AddButton( 'edit', self._EditPage, enabled_only_on_selection = True )
+        
+        self._gallery_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._gallery_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_list_ctrl_panel, 'url_match_names_to_gallery_parsing_keys', 15, 36, [ ( 'url class', -1 ), ( 'gallery parser', 36 ) ], self._ConvertGalleryDataToListCtrlTuples, activation_callback = self._EditGallery )
+        
+        self._gallery_list_ctrl_panel.SetListCtrl( self._gallery_list_ctrl )
+        
+        self._gallery_list_ctrl_panel.AddButton( 'edit', self._EditGallery, enabled_only_on_selection = True )
         
         #
         
-        ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
+        self._display_list_ctrl.AddDatas( url_match_names_to_display.items() )
         
-        self._intended_files_per_check.SetValue( intended_files_per_check )
-        self._never_faster_than.SetValue( never_faster_than )
-        self._never_slower_than.SetValue( never_slower_than )
-        self._death_file_velocity.SetValue( death_file_velocity )
+        self._display_list_ctrl.Sort( 0 )
+        
+        self._page_list_ctrl.AddDatas( url_match_names_to_page_parsing_keys.items() )
+        
+        self._page_list_ctrl.Sort( 0 )
+        
+        self._gallery_list_ctrl.AddDatas( url_match_names_to_gallery_parsing_keys.items() )
+        
+        self._gallery_list_ctrl.Sort( 0 )
         
         #
-        
-        rows = []
-        
-        rows.append( ( 'intended new files per check: ', self._intended_files_per_check ) )
-        rows.append( ( 'stop checking if new files found falls below: ', self._death_file_velocity ) )
-        rows.append( ( 'never check faster than once per: ', self._never_faster_than ) )
-        rows.append( ( 'never check slower than once per: ', self._never_slower_than ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.AddF( st, CC.FLAGS_VCENTER )
-        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
-        
-        vbox.AddF( help_hbox, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.AddF( self._display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._page_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.AddF( self._gallery_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
-    def _ShowHelp( self ):
+    def _ConvertDisplayDataToListCtrlTuples( self, data ):
         
-        help = 'PROTIP: Do not change anything here unless you understand what it means!'
-        help += os.linesep * 2
-        help += 'After its initialisation check, the checker times future checks so that it will probably find the same specified number of new files each time. When files are being posted frequently, it will check more often. When things are slow, it will slow down as well.'
-        help += os.linesep * 2
-        help += 'For instance, if it were set to try for 5 new files with every check, and at the last check it knew that the last 24 hours had produced 10 new files, it would check again 12 hours later. When that check was done and any new files found, it would then recalculate and repeat the process.'
-        help += os.linesep * 2
-        help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have been a rush of new files, hit the \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
+        ( url_match_name, display ) = data
         
-        wx.MessageBox( help )
+        pretty_name = url_match_name
+        
+        if display:
+            
+            pretty_display = 'yes'
+            
+        else:
+            
+            pretty_display = 'no'
+            
+        
+        display_tuple = ( pretty_name, pretty_display )
+        sort_tuple = ( url_match_name, display )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ConvertGalleryDataToListCtrlTuples( self, data ):
+        
+        ( url_match_name, gallery_script_key ) = data
+        
+        pretty_name = url_match_name
+        
+        if gallery_script_key is None:
+            
+            pretty_script_key = ''
+            
+        else:
+            
+            # fetch this from network engine
+            pretty_script_key = 'fetch this from network engine'
+            
+        
+        display_tuple = ( pretty_name, pretty_script_key )
+        sort_tuple = ( url_match_name, pretty_script_key )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _ConvertPageDataToListCtrlTuples( self, data ):
+        
+        ( url_match_name, page_script_key ) = data
+        
+        pretty_name = url_match_name
+        
+        if page_script_key is None:
+            
+            pretty_script_key = ''
+            
+        else:
+            
+            pretty_script_key = 'fetch this from network engine'
+            
+        
+        display_tuple = ( pretty_name, pretty_script_key )
+        sort_tuple = ( url_match_name, pretty_script_key )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _EditDisplay( self ):
+        
+        for data in self._display_list_ctrl.GetData( only_selected = True ):
+            
+            ( url_match_name, display ) = data
+            
+            message = 'Show ' + url_match_name + ' in the media viewer?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Show in the media viewer?' ) as dlg:
+                
+                result = dlg.ShowModal()
+                
+                if result in ( wx.ID_YES, wx.ID_NO ):
+                    
+                    display = result == wx.ID_YES
+                    
+                    self._display_list_ctrl.DeleteDatas( ( data, ) )
+                    
+                    new_data = ( url_match_name, display )
+                    
+                    self._display_list_ctrl.AddDatas( ( new_data, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._display_list_ctrl.Sort()
+        
+    
+    def _EditGallery( self ):
+        
+        for data in self._gallery_list_ctrl.GetData( only_selected = True ):
+            
+            ( url_match_name, gallery_script_key ) = data
+            
+            # present the user with a dialog to choose gallery script key, or none
+            
+            wx.MessageBox( 'This does not work yet!' )
+            
+            break
+            
+        
+    
+    def _EditPage( self ):
+        
+        for data in self._page_list_ctrl.GetData( only_selected = True ):
+            
+            ( url_match_name, page_script_key ) = data
+            
+            # present the user with a dialog to choose page script key, or none
+            
+            wx.MessageBox( 'This does not work yet!' )
+            
+            break
+            
         
     
     def GetValue( self ):
         
-        intended_files_per_check = self._intended_files_per_check.GetValue()
-        never_faster_than = self._never_faster_than.GetValue()
-        never_slower_than = self._never_slower_than.GetValue()
-        death_file_velocity = self._death_file_velocity.GetValue()
+        url_match_names_to_display = dict( self._display_list_ctrl.GetData() )
+        url_match_names_to_page_parsing_keys = dict( self._page_list_ctrl.GetData() )
+        url_match_names_to_gallery_parsing_keys = dict( self._gallery_list_ctrl.GetData() )
         
-        return ClientData.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
+        return ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
         
     

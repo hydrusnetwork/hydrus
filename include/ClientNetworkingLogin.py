@@ -294,7 +294,30 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         session = self.engine.session_manager.GetSession( network_context )
         
-        response = session.get( 'https://www.hentai-foundry.com/' )
+        num_attempts = 0
+        
+        while True:
+            
+            try:
+                
+                response = session.get( 'https://www.hentai-foundry.com/', timeout = 10 )
+                
+                break
+                
+            except requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout:
+                
+                if num_attempts < 3:
+                    
+                    num_attempts += 1
+                    
+                    time.sleep( 3 )
+                    
+                else:
+                    
+                    raise HydrusExceptions.ConnectionException( 'Could not connect to HF to log in!' )
+                    
+                
+            
         
         time.sleep( 1 )
         

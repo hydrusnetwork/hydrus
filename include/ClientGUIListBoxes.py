@@ -1019,7 +1019,7 @@ class ListBoxTags( ListBox ):
     
     def _UpdateBackgroundColour( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
         

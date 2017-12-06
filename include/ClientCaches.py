@@ -309,9 +309,7 @@ class ClientFilesManager( object ):
         
         full_size_path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
-        options = self._controller.GetOptions()
-        
-        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
+        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         
         if mime in ( HC.IMAGE_GIF, HC.IMAGE_PNG ):
             
@@ -385,7 +383,7 @@ class ClientFilesManager( object ):
     
     def _GetRebalanceTuple( self ):
         
-        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._controller.GetNewOptions().GetClientFilesLocationsToIdealWeights()
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._controller.new_options.GetClientFilesLocationsToIdealWeights()
         
         total_weight = sum( locations_to_ideal_weights.values() )
         
@@ -1341,8 +1339,6 @@ class DataCache( object ):
             
             if key not in self._keys_to_data:
                 
-                options = self._controller.GetOptions()
-                
                 while self._total_estimated_memory_footprint > self._cache_size:
                     
                     self._DeleteItem()
@@ -1676,9 +1672,7 @@ class RenderedImageCache( object ):
         
         self._controller = controller
         
-        options = self._controller.GetOptions()
-        
-        cache_size = options[ 'fullscreen_cache_size' ]
+        cache_size = self._controller.options[ 'fullscreen_cache_size' ]
         
         self._data_cache = DataCache( self._controller, cache_size, timeout = 600 )
         
@@ -1723,9 +1717,7 @@ class ThumbnailCache( object ):
         
         self._controller = controller
         
-        options = self._controller.GetOptions()
-        
-        cache_size = options[ 'thumbnail_cache_size' ]
+        cache_size = self._controller.options[ 'thumbnail_cache_size' ]
         
         self._data_cache = DataCache( self._controller, cache_size, timeout = 86400 )
         
@@ -1747,9 +1739,7 @@ class ThumbnailCache( object ):
     
     def _GetResizedHydrusBitmapFromHardDrive( self, display_media ):
         
-        options = self._controller.GetOptions()
-        
-        thumbnail_dimensions = options[ 'thumbnail_dimensions' ]
+        thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         
         if tuple( thumbnail_dimensions ) == HC.UNSCALED_THUMBNAIL_DIMENSIONS:
             
@@ -1819,11 +1809,9 @@ class ThumbnailCache( object ):
                 
             
         
-        options = HG.client_controller.GetOptions()
-        
         ( media_x, media_y ) = display_media.GetResolution()
         ( actual_x, actual_y ) = hydrus_bitmap.GetSize()
-        ( desired_x, desired_y ) = options[ 'thumbnail_dimensions' ]
+        ( desired_x, desired_y ) = self._controller.options[ 'thumbnail_dimensions' ]
         
         too_large = actual_x > desired_x or actual_y > desired_y
         
@@ -1883,9 +1871,9 @@ class ThumbnailCache( object ):
                     
                     path = os.path.join( HC.STATIC_DIR, name + '.png' )
                     
-                    options = self._controller.GetOptions()
+                    thumbnail_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
                     
-                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, options[ 'thumbnail_dimensions' ], HC.IMAGE_PNG )
+                    thumbnail = HydrusFileHandling.GenerateThumbnailFromStaticImage( path, thumbnail_dimensions, HC.IMAGE_PNG )
                     
                     with open( temp_path, 'wb' ) as f:
                         
@@ -2441,9 +2429,7 @@ class TagParentsManager( object ):
     
     def ExpandPredicates( self, service_key, predicates ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2477,9 +2463,7 @@ class TagParentsManager( object ):
     
     def ExpandTags( self, service_key, tags ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2499,9 +2483,7 @@ class TagParentsManager( object ):
     
     def GetParents( self, service_key, tag ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_parents_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2599,9 +2581,7 @@ class TagSiblingsManager( object ):
     
     def GetAutocompleteSiblings( self, service_key, search_text, exact_match = False ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2652,9 +2632,7 @@ class TagSiblingsManager( object ):
     
     def GetSibling( self, service_key, tag ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2676,9 +2654,7 @@ class TagSiblingsManager( object ):
     
     def GetAllSiblings( self, service_key, tag ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2719,9 +2695,7 @@ class TagSiblingsManager( object ):
     
     def CollapsePredicates( self, service_key, predicates ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2778,9 +2752,7 @@ class TagSiblingsManager( object ):
     
     def CollapsePairs( self, service_key, pairs ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2812,9 +2784,7 @@ class TagSiblingsManager( object ):
     
     def CollapseStatusesToTags( self, service_key, statuses_to_tags ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2836,9 +2806,7 @@ class TagSiblingsManager( object ):
     
     def CollapseTag( self, service_key, tag ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2860,9 +2828,7 @@ class TagSiblingsManager( object ):
     
     def CollapseTags( self, service_key, tags ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
@@ -2875,9 +2841,7 @@ class TagSiblingsManager( object ):
     
     def CollapseTagsToCount( self, service_key, tags_to_count ):
         
-        new_options = self._controller.GetNewOptions()
-        
-        if new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
             
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             

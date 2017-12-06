@@ -74,9 +74,7 @@ class HydrusResourceSessionKey( HydrusServerResources.HydrusResource ):
         
         access_key = self._parseAccessKey( request )
         
-        session_manager = HG.server_controller.GetServerSessionManager()
-        
-        ( session_key, expires ) = session_manager.AddSession( self._service_key, access_key )
+        ( session_key, expires ) = HG.server_controller.server_session_manager.AddSession( self._service_key, access_key )
         
         now = HydrusData.GetNow()
         
@@ -151,9 +149,7 @@ class HydrusResourceRestricted( HydrusServerResources.HydrusResource ):
             raise Exception( 'Problem parsing cookies!' )
             
         
-        session_manager = HG.server_controller.GetServerSessionManager()
-        
-        account = session_manager.GetAccount( self._service_key, session_key )
+        account = HG.server_controller.server_session_manager.GetAccount( self._service_key, session_key )
         
         request.hydrus_account = account
         
@@ -229,13 +225,11 @@ class HydrusResourceRestrictedAccountModification( HydrusResourceRestricted ):
         
         kwargs = request.hydrus_args # for things like expires, title, and so on
         
-        server_session_manager = HG.server_controller.GetServerSessionManager()
-        
         with HG.dirty_object_lock:
             
             HG.server_controller.WriteSynchronous( 'account_modification', self._service_key, request.hydrus_account, action, subject_accounts, **kwargs )
             
-            server_session_manager.UpdateAccounts( self._service_key, subject_accounts )
+            HG.server_controller.server_session_manager.UpdateAccounts( self._service_key, subject_accounts )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -263,9 +257,7 @@ class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
         
         HG.server_controller.WriteSynchronous( 'account_types', self._service_key, request.hydrus_account, account_types, deletee_account_type_keys_to_new_account_type_keys )
         
-        session_manager = HG.server_controller.GetServerSessionManager()
-        
-        session_manager.RefreshAccounts( self._service_key )
+        HG.server_controller.server_session_manager.RefreshAccounts( self._service_key )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

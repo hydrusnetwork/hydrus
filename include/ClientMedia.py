@@ -251,59 +251,24 @@ class FileInfoManager( object ):
             mime = HC.APPLICATION_UNKNOWN
             
         
-        self._hash = hash
-        self._size = size
-        self._mime = mime
-        self._width = width
-        self._height = height
-        self._duration = duration
-        self._num_frames = num_frames
-        self._num_words = num_words
+        self.hash = hash
+        self.size = size
+        self.mime = mime
+        self.width = width
+        self.height = height
+        self.duration = duration
+        self.num_frames = num_frames
+        self.num_words = num_words
         
     
     def Duplicate( self ):
         
-        return FileInfoManager( self._hash, self._size, self._mime, self._width, self._height, self._duration, self._num_frames, self._num_words )
-        
-    
-    def GetDuration( self ):
-        
-        return self._duration
-        
-    
-    def GetHash( self ):
-        
-        return self._hash
-        
-    
-    def GetMime( self ):
-        
-        return self._mime
-        
-    
-    def GetNumFrames( self ):
-        
-        return self._num_frames
-        
-    
-    def GetNumWords( self ):
-        
-        return self._num_words
-        
-    
-    def GetResolution( self ):
-        
-        return ( self._width, self._height )
-        
-    
-    def GetSize( self ):
-        
-        return self._size
+        return FileInfoManager( self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
         
     
     def ToTuple( self ):
         
-        return ( self._hash, self._size, self._mime, self._width, self._height, self._duration, self._num_frames, self._num_words )
+        return ( self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.num_words )
         
     
 class LocationsManager( object ):
@@ -1040,7 +1005,7 @@ class MediaList( object ):
                 
                 if for_media_viewer:
                     
-                    new_options = HG.client_controller.GetNewOptions()
+                    new_options = HG.client_controller.new_options
                     
                     media_show_action = new_options.GetMediaShowAction( media.GetMime() )
                     
@@ -1239,7 +1204,7 @@ class MediaList( object ):
         
         self._media_sort = media_sort
         
-        media_sort_fallback = HG.client_controller.GetNewOptions().GetFallbackSort()
+        media_sort_fallback = HG.client_controller.new_options.GetFallbackSort()
         
         ( sort_key, reverse ) = media_sort_fallback.GetSortKeyAndReverse( self._file_service_key )
         
@@ -1860,7 +1825,7 @@ class MediaResult( object ):
     
     def GetDuration( self ):
         
-        return self._file_info_manager.GetDuration()
+        return self._file_info_manager.duration
         
     
     def GetFileInfoManager( self ):
@@ -1870,7 +1835,7 @@ class MediaResult( object ):
     
     def GetHash( self ):
         
-        return self._file_info_manager.GetHash()
+        return self._file_info_manager.hash
         
     
     def GetInbox( self ):
@@ -1885,17 +1850,17 @@ class MediaResult( object ):
     
     def GetMime( self ):
         
-        return self._file_info_manager.GetMime()
+        return self._file_info_manager.mime
         
     
     def GetNumFrames( self ):
         
-        return self._file_info_manager.GetNumFrames()
+        return self._file_info_manager.num_frames
         
     
     def GetNumWords( self ):
         
-        return self._file_info_manager.GetNumWords()
+        return self._file_info_manager.num_words
         
     
     def GetRatingsManager( self ):
@@ -1905,12 +1870,12 @@ class MediaResult( object ):
     
     def GetResolution( self ):
         
-        return self._file_info_manager.GetResolution()
+        return ( self._file_info_manager.width, self._file_info_manager.height )
         
     
     def GetSize( self ):
         
-        return self._file_info_manager.GetSize()
+        return self._file_info_manager.size
         
     
     def GetTagsManager( self ):

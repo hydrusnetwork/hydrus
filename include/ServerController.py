@@ -279,11 +279,6 @@ class Controller( HydrusController.HydrusController ):
         return self.db.GetFilesDir()
         
     
-    def GetServerSessionManager( self ):
-        
-        return self._server_session_manager
-        
-    
     def GetServices( self ):
         
         return list( self._services )
@@ -293,7 +288,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusController.HydrusController.InitModel( self )
         
-        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
+        self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
         self._service_keys_to_connected_ports = {}
         
@@ -421,7 +416,7 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'dirty_services', dirty_services )
                 
             
-            dirty_accounts = self._server_session_manager.GetDirtyAccounts()
+            dirty_accounts = self.server_session_manager.GetDirtyAccounts()
             
             if len( dirty_accounts ) > 0:
                 

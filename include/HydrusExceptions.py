@@ -25,8 +25,13 @@ class StringMatchException( ParseException ): pass
 class URLMatchException( ParseException ): pass
 
 class NetworkException( Exception ): pass
+
+class NetworkInfrastructureException( NetworkException ): pass
+class ConnectionException( NetworkInfrastructureException ): pass
+class FirewallException( NetworkInfrastructureException ): pass
+class ServerBusyException( NetworkInfrastructureException ): pass
+
 class BandwidthException( NetworkException ): pass
-class FirewallException( NetworkException ): pass
 class ForbiddenException( NetworkException ): pass
 class LoginException( NetworkException ): pass
 class NetworkVersionException( NetworkException ): pass
@@ -35,7 +40,6 @@ class NotFoundException( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class PermissionException( NetworkException ): pass
 class RedirectionException( NetworkException ): pass
-class ServerBusyException( NetworkException ): pass
 class ServerException( NetworkException ): pass
 class SessionException( NetworkException ): pass
 class WrongServiceTypeException( NetworkException ): pass

@@ -629,13 +629,15 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
-def DeserialisePrettyTags( text ):
+def DeserialiseNewlinedTexts( text ):
     
     text = text.replace( '\r', '' )
     
-    tags = text.split( '\n' )
+    texts = text.split( '\n' )
     
-    return tags
+    texts = [ line for line in texts if line != '' ]
+    
+    return texts
     
 def EncodeBytes( encoding, data ):
     
@@ -1612,9 +1614,7 @@ class ContentUpdate( object ):
                 
                 ( file_info_manager, timestamp ) = self._row
                 
-                hash = file_info_manager.GetHash()
-                
-                hashes = { hash }
+                hashes = { file_info_manager.hash }
                 
             elif self._action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_INBOX, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ):
                 
@@ -1684,56 +1684,6 @@ class ContentUpdate( object ):
         
         return ( self._data_type, self._action, self._row )
         
-    
-class EditLogAction( object ):
-    
-    yaml_tag = u'!EditLogAction'
-    
-    def __init__( self, action ): self._action = action
-    
-    def GetAction( self ): return self._action
-    
-class EditLogActionAdd( EditLogAction ):
-    
-    yaml_tag = u'!EditLogActionAdd'
-    
-    def __init__( self, data ):
-        
-        EditLogAction.__init__( self, HC.ADD )
-        
-        self._data = data
-        
-    
-    def GetData( self ): return self._data
-    
-class EditLogActionDelete( EditLogAction ):
-    
-    yaml_tag = u'!EditLogActionDelete'
-    
-    def __init__( self, identifier ):
-        
-        EditLogAction.__init__( self, HC.DELETE )
-        
-        self._identifier = identifier
-        
-    
-    def GetIdentifier( self ): return self._identifier
-    
-class EditLogActionEdit( EditLogAction ):
-    
-    yaml_tag = u'!EditLogActionEdit'
-    
-    def __init__( self, identifier, data ):
-        
-        EditLogAction.__init__( self, HC.EDIT )
-        
-        self._identifier = identifier
-        self._data = data
-        
-    
-    def GetData( self ): return self._data
-    
-    def GetIdentifier( self ): return self._identifier
     
 class JobDatabase( object ):
     

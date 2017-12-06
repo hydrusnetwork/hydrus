@@ -1,8 +1,3 @@
-import hsaudiotag
-import hsaudiotag.auto
-import hsaudiotag.flac
-import hsaudiotag.mpeg
-import hsaudiotag.ogg
 import HydrusConstants as HC
 import os
 import threading
@@ -11,55 +6,7 @@ import traceback
 
 #if HC.PLATFORM_WINDOWS: import mp3play
 
-parsed_noises = {}
-
-def GetFLACDuration( path ):
-    
-    hsaudio_object = hsaudiotag.flac.FLAC( path )
-    
-    if not hsaudio_object.valid: raise Exception( 'FLAC file was not valid!' )
-    
-    length_in_seconds = hsaudio_object.duration
-    
-    length_in_ms = int( length_in_seconds * 1000 )
-    
-    return length_in_ms
-    
-def GetMP3Duration( path ):
-    
-    hsaudio_object = hsaudiotag.mpeg.Mpeg( path )
-    
-    if not hsaudio_object.valid: raise Exception( 'MP3 file was not valid!' )
-    
-    length_in_seconds = hsaudio_object.duration
-    
-    length_in_ms = int( length_in_seconds * 1000 )
-    
-    return length_in_ms
-    
-def GetOGGVorbisDuration( path ):
-    
-    hsaudio_object = hsaudiotag.ogg.Vorbis( path )
-    
-    if not hsaudio_object.valid: raise Exception( 'Ogg Vorbis file was not valid!' )
-    
-    length_in_seconds = hsaudio_object.duration
-    
-    length_in_ms = int( length_in_seconds * 1000 )
-    
-    return length_in_ms
-    
-def GetWMADuration( path ):
-    
-    hsaudio_object = hsaudiotag.wma.WMADecoder( path )
-    
-    if not hsaudio_object.valid: raise Exception( 'WMA file was not valid!' )
-    
-    length_in_seconds = hsaudio_object.duration
-    
-    length_in_ms = int( length_in_seconds * 1000 )
-    
-    return length_in_ms
+# There used to be hsaudiotag duration stuff here, but I moved it all to FFMPEG
 
 '''
 def PlayNoise( name ):

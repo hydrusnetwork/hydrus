@@ -656,7 +656,7 @@ class PopupMessageManager( wx.Frame ):
             
             going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
                 

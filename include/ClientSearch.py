@@ -427,7 +427,7 @@ class FileSystemPredicates( object ):
         
         self._duplicate_predicates = []
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         forced_search_limit = new_options.GetNoneableInteger( 'forced_search_limit' )
         

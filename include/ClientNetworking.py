@@ -1080,7 +1080,7 @@ class NetworkJob( object ):
             self._status_text = u'sending request\u2026'
             
         
-        connect_timeout = HG.client_controller.GetNewOptions().GetInteger( 'network_timeout' )
+        connect_timeout = HG.client_controller.new_options.GetInteger( 'network_timeout' )
         
         read_timeout = connect_timeout * 6
         
@@ -1621,7 +1621,7 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Could not connect!' )
+                        raise HydrusExceptions.ConnectionException( 'Could not connect!' )
                         
                     
                     with self._lock:
@@ -1637,7 +1637,7 @@ class NetworkJob( object ):
                     
                     if not self._CanReattemptRequest():
                         
-                        raise HydrusExceptions.NetworkException( 'Connection successful, but reading response timed out!' )
+                        raise HydrusExceptions.ConnectionException( 'Connection successful, but reading response timed out!' )
                         
                     
                     with self._lock:

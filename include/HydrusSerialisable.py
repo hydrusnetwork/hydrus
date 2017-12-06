@@ -320,6 +320,10 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
                 
                 encoded_value = [ item.encode( 'hex' ) for item in value ]
                 
+            elif value is None:
+                
+                encoded_value = value
+                
             else:
                 
                 encoded_value = value.encode( 'hex' )
@@ -347,6 +351,10 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
             if isinstance( encoded_value, ( list, tuple, set ) ):
                 
                 value = [ encoded_item.decode( 'hex' ) for encoded_item in encoded_value ]
+                
+            elif encoded_value is None:
+                
+                value = encoded_value
                 
             else:
                 

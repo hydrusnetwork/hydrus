@@ -84,7 +84,7 @@ class FullscreenHoverFrame( wx.Frame ):
         
         try:
             
-            new_options = HG.client_controller.GetNewOptions()
+            new_options = HG.client_controller.new_options
             
             if new_options.GetBoolean( 'always_show_hover_windows' ):
                 
@@ -425,7 +425,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
     
     def _SetDefaultShortcuts( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         default_media_viewer_custom_shortcuts = new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
         
@@ -617,7 +617,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
     
     def _EditBackgroundSwitchIntensity( self ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         value = new_options.GetNoneableInteger( 'duplicate_background_switch_intensity' )
         
@@ -638,7 +638,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
     
     def _EditMergeOptions( self, duplicate_type ):
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         duplicate_action_options = new_options.GetDuplicateActionOptions( duplicate_type )
         
@@ -867,25 +867,17 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
             
             urls = self._current_media.GetLocationsManager().GetURLs()
             
-            urls = list( urls )
-            
-            urls.sort()
-            
-            urls = urls[ : 10 ]
-            
             if urls != self._last_seen_urls:
                 
                 self._last_seen_urls = list( urls )
                 
                 self._urls_vbox.Clear( deleteWindows = True )
                 
-                for url in urls:
+                url_tuples = HG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
+                
+                for ( display_string, url ) in url_tuples:
                     
-                    parse = urlparse.urlparse( url )
-                    
-                    url_string = parse.hostname
-                    
-                    link = wx.HyperlinkCtrl( self, id = -1, label = url_string, url = url )
+                    link = wx.HyperlinkCtrl( self, id = -1, label = display_string, url = url )
                     
                     link.SetToolTipString( url )
                     

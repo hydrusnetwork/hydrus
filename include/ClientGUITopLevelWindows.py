@@ -109,7 +109,7 @@ def GetSafeSize( tlw, min_size, gravity ):
     
 def ExpandTLWIfPossible( tlw, frame_key, desired_size_delta ):
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -148,7 +148,7 @@ def PostSizeChangedEvent( window ):
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -170,7 +170,7 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
 def SetTLWSizeAndPosition( tlw, frame_key ):
     
-    new_options = HG.client_controller.GetNewOptions()
+    new_options = HG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -293,7 +293,7 @@ class NewDialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -638,7 +638,7 @@ class Frame( wx.Frame ):
         
         wx.Frame.__init__( self, parent, title = title, style = style )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         

@@ -14,6 +14,7 @@ import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIPredicates
+import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientThreading
@@ -129,7 +130,7 @@ class Dialog( wx.Dialog ):
         
         wx.Dialog.__init__( self, parent, title = title, style = style, pos = pos )
         
-        self._new_options = HG.client_controller.GetNewOptions()
+        self._new_options = HG.client_controller.new_options
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -667,6 +668,16 @@ class DialogInputLocalBooruShare( Dialog ):
             
         
         self._hashes = hashes
+        
+        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        
+        internal_port = self._service.GetPort()
+        
+        if internal_port is None:
+            
+            self._copy_internal_share_link.Disable()
+            self._copy_external_share_link.Disable()
+            
         
         #
         
@@ -1459,49 +1470,6 @@ class DialogInputTags( Dialog ):
         self.EndModal( wx.ID_OK )
         
     
-class DialogInputTimeDelta( Dialog ):
-    
-    def __init__( self, parent, initial_value, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False ):
-        
-        Dialog.__init__( self, parent, 'input time delta' )
-        
-        self._time_delta = ClientGUICommon.TimeDeltaCtrl( self, min = min, days = days, hours = hours, minutes = minutes, seconds = seconds, monthly_allowed = monthly_allowed )
-        
-        self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
-        self._ok.SetForegroundColour( ( 0, 128, 0 ) )
-        
-        self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'Cancel' )
-        self._cancel.SetForegroundColour( ( 128, 0, 0 ) )
-        
-        #
-        
-        self._time_delta.SetValue( initial_value )
-        
-        #
-        
-        b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.AddF( self._time_delta, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
-        
-        self.SetSizer( vbox )
-        
-        ( x, y ) = self.GetEffectiveMinSize()
-        
-        self.SetInitialSize( ( x, y ) )
-        
-        wx.CallAfter( self._ok.SetFocus )
-        
-    
-    def GetValue( self ):
-        
-        return self._time_delta.GetValue()
-        
-    
 class DialogInputUPnPMapping( Dialog ):
     
     def __init__( self, parent, external_port, protocol_type, internal_port, description, duration ):
@@ -2231,7 +2199,7 @@ class DialogSetupExport( Dialog ):
         
         Dialog.__init__( self, parent, 'setup export' )
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
         
@@ -2414,7 +2382,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
         
@@ -2553,7 +2521,7 @@ class DialogSetupExport( Dialog ):
         
         pattern = self._pattern.GetValue()
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         new_options.SetString( 'export_phrase', pattern )
         

@@ -152,7 +152,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     search_enabled = True
                     
-                    new_options = self._controller.GetNewOptions()
+                    new_options = self._controller.new_options
                     
                     tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
                     
@@ -901,7 +901,7 @@ class PagesNotebook( wx.Notebook ):
     
     def _GetDefaultPageInsertionIndex( self ):
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         new_page_goes = new_options.GetInteger( 'default_new_page_goes' )
         
@@ -1105,7 +1105,7 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         max_page_name_chars = new_options.GetInteger( 'max_page_name_chars' )
         
@@ -1756,26 +1756,38 @@ class PagesNotebook( wx.Notebook ):
             return current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
         
+        WARNING_TOTAL_PAGES = 165
+        MAX_TOTAL_PAGES = 200
+        
+        ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
+        
+        if total_active_page_count + total_closed_page_count >= WARNING_TOTAL_PAGES:
+            
+            self._controller.gui.DeleteAllClosedPages()
+            
+        
         if not HG.no_page_limit_mode:
-            
-            WARNING_TOTAL_PAGES = 200
-            MAX_TOTAL_PAGES = 165
-            
-            ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
-            
-            if total_active_page_count + total_closed_page_count >= MAX_TOTAL_PAGES:
-                
-                self._controller.gui.DeleteAllClosedPages()
-                
             
             if total_active_page_count >= MAX_TOTAL_PAGES:
                 
-                HydrusData.ShowText( 'The client cannot have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open! For system stability reasons, please close some now!' )
+                message = 'The client should not have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open, as it leads to program instability! Are you sure you want to open more pages?'
                 
-                return
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Too many pages!', yes_label = 'yes, and do not tell me again', no_label = 'no' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        HG.no_page_limit_mode = True
+                        
+                        self._controller.pub( 'notify_new_options' )
+                        
+                    else:
+                        
+                        return
+                        
+                    
                 
             
-            if total_active_page_count == WARNING_TOTAL_PAGES - 5:
+            if total_active_page_count == WARNING_TOTAL_PAGES:
                 
                 HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before system stability is affected! Please close some now!' )
                 
@@ -1899,7 +1911,7 @@ class PagesNotebook( wx.Notebook ):
         
         search_enabled = len( initial_hashes ) == 0
         
-        new_options = self._controller.GetNewOptions()
+        new_options = self._controller.new_options
         
         tag_service_key = new_options.GetKey( 'default_tag_service_search_page' )
         
@@ -2114,7 +2126,7 @@ class PagesNotebook( wx.Notebook ):
         
         follow_dropped_page = not shift_down
         
-        new_options = HG.client_controller.GetNewOptions()
+        new_options = HG.client_controller.new_options
         
         if new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ):
             

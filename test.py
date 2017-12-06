@@ -79,6 +79,10 @@ class Controller( object ):
         
         self.new_options = ClientData.ClientOptions( self.db_dir )
         
+        HC.options = ClientDefaults.GetClientDefaultOptions()
+        
+        self.options = HC.options
+        
         def show_text( text ): pass
         
         HydrusData.ShowText = show_text
@@ -125,8 +129,6 @@ class Controller( object ):
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_siblings' ] = {}
         
-        HC.options = ClientDefaults.GetClientDefaultOptions()
-        
         self._writes = collections.defaultdict( list )
         
         self._managers = {}
@@ -138,8 +140,9 @@ class Controller( object ):
         self._managers[ 'tag_siblings' ] = ClientCaches.TagSiblingsManager( self )
         self._managers[ 'tag_parents' ] = ClientCaches.TagParentsManager( self )
         self._managers[ 'undo' ] = ClientCaches.UndoManager( self )
-        self._server_session_manager = HydrusSessions.HydrusSessionManagerServer()
-        self._managers[ 'local_booru' ] = ClientCaches.LocalBooruCache( self )
+        self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
+        
+        self.local_booru_manager = ClientCaches.LocalBooruCache( self )
         
         self._cookies = {}
         
@@ -216,19 +219,9 @@ class Controller( object ):
         return self.new_options
         
     
-    def GetOptions( self ):
-        
-        return HC.options
-        
-    
     def GetManager( self, manager_type ):
         
         return self._managers[ manager_type ]
-        
-    
-    def GetServerSessionManager( self ):
-        
-        return self._server_session_manager
         
     
     def GetWrite( self, name ):

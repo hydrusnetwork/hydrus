@@ -6,6 +6,7 @@ import ClientGUIDialogs
 import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
+import ClientGUITime
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
@@ -153,7 +154,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             self._bandwidth_type.Bind( wx.EVT_CHOICE, self.EventBandwidth )
             
-            self._time_delta = ClientGUICommon.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
+            self._time_delta = ClientGUITime.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
             
             self._max_allowed = wx.SpinCtrl( self, min = 1, max = 1024 * 1024 * 1024 )
             
@@ -230,22 +231,21 @@ class EditStringToStringDictControl( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        listctrl_panel = ClientGUIListCtrl.SaneListCtrlPanel( self )
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.SaneListCtrl( listctrl_panel, 120, [ ( 'key', 200 ), ( 'value', -1 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, [ ( 'key', 20 ), ( 'value', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
-        listctrl_panel.AddButton( 'add', self.Add )
-        listctrl_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
-        listctrl_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         
         #
         
-        for display_tuple in initial_dict.items():
-            
-            self._listctrl.Append( display_tuple, display_tuple )
-            
+        self._listctrl.AddDatas( initial_dict.items() )
+        
+        self._listctrl.Sort()
         
         #
         
@@ -256,7 +256,17 @@ class EditStringToStringDictControl( wx.Panel ):
         self.SetSizer( vbox )
         
     
-    def Add( self ):
+    def _ConvertDataToListCtrlTuples( self, data ):
+        
+        ( key, value ) = data
+        
+        display_tuple = ( key, value )
+        sort_tuple = ( key, value )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Add( self ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'enter the key', allow_blank = False ) as dlg:
             
@@ -270,33 +280,31 @@ class EditStringToStringDictControl( wx.Panel ):
                         
                         value = dlg.GetValue()
                         
-                        display_tuple = ( key, value )
+                        data = ( key, value )
                         
-                        self._listctrl.Append( display_tuple, display_tuple )
+                        self._listctrl.AddDatas( ( data, ) )
                         
                     
                 
             
         
     
-    def Delete( self ):
+    def _Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._listctrl.RemoveAllSelected()
+                self._listctrl.DeleteSelected()
                 
             
         
     
-    def Edit( self ):
+    def _Edit( self ):
         
-        for i in self._listctrl.GetAllSelected():
+        for data in self._listctrl.GetData( only_selected = True ):
             
-            ( key, value ) = self._listctrl.GetClientData( i )
-            
-            import ClientGUIDialogs
+            ( key, value ) = data
             
             with ClientGUIDialogs.DialogTextEntry( self, 'edit the key', default = key, allow_blank = False ) as dlg:
                 
@@ -306,7 +314,7 @@ class EditStringToStringDictControl( wx.Panel ):
                     
                 else:
                     
-                    return
+                    break
                     
                 
             
@@ -318,19 +326,23 @@ class EditStringToStringDictControl( wx.Panel ):
                     
                 else:
                     
-                    return
+                    break
                     
                 
             
-            display_tuple = ( key, value )
+            self._listctrl.DeleteDatas( ( data, ) )
             
-            self._listctrl.UpdateRow( i, display_tuple, display_tuple )
+            new_data = ( key, value )
             
+            self._listctrl.AddDatas( ( data, ) )
+            
+        
+        self._listctrl.Sort()
         
     
     def GetValue( self ):
         
-        value_dict = { key : value for ( key, value ) in self._listctrl.GetClientData() }
+        value_dict = dict( self._listctrl.GetData() )
         
         return value_dict
         
