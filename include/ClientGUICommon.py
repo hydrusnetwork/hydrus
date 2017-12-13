@@ -10,6 +10,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
+import HydrusText
 import os
 import sys
 import threading
@@ -2840,6 +2841,80 @@ class TextAndGauge( wx.Panel ):
     
 ( DirtyEvent, EVT_DIRTY ) = wx.lib.newevent.NewEvent()
 
+class TextAndPasteCtrl( wx.Panel ):
+    
+    def __init__( self, parent, add_callable ):
+        
+        self._add_callable = add_callable
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._text_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._text_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._paste_button = BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
+        self._paste_button.SetToolTipString( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.AddF( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def _Paste( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            texts = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) if text != '' ]
+            
+            if len( texts ) > 0:
+                
+                self._add_callable( texts )
+                
+            
+        except:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+        
+    
+    def EventKeyDown( self, event ):
+        
+        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            text = self._text_input.GetValue()
+            
+            if text != '':
+                
+                self._add_callable( ( text, ) )
+                
+            
+            self._text_input.SetValue( '' )
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._text_input.GetValue()
+        
+    
+    def SetValue( self, text ):
+        
+        self._text_input.SetValue( text )
+        
+    
 class ThreadToGUIUpdater( object ):
     
     def __init__( self, event_handler, func ):

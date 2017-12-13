@@ -873,8 +873,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             self.AddDatas( datas_to_add )
             
-            self._SortAndRefreshRows()
-            
+        
+        self._SortAndRefreshRows()
         
     
     def Sort( self, col = None, asc = None ):
@@ -1023,30 +1023,17 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportFromClipboard( self ):
         
-        if wx.TheClipboard.Open():
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
+            obj = HydrusSerialisable.CreateFromString( raw_text )
             
-            wx.TheClipboard.GetData( data )
+            self._ImportObject( obj )
             
-            wx.TheClipboard.Close()
+        except Exception as e:
             
-            raw_text = data.GetText()
-            
-            try:
-                
-                obj = HydrusSerialisable.CreateFromString( raw_text )
-                
-                self._ImportObject( obj )
-                
-            except Exception as e:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     

@@ -52,6 +52,7 @@ import webbrowser
 import wx
 
 ID_TIMER_GUI_BANDWIDTH = wx.NewId()
+ID_TIMER_GUI_PAGE_UPDATE = wx.NewId()
 
 # Sizer Flags
 
@@ -104,6 +105,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventPageUpdate, id = ID_TIMER_GUI_PAGE_UPDATE )
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
@@ -146,6 +148,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._bandwidth_timer = wx.Timer( self, id = ID_TIMER_GUI_BANDWIDTH )
         
         self._bandwidth_timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        
+        self._import_update_timer = wx.Timer( self, id = ID_TIMER_GUI_PAGE_UPDATE )
+        
+        self._import_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        
         
     
     def _AboutWindow( self ):
@@ -1026,7 +1033,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     ClientGUIMenus.AppendMenuItem( self, load, name, 'Close all other pages and load this session.', self._notebook.LoadGUISession, name )
                     
                 
-                ClientGUIMenus.AppendMenu( sessions, load, 'load' )
+                ClientGUIMenus.AppendMenu( sessions, load, 'clear and load' )
                 
                 append = wx.Menu()
                 
@@ -1038,7 +1045,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ClientGUIMenus.AppendMenu( sessions, append, 'append' )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, sessions, 'save current', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
+            save = wx.Menu()
+            
+            for name in gui_session_names:
+                
+                if name == 'last session':
+                    
+                    continue
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, save, name, 'Save the existing open pages as a session.', self._notebook.SaveGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenuItem( self, save, 'as new session', 'Save the existing open pages as a session.', self._notebook.SaveGUISession )
+            
+            ClientGUIMenus.AppendMenu( sessions, save, 'save' )
             
             if len( gui_session_names ) > 0 and gui_session_names != [ 'last session' ]:
                 
@@ -1500,6 +1521,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
@@ -1907,11 +1929,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageSubscriptions( self ):
         
-        original_pause_status = HC.options[ 'pause_subs_sync' ]
-        
-        HC.options[ 'pause_subs_sync' ] = True
-        
-        try:
+        def wx_do_it():
             
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
@@ -1925,12 +1943,52 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 dlg.ShowModal()
                 
             
-        finally:
+        
+        def THREAD_do_it():
             
-            HC.options[ 'pause_subs_sync' ] = original_pause_status
+            original_pause_status = self._controller.options[ 'pause_subs_sync' ]
             
-            HG.client_controller.pub( 'notify_new_subscriptions' )
+            self._controller.options[ 'pause_subs_sync' ] = True
             
+            try:
+                
+                if HG.subscriptions_running:
+                    
+                    job_key = ClientThreading.JobKey()
+                    
+                    try:
+                        
+                        job_key.SetVariable( 'popup_text_1', 'Waiting for subs to finish.' )
+                        
+                        self._controller.pub( 'message', job_key )
+                        
+                        while HG.subscriptions_running:
+                            
+                            time.sleep( 0.1 )
+                            
+                            if HG.view_shutdown:
+                                
+                                return
+                                
+                            
+                        
+                    finally:
+                        
+                        job_key.Delete()
+                        
+                    
+                
+                self._controller.CallBlockingToWx( wx_do_it )
+                
+            finally:
+                
+                self._controller.options[ 'pause_subs_sync' ] = original_pause_status
+                
+                HG.client_controller.pub( 'notify_new_subscriptions' )
+                
+            
+        
+        self._controller.CallToThread( THREAD_do_it )
         
     
     def _ManageTagCensorship( self ):
@@ -2543,6 +2601,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.callto_report_mode = not HG.callto_report_mode
             
+        elif name == 'daemon_report_mode':
+            
+            HG.daemon_report_mode = not HG.daemon_report_mode
+            
         elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
@@ -3069,6 +3131,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._statusbar.SetStatusText( bandwidth_status, number = 1 )
+        
+    
+    def TIMEREventPageUpdate( self, event ):
+        
+        page = self.GetCurrentPage()
+        
+        if page is not None:
+            
+            page.TIMERUpdate()
+            
         
     
     def Exit( self, restart = False ):

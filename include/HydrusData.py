@@ -6,6 +6,7 @@ import HydrusConstants as HC
 import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
+import HydrusText
 import locale
 import os
 import pstats
@@ -629,16 +630,6 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
-def DeserialiseNewlinedTexts( text ):
-    
-    text = text.replace( '\r', '' )
-    
-    texts = text.split( '\n' )
-    
-    texts = [ line for line in texts if line != '' ]
-    
-    return texts
-    
 def EncodeBytes( encoding, data ):
     
     data = ToByteString( data )
@@ -735,7 +726,7 @@ def GetSiblingProcessPorts( db_path, instance ):
             
             try:
                 
-                ( pid, create_time ) = SplitByLinesep( result )
+                ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( result )
                 
                 pid = int( pid )
                 create_time = float( create_time )
@@ -814,7 +805,7 @@ def IsAlreadyRunning( db_path, instance ):
             
             try:
                 
-                ( pid, create_time ) = SplitByLinesep( result )
+                ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( result )
                 
                 pid = int( pid )
                 create_time = float( create_time )
@@ -928,11 +919,25 @@ def PrintException( e, do_wait = True ):
     
     value = ToUnicode( e )
     
-    trace_list = traceback.format_stack()
+    ( etype, value, tb ) = sys.exc_info()
     
-    trace = ''.join( trace_list )
+    if etype is None:
+        
+        etype = type( e )
+        value = ToUnicode( e )
+        
+        trace = 'No error trace'
+        
+    else:
+        
+        trace = ''.join( traceback.format_exception( etype, value, tb ) )
+        
     
-    message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace )
+    stack_list = traceback.format_stack()
+    
+    stack = ''.join( stack_list )
+    
+    message = ToUnicode( etype.__name__ ) + ': ' + ToUnicode( value ) + os.linesep + ToUnicode( trace ) + os.linesep + ToUnicode( stack )
     
     Print( '' )
     Print( 'Exception:' )
@@ -1047,20 +1052,10 @@ def RestartProcess():
     
     os.execv( exe, args )
     
-def SplayListForDB( xs ): return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
-
-def SplitByLinesep( raw_text ):
+def SplayListForDB( xs ):
     
-    if '\r\n' in raw_text:
-        
-        return raw_text.split( '\r\n' )
-        
-    else:
-        
-        return raw_text.split( '\n' )
-        
+    return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
     
-
 def SplitIteratorIntoChunks( iterator, n ):
     
     chunk = []

@@ -26,6 +26,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
+import HydrusText
 import os
 import wx
 
@@ -1780,7 +1781,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 8, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'file progress', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 8, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'urls', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -2026,8 +2027,25 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( file_status, ( num_done, num_total ) ) = seed_cache.GetStatus()
         
-        file_value_range = ( num_total, num_done )
-        pretty_file_value_range = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
+        if num_total > 0:
+            
+            sort_float = float( num_done ) / num_total
+            
+        else:
+            
+            sort_float = 0.0
+            
+        
+        file_value_range = ( sort_float, num_total, num_done )
+        
+        if num_done == num_total:
+            
+            pretty_file_value_range = HydrusData.ConvertIntToPrettyString( num_total )
+            
+        else:
+            
+            pretty_file_value_range = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
+            
         
         pretty_file_status = file_status
         
@@ -2180,32 +2198,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        if wx.TheClipboard.Open():
+        text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
+            query_texts = HydrusText.DeserialiseNewlinedTexts( text )
             
-            wx.TheClipboard.GetData( data )
+            queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in query_texts ]
             
-            wx.TheClipboard.Close()
+            self._queries.AddDatas( queries )
             
-            text = data.GetText()
+        except:
             
-            try:
-                
-                query_texts = HydrusData.DeserialiseNewlinedTexts( text )
-                
-                queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in query_texts ]
-                
-                self._queries.AddDatas( queries )
-                
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     
@@ -2894,7 +2899,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_type = ClientGUICommon.BetterChoice( self )
         
-        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_FILE ):
+        for url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE, HC.URL_TYPE_FILE ):
             
             self._url_type.Append( HC.url_type_string_lookup[ url_type ], url_type )
             
@@ -3059,7 +3064,9 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._parameters.AddDatas( ( key, string_match ) )
+        data = ( key, string_match )
+        
+        self._parameters.AddDatas( ( data, ) )
         
         self._parameters.Sort()
         
@@ -3267,9 +3274,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.URLMatchException:
             
-            wx.MessageBox( 'Please enter an example url that matches the given rules!' )
-            
-            raise HydrusExceptions.VetoException()
+            raise HydrusExceptions.VetoException( 'Please enter an example url that matches the given rules!' )
             
         
         return url_match
@@ -3293,7 +3298,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ClientNetworkingDomain.URLMatch, self._AddURLMatch )
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddButton( 'add the hf examples', self._AddHFExamples )
+        self._list_ctrl_panel.AddButton( 'add the examples', self._AddExamples )
         
         self._list_ctrl.Sort( 0 )
         
@@ -3328,7 +3333,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _AddHFExamples( self ):
+    def _AddExamples( self ):
         
         for url_match in ClientDefaults.GetDefaultURLMatches():
             

@@ -1154,30 +1154,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _RecalculateVirtualSize( self ): pass
     
-    def _RecheckVideoMetadata( self ):
-        
-        flat_media = self._GetSelectedFlatMedia()
-        
-        hashes = { media.GetHash() for media in flat_media if media.GetMime() in HC.VIDEO }
-        
-        if len( hashes ) > 0:
-            
-            text = 'This will reparse the ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' selected videos using a slower but more accurate routine.'
-            text += os.linesep * 2
-            text += 'If you see videos that seem to render too fast or cut short of frames half way through, this may fix it.'
-            text += os.linesep * 2
-            text += 'It may take some time to reparse the files, and you will need to refresh your search to see the updated videos.'
-            
-            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    HG.client_controller.Write( 'recheck_video_metadata', hashes )
-                    
-                
-            
-        
-    
     def _RedrawMedia( self, media ): pass
     
     def _Remove( self ):
@@ -1187,6 +1163,30 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         collections = [ media for media in self._selected_media if media.IsCollection() ]
         
         self._RemoveMediaDirectly( singletons, collections )
+        
+    
+    def _ReparseFile( self ):
+        
+        flat_media = self._GetSelectedFlatMedia()
+        
+        hashes = { media.GetHash() for media in flat_media }
+        
+        if len( hashes ) > 0:
+            
+            text = 'This will reparse the ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' selected files\' metadata and regenerate their thumbnails.'
+            text += os.linesep * 2
+            text += 'If the files were imported before some recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
+            text += os.linesep * 2
+            text += 'It may take some time to reparse the files.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    HG.client_controller.Write( 'reparse_files', hashes )
+                    
+                
+            
         
     
     def _RescindDownloadSelected( self ):
@@ -1811,6 +1811,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self.RefreshAcceleratorTable()
         
         HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
+        HG.client_controller.sub( self, 'NewFileInfo', 'new_file_info' )
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HG.client_controller.sub( self, 'ThumbnailsResized', 'thumbnail_resize' )
         HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
@@ -1971,6 +1972,13 @@ class MediaPanelThumbnails( MediaPanel ):
         
     
     def _FadeThumbnails( self, thumbnails ):
+        
+        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
+            
+            self._DirtyAllPages()
+            
+            return
+            
         
         now_precise = HydrusData.GetNowPrecise()
         
@@ -3544,14 +3552,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if advanced_mode:
                 
-                if focussed_is_local and self._focussed_media.GetMime() in HC.VIDEO:
-                    
-                    advanced_menu = wx.Menu()
-                    
-                    ClientGUIMenus.AppendMenuItem( self, advanced_menu, 'attempt to correct video frame count', 'Recalculate this video\'s metadata using a slower but more accurate video parsing routine.', self._RecheckVideoMetadata )
-                    
-                    ClientGUIMenus.AppendMenu( menu, advanced_menu, 'advanced' )
-                    
+                ClientGUIMenus.AppendMenuItem( self, menu, 'reparse files and regenerate thumbnails', 'Refresh this file\'s metadata and regenerate its thumbnails.', self._ReparseFile )
                 
             
         
@@ -3568,6 +3569,16 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         self._DeleteAllDirtyPages()
+        
+    
+    def NewFileInfo( self, hashes ):
+        
+        affected_media = self._GetMedia( hashes )
+        
+        for media in affected_media:
+            
+            media.RefreshFileInfo()
+            
         
     
     def NewThumbnails( self, hashes ):
@@ -3701,7 +3712,7 @@ class MediaPanelThumbnails( MediaPanel ):
             earliest_y = y_start * yUnit
             
             page_height = self._num_rows_per_canvas_page * thumbnail_span_height
-            
+            d = False
             for hash in hashes:
                 
                 ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
@@ -3710,94 +3721,94 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 num_frames_to_render = num_frames_supposed_to_be_rendered - num_frames_rendered
                 
-                if num_frames_to_render > 0:
+                if num_frames_to_render == 0:
                     
-                    delete_entry = False
+                    continue
                     
-                    try:
-                        
-                        expected_thumbnail = self._sorted_media[ thumbnail_index ]
-                        
-                    except:
-                        
-                        expected_thumbnail = None
-                        
+                
+                delete_entry = False
+                
+                try:
                     
-                    page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                    expected_thumbnail = self._sorted_media[ thumbnail_index ]
                     
-                    if expected_thumbnail != thumbnail:
+                except:
+                    
+                    expected_thumbnail = None
+                    
+                
+                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                
+                if expected_thumbnail != thumbnail:
+                    
+                    delete_entry = True
+                    
+                elif page_index not in self._clean_canvas_pages:
+                    
+                    delete_entry = True
+                    
+                else:
+                    
+                    times_to_draw = 1
+                    
+                    if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
                         
-                        delete_entry = True
-                        
-                    elif page_index not in self._clean_canvas_pages:
+                        bmp_to_use = original_bmp
                         
                         delete_entry = True
                         
                     else:
                         
-                        times_to_draw = 1
+                        times_to_draw = num_frames_to_render
                         
-                        if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
-                            
-                            bmp_to_use = original_bmp
-                            
-                            delete_entry = True
-                            
-                        else:
-                            
-                            times_to_draw = num_frames_to_render
-                            
-                            bmp_to_use = alpha_bmp
-                            
-                            num_frames_rendered += times_to_draw
-                            
-                            self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
-                            
+                        bmp_to_use = alpha_bmp
                         
-                        thumbnail_col = thumbnail_index % self._num_columns
+                        num_frames_rendered += times_to_draw
                         
-                        thumbnail_row = thumbnail_index / self._num_columns
-                        
-                        x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                        
-                        y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
-                        
-                        if page_index not in dcs:
-                            
-                            canvas_bmp = self._clean_canvas_pages[ page_index ]
-                            
-                            dc = wx.MemoryDC( canvas_bmp )
-                            
-                            dcs[ page_index ] = dc
-                            
-                        
-                        dc = dcs[ page_index ]
-                        
-                        for i in range( times_to_draw ):
-                            
-                            dc.DrawBitmap( bmp_to_use, x, y, True )
-                            
-                            changes_made = True
-                            
-                        
-                        #
-                        
-                        page_virtual_y = page_height * page_index
-                        
-                        page_client_y = page_virtual_y - earliest_y
-                        
-                        client_y = page_client_y + y
-                        
-                        self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
+                        self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
                         
                     
-                    if delete_entry:
+                    thumbnail_col = thumbnail_index % self._num_columns
+                    
+                    thumbnail_row = thumbnail_index / self._num_columns
+                    
+                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                    
+                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                    
+                    if page_index not in dcs:
                         
-                        del self._thumbnails_being_faded_in[ hash ]
+                        canvas_bmp = self._clean_canvas_pages[ page_index ]
                         
-                        original_bmp.Destroy()
-                        alpha_bmp.Destroy()
+                        dc = wx.MemoryDC( canvas_bmp )
                         
+                        dcs[ page_index ] = dc
+                        
+                    
+                    dc = dcs[ page_index ]
+                    
+                    for i in range( times_to_draw ):
+                        
+                        dc.DrawBitmap( bmp_to_use, x, y, True )
+                        
+                    
+                    #
+                    
+                    page_virtual_y = page_height * page_index
+                    
+                    page_client_y = page_virtual_y - earliest_y
+                    
+                    client_y = page_client_y + y
+                    d = True
+                    self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
+                    
+                
+                if delete_entry:
+                    
+                    del self._thumbnails_being_faded_in[ hash ]
+                    
+                    original_bmp.Destroy()
+                    alpha_bmp.Destroy()
                     
                 
                 if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
@@ -3808,18 +3819,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._thumbnails_being_faded_in ) > 0:
                 
-                self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
+                self._timer_animation.Start( 5, wx.TIMER_ONE_SHOT )
                 
             
         except wx.PyDeadObjectError:
             
-            self._timer_animation.Stop()
-            
-        except:
-            
-            self._timer_animation.Stop()
-            
-            raise
+            pass
             
         
     

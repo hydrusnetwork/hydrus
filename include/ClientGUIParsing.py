@@ -203,9 +203,17 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
         
-        self._content_rule = wx.TextCtrl( edit_panel )
+        self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
         
-        ( tag_rules, content_rule, string_match, string_converter ) = formula.ToTuple()
+        self._content_to_fetch.Append( 'attribute', ClientParsing.HTML_CONTENT_ATTRIBUTE )
+        self._content_to_fetch.Append( 'string', ClientParsing.HTML_CONTENT_STRING )
+        self._content_to_fetch.Append( 'html', ClientParsing.HTML_CONTENT_HTML )
+        
+        self._content_to_fetch.Bind( wx.EVT_CHOICE, self.EventContentChoice )
+        
+        self._attribute_to_fetch = wx.TextCtrl( edit_panel )
+        
+        ( tag_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter ) = formula.ToTuple()
         
         self._string_match_button = StringMatchButton( edit_panel, string_match )
         
@@ -264,14 +272,13 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             self._tag_rules.Append( pretty_rule, rule )
             
         
-        if content_rule is None:
-            
-            content_rule = ''
-            
+        self._content_to_fetch.SelectClientData( content_to_fetch )
         
-        self._content_rule.SetValue( content_rule )
+        self._attribute_to_fetch.SetValue( attribute_to_fetch )
         
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        
+        self._UpdateControls()
         
         #
         
@@ -295,7 +302,8 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         rows = []
         
-        rows.append( ( 'attribute to fetch: ', self._content_rule ) )
+        rows.append( ( 'content to fetch:', self._content_to_fetch ) )
+        rows.append( ( 'attribute to fetch: ', self._attribute_to_fetch ) )
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
@@ -340,6 +348,18 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    def _UpdateControls( self ):
+        
+        if self._content_to_fetch.GetChoice() == ClientParsing.HTML_CONTENT_ATTRIBUTE:
+            
+            self._attribute_to_fetch.Enable()
+            
+        else:
+            
+            self._attribute_to_fetch.Disable()
+            
         
     
     def Add( self ):
@@ -411,6 +431,11 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             
         
     
+    def EventContentChoice( self, event ):
+        
+        self._UpdateControls()
+        
+    
     def EventEdit( self, event ):
         
         self.Edit()
@@ -419,18 +444,21 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
     def GetValue( self ):
         
         tags_rules = [ self._tag_rules.GetClientData( i ) for i in range( self._tag_rules.GetCount() ) ]
-        content_rule = self._content_rule.GetValue()
         
-        if content_rule == '':
+        content_to_fetch = self._content_to_fetch.GetChoice()
+        
+        attribute_to_fetch = self._attribute_to_fetch.GetValue()
+        
+        if content_to_fetch == ClientParsing.HTML_CONTENT_ATTRIBUTE and attribute_to_fetch == '':
             
-            content_rule = None
+            raise HydrusExceptions.VetoException( 'Please enter an attribute to fetch!' )
             
         
         string_match = self._string_match_button.GetValue()
         
         string_converter = self._string_converter_button.GetValue()
         
-        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_rule, string_match, string_converter )
+        formula = ClientParsing.ParseFormulaHTML( tags_rules, content_to_fetch, attribute_to_fetch, string_match, string_converter )
         
         return formula
         
@@ -588,7 +616,7 @@ class EditNodes( wx.Panel ):
             
         else:
             
-            if isinstance( obj, ( ClientParsing.ParseNodeContent, ClientParsing.ParseNodeContentLink ) ):
+            if isinstance( obj, ( ClientParsing.ContentParser, ClientParsing.ParseNodeContentLink ) ):
                 
                 node = obj
                 
@@ -607,9 +635,9 @@ class EditNodes( wx.Panel ):
         
         dlg_title = 'edit content node'
         
-        empty_node = ClientParsing.ParseNodeContent()
+        empty_node = ClientParsing.ContentParser()
         
-        panel_class = EditParseNodeContentPanel
+        panel_class = EditContentParserPanel
         
         self.AddNode( dlg_title, empty_node, panel_class )
         
@@ -692,9 +720,9 @@ class EditNodes( wx.Panel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit node' ) as dlg:
                 
-                if isinstance( node, ClientParsing.ParseNodeContent):
+                if isinstance( node, ClientParsing.ContentParser):
                     
-                    panel_class = EditParseNodeContentPanel
+                    panel_class = EditContentParserPanel
                     
                 elif isinstance( node, ClientParsing.ParseNodeContentLink ):
                     
@@ -728,34 +756,21 @@ class EditNodes( wx.Panel ):
     
     def Paste( self ):
         
-        if wx.TheClipboard.Open():
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
+            obj = HydrusSerialisable.CreateFromString( raw_text )
             
-            wx.TheClipboard.GetData( data )
+            self._ImportObject( obj )
             
-            wx.TheClipboard.Close()
+        except:
             
-            raw_text = data.GetText()
-            
-            try:
-                
-                obj = HydrusSerialisable.CreateFromString( raw_text )
-                
-                self._ImportObject( obj )
-                
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     
-class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, node, referral_url = None, example_data = None ):
         
@@ -787,14 +802,15 @@ class EditParseNodeContentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_type = ClientGUICommon.BetterChoice( self._content_panel )
         
+        self._content_type.Append( 'urls', HC.CONTENT_TYPE_URLS )
         self._content_type.Append( 'tags', HC.CONTENT_TYPE_MAPPINGS )
         self._content_type.Append( 'veto', HC.CONTENT_TYPE_VETO )
         
         self._content_type.Bind( wx.EVT_CHOICE, self.EventContentTypeChange )
         
-        # bind an event here when I add new content types that will dynamically hide/show the namespace/rating stuff and relayout as needed
-        # it should have a forced name or something. whatever we'll use to discriminate between rating services on 'import options - ratings'
-        # (this probably means sending and EditPanel size changed event or whatever)
+        self._urls_panel = wx.Panel( self._content_panel )
+        
+        self._file_priority = ClientGUICommon.NoneableSpinCtrl( self._urls_panel, message='file url quality precedence (higher is better)', none_phrase = 'not a file url', min = 0, max = 100 )
         
         self._mappings_panel = wx.Panel( self._content_panel )
         
@@ -854,7 +870,13 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         self._content_type.SelectClientData( content_type )
         
-        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+        if content_type == HC.CONTENT_TYPE_URLS:
+            
+            priority = additional_info
+            
+            self._file_priority.SetValue( priority )
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
             namespace = additional_info
             
@@ -873,6 +895,14 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         self._example_data.SetValue( example_data )
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.AddF( self._file_priority, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._urls_panel.SetSizer( vbox )
         
         #
         
@@ -905,6 +935,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         gridbox = ClientGUICommon.WrapInGrid( self._content_panel, rows )
         
         self._content_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.AddF( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.AddF( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.AddF( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -966,14 +997,20 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         choice = self._content_type.GetChoice()
         
-        if choice == HC.CONTENT_TYPE_MAPPINGS:
+        self._urls_panel.Hide()
+        self._mappings_panel.Hide()
+        self._veto_panel.Hide()
+        
+        if choice == HC.CONTENT_TYPE_URLS:
             
-            self._veto_panel.Hide()
+            self._urls_panel.Show()
+            
+        elif choice == HC.CONTENT_TYPE_MAPPINGS:
+            
             self._mappings_panel.Show()
             
         elif choice == HC.CONTENT_TYPE_VETO:
             
-            self._mappings_panel.Hide()
             self._veto_panel.Show()
             
         
@@ -1008,7 +1045,13 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         content_type = self._content_type.GetChoice()
         
-        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+        if content_type == HC.CONTENT_TYPE_URLS:
+            
+            priority = self._file_priority.GetValue()
+            
+            additional_info = priority
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
             namespace = self._namespace.GetValue()
             
@@ -1025,7 +1068,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         formula = self._current_formula
         
-        node = ClientParsing.ParseNodeContent( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
+        node = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
         return node
         
@@ -1042,9 +1085,15 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             data = self._example_data.GetValue()
             referral_url = self._referral_url
-            desired_content = 'all'
             
-            results = node.Parse( job_key, data, referral_url, desired_content )
+            try:
+                
+                results = node.Parse( job_key, data, referral_url )
+                
+            except HydrusExceptions.VetoException as e:
+                
+                results = [ 'veto: ' + unicode( e ) ]
+                
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
@@ -1286,7 +1335,6 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             data = self._example_data.GetValue()
             referral_url = self._referral_url
-            desired_content = 'all'
             
             parsed_urls = node.ParseURLs( job_key, data, referral_url )
             
@@ -1601,9 +1649,8 @@ And pass that html to a number of 'parsing children' that will each look through
             self._test_script_management.SetJobKey( job_key )
             
             data = self._example_data.GetValue()
-            desired_content = 'all'
             
-            results = script.Parse( job_key, data, desired_content )
+            results = script.Parse( job_key, data )
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
@@ -1983,9 +2030,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.StringConvertException:
             
-            wx.MessageBox( 'Please enter an example text that can be converted!' )
-            
-            raise HydrusExceptions.VetoException()
+            raise HydrusExceptions.VetoException( 'Please enter an example text that can be converted!' )
             
         
         return string_converter
@@ -2293,9 +2338,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.StringMatchException:
             
-            wx.MessageBox( 'Please enter an example text that matches the given rules!' )
-            
-            raise HydrusExceptions.VetoException()
+            raise HydrusExceptions.VetoException( 'Please enter an example text that matches the given rules!' )
             
         
         return string_match
@@ -2577,30 +2620,17 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def ImportFromClipboard( self ):
         
-        if wx.TheClipboard.Open():
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
+            obj = HydrusSerialisable.CreateFromString( raw_text )
             
-            wx.TheClipboard.GetData( data )
+            self._ImportObject( obj )
             
-            wx.TheClipboard.Close()
+        except Exception as e:
             
-            raw_text = data.GetText()
-            
-            try:
-                
-                obj = HydrusSerialisable.CreateFromString( raw_text )
-                
-                self._ImportObject( obj )
-                
-            except Exception as e:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     

@@ -26,6 +26,7 @@ import ClientImporting
 import ClientMedia
 import ClientRendering
 import ClientThreading
+import HydrusText
 import json
 import multipart
 import os
@@ -45,8 +46,6 @@ CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
 
 ID_TIMER_CAPTCHA = wx.NewId()
 ID_TIMER_DUMP = wx.NewId()
-ID_TIMER_UPDATE = wx.NewId()
-ID_TIMER_IMPORT_UPDATE = wx.NewId()
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_GALLERY = 1
@@ -791,6 +790,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
+    def TIMERUpdate( self ):
+        
+        pass
+        
+    
 class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -1237,11 +1241,6 @@ class ManagementPanelImporter( ManagementPanel ):
         
         ManagementPanel.__init__( self, parent, page, controller, management_controller )
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventImportUpdate, id = ID_TIMER_UPDATE )
-        self._import_update_timer = wx.Timer( self, id = ID_TIMER_UPDATE )
-        
-        self._import_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
-        
         self._controller.sub( self, 'RefreshSort', 'refresh_query' )
         
     
@@ -1254,16 +1253,12 @@ class ManagementPanelImporter( ManagementPanel ):
         
         ManagementPanel.PageHidden( self )
         
-        self._import_update_timer.Stop()
-        
     
     def PageShown( self ):
         
         ManagementPanel.PageShown( self )
         
         self._UpdateStatus()
-        
-        self._import_update_timer.Start()
         
     
     def RefreshSort( self, page_key ):
@@ -1274,12 +1269,9 @@ class ManagementPanelImporter( ManagementPanel ):
             
         
     
-    def TIMEREventImportUpdate( self, event ):
+    def TIMERUpdate( self ):
         
-        if self._controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._UpdateStatus()
-            
+        self._UpdateStatus()
         
     
 class ManagementPanelImporterGallery( ManagementPanelImporter ):
@@ -1315,7 +1307,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._pending_queries_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'pending queries' )
         
-        self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 100 ) )
+        self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 100 ), style = wx.LB_EXTENDED )
         
         self._advance_button = wx.Button( self._pending_queries_panel, label = u'\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
@@ -1326,11 +1318,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._delay_button = wx.Button( self._pending_queries_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._query_input = wx.TextCtrl( self._pending_queries_panel, style = wx.TE_PROCESS_ENTER )
-        self._query_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._query_paste = wx.Button( self._pending_queries_panel, label = 'paste queries' )
-        self._query_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
+        self._query_input = ClientGUICommon.TextAndPasteCtrl( self._pending_queries_panel, self._PendQueries )
         
         menu_items = []
         
@@ -1388,13 +1376,8 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         queue_hbox.AddF( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
-        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        input_hbox.AddF( self._query_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        input_hbox.AddF( self._query_paste, CC.FLAGS_VCENTER )
-        
         self._pending_queries_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_queries_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._pending_queries_panel.AddF( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1438,6 +1421,16 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
+    def _PendQueries( self, queries ):
+        
+        for query in queries:
+            
+            self._gallery_import.PendQuery( query )
+            
+        
+        self._UpdateStatus()
+        
+    
     def _SeedCache( self ):
         
         seed_cache = self._gallery_import.GetSeedCache()
@@ -1458,15 +1451,20 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         if self._pending_queries_listbox.GetStrings() != pending_queries:
             
-            selected_string = self._pending_queries_listbox.GetStringSelection()
+            selected_indices = self._pending_queries_listbox.GetSelections()
+            
+            selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
             
             self._pending_queries_listbox.SetItems( pending_queries )
             
-            selection_index = self._pending_queries_listbox.FindString( selected_string )
-            
-            if selection_index != wx.NOT_FOUND:
+            for selected_string in selected_strings:
                 
-                self._pending_queries_listbox.Select( selection_index )
+                selection_index = self._pending_queries_listbox.FindString( selected_string )
+                
+                if selection_index != wx.NOT_FOUND:
+                    
+                    self._pending_queries_listbox.Select( selection_index )
+                    
                 
             
         
@@ -1540,13 +1538,13 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
     
     def EventAdvance( self, event ):
         
-        selection = self._pending_queries_listbox.GetSelection()
+        selected_indices = self._pending_queries_listbox.GetSelections()
         
-        if selection != wx.NOT_FOUND:
+        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
+        
+        if len( selected_strings ) > 0:
             
-            query = self._pending_queries_listbox.GetString( selection )
-            
-            self._gallery_import.AdvanceQuery( query )
+            self._gallery_import.AdvanceQueries( selected_strings )
             
             self._UpdateStatus()
             
@@ -1554,13 +1552,13 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
     
     def EventDelay( self, event ):
         
-        selection = self._pending_queries_listbox.GetSelection()
+        selected_indices = self._pending_queries_listbox.GetSelections()
         
-        if selection != wx.NOT_FOUND:
+        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
+        
+        if len( selected_strings ) > 0:
             
-            query = self._pending_queries_listbox.GetString( selection )
-            
-            self._gallery_import.DelayQuery( query )
+            self._gallery_import.DelayQueries( selected_strings )
             
             self._UpdateStatus()
             
@@ -1568,13 +1566,13 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
     
     def EventDelete( self, event ):
         
-        selection = self._pending_queries_listbox.GetSelection()
+        selected_indices = self._pending_queries_listbox.GetSelections()
         
-        if selection != wx.NOT_FOUND:
+        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
+        
+        if len( selected_strings ) > 0:
             
-            query = self._pending_queries_listbox.GetString( selection )
-            
-            self._gallery_import.DeleteQuery( query )
+            self._gallery_import.DeleteQueries( selected_strings )
             
             self._UpdateStatus()
             
@@ -1606,64 +1604,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_import.PausePlayGallery()
         
         self._UpdateStatus()
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            query = self._query_input.GetValue()
-            
-            if query != '':
-                
-                self._gallery_import.PendQuery( query )
-                
-            
-            self._query_input.SetValue( '' )
-            
-            self._UpdateStatus()
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventPaste( self, event ):
-        
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject()
-            
-            wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
-            
-            raw_text = data.GetText()
-            
-            try:
-                
-                for query in HydrusData.SplitByLinesep( raw_text ):
-                    
-                    if query != '':
-                        
-                        self._gallery_import.PendQuery( query )
-                        
-                    
-                
-                self._UpdateStatus()
-                
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
         
     
     def SetSearchFocus( self, page_key ):
@@ -1827,11 +1767,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._delay_button = wx.Button( self._pending_page_urls_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._page_url_input = wx.TextCtrl( self._pending_page_urls_panel, style = wx.TE_PROCESS_ENTER )
-        self._page_url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._page_url_paste = wx.Button( self._pending_page_urls_panel, label = 'paste urls' )
-        self._page_url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
+        self._page_url_input = ClientGUICommon.TextAndPasteCtrl( self._pending_page_urls_panel, self._PendPageURLs )
         
         self._download_image_links = wx.CheckBox( self._page_of_images_panel, label = 'download image links' )
         self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
@@ -1865,15 +1801,10 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         queue_hbox.AddF( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
-        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        input_hbox.AddF( self._page_url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        input_hbox.AddF( self._page_url_paste, CC.FLAGS_VCENTER )
-        
         self._pending_page_urls_panel.AddF( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_page_urls_panel.AddF( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_page_urls_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._pending_page_urls_panel.AddF( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_page_urls_panel.AddF( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
         
         #
@@ -1909,6 +1840,18 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._download_image_links.SetValue( download_image_links )
         self._download_unlinked_images.SetValue( download_unlinked_images )
+        
+        self._UpdateStatus()
+        
+    
+    def _PendPageURLs( self, urls ):
+        
+        urls = [ url for url in urls if url.startswith( 'http' ) ]
+        
+        for url in urls:
+            
+            self._page_of_images_import.PendPageURL( url )
+            
         
         self._UpdateStatus()
         
@@ -2040,64 +1983,6 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     def EventDownloadUnlinkedImages( self, event ):
         
         self._page_of_images_import.SetDownloadUnlinkedImages( self._download_unlinked_images.GetValue() )
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            page_url = self._page_url_input.GetValue()
-            
-            if page_url != '':
-                
-                self._page_of_images_import.PendPageURL( page_url )
-                
-                self._page_url_input.SetValue( '' )
-                
-                self._UpdateStatus()
-                
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventPaste( self, event ):
-        
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject()
-            
-            wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
-            
-            raw_text = data.GetText()
-            
-            try:
-                
-                for page_url in HydrusData.SplitByLinesep( raw_text ):
-                    
-                    if page_url != '':
-                        
-                        self._page_of_images_import.PendPageURL( page_url )
-                        
-                    
-                
-                self._UpdateStatus()
-                
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
         
     
     def EventPauseQueue( self, event ):
@@ -2511,11 +2396,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         # replace all this with a seed cache panel sometime
         self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._url_panel, self._controller, self._urls_import.GetSeedCache )
         
-        self._url_input = wx.TextCtrl( self._url_panel, style = wx.TE_PROCESS_ENTER )
-        self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._url_paste = wx.Button( self._url_panel, label = 'paste urls' )
-        self._url_paste.Bind( wx.EVT_BUTTON, self.EventPaste )
+        self._url_input = ClientGUICommon.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
         file_import_options = self._urls_import.GetOptions()
         
@@ -2523,18 +2404,13 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        input_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        input_hbox.AddF( self._url_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        input_hbox.AddF( self._url_paste, CC.FLAGS_VCENTER )
-        
         self._url_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._url_panel.AddF( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -2558,6 +2434,15 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateStatus()
         
         HG.client_controller.sub( self, 'SetURLInput', 'set_page_url_input' )
+        
+    
+    def _PendURLs( self, urls ):
+        
+        urls = [ url for url in urls if url.startswith( 'http' ) ]
+        
+        self._urls_import.PendURLs( urls )
+        
+        self._UpdateStatus()
         
     
     def _UpdateStatus( self ):
@@ -2606,63 +2491,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
                 
                 self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
                 
-            
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            url = self._url_input.GetValue()
-            
-            if url != '':
-                
-                self._urls_import.PendURLs( ( url, ) )
-                
-                self._url_input.SetValue( '' )
-                
-                self._UpdateStatus()
-                
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventPaste( self, event ):
-    
-        if wx.TheClipboard.Open():
-            
-            data = wx.TextDataObject()
-            
-            wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
-            
-            raw_text = data.GetText()
-            
-            try:
-                
-                urls = HydrusData.SplitByLinesep( raw_text )
-                
-                if len( urls ) > 0:
-                    
-                    self._urls_import.PendURLs( urls )
-                    
-                
-                self._UpdateStatus()
-                
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
     

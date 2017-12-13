@@ -550,7 +550,14 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
             
             self._panel.TryToClose()
             
-        except HydrusExceptions.VetoException:
+        except HydrusExceptions.VetoException as e:
+            
+            message = unicode( e )
+            
+            if len( message ) > 0:
+                
+                wx.MessageBox( message )
+                
             
             return
             
@@ -597,7 +604,14 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
             
             value = self._panel.GetValue()
             
-        except HydrusExceptions.VetoException:
+        except HydrusExceptions.VetoException as e:
+            
+            message = unicode( e )
+            
+            if len( message ) > 0:
+                
+                wx.MessageBox( message )
+                
             
             return
             
@@ -615,7 +629,14 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
             
             self._panel.CommitChanges()
             
-        except HydrusExceptions.VetoException:
+        except HydrusExceptions.VetoException as e:
+            
+            message = unicode( e )
+            
+            if len( message ) > 0:
+                
+                wx.MessageBox( message )
+                
             
             return
             

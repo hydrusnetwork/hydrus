@@ -352,14 +352,12 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         self._script_management.SetJobKey( job_key )
         
-        desired_content = 'all'
-        
-        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier, desired_content )
+        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
         
     
-    def THREADFetchTags( self, script, job_key, file_identifier, desired_content ):
+    def THREADFetchTags( self, script, job_key, file_identifier ):
         
-        content_results = script.DoQuery( job_key, file_identifier, desired_content )
+        content_results = script.DoQuery( job_key, file_identifier )
         
         tags = ClientParsing.GetTagsFromContentResults( content_results )
         

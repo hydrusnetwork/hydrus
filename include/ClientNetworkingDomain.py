@@ -229,7 +229,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     url_match_names_to_page_parsing_keys[ name ] = None
                     
                 
-                if url_match.IsGalleryURL():
+                if url_match.IsGalleryURL() or url_match.IsWatchableURL():
                     
                     url_match_names_to_gallery_parsing_keys[ name ] = None
                     
@@ -264,7 +264,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            if url_match.IsGalleryURL():
+            if url_match.IsGalleryURL() or url_match.IsWatchableURL():
                 
                 if name not in self._url_match_names_to_gallery_parsing_keys:
                     
@@ -758,6 +758,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     def IsPostURL( self ):
         
         return self._url_type == HC.URL_TYPE_POST
+        
+    
+    def IsWatchableURL( self ):
+        
+        return self._url_type == HC.URL_TYPE_WATCHABLE
         
     
     def Normalise( self, url ):

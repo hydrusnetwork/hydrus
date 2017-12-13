@@ -34,6 +34,7 @@ import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
+import HydrusText
 import itertools
 import os
 import random
@@ -616,9 +617,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if name == '':
                     
-                    wx.MessageBox( 'Please enter a name!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please enter a name!' )
                     
                 
                 return name
@@ -667,7 +666,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     credentials = self.GetCredentials()
                     
-                except HydrusExceptions.VetoException:
+                except HydrusExceptions.VetoException as e:
+                    
+                    message = unicode( e )
+                    
+                    if len( message ) > 0:
+                        
+                        wx.MessageBox( message )
+                        
                     
                     return
                     
@@ -713,9 +719,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if host == '':
                     
-                    wx.MessageBox( 'Please enter a host!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please enter a host!' )
                     
                 
                 port = self._port.GetValue()
@@ -822,7 +826,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     credentials = self._remote_panel.GetCredentials()
                     
-                except HydrusExceptions.VetoException:
+                except HydrusExceptions.VetoException as e:
+                    
+                    message = unicode( e )
+                    
+                    if len( message ) > 0:
+                        
+                        wx.MessageBox( message )
+                        
                     
                     return
                     
@@ -915,7 +926,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     credentials = self.GetCredentials()
                     
-                except HydrusExceptions.VetoException:
+                except HydrusExceptions.VetoException as e:
+                    
+                    message = unicode( e )
+                    
+                    if len( message ) > 0:
+                        
+                        wx.MessageBox( message )
+                        
                     
                     return
                     
@@ -936,9 +954,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except:
                     
-                    wx.MessageBox( 'Could not understand that access key!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Could not understand that access key!')
                     
                 
                 if access_key != '':
@@ -2581,6 +2597,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
                 
             
+            self._total_pages_warning = wx.SpinCtrl( self, min = 5, max = 200 )
+            
             self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
             self._reverse_page_shift_drag_behaviour.SetToolTipString( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
@@ -2658,6 +2676,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
             
+            self._total_pages_warning.SetValue( self._new_options.GetInteger( 'total_pages_warning' ) )
+            
             self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
             
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
@@ -2703,6 +2723,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
+            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
@@ -2796,6 +2817,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
+            
+            self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.GetValue() )
             
             self._new_options.SetBoolean( 'reverse_page_shift_drag_behaviour', self._reverse_page_shift_drag_behaviour.GetValue() )
             
@@ -4455,9 +4478,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._this_is_custom and name in CC.SHORTCUTS_RESERVED_NAMES:
                 
-                wx.MessageBox( 'That name is reserved--please pick another!' )
-                
-                raise HydrusExceptions.VetoException()
+                raise HydrusExceptions.VetoException( 'That name is reserved--please pick another!' )
                 
             
             shortcuts = ClientData.Shortcuts( name )
@@ -4521,7 +4542,16 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._tag_panel = ClientGUICommon.StaticBox( self, 'tag service actions' )
+                self._content_panel = ClientGUICommon.StaticBox( self, 'content actions' )
+                
+                self._flip_or_set_action = ClientGUICommon.BetterChoice( self._content_panel )
+                
+                self._flip_or_set_action.Append( 'set', HC.CONTENT_UPDATE_SET )
+                self._flip_or_set_action.Append( 'flip on and off', HC.CONTENT_UPDATE_FLIP )
+                
+                self._flip_or_set_action.SelectClientData( HC.CONTENT_UPDATE_SET )
+                
+                self._tag_panel = ClientGUICommon.StaticBox( self._content_panel, 'tag service actions' )
                 
                 self._tag_service_keys = wx.Choice( self._tag_panel )
                 self._tag_value = wx.TextCtrl( self._tag_panel, style = wx.TE_READONLY )
@@ -4534,7 +4564,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._ratings_like_panel = ClientGUICommon.StaticBox( self, 'like/dislike ratings service actions' )
+                self._ratings_like_panel = ClientGUICommon.StaticBox( self._content_panel, 'like/dislike ratings service actions' )
                 
                 self._ratings_like_service_keys = wx.Choice( self._ratings_like_panel )
                 self._ratings_like_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
@@ -4546,7 +4576,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._ratings_numerical_panel = ClientGUICommon.StaticBox( self, 'numerical ratings service actions' )
+                self._ratings_numerical_panel = ClientGUICommon.StaticBox( self._content_panel, 'numerical ratings service actions' )
                 
                 self._ratings_numerical_service_keys = wx.Choice( self._ratings_numerical_panel )
                 self._ratings_numerical_service_keys.Bind( wx.EVT_CHOICE, self.EventRecalcActions )
@@ -4595,6 +4625,8 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_name = self._service.GetName()
                     service_type = self._service.GetServiceType()
+                    
+                    self._flip_or_set_action.SelectClientData( action )
                     
                     if service_type in HC.TAG_SERVICES:
                         
@@ -4696,12 +4728,15 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
+                self._content_panel.AddF( self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
                 vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.AddF( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 is_custom_or_media = shortcuts_name not in CC.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
                 
@@ -4709,9 +4744,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._set_simple.Hide()
                     
-                    self._tag_panel.Hide()
-                    self._ratings_like_panel.Hide()
-                    self._ratings_numerical_panel.Hide()
+                    self._content_panel.Hide()
                     
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -4757,9 +4790,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if action == '':
                     
-                    wx.MessageBox( 'Please select an action!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please select an action!' )
                     
                 else:
                     
@@ -4775,6 +4806,8 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_key = self._ratings_like_service_keys.GetClientData( selection )
                     
+                    action = self._flip_or_set_action.GetChoice()
+                    
                     if self._ratings_like_like.GetValue():
                         
                         value = 1.0
@@ -4788,13 +4821,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         value = None
                         
                     
-                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, value ) )
                     
                 else:
                     
-                    wx.MessageBox( 'Please select a rating service!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please select a rating service!' )
                     
                 
             
@@ -4805,6 +4836,8 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 if selection != wx.NOT_FOUND:
                     
                     service_key = self._ratings_numerical_service_keys.GetClientData( selection )
+                    
+                    action = self._flip_or_set_action.GetChoice()
                     
                     if self._ratings_numerical_remove.GetValue():
                         
@@ -4827,13 +4860,11 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, value ) )
                     
                 else:
                     
-                    wx.MessageBox( 'Please select a rating service!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please select a rating service!' )
                     
                 
             
@@ -4845,22 +4876,20 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     service_key = self._tag_service_keys.GetClientData( selection )
                     
+                    action = self._flip_or_set_action.GetChoice()
+                    
                     value = self._tag_value.GetValue()
                     
                     if value == '':
                         
-                        wx.MessageBox( 'Please enter a tag!' )
-                        
-                        raise HydrusExceptions.VetoException()
+                        raise HydrusExceptions.VetoException( 'Please enter a tag!' )
                         
                     
-                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_FLIP, value ) )
+                    return ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_MAPPINGS, action, value ) )
                     
                 else:
                     
-                    wx.MessageBox( 'Please select a tag service!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'Please select a tag service!' )
                     
                 
             
@@ -5219,6 +5248,17 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_urls_done, num_urls )
             
         
+        if num_urls > 0:
+            
+            sort_float = float( num_urls_done ) / num_urls
+            
+        else:
+            
+            sort_float = 0.0
+            
+        
+        num_urls_sortable = ( sort_float, num_urls, num_urls_done )
+        
         pretty_failures = HydrusData.ConvertIntToPrettyString( num_failed )
         
         if paused:
@@ -5231,7 +5271,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_urls, pretty_failures, pretty_paused )
-        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, num_urls, num_failed, paused )
+        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, num_urls_sortable, num_failed, paused )
         
         return ( display_tuple, sort_tuple )
         
@@ -5428,30 +5468,17 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def ImportFromClipboard( self ):
         
-        if wx.TheClipboard.Open():
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
+            obj = HydrusSerialisable.CreateFromString( raw_text )
             
-            wx.TheClipboard.GetData( data )
+            self._ImportObject( obj )
             
-            wx.TheClipboard.Close()
+        except Exception as e:
             
-            raw_text = data.GetText()
-            
-            try:
-                
-                obj = HydrusSerialisable.CreateFromString( raw_text )
-                
-                self._ImportObject( obj )
-                
-            except Exception as e:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
-            
-        else:
-            
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     
@@ -6378,7 +6405,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    tags = HydrusData.DeserialiseNewlinedTexts( text )
+                    tags = HydrusText.DeserialiseNewlinedTexts( text )
                     
                     tags = HydrusTags.CleanTags( tags )
                     
@@ -6568,34 +6595,21 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Paste( self ):
         
-        if wx.TheClipboard.Open():
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
             
-            data = wx.TextDataObject()
-            
-            wx.TheClipboard.GetData( data )
-            
-            wx.TheClipboard.Close()
-            
-            raw_text = data.GetText()
-            
-            try:
+            for url in HydrusText.DeserialiseNewlinedTexts( raw_text ):
                 
-                for url in HydrusData.SplitByLinesep( raw_text ):
+                if url != '':
                     
-                    if url != '':
-                        
-                        self._EnterURL( url, only_add = True )
-                        
+                    self._EnterURL( url, only_add = True )
                     
                 
-            except:
-                
-                wx.MessageBox( 'I could not understand what was in the clipboard' )
-                
             
-        else:
+        except:
             
-            wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
     
@@ -6899,15 +6913,11 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if correct_location == '':
                     
-                    wx.MessageBox( 'You did not correct all the locations!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'You did not correct all the locations!' )
                     
                 elif ok != 'ok!':
                     
-                    wx.MessageBox( 'You did not find all the correct locations!' )
-                    
-                    raise HydrusExceptions.VetoException()
+                    raise HydrusExceptions.VetoException( 'You did not find all the correct locations!' )
                     
                 else:
                     

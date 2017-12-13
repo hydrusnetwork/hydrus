@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 286</h3></li>
+				<ul>
+					<li>simplified how thread watcher assigns DEAD and 404 status--it should do it more reliably now</li>
+					<li>thread watchers now publish their page names (including updating dead/404 status) right after they check</li>
+					<li>the save session menu under pages now lists the exsting sessions for quick-save--if you select one of these, it will throw up a yes/no overwrite confirmation dialog</li>
+					<li>'appending' sessions now loads them in a new page of pages named as the session name!</li>
+					<li>right-clicking on a page of pages now gives you a 'save this page of pages to a session' option</li>
+					<li>right-clicking on the page tabs lets you append a session anywhere</li>
+					<li>'load' session is now 'clear and load', and it throws a yes/no dialog for confirmation</li>
+					<li>the gallery pending queries box now allows multiple selection with ctrl/shift clicks. it'll even move up/down correctly on non-contiguous selections!</li>
+					<li>the gallery query input is now a new combined textctrl-and-paste button control that will appear in other places across the program</li>
+					<li>the page of images input now also uses this new control</li>
+					<li>the page of images and raw urls queues will now ignore any input that does not start with 'http'</li>
+					<li>pasting a list of texts from the clipboard will now typically strip the pasted content of leading or trailing whitespace</li>
+					<li>some text and tag cleaning is a bit faster and neater</li>
+					<li>the file import status panel now supports 'open sources' on its right-click menu--it opens in your web browser or file explorer as appropriate. (linux can't do file explorer though)</li>
+					<li>thumbnails will no longer 'fade' when their pages are not visible, reducing CPU load in several contexts</li>
+					<li>thumbnail fade will use less CPU overhead on very fast computers</li>
+					<li>the timer loops that all import pages use to keep themselves updated are now harmonised into one loop at the top gui level (this should reduce some idle CPU overhead and improve some ui responsiveness)</li>
+					<li>content (tag and rating) shortcuts can now be set to 'flip on/off' or 'set'</li>
+					<li>the manage subscriptions dialog now waits for any currently syncing subs to cancel and save themselves before opening itself (keeping it all synced and rollback-proof)</li>
+					<li>added a 'watchable' url class type and wrote examples for 4chan/8chan thread urls</li>
+					<li>added 4chan/8chan file url classes to the examples, which if added will auto-hide them from the media viewer</li>
+					<li>fixed 'add parameter' in edit url match panel</li>
+					<li>simplified some stuff in the existing parsing system</li>
+					<li>added preliminary 'url type' support to the parsing system</li>
+					<li>the html formula parsing object can now return the full child html of the node it finds</li>
+					<li>the new url and html stuff doesn't do anything yet--but it will in the new downloader engine</li>
+					<li>added a bunch more booru entries to the url classes defaults. I will continue filling these out, hopefully setting comprehensive defaults next week</li>
+					<li>the advanced mode thumbnail right-click menu lets you reparse and regen thumbnails for any files! if you have rotated or stretched files, you can now fix them from the menu!</li>
+					<li>added new tools to let the client update media file metadata and thumbnails live!</li>
+					<li>the new reparse and regen should update file metadata and thumbnails live!</li>
+					<li>improved how some 'quiet' errors are printed to the log. they'll now have the full trace of the error as well as the stack</li>
+					<li>added a daemon_report_mode debug mode. it throws up a popup every time a daemon fires its callable</li>
+					<li>fixed an issue with the editstringtostringdictcontrol</li>
+					<li>fixed an issue with loading (and updating to a new version) import pages or import folders with some kinds of unicode paths</li>
+					<li>you can now set the 'woah, you should close some pages' warning value under options->gui. its default remains 165 pages</li>
+					<li>system:similar_to searches should be a lot faster on clients with many files</li>
+					<li>the manage subscriptions and edit subscription panels now both list their num_urls summary column as '22' if all done but '11/22' if not. this column also sorts based on percentage completion, then num total, then num done</li>
+					<li>the database migration dialog now uses the new listctrl--its buttons are now also clever, and will disable when they are invalid</li>
+					<li>misc fixes</li>
+					<li>fixed an index bug in the new listctrl after certain types of 'setdata' call</li>
+					<li>cleaned up some search code</li>
+					<li>some veto code cleanup</li>
+					<li>cleaned and harmonised how text is pulled from the clipboard</li>
+				</ul>
 				<li><h3>version 285</h3></li>
 				<ul>
 					<li>added 'network' main gui menu and moved network stuff from services to it</li>

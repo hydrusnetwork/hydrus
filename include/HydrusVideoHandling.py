@@ -382,7 +382,7 @@ def ParseFFMPEGAudio( lines ):
     
     # this is from the old stuff--might be helpful later when we add audio
     
-    lines_audio = [l for l in lines if ' Audio: ' in l]
+    lines_audio = [l for l in lines if 'Audio: ' in l]
     
     audio_found = lines_audio != []
     
@@ -548,7 +548,7 @@ def ParseFFMPEGNumFramesManually( lines ):
 def ParseFFMPEGVideoLine( lines ):
     
     # get the output line that speaks about video
-    lines_video = [ l for l in lines if ' Video: ' in l and not ( ' Video: png' in l or ' Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
+    lines_video = [ l for l in lines if 'Video: ' in l and not ( 'Video: png' in l or 'Video: jpg' in l ) ] # mp3 says it has a 'png' video stream
     
     if len( lines_video ) == 0:
         

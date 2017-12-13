@@ -18,7 +18,7 @@ import wx
 
 class QueueListBox( wx.Panel ):
     
-    def __init__( self, parent, data_to_pretty_callable, add_callable, edit_callable ):
+    def __init__( self, parent, data_to_pretty_callable, add_callable = None, edit_callable = None ):
         
         self._data_to_pretty_callable = data_to_pretty_callable
         self._add_callable = add_callable
@@ -36,6 +36,16 @@ class QueueListBox( wx.Panel ):
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        
+        if self._add_callable is None:
+            
+            self._add_button.Hide()
+            
+        
+        if self._edit_callable is None:
+            
+            self._edit_button.Hide()
+            
         
         #
         
@@ -250,6 +260,11 @@ class QueueListBox( wx.Panel ):
         event.Skip()
         
     
+    def GetCount( self ):
+        
+        return self._listbox.GetCount()
+        
+    
     def GetData( self, only_selected = False ):
         
         datas = []
@@ -262,6 +277,20 @@ class QueueListBox( wx.Panel ):
             
         
         return datas
+        
+    
+    def Pop( self ):
+        
+        if self._listbox.GetCount() == 0:
+            
+            return None
+            
+        
+        data = self._listbox.GetClientData( 0 )
+        
+        self._listbox.Delete( 0 )
+        
+        return data
         
     
 class ListBox( wx.ScrolledWindow ):

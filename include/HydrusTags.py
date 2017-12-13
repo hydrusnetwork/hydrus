@@ -9,12 +9,7 @@ import HydrusData
 import HydrusExceptions
 import re
 import HydrusGlobals as HG
-
-re_newlines = re.compile( '[\r\n]', re.UNICODE )
-re_multiple_spaces = re.compile( '\\s+', re.UNICODE )
-re_trailing_space = re.compile( '\\s$', re.UNICODE )
-re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)', re.UNICODE )
-re_leading_single_colon = re.compile( '^:(?!:)', re.UNICODE )
+import HydrusText
 
 def CensorshipMatch( tag, censorships ):
     
@@ -167,7 +162,7 @@ def CleanTag( tag ):
         
         if tag.startswith( ':' ):
             
-            tag = re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+            tag = HydrusText.re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
             
             tag = StripTextOfGumpf( tag )
             
@@ -251,16 +246,13 @@ def SplitTag( tag ):
     
 def StripTextOfGumpf( t ):
     
-    t = re_newlines.sub( '', t )
+    t = HydrusText.re_newlines.sub( '', t )
     
-    t = re_multiple_spaces.sub( ' ', t )
+    t = HydrusText.re_multiple_spaces.sub( ' ', t )
     
-    t = re_trailing_space.sub( '', t )
+    t = HydrusText.re_trailing_space.sub( '', t )
     
-    while re_leading_space_or_garbage.search( t ) is not None:
-        
-        t = re_leading_space_or_garbage.sub( '', t )
-        
+    t = HydrusText.re_leading_space_or_garbage.sub( '', t )
     
     return t
     

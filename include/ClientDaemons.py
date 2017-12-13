@@ -298,19 +298,28 @@ def DAEMONSynchroniseSubscriptions( controller ):
     
     random.shuffle( subscription_names )
     
-    for name in subscription_names:
+    HG.subscriptions_running = True
+    
+    try:
         
-        p1 = controller.options[ 'pause_subs_sync' ]
-        p2 = controller.ViewIsShutdown()
-        
-        if p1 or p2:
+        for name in subscription_names:
             
-            return
+            p1 = controller.options[ 'pause_subs_sync' ]
+            p2 = controller.ViewIsShutdown()
+            
+            if p1 or p2:
+                
+                return
+                
+            
+            subscription = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+            
+            subscription.Sync()
             
         
-        subscription = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+    finally:
         
-        subscription.Sync()
+        HG.subscriptions_running = False
         
     
 def DAEMONUPnP( controller ):

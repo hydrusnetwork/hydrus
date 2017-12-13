@@ -1,5 +1,6 @@
 import bs4
 import ClientNetworking
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -11,15 +12,15 @@ import re
 import time
 import urlparse
 
-def ChildHasDesiredContent( child, desired_content ):
-    
-    return desired_content == 'all' or len( child.GetParsableContent().intersection( desired_content ) ) > 0
-    
 def ConvertContentResultToPrettyString( result ):
     
     ( ( name, content_type, additional_info ), parsed_text ) = result
     
-    if content_type == HC.CONTENT_TYPE_MAPPINGS:
+    if content_type == HC.CONTENT_TYPE_URLS:
+        
+        return 'url: ' + parsed_text
+        
+    elif content_type == HC.CONTENT_TYPE_MAPPINGS:
         
         return 'tag: ' + HydrusTags.CombineTag( additional_info, parsed_text )
         
@@ -38,7 +39,11 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
     
     for ( content_type, additional_infos ) in content_type_to_additional_infos.items():
         
-        if content_type == HC.CONTENT_TYPE_MAPPINGS:
+        if content_type == HC.CONTENT_TYPE_URLS:
+            
+            pretty_strings.append( 'urls' )
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
             namespaces = [ namespace for namespace in additional_infos if namespace != '' ]
             
@@ -67,26 +72,22 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         return ', '.join( pretty_strings )
         
     
-def GetChildrenContent( job_key, children, data, referral_url, desired_content ):
-    
-    for child in children:
-        
-        if child.Vetoes( data ):
-            
-            return []
-            
-        
+def GetChildrenContent( job_key, children, data, referral_url ):
     
     content = []
     
     for child in children:
         
-        if ChildHasDesiredContent( child, desired_content ):
+        try:
             
-            child_content = child.Parse( job_key, data, referral_url, desired_content )
+            child_content = child.Parse( job_key, data, referral_url )
             
-            content.extend( child_content )
+        except HydrusExceptions.VetoException:
             
+            return []
+            
+        
+        content.extend( child_content )
         
     
     return content
@@ -106,6 +107,39 @@ def GetTagsFromContentResults( results ):
     tag_results = HydrusTags.CleanTags( tag_results )
     
     return tag_results
+    
+def GetURLsFromContentResults( results ):
+    
+    url_results = collections.defaultdict( list )
+    
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
+        
+        if content_type == HC.CONTENT_TYPE_URLS:
+            
+            priority = additional_info
+            
+            if priority is None:
+                
+                priority = -1
+                
+            
+            url_results[ priority ].append( parsed_text )
+            
+        
+    
+    # ( priority, url_list ) pairs
+    
+    url_results = list( url_results.items() )
+    
+    # ordered by descending priority
+    
+    url_results.sort( reverse = True )
+    
+    # url_lists of descending priority
+    
+    url_results = [ url_list for ( priority, url_list ) in url_results ]
+    
+    return url_results
     
 def GetVetoes( parsed_texts, additional_info ):
     
@@ -154,13 +188,17 @@ def RenderTagRule( ( name, attrs, index ) ):
     
     return result
     
+HTML_CONTENT_ATTRIBUTE = 0
+HTML_CONTENT_STRING = 1
+HTML_CONTENT_HTML = 2
+
 class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
     SERIALISABLE_NAME = 'HTML Parsing Formula'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, tag_rules = None, content_rule = None, string_match = None, string_converter = None ):
+    def __init__( self, tag_rules = None, content_to_fetch = None, attribute_to_fetch = None, string_match = None, string_converter = None ):
         
         if tag_rules is None:
             
@@ -179,7 +217,9 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         
         self._tag_rules = tag_rules
         
-        self._content_rule = content_rule
+        self._content_to_fetch = content_to_fetch
+        
+        self._attribute_to_fetch = attribute_to_fetch
         
         self._string_match = string_match
         self._string_converter = string_converter
@@ -190,12 +230,12 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         serialisable_string_match = self._string_match.GetSerialisableTuple()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        return ( self._tag_rules, self._content_rule, serialisable_string_match, serialisable_string_converter )
+        return ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._tag_rules, self._content_rule, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
         
         self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
@@ -203,22 +243,18 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     def _ParseContent( self, root ):
         
-        if self._content_rule is None:
+        if self._content_to_fetch == HTML_CONTENT_ATTRIBUTE:
             
-            result = root.string
-            
-        else:
-            
-            if root.has_attr( self._content_rule ):
+            if root.has_attr( self._attribute_to_fetch ):
                 
-                unknown_attr_result = root[ self._content_rule ]
+                unknown_attr_result = root[ self._attribute_to_fetch ]
                 
                 # 'class' attr returns a list because it has multiple values under html spec, wew
                 if isinstance( unknown_attr_result, list ):
                     
                     if len( unknown_attr_result ) == 0:
                         
-                        result = None
+                        raise HydrusExceptions.ParseException( 'Attribute ' + self._attribute_to_fetch + ' not found!' )
                         
                     else:
                         
@@ -232,13 +268,21 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                result = None
+                raise HydrusExceptions.ParseException( 'Attribute ' + self._attribute_to_fetch + ' not found!' )
                 
+            
+        elif self._content_to_fetch == HTML_CONTENT_STRING:
+            
+            result = root.string
+            
+        elif self._content_to_fetch == HTML_CONTENT_HTML:
+            
+            result = unicode( root )
             
         
         if result is None or result == '':
             
-            raise HydrusExceptions.ParseException( 'No results found!' )
+            raise HydrusExceptions.ParseException( 'Empty/No results found!' )
             
         else:
             
@@ -271,18 +315,18 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( tag_rules, content_rule ) = old_serialisable_info
+            ( tag_rules, attribute_to_fetch ) = old_serialisable_info
             
             culling_and_adding = ( 0, 0, '', '' )
             
-            new_serialisable_info = ( tag_rules, content_rule, culling_and_adding )
+            new_serialisable_info = ( tag_rules, attribute_to_fetch, culling_and_adding )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( tag_rules, content_rule, culling_and_adding ) = old_serialisable_info
+            ( tag_rules, attribute_to_fetch, culling_and_adding ) = old_serialisable_info
             
             ( cull_front, cull_back, prepend, append ) = culling_and_adding
             
@@ -320,22 +364,41 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             
             serialisable_string_converter = string_converter.GetSerialisableTuple()
             
-            new_serialisable_info = ( tag_rules, content_rule, serialisable_string_converter )
+            new_serialisable_info = ( tag_rules, attribute_to_fetch, serialisable_string_converter )
             
             return ( 3, new_serialisable_info )
             
         
         if version == 3:
             
-            ( tag_rules, content_rule, serialisable_string_converter ) = old_serialisable_info
+            ( tag_rules, attribute_to_fetch, serialisable_string_converter ) = old_serialisable_info
             
             string_match = StringMatch()
             
             serialisable_string_match = string_match.GetSerialisableTuple()
             
-            new_serialisable_info = ( tag_rules, content_rule, serialisable_string_match, serialisable_string_converter )
+            new_serialisable_info = ( tag_rules, attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
             
             return ( 4, new_serialisable_info )
+            
+        
+        if version == 4:
+            
+            ( tag_rules, attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            if attribute_to_fetch is None:
+                
+                content_to_fetch = HTML_CONTENT_STRING
+                attribute_to_fetch = ''
+                
+            else:
+                
+                content_to_fetch = HTML_CONTENT_ATTRIBUTE
+                
+            
+            new_serialisable_info = ( tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
+            
+            return ( 5, new_serialisable_info )
             
         
     
@@ -405,13 +468,17 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
             pretty_strings.append( s )
             
         
-        if self._content_rule is None:
+        if self._content_to_fetch == HTML_CONTENT_ATTRIBUTE:
+            
+            pretty_strings.append( 'get the ' + self._attribute_to_fetch + ' attribute of those tags' )
+            
+        elif self._content_to_fetch == HTML_CONTENT_STRING:
             
             pretty_strings.append( 'get the text content of those tags' )
             
-        else:
+        elif self._content_to_fetch == HTML_CONTENT_HTML:
             
-            pretty_strings.append( 'get the ' + self._content_rule + ' attribute of those tags' )
+            pretty_strings.append( 'get the html of those tags' )
             
         
         pretty_strings.extend( self._string_converter.GetTransformationStrings() )
@@ -425,15 +492,15 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._tag_rules, self._content_rule, self._string_match, self._string_converter )
+        return ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._string_match, self._string_converter )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
 
-class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
+class ContentParser( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT
-    SERIALISABLE_NAME = 'Content Parsing Node'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
+    SERIALISABLE_NAME = 'Content Parser'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
@@ -491,7 +558,7 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
         return { ( self._name, self._content_type, self._additional_info ) }
         
     
-    def Parse( self, job_key, data, referral_url, desired_content ):
+    def Parse( self, job_key, data, referral_url ):
         
         content_description = ( self._name, self._content_type, self._additional_info )
         
@@ -501,7 +568,12 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
             
             vetoes = GetVetoes( parsed_texts, self._additional_info )
             
-            return [ ( content_description, veto ) for veto in vetoes ]
+            for veto in vetoes:
+                
+                raise HydrusExceptions.VetoException( self._name )
+                
+            
+            return []
             
         else:
             
@@ -519,23 +591,47 @@ class ParseNodeContent( HydrusSerialisable.SerialisableBase ):
         return ( self._name, self._content_type, self._formula, self._additional_info )
         
     
-    def Vetoes( self, data ):
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER ] = ContentParser
+
+PARSER_FILE_PAGE = 0
+PARSER_FILES_PAGE = 1
+
+class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
+    SERIALISABLE_NAME = 'Page Parser'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name, parser_type = None, content_parsers = None ):
         
-        if self._content_type == HC.CONTENT_TYPE_VETO:
+        if parser_type is None:
             
-            parsed_texts = self._formula.Parse( data )
+            parser_type = PARSER_FILE_PAGE
             
-            vetoes = GetVetoes( parsed_texts, self._additional_info )
+        
+        if content_parsers is None:
             
-            return len( vetoes ) > 0
+            content_parsers = []
             
-        else:
-            
-            return False
-            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._content_parsers = content_parsers
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT ] = ParseNodeContent
+    def Parse( self, page_data ):
+        
+        content_results = []
+        
+        for content_parser in self._content_parsers:
+            
+            content_results.extend( content_parser.Parse( page_data ) )
+            
+        
+        return content_results
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER ] = PageParser
 
 class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     
@@ -593,7 +689,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return children_parsable_content
         
     
-    def Parse( self, job_key, data, referral_url, desired_content ):
+    def Parse( self, job_key, data, referral_url ):
         
         search_urls = self.ParseURLs( job_key, data, referral_url )
         
@@ -646,7 +742,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             linked_data = network_job.GetContent()
             
-            children_content = GetChildrenContent( job_key, self._children, linked_data, search_url, desired_content )
+            children_content = GetChildrenContent( job_key, self._children, linked_data, search_url )
             
             content.extend( children_content )
             
@@ -683,11 +779,6 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return ( self._name, self._formula, self._children )
         
     
-    def Vetoes( self, data ):
-        
-        return False
-        
-    
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK ] = ParseNodeContentLink
 
 FILE_IDENTIFIER_TYPE_FILE = 0
@@ -706,6 +797,9 @@ file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_SHA256 ] = 'sha256 hash'
 file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_SHA512 ] = 'sha512 hash'
 file_identifier_string_lookup[ FILE_IDENTIFIER_TYPE_USER_INPUT ] = 'custom user input'
 
+# eventually transition this to be a flat 'generate page/gallery urls'
+# the rest of the parsing system can pick those up automatically
+# this nullifies the need for contentlink stuff, at least in its current borked form
 class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
@@ -924,7 +1018,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return children_parsable_content
         
     
-    def DoQuery( self, job_key, file_identifier, desired_content ):
+    def DoQuery( self, job_key, file_identifier ):
         
         try:
             
@@ -937,7 +1031,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 return []
                 
             
-            content_results = self.Parse( job_key, data, desired_content )
+            content_results = self.Parse( job_key, data )
             
             return content_results
             
@@ -958,9 +1052,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT
         
     
-    def Parse( self, job_key, data, desired_content ):
+    def Parse( self, job_key, data ):
         
-        content_results = GetChildrenContent( job_key, self._children, data, self._url, desired_content )
+        content_results = GetChildrenContent( job_key, self._children, data, self._url )
         
         if len( content_results ) == 0:
             

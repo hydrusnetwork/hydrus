@@ -734,6 +734,11 @@ class Page( wx.SplitterWindow ):
         wx.CallAfter( self.SetMediaResults, sorted_initial_media_results )
         
     
+    def TIMERUpdate( self ):
+        
+        self._management_panel.TIMERUpdate()
+        
+    
 class PagesNotebook( wx.Notebook ):
     
     def __init__( self, parent, controller, name ):
@@ -1200,13 +1205,23 @@ class PagesNotebook( wx.Notebook ):
         
         num_pages = self.GetPageCount()
         
+        more_than_one_tab = num_pages > 1
+        
         click_over_tab = tab_index != -1
         
+        click_over_page_of_pages = False
+        
         end_index = num_pages - 1
+        
+        existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
         
         menu = wx.Menu()
         
         if click_over_tab:
+            
+            page = self.GetPage( tab_index )
+            
+            click_over_page_of_pages = isinstance( page, PagesNotebook )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
             
@@ -1241,16 +1256,50 @@ class PagesNotebook( wx.Notebook ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
-            more_than_one_tab = num_pages > 1
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        
+        if click_over_page_of_pages or len( existing_session_names ) > 0:
             
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
+        if len( existing_session_names ) > 0:
+            
+            submenu = wx.Menu()
+            
+            for name in existing_session_names:
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Load this session here.', self.AppendGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'append session' )
+            
         
         if click_over_tab:
             
+            if click_over_page_of_pages:
+                
+                submenu = wx.Menu()
+                
+                for name in existing_session_names:
+                    
+                    if name == 'last session':
+                        
+                        continue
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetName() )
+                
+                ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
+                
+            
             if more_than_one_tab:
+                
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 can_home = tab_index > 1
                 can_move_left = tab_index > 0
@@ -1282,9 +1331,7 @@ class PagesNotebook( wx.Notebook ):
                     
                 
             
-            page = self.GetPage( tab_index )
-            
-            if isinstance( page, PagesNotebook ) and page.GetPageCount() > 0:
+            if click_over_page_of_pages and page.GetPageCount() > 0:
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
@@ -1295,7 +1342,7 @@ class PagesNotebook( wx.Notebook ):
         self._controller.PopupMenu( self, menu )
         
     
-    def AppendGUISession( self, name ):
+    def AppendGUISession( self, name, load_in_a_page_of_pages = True ):
         
         try:
             
@@ -1311,9 +1358,18 @@ class PagesNotebook( wx.Notebook ):
             return
             
         
+        if load_in_a_page_of_pages:
+            
+            destination = self.NewPagesNotebook( name = name, give_it_a_blank_page = False)
+            
+        else:
+            
+            destination = self
+            
+        
         page_tuples = session.GetPages()
         
-        self.AppendSessionPageTuples( page_tuples )
+        destination.AppendSessionPageTuples( page_tuples )
         
     
     def AppendSessionPageTuples( self, page_tuples ):
@@ -1733,18 +1789,31 @@ class PagesNotebook( wx.Notebook ):
     
     def LoadGUISession( self, name ):
         
-        try:
+        if self.GetPageCount() > 0:
             
-            self.TestAbleToClose()
+            message = 'Close the current pages and load session "' + name + '"?'
             
-        except HydrusExceptions.PermissionException:
+            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Clear and load session?' ) as yn_dlg:
+                
+                if yn_dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
+                    
+                
             
-            return
+            try:
+                
+                self.TestAbleToClose()
+                
+            except HydrusExceptions.PermissionException:
+                
+                return
+                
+            
+            self._CloseAllPages( polite = False )
             
         
-        self._CloseAllPages( polite = False )
-        
-        self.AppendGUISession( name )
+        self.AppendGUISession( name, load_in_a_page_of_pages = False )
         
     
     def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False ):
@@ -1756,7 +1825,7 @@ class PagesNotebook( wx.Notebook ):
             return current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
         
-        WARNING_TOTAL_PAGES = 165
+        WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
         MAX_TOTAL_PAGES = 200
         
         ( total_active_page_count, total_closed_page_count ) = self._controller.gui.GetTotalPageCounts()
@@ -1789,7 +1858,7 @@ class PagesNotebook( wx.Notebook ):
             
             if total_active_page_count == WARNING_TOTAL_PAGES:
                 
-                HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before system stability is affected! Please close some now!' )
+                HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before program stability is affected! Please close some now!' )
                 
             
         
@@ -2223,13 +2292,13 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def SaveGUISession( self, name = None ):
+    def SaveGUISession( self, name = None, suggested_name = '' ):
         
         if name is None:
             
             while True:
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.' ) as dlg:
+                with ClientGUIDialogs.DialogTextEntry( self, 'Enter a name for the new session.', default = suggested_name ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
@@ -2263,6 +2332,18 @@ class PagesNotebook( wx.Notebook ):
                         
                         return
                         
+                    
+                
+            
+        elif name != 'last session':
+            
+            message = 'Overwrite this session?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, title = 'Overwrite existing session?', yes_label = 'yes, overwrite', no_label = 'no' ) as yn_dlg:
+                
+                if yn_dlg.ShowModal() != wx.ID_YES:
+                    
+                    return
                     
                 
             
@@ -2332,6 +2413,11 @@ class PagesNotebook( wx.Notebook ):
             
             page.TestAbleToClose()
             
+        
+    
+    def TIMERUpdate( self ):
+        
+        pass
         
     
 class GUISession( HydrusSerialisable.SerialisableBaseNamed ):

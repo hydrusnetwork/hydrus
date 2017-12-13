@@ -999,9 +999,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                 
             else:
                 
-                wx.MessageBox( 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
-                
-                raise HydrusExceptions.VetoException()
+                raise HydrusExceptions.VetoException( 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
                 
             
         

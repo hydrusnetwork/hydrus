@@ -7,12 +7,15 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+subscriptions_running = False
+
 callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False
 gui_report_mode = False
 network_report_mode = False
 pubsub_profile_mode = False
+daemon_report_mode = False
 force_idle_mode = False
 no_page_limit_mode = False
 server_busy = False

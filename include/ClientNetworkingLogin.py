@@ -832,7 +832,7 @@ class LoginStep( object ):
                 
             except HydrusExceptions.VetoException as e:
                 
-                raise HydrusExceptions.ValidationException( str( e ) )
+                raise HydrusExceptions.ValidationException( unicode( e ) )
                 
             
             # if content type is a temp variable:

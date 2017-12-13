@@ -683,7 +683,7 @@ def OpenFileLocation( path ):
             
         elif HC.PLATFORM_LINUX:
             
-            raise NotImplementedError()
+            raise NotImplementedError( 'Linux cannot open file locations!' )
             
         
         process = subprocess.Popen( shlex.split( cmd ) )

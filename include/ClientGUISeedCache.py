@@ -8,7 +8,9 @@ import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
+import HydrusPaths
 import os
+import webbrowser
 import wx
 
 class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -145,6 +147,49 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _OpenSelectedSeedData( self ):
+        
+        seeds = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( seeds ) > 0:
+            
+            if len( seeds ) > 10:
+                
+                message = 'You have many objects selected--are you sure you want to open them all?'
+                
+                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                    
+                    if dlg.ShowModal() != wx.ID_YES:
+                        
+                        return
+                        
+                    
+                
+            
+            if seeds[0].seed_data.startswith( 'http' ):
+                
+                for seed in seeds:
+                    
+                    webbrowser.open( seed.seed_data )
+                    
+                
+            else:
+                
+                try:
+                    
+                    for seed in seeds:
+                        
+                        HydrusPaths.OpenFileLocation( seed.seed_data )
+                        
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( unicode( e ) )
+                    
+                
+            
+        
+    
     def _SetSelected( self, status_to_set ):
         
         seeds = self._list_ctrl.GetData( only_selected = True )
@@ -165,6 +210,10 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeedData )
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedSeedData )
             
             ClientGUIMenus.AppendSeparator( menu )
             

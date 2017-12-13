@@ -233,7 +233,7 @@ class EditStringToStringDictControl( wx.Panel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, [ ( 'key', 20 ), ( 'value', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, [ ( 'key', 20 ), ( 'value', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         

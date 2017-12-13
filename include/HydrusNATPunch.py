@@ -1,6 +1,7 @@
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
+import HydrusText
 import os
 import shlex
 import socket
@@ -52,9 +53,9 @@ def GetExternalIP():
             
             try:
                 
-                lines = HydrusData.SplitByLinesep( output )
+                lines = HydrusText.DeserialiseNewlinedTexts( output )
                 
-                i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
+                i = lines.index( 'i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
                 
                 '''ExternalIPAddress = ip'''
                 
@@ -131,9 +132,9 @@ def GetUPnPMappings():
         
         try:
             
-            lines = HydrusData.SplitByLinesep( output )
+            lines = HydrusText.DeserialiseNewlinedTexts( output )
             
-            i = lines.index( ' i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
+            i = lines.index( 'i protocol exPort->inAddr:inPort description remoteHost leaseTime' )
             
             data_lines = []
             

@@ -1829,7 +1829,14 @@ class Canvas( wx.Window ):
                     
                     if tag in current:
                         
-                        content_update_action = HC.CONTENT_UPDATE_DELETE
+                        if action == HC.CONTENT_UPDATE_FLIP:
+                            
+                            content_update_action = HC.CONTENT_UPDATE_DELETE
+                            
+                        else:
+                            
+                            return True
+                            
                         
                     else:
                         
@@ -1850,9 +1857,16 @@ class Canvas( wx.Window ):
                         
                         if tag in petitioned:
                             
-                            content_update_action = HC.CONTENT_UPDATE_RESCIND_PETITION
-                            
-                            rows = [ ( tag, hashes ) ]
+                            if action == HC.CONTENT_UPDATE_FLIP:
+                                
+                                content_update_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                                
+                                rows = [ ( tag, hashes ) ]
+                                
+                            else:
+                                
+                                return True
+                                
                             
                         else:
                             
@@ -1868,7 +1882,7 @@ class Canvas( wx.Window ):
                                     
                                 else:
                                     
-                                    return
+                                    return True
                                     
                                 
                             
@@ -1879,7 +1893,14 @@ class Canvas( wx.Window ):
                         
                         if tag in pending:
                             
-                            content_update_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                            if action == HC.CONTENT_UPDATE_FLIP:
+                                
+                                content_update_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                                
+                            else:
+                                
+                                return True
+                                
                             
                         else:
                             
@@ -1908,9 +1929,14 @@ class Canvas( wx.Window ):
                 
                 if current_rating == rating:
                     
-                    # to flip
-                    
-                    rating = None
+                    if action == HC.CONTENT_UPDATE_FLIP:
+                        
+                        rating = None
+                        
+                    else:
+                        
+                        return True
+                        
                     
                 
                 row = ( rating, hashes )
@@ -1920,7 +1946,6 @@ class Canvas( wx.Window ):
             
             HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
             
-        
         else:
             
             command_processed = False

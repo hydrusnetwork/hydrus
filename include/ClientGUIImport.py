@@ -12,6 +12,7 @@ import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
 import HydrusTags
+import HydrusText
 import os
 import re
 import wx
@@ -594,32 +595,19 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         def _GetTagsFromClipboard( self ):
             
-            if wx.TheClipboard.Open():
+            text = HG.client_controller.GetClipboardText()
+            
+            try:
                 
-                data = wx.TextDataObject()
+                tags = HydrusText.DeserialiseNewlinedTexts( text )
                 
-                wx.TheClipboard.GetData( data )
+                tags = HydrusTags.CleanTags( tags )
                 
-                wx.TheClipboard.Close()
+                return tags
                 
-                text = data.GetText()
+            except:
                 
-                try:
-                    
-                    tags = HydrusData.DeserialiseNewlinedTexts( text )
-                    
-                    tags = HydrusTags.CleanTags( tags )
-                    
-                    return tags
-                    
-                except:
-                    
-                    raise Exception( 'I could not understand what was in the clipboard' )
-                    
-                
-            else:
-                
-                raise Exception( 'I could not get permission to access the clipboard.' )
+                raise Exception( 'I could not understand what was in the clipboard' )
                 
             
         

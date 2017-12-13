@@ -63,6 +63,14 @@ class DAEMON( threading.Thread ):
         self._controller.sub( self, 'shutdown', 'shutdown' )
         
     
+    def _DoPreCall( self ):
+        
+        if HG.daemon_report_mode:
+            
+            HydrusData.ShowText( self._name + ' doing a job.' )
+            
+        
+    
     def shutdown( self ):
         
         ShutdownThread( self )
@@ -140,6 +148,8 @@ class DAEMONWorker( DAEMON ):
                     return
                     
                 
+            
+            self._DoPreCall()
             
             try:
                 
@@ -224,6 +234,8 @@ class THREADCallToThread( DAEMON ):
                     
                     self._event.clear()
                     
+                
+                self._DoPreCall()
                 
                 ( callable, args, kwargs ) = self._queue.get()
                 

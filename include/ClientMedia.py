@@ -1433,6 +1433,16 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
+    def RefreshFileInfo( self ):
+        
+        for media in self._sorted_media:
+            
+            media.RefreshFileInfo()
+            
+        
+        self._RecalcInternals()
+        
+    
     def ResetService( self, service_key ):
         
         MediaList.ResetService( self, service_key )
@@ -1786,7 +1796,12 @@ class MediaSingleton( Media ):
     def IsNoisy( self ): return self._media_result.GetMime() in HC.NOISY_MIMES
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
-
+    
+    def RefreshFileInfo( self ):
+        
+        self._media_result.RefreshFileInfo()
+        
+    
 class MediaResult( object ):
     
     def __init__( self, file_info_manager, tags_manager, locations_manager, ratings_manager ):
@@ -1902,6 +1917,18 @@ class MediaResult( object ):
         elif service_type in HC.RATINGS_SERVICES:
             
             self._ratings_manager.ProcessContentUpdate( service_key, content_update )
+            
+        
+    
+    def RefreshFileInfo( self ):
+        
+        media_results = HG.client_controller.Read( 'media_results', ( self._file_info_manager.hash, ) )
+        
+        if len( media_results ) > 0:
+            
+            media_result = media_results[0]
+            
+            self._file_info_manager = media_result._file_info_manager
             
         
     

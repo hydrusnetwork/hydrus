@@ -532,7 +532,7 @@ def ShowExceptionClient( e, do_wait = True ):
         etype = type( e )
         value = HydrusData.ToUnicode( e )
         
-        trace = ''.join( traceback.format_stack() )
+        trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
         
     else:
         
@@ -924,6 +924,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
         
         self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
+        
+        self._dictionary[ 'integers' ][ 'total_pages_warning' ] = 165
         
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         

@@ -723,6 +723,14 @@ class ClientFilesManager( object ):
             f.write( thumbnail )
             
         
+        resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
+        
+        if os.path.exists( resized_path ):
+            
+            HydrusPaths.DeletePath( resized_path )
+            
+        
+        self._controller.pub( 'clear_thumbnails', { hash } )
         self._controller.pub( 'new_thumbnails', { hash } )
         
     
@@ -1170,20 +1178,25 @@ class ClientFilesManager( object ):
             
         
     
-    def RegenerateResizedThumbnail( self, hash, mime ):
-        
-        with self._lock:
-            
-            self._GenerateResizedThumbnail( hash, mime )
-            
-        
-    
     def RebalanceWorkToDo( self ):
         
         with self._lock:
             
             return self._GetRebalanceTuple() is not None
             
+        
+    
+    def RegenerateResizedThumbnail( self, hash, mime ):
+        
+        with self._lock:
+            
+            self.LocklessRegenerateResizedThumbnail( hash, mime )
+            
+        
+    
+    def LocklessRegenerateResizedThumbnail( self, hash, mime ):
+        
+        self._GenerateResizedThumbnail( hash, mime )
         
     
     def RegenerateThumbnails( self, only_do_missing = False ):
@@ -1295,15 +1308,25 @@ class DataCache( object ):
         self._controller.sub( self, 'MaintainCache', 'memory_maintenance_pulse' )
         
     
+    def _Delete( self, key ):
+        
+        if key not in self._keys_to_data:
+            
+            return
+            
+        
+        deletee_data = self._keys_to_data[ key ]
+        
+        del self._keys_to_data[ key ]
+        
+        self._RecalcMemoryUsage()
+        
+    
     def _DeleteItem( self ):
         
         ( deletee_key, last_access_time ) = self._keys_fifo.popitem( last = False )
         
-        deletee_data = self._keys_to_data[ deletee_key ]
-        
-        del self._keys_to_data[ deletee_key ]
-        
-        self._RecalcMemoryUsage()
+        self._Delete( deletee_key )
         
     
     def _RecalcMemoryUsage( self ):
@@ -1350,6 +1373,14 @@ class DataCache( object ):
                 
                 self._RecalcMemoryUsage()
                 
+            
+        
+    
+    def DeleteData( self, key ):
+        
+        with self._lock:
+            
+            self._Delete( key )
             
         
     
@@ -1735,6 +1766,7 @@ class ThumbnailCache( object ):
         self._controller.CallToThreadLongRunning( self.DAEMONWaterfall )
         
         self._controller.sub( self, 'Clear', 'thumbnail_resize' )
+        self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
         
     
     def _GetResizedHydrusBitmapFromHardDrive( self, display_media ):
@@ -1888,6 +1920,17 @@ class ThumbnailCache( object ):
             finally:
                 
                 HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
+            
+        
+    
+    def ClearThumbnails( self, hashes ):
+        
+        with self._lock:
+            
+            for hash in hashes:
+                
+                self._data_cache.DeleteData( hash )
                 
             
         

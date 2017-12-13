@@ -990,6 +990,10 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
+        service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        
+        self._all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+        
         menu_items = []
         
         page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/database_migration.html' )
@@ -1006,13 +1010,18 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_db_path_st = ClientGUICommon.BetterStaticText( info_panel )
         self._current_media_paths_st = ClientGUICommon.BetterStaticText( info_panel )
         
-        self._current_media_locations_listctrl = ClientGUIListCtrl.SaneListCtrl( info_panel, 120, [ ( 'location', -1 ), ( 'portable?', 70 ), ( 'free space', 70 ), ( 'weight', 50 ), ( 'ideal usage', 200 ), ( 'current usage', 200 ) ] )
+        current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( info_panel )
         
-        self._add_path_button = ClientGUICommon.BetterButton( info_panel, 'add location', self._AddPath )
-        self._remove_path_button = ClientGUICommon.BetterButton( info_panel, 'empty/remove location', self._RemovePaths )
-        self._increase_weight_button = ClientGUICommon.BetterButton( info_panel, 'increase weight', self._IncreaseWeight )
-        self._decrease_weight_button = ClientGUICommon.BetterButton( info_panel, 'decrease weight', self._DecreaseWeight )
-        self._rebalance_button = ClientGUICommon.BetterButton( info_panel, 'move files now', self._Rebalance )
+        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, 'db_migration_locations', 6, 36, [ ( 'location', -1 ), ( 'portable?', 12 ), ( 'free space', 12 ), ( 'weight', 10 ), ( 'ideal usage', 24 ), ( 'current usage', 24 ) ], self._ConvertLocationToListCtrlTuples )
+        
+        self._current_media_locations_listctrl.Sort()
+        
+        current_media_locations_listctrl_panel.SetListCtrl( self._current_media_locations_listctrl )
+        
+        current_media_locations_listctrl_panel.AddButton( 'add location', self._AddPath )
+        current_media_locations_listctrl_panel.AddButton( 'empty/remove location', self._RemovePaths, enabled_check_func = self._FileLocationSelected )
+        current_media_locations_listctrl_panel.AddButton( 'increase weight', self._IncreaseWeight, enabled_check_func = self._FileLocationSelected )
+        current_media_locations_listctrl_panel.AddButton( 'decrease weight', self._DecreaseWeight, enabled_check_func = self._FileLocationSelected )
         
         self._resized_thumbs_location = wx.TextCtrl( info_panel )
         self._resized_thumbs_location.Disable()
@@ -1026,7 +1035,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._resized_thumbs_location_clear = ClientGUICommon.BetterButton( info_panel, 'clear', self._ClearResizedThumbnailLocation )
         self._fullsize_thumbs_location_clear = ClientGUICommon.BetterButton( info_panel, 'clear', self._ClearFullsizeThumbnailLocation )
         
-        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel )
+        self._rebalance_status_st = ClientGUICommon.BetterStaticText( info_panel, style = wx.ALIGN_RIGHT | wx.ST_NO_AUTORESIZE )
+        
+        self._rebalance_button = ClientGUICommon.BetterButton( info_panel, 'move files now', self._Rebalance )
         
         #
         
@@ -1047,14 +1058,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        button_hbox.AddF( self._add_path_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._remove_path_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._increase_weight_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._decrease_weight_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
-        
         r_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         r_hbox.AddF( ClientGUICommon.BetterStaticText( info_panel, 'resized thumbnail location' ), CC.FLAGS_VCENTER )
@@ -1069,14 +1072,18 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         t_hbox.AddF( self._fullsize_thumbs_location_set, CC.FLAGS_VCENTER )
         t_hbox.AddF( self._fullsize_thumbs_location_clear, CC.FLAGS_VCENTER )
         
+        rebalance_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        rebalance_hbox.AddF( self._rebalance_status_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        rebalance_hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
+        
         info_panel.AddF( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._current_media_locations_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        info_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        info_panel.AddF( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         info_panel.AddF( r_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.AddF( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._rebalance_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.AddF( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1136,7 +1143,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         adjustees = set()
         
-        for ( location, portable, free_space, weight, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+        for location in self._current_media_locations_listctrl.GetData( only_selected = True ):
             
             if location in locations_to_ideal_weights:
                 
@@ -1176,22 +1183,204 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _DecreaseWeight( self ):
+    def _ConvertLocationToListCtrlTuples( self, location ):
         
-        self._AdjustWeight( -1 )
-        
-    
-    def _GenerateCurrentMediaTuples( self, approx_total_client_files ):
-        
-        f_space = approx_total_client_files
-        r_space = approx_total_client_files * self.RESIZED_RATIO
-        t_space = approx_total_client_files * self.FULLSIZE_RATIO
+        f_space = self._all_local_files_total_size
+        r_space = self._all_local_files_total_size * self.RESIZED_RATIO
+        t_space = self._all_local_files_total_size * self.FULLSIZE_RATIO
         
         # ideal
         
         ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
         
         # current
+        
+        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
+        #
+        
+        pretty_location = location
+        
+        portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+        portable = not os.path.isabs( portable_location )
+        
+        if portable:
+            
+            pretty_portable = 'yes'
+            
+        else:
+            
+            pretty_portable = 'no'
+            
+        
+        free_space = HydrusPaths.GetFreeSpace( location )
+        pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
+        
+        fp = locations_to_file_weights[ location ] / 256.0
+        tp = locations_to_fs_thumb_weights[ location ] / 256.0
+        rp = locations_to_r_thumb_weights[ location ] / 256.0
+        
+        p = HydrusData.ConvertFloatToPercentage
+        
+        current_bytes = fp * f_space + tp * t_space + rp * r_space
+        
+        current_usage = ( fp, tp, rp )
+        
+        usages = []
+        
+        if fp > 0:
+            
+            usages.append( p( fp ) + ' files' )
+            
+        
+        if tp > 0:
+            
+            usages.append( p( tp ) + ' full-size thumbnails' )
+            
+        
+        if rp > 0:
+            
+            usages.append( p( rp ) + ' resized thumbnails' )
+            
+        
+        if len( usages ) > 0:
+            
+            if fp == tp and tp == rp:
+                
+                usages = [ p( fp ) + ' everything' ]
+                
+            
+            pretty_current_usage = HydrusData.ConvertIntToBytes( current_bytes ) + ' - ' + ','.join( usages )
+            
+        else:
+            
+            pretty_current_usage = 'nothing'
+            
+        
+        #
+        
+        if location in locations_to_ideal_weights:
+            
+            ideal_weight = locations_to_ideal_weights[ location ]
+            
+            pretty_ideal_weight = str( int( ideal_weight ) )
+            
+        else:
+            
+            ideal_weight = 0
+            
+            pretty_ideal_weight = 'n/a'
+            
+        
+        if location in locations_to_ideal_weights:
+            
+            total_ideal_weight = sum( locations_to_ideal_weights.values() )
+            
+            ideal_fp = locations_to_ideal_weights[ location ] / float( total_ideal_weight )
+            
+        else:
+            
+            ideal_fp = 0.0
+            
+        
+        if full_size_thumbnail_override is None:
+            
+            ideal_tp = ideal_fp
+            
+        else:
+            
+            if location == full_size_thumbnail_override:
+                
+                ideal_tp = 1.0
+                
+            else:
+                
+                ideal_tp = 0.0
+                
+            
+        
+        if resized_thumbnail_override is None:
+            
+            ideal_rp = ideal_fp
+            
+        else:
+            
+            if location == resized_thumbnail_override:
+                
+                ideal_rp = 1.0
+                
+            else:
+                
+                ideal_rp = 0.0
+                
+            
+        
+        ideal_bytes = ideal_fp * f_space + ideal_tp * t_space + ideal_rp * r_space
+        
+        ideal_usage = ( ideal_fp, ideal_tp, ideal_rp )
+        
+        usages = []
+        
+        if ideal_fp > 0:
+            
+            usages.append( p( ideal_fp ) + ' files' )
+            
+        
+        if ideal_tp > 0:
+            
+            usages.append( p( ideal_tp ) + ' full-size thumbnails' )
+            
+        
+        if ideal_rp > 0:
+            
+            usages.append( p( ideal_rp ) + ' resized thumbnails' )
+            
+        
+        if len( usages ) > 0:
+            
+            if ideal_fp == ideal_tp and ideal_tp == ideal_rp:
+                
+                usages = [ p( ideal_fp ) + ' everything' ]
+                
+            
+            pretty_ideal_usage = HydrusData.ConvertIntToBytes( ideal_bytes ) + ' - ' + ','.join( usages )
+            
+        else:
+            
+            pretty_ideal_usage = 'nothing'
+            
+        
+        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
+        sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DecreaseWeight( self ):
+        
+        self._AdjustWeight( -1 )
+        
+    
+    def _FileLocationSelected( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        for location in locations:
+            
+            if location in locations_to_file_weights or location in locations_to_ideal_weights:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _GetLocationsToCurrentWeights( self ):
         
         prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
         
@@ -1217,6 +1406,17 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        return ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights )
+        
+    
+    def _GetListCtrlLocations( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        # current
+        
+        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
         #
         
         all_locations = set()
@@ -1239,170 +1439,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         all_locations = list( all_locations )
         
-        all_locations.sort()
-        
-        tuples = []
-        
-        total_ideal_weight = sum( locations_to_ideal_weights.values() )
-        
-        for location in all_locations:
-            
-            pretty_location = location
-            
-            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-            portable = not os.path.isabs( portable_location )
-            
-            if portable:
-                
-                pretty_portable = 'yes'
-                
-            else:
-                
-                pretty_portable = 'no'
-                
-            
-            free_space = HydrusPaths.GetFreeSpace( location )
-            pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
-            
-            fp = locations_to_file_weights[ location ] / 256.0
-            tp = locations_to_fs_thumb_weights[ location ] / 256.0
-            rp = locations_to_r_thumb_weights[ location ] / 256.0
-            
-            p = HydrusData.ConvertFloatToPercentage
-            
-            current_bytes = fp * f_space + tp * t_space + rp * r_space
-            
-            current_usage = ( fp, tp, rp )
-            
-            usages = []
-            
-            if fp > 0:
-                
-                usages.append( p( fp ) + ' files' )
-                
-            
-            if tp > 0:
-                
-                usages.append( p( tp ) + ' full-size thumbnails' )
-                
-            
-            if rp > 0:
-                
-                usages.append( p( rp ) + ' resized thumbnails' )
-                
-            
-            if len( usages ) > 0:
-                
-                if fp == tp and tp == rp:
-                    
-                    usages = [ p( fp ) + ' everything' ]
-                    
-                
-                pretty_current_usage = HydrusData.ConvertIntToBytes( current_bytes ) + ' - ' + ','.join( usages )
-                
-            else:
-                
-                pretty_current_usage = 'nothing'
-                
-            
-            #
-            
-            if location in locations_to_ideal_weights:
-                
-                ideal_weight = locations_to_ideal_weights[ location ]
-                
-                pretty_ideal_weight = str( int( ideal_weight ) )
-                
-            else:
-                
-                ideal_weight = 0
-                
-                pretty_ideal_weight = 'n/a'
-                
-            
-            if location in locations_to_ideal_weights:
-                
-                ideal_fp = locations_to_ideal_weights[ location ] / float( total_ideal_weight )
-                
-            else:
-                
-                ideal_fp = 0.0
-                
-            
-            if full_size_thumbnail_override is None:
-                
-                ideal_tp = ideal_fp
-                
-            else:
-                
-                if location == full_size_thumbnail_override:
-                    
-                    ideal_tp = 1.0
-                    
-                else:
-                    
-                    ideal_tp = 0.0
-                    
-                
-            
-            if resized_thumbnail_override is None:
-                
-                ideal_rp = ideal_fp
-                
-            else:
-                
-                if location == resized_thumbnail_override:
-                    
-                    ideal_rp = 1.0
-                    
-                else:
-                    
-                    ideal_rp = 0.0
-                    
-                
-            
-            ideal_bytes = ideal_fp * f_space + ideal_tp * t_space + ideal_rp * r_space
-            
-            ideal_usage = ( ideal_fp, ideal_tp, ideal_rp )
-            
-            usages = []
-            
-            if ideal_fp > 0:
-                
-                usages.append( p( ideal_fp ) + ' files' )
-                
-            
-            if ideal_tp > 0:
-                
-                usages.append( p( ideal_tp ) + ' full-size thumbnails' )
-                
-            
-            if ideal_rp > 0:
-                
-                usages.append( p( ideal_rp ) + ' resized thumbnails' )
-                
-            
-            if len( usages ) > 0:
-                
-                if ideal_fp == ideal_tp and ideal_tp == ideal_rp:
-                    
-                    usages = [ p( ideal_fp ) + ' everything' ]
-                    
-                
-                pretty_ideal_usage = HydrusData.ConvertIntToBytes( ideal_bytes ) + ' - ' + ','.join( usages )
-                
-            else:
-                
-                pretty_ideal_usage = 'nothing'
-                
-            
-            display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
-            sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
-            
-            tuples.append( ( location, display_tuple, sort_tuple ) )
-            
-        
-        return tuples
+        return all_locations
         
     
     def _IncreaseWeight( self ):
@@ -1524,7 +1561,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         removees = set()
         
-        for ( location, portable, free_space, weight, gumpf, gumpf ) in self._current_media_locations_listctrl.GetSelectedClientData():
+        for location in self._current_media_locations_listctrl.GetData( only_selected = True ):
             
             if location in locations_to_ideal_weights:
                 
@@ -1624,13 +1661,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_db_path_st.SetLabelText( 'database (about ' + HydrusData.ConvertIntToBytes( approx_total_db_size ) + '): ' + self._controller.GetDBDir() )
         self._current_install_path_st.SetLabelText( 'install: ' + HC.BASE_DIR )
         
-        service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        
-        all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-        
-        approx_total_client_files = all_local_files_total_size
-        approx_total_resized_thumbs = all_local_files_total_size * self.RESIZED_RATIO
-        approx_total_fullsize_thumbs = all_local_files_total_size * self.FULLSIZE_RATIO
+        approx_total_client_files = self._all_local_files_total_size
+        approx_total_resized_thumbs = self._all_local_files_total_size * self.RESIZED_RATIO
+        approx_total_fullsize_thumbs = self._all_local_files_total_size * self.FULLSIZE_RATIO
         
         label_components = []
         
@@ -1642,19 +1675,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_media_paths_st.SetLabelText( label )
         
-        selected_locations = { l[0] for l in self._current_media_locations_listctrl.GetSelectedClientData() }
+        locations = self._GetListCtrlLocations()
         
-        self._current_media_locations_listctrl.DeleteAllItems()
-        
-        for ( i, ( location, display_tuple, sort_tuple ) ) in enumerate( self._GenerateCurrentMediaTuples( all_local_files_total_size ) ):
-            
-            self._current_media_locations_listctrl.Append( display_tuple, sort_tuple )
-            
-            if location in selected_locations:
-                
-                self._current_media_locations_listctrl.Select( i )
-                
-            
+        self._current_media_locations_listctrl.SetData( locations )
         
         #
         

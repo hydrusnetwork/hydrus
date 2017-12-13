@@ -4029,6 +4029,42 @@ class DB( HydrusDB.HydrusDB ):
             return query_hash_ids
             
         
+        # start with some quick ways to populate query_hash_ids
+        
+        def update_qhi( query_hash_ids, some_hash_ids ):
+            
+            if query_hash_ids is None:
+                
+                if not isinstance( some_hash_ids, set ):
+                    
+                    some_hash_ids = set( some_hash_ids )
+                    
+                
+                return some_hash_ids
+                
+            else:
+                
+                query_hash_ids.intersection_update( some_hash_ids )
+                
+                return query_hash_ids
+                
+            
+        
+        query_hash_ids = None
+        
+        if system_predicates.HasSimilarTo():
+            
+            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
+            
+            hash_id = self._GetHashId( similar_to_hash )
+            
+            similar_hash_ids = self._CacheSimilarFilesSearch( hash_id, max_hamming )
+            
+            query_hash_ids = update_qhi( query_hash_ids, similar_hash_ids )
+            
+        
+        # now the simple preds and typical ways to populate query_hash_ids
+        
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
         if 'size' in simple_preds: files_info_predicates.append( 'size = ' + str( simple_preds[ 'size' ] ) )
         if 'max_size' in simple_preds: files_info_predicates.append( 'size < ' + str( simple_preds[ 'max_size' ] ) )
@@ -4120,27 +4156,25 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
             
-            query_hash_ids = None
-            
             if len( tags_to_include ) > 0:
                 
-                query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+                tag_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+                
+                query_hash_ids = update_qhi( query_hash_ids, tag_query_hash_ids )
                 
             
             if len( namespaces_to_include ) > 0:
                 
                 namespace_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromNamespace( file_service_key, tag_service_key, namespace, include_current_tags, include_pending_tags ) for namespace in namespaces_to_include ) )
                 
-                if query_hash_ids is None: query_hash_ids = namespace_query_hash_ids
-                else: query_hash_ids.intersection_update( namespace_query_hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, namespace_query_hash_ids )
                 
             
             if len( wildcards_to_include ) > 0:
                 
                 wildcard_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromWildcard( file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ) for wildcard in wildcards_to_include ) )
                 
-                if query_hash_ids is None: query_hash_ids = wildcard_query_hash_ids
-                else: query_hash_ids.intersection_update( wildcard_query_hash_ids )
+                query_hash_ids = update_qhi( query_hash_ids, wildcard_query_hash_ids )
                 
             
             if len( files_info_predicates ) > 0:
@@ -4157,7 +4191,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        else:
+        elif query_hash_ids is None:
             
             if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                 
@@ -4229,6 +4263,10 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        # at this point, query_hash_ids has something in it
+        
+        # hide update files
+        
         if file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
             
             repo_update_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE service_id = ?;', ( self._local_update_service_id, ) ) )
@@ -4236,20 +4274,7 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids.difference_update( repo_update_hash_ids )
             
         
-        #
-        
-        if system_predicates.HasSimilarTo():
-            
-            ( similar_to_hash, max_hamming ) = system_predicates.GetSimilarTo()
-            
-            hash_id = self._GetHashId( similar_to_hash )
-            
-            similar_hash_ids = self._CacheSimilarFilesSearch( hash_id, max_hamming )
-            
-            query_hash_ids.intersection_update( similar_hash_ids )
-            
-        
-        #
+        # now subtract bad results
         
         exclude_query_hash_ids = set()
         
@@ -8013,80 +8038,6 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RecheckVideoMetadata( self, hashes ):
-        
-        job_key = ClientThreading.JobKey()
-        
-        try:
-            
-            job_key.SetVariable( 'popup_title', 'rechecking video metadata' )
-            
-            self._controller.pub( 'modal_message', job_key )
-            
-            client_files_manager = self._controller.client_files_manager
-            
-            num_to_do = len( hashes )
-            
-            for ( i, hash ) in enumerate( hashes ):
-                
-                job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
-                
-                hash_id = self._GetHashId( hash )
-                
-                try:
-                    
-                    mime = self._GetMime( hash_id )
-                    
-                except HydrusExceptions.FileMissingException:
-                    
-                    continue
-                    
-                
-                path = client_files_manager.LocklessGetFilePath( hash, mime )
-                
-                ( ( w, h ), duration, num_frames ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path, count_frames_manually = True )
-                
-                self._c.execute( 'UPDATE files_info SET width = ?, height = ?, duration = ?, num_frames = ? WHERE hash_id = ?;', ( w, h, duration, num_frames, hash_id ) )
-                
-            
-        finally:
-            
-            job_key.SetVariable( 'popup_text_1', 'done!' )
-            
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            
-            job_key.Finish()
-            
-            job_key.Delete()
-            
-        
-    
-    def _RelocateClientFiles( self, prefix, source, dest ):
-        
-        full_source = os.path.join( source, prefix )
-        full_dest = os.path.join( dest, prefix )
-        
-        if os.path.exists( full_source ):
-            
-            HydrusPaths.MergeTree( full_source, full_dest )
-            
-        elif not os.path.exists( full_dest ):
-            
-            HydrusPaths.MakeSureDirectoryExists( full_dest )
-            
-        
-        portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( dest )
-        
-        self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE prefix = ?;', ( portable_dest, prefix ) )
-        
-        if os.path.exists( full_source ):
-            
-            try: HydrusPaths.RecyclePath( full_source )
-            except: pass
-            
-        
-    
     def _RegenerateACCache( self ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
@@ -8138,6 +8089,31 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RelocateClientFiles( self, prefix, source, dest ):
+        
+        full_source = os.path.join( source, prefix )
+        full_dest = os.path.join( dest, prefix )
+        
+        if os.path.exists( full_source ):
+            
+            HydrusPaths.MergeTree( full_source, full_dest )
+            
+        elif not os.path.exists( full_dest ):
+            
+            HydrusPaths.MakeSureDirectoryExists( full_dest )
+            
+        
+        portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( dest )
+        
+        self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE prefix = ?;', ( portable_dest, prefix ) )
+        
+        if os.path.exists( full_source ):
+            
+            try: HydrusPaths.RecyclePath( full_source )
+            except: pass
+            
+        
+    
     def _RepairClientFiles( self, correct_rows ):
         
         for ( incorrect_location, prefix, correct_location ) in correct_rows:
@@ -8150,6 +8126,64 @@ class DB( HydrusDB.HydrusDB ):
             HydrusPaths.MakeSureDirectoryExists( full_abs_correct_location )
             
             self._c.execute( 'UPDATE client_files_locations SET location = ? WHERE location = ? AND prefix = ?;', ( portable_correct_location, portable_incorrect_location, prefix ) )
+            
+        
+    
+    def _ReparseFiles( self, hashes ):
+        
+        job_key = ClientThreading.JobKey()
+        
+        try:
+            
+            job_key.SetVariable( 'popup_title', 'rechecking video metadata' )
+            
+            self._controller.pub( 'modal_message', job_key )
+            
+            client_files_manager = self._controller.client_files_manager
+            
+            num_to_do = len( hashes )
+            
+            for ( i, hash ) in enumerate( hashes ):
+                
+                job_key.SetVariable( 'popup_text_1', 'processing ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+                
+                hash_id = self._GetHashId( hash )
+                
+                try:
+                    
+                    mime = self._GetMime( hash_id )
+                    
+                except HydrusExceptions.FileMissingException:
+                    
+                    continue
+                    
+                
+                path = client_files_manager.LocklessGetFilePath( hash, mime )
+                
+                ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
+                
+                self._c.execute( 'UPDATE files_info SET size = ?, mime = ?, width = ?, height = ?, duration = ?, num_frames = ?, num_words = ? WHERE hash_id = ?;', ( size, mime, width, height, duration, num_frames, num_words, hash_id ) )
+                
+                if mime in HC.MIMES_WITH_THUMBNAILS:
+                    
+                    thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime )
+                    
+                    client_files_manager.LocklessAddFullSizeThumbnail( hash, thumbnail )
+                    
+                
+                self._controller.pub( 'new_file_info', { hash } )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.DeleteVariable( 'popup_gauge_1' )
+            
+            job_key.Finish()
+            
+            job_key.Delete()
             
         
     
@@ -10636,12 +10670,12 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'maintain_similar_files_tree': result = self._CacheSimilarFilesMaintainTree( *args, **kwargs )
         elif action == 'process_repository': result = self._ProcessRepositoryUpdates( *args, **kwargs )
         elif action == 'push_recent_tags': result = self._PushRecentTags( *args, **kwargs )
-        elif action == 'recheck_video_metadata': result = self._RecheckVideoMetadata( *args, **kwargs )
         elif action == 'regenerate_ac_cache': result = self._RegenerateACCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': result = self._CacheSimilarFilesRegenerateTree( *args, **kwargs )
         elif action == 'relocate_client_files': result = self._RelocateClientFiles( *args, **kwargs )
         elif action == 'remote_booru': result = self._SetYAMLDump( YAML_DUMP_ID_REMOTE_BOORU, *args, **kwargs )
         elif action == 'repair_client_files': result = self._RepairClientFiles( *args, **kwargs )
+        elif action == 'reparse_files': result = self._ReparseFiles( *args, **kwargs )
         elif action == 'reset_repository': result = self._ResetRepository( *args, **kwargs )
         elif action == 'save_options': result = self._SaveOptions( *args, **kwargs )
         elif action == 'schedule_full_phash_regen': result = self._CacheSimilarFilesSchedulePHashRegeneration()

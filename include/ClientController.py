@@ -236,94 +236,6 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def Clipboard( self, data_type, data ):
-        
-        # need this cause can't do it in a non-gui thread
-        
-        if data_type == 'paths':
-            
-            paths = data
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.DataObjectComposite()
-                
-                file_data = wx.FileDataObject()
-                
-                for path in paths: file_data.AddFile( path )
-                
-                text_data = wx.TextDataObject( os.linesep.join( paths ) )
-                
-                data.Add( file_data, True )
-                data.Add( text_data, False )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
-            
-        elif data_type == 'text':
-            
-            text = data
-            
-            if wx.TheClipboard.Open():
-                
-                data = wx.TextDataObject( text )
-                
-                wx.TheClipboard.SetData( data )
-                
-                wx.TheClipboard.Close()
-                
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
-            
-        elif data_type == 'bmp':
-            
-            media = data
-            
-            image_renderer = self.GetCache( 'images' ).GetImageRenderer( media )
-            
-            def CopyToClipboard():
-                
-                if wx.TheClipboard.Open():
-                    
-                    wx_bmp = image_renderer.GetWXBitmap()
-                    
-                    data = wx.BitmapDataObject( wx_bmp )
-                    
-                    wx.TheClipboard.SetData( data )
-                    
-                    wx.TheClipboard.Close()
-                    
-                else:
-                    
-                    wx.MessageBox( 'I could not get permission to access the clipboard.' )
-                    
-                
-            
-            def THREADWait():
-                
-                # have to do this in thread, because the image needs the wx event queue to render
-                
-                start_time = time.time()
-                
-                while not image_renderer.IsReady():
-                    
-                    if HydrusData.TimeHasPassed( start_time + 15 ):
-                        
-                        raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
-                        
-                    
-                    time.sleep( 0.1 )
-                    
-                
-                wx.CallAfter( CopyToClipboard )
-                
-            
-            self.CallToThread( THREADWait )
-            
-        
-    
     def CurrentlyIdle( self ):
         
         if HG.force_idle_mode:
@@ -487,6 +399,26 @@ class Controller( HydrusController.HydrusController ):
     def GetBandwidthManager( self ):
         
         raise NotImplementedError()
+        
+    
+    def GetClipboardText( self ):
+        
+        if wx.TheClipboard.Open():
+            
+            data = wx.TextDataObject()
+            
+            wx.TheClipboard.GetData( data )
+            
+            wx.TheClipboard.Close()
+            
+            text = data.GetText()
+            
+            return text
+            
+        else:
+            
+            raise Exception( 'I could not get permission to access the clipboard.' )
+            
         
     
     def GetCommandFromShortcut( self, shortcut_names, shortcut ):
@@ -653,7 +585,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.CallBlockingToWx( wx_code )
         
-        self.sub( self, 'Clipboard', 'clipboard' )
+        self.sub( self, 'ToClipboard', 'clipboard' )
         self.sub( self, 'RestartBooru', 'restart_booru' )
         
     
@@ -1325,6 +1257,94 @@ class Controller( HydrusController.HydrusController ):
         finally:
             
             self._DestroySplash()
+            
+        
+    
+    def ToClipboard( self, data_type, data ):
+        
+        # need this cause can't do it in a non-gui thread
+        
+        if data_type == 'paths':
+            
+            paths = data
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.DataObjectComposite()
+                
+                file_data = wx.FileDataObject()
+                
+                for path in paths: file_data.AddFile( path )
+                
+                text_data = wx.TextDataObject( os.linesep.join( paths ) )
+                
+                data.Add( file_data, True )
+                data.Add( text_data, False )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'Could not get permission to access the clipboard!' )
+            
+        elif data_type == 'text':
+            
+            text = data
+            
+            if wx.TheClipboard.Open():
+                
+                data = wx.TextDataObject( text )
+                
+                wx.TheClipboard.SetData( data )
+                
+                wx.TheClipboard.Close()
+                
+            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
+            
+        elif data_type == 'bmp':
+            
+            media = data
+            
+            image_renderer = self.GetCache( 'images' ).GetImageRenderer( media )
+            
+            def CopyToClipboard():
+                
+                if wx.TheClipboard.Open():
+                    
+                    wx_bmp = image_renderer.GetWXBitmap()
+                    
+                    data = wx.BitmapDataObject( wx_bmp )
+                    
+                    wx.TheClipboard.SetData( data )
+                    
+                    wx.TheClipboard.Close()
+                    
+                else:
+                    
+                    wx.MessageBox( 'I could not get permission to access the clipboard.' )
+                    
+                
+            
+            def THREADWait():
+                
+                # have to do this in thread, because the image needs the wx event queue to render
+                
+                start_time = time.time()
+                
+                while not image_renderer.IsReady():
+                    
+                    if HydrusData.TimeHasPassed( start_time + 15 ):
+                        
+                        raise Exception( 'The image did not render in fifteen seconds, so the attempt to copy it to the clipboard was abandoned.' )
+                        
+                    
+                    time.sleep( 0.1 )
+                    
+                
+                wx.CallAfter( CopyToClipboard )
+                
+            
+            self.CallToThread( THREADWait )
             
         
     

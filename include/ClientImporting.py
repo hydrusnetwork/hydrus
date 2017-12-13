@@ -18,6 +18,7 @@ import HydrusGlobals as HG
 import HydrusPaths
 import HydrusSerialisable
 import HydrusTags
+import HydrusText
 import json
 import os
 import random
@@ -941,49 +942,66 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AdvanceQuery( self, query ):
+    def AdvanceQueries( self, queries ):
         
         with self._lock:
             
-            if query in self._pending_queries:
+            queries_lookup = set( queries )
+            
+            for query in queries:
                 
-                index = self._pending_queries.index( query )
-                
-                if index - 1 >= 0:
+                if query in self._pending_queries:
                     
-                    self._pending_queries.remove( query )
+                    index = self._pending_queries.index( query )
                     
-                    self._pending_queries.insert( index - 1, query )
+                    if index > 0 and self._pending_queries[ index - 1 ] not in queries_lookup:
+                        
+                        self._pending_queries.remove( query )
+                        
+                        self._pending_queries.insert( index - 1, query )
+                        
                     
                 
             
         
     
-    def DelayQuery( self, query ):
+    def DelayQueries( self, queries ):
         
         with self._lock:
             
-            if query in self._pending_queries:
+            queries = list( queries )
+            
+            queries.reverse()
+            
+            queries_lookup = set( queries )
+            
+            for query in queries:
                 
-                index = self._pending_queries.index( query )
-                
-                if index + 1 < len( self._pending_queries ):
+                if query in self._pending_queries:
                     
-                    self._pending_queries.remove( query )
+                    index = self._pending_queries.index( query )
                     
-                    self._pending_queries.insert( index + 1, query )
+                    if index + 1 < len( self._pending_queries ) and self._pending_queries[ index + 1] not in queries_lookup:
+                        
+                        self._pending_queries.remove( query )
+                        
+                        self._pending_queries.insert( index + 1, query )
+                        
                     
                 
             
         
     
-    def DeleteQuery( self, query ):
+    def DeleteQueries( self, queries ):
         
         with self._lock:
             
-            if query in self._pending_queries:
+            for query in queries:
                 
-                self._pending_queries.remove( query )
+                if query in self._pending_queries:
+                    
+                    self._pending_queries.remove( query )
+                    
                 
             
         
@@ -1185,7 +1203,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusData.SplitByLinesep( txt_tags_string ) ]
+                    txt_tags = [ HydrusData.ToUnicode( tag ) for tag in HydrusText.DeserialiseNewlinedTexts( txt_tags_string ) ]
                     
                     if True in ( len( txt_tag ) > 1024 for txt_tag in txt_tags ):
                         
@@ -3331,13 +3349,13 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             for ( seed_text, seed_info ) in old_serialisable_info:
                 
-                if os.path.exists( seed_text ):
+                if seed_text.startswith( 'http' ):
                     
-                    seed_type = SEED_TYPE_HDD
+                    seed_type = SEED_TYPE_URL
                     
                 else:
                     
-                    seed_type = SEED_TYPE_URL
+                    seed_type = SEED_TYPE_HDD
                     
                 
                 seed = Seed( seed_type, seed_text )
@@ -4713,10 +4731,6 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
                 
                 self._paused = True
                 
-            else:
-                
-                self._status = CHECKER_STATUS_OK
-                
             
             self._next_check_time = checker_options.GetNextCheckTime( self._seed_cache, self._last_check_time )
             
@@ -5123,6 +5137,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._thread_paused = True
                 
             
+            self._PublishPageName( page_key )
+            
         
         if error_occurred:
             
@@ -5223,8 +5239,6 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._next_check_time = self._last_check_time + self.MIN_CHECK_PERIOD
             
-            self._thread_status = CHECKER_STATUS_OK
-            
         else:
             
             if self._thread_status != CHECKER_STATUS_404:
@@ -5233,13 +5247,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._thread_status = CHECKER_STATUS_DEAD
                     
-                    self._watcher_status = ''
-                    
                     self._thread_paused = True
-                    
-                else:
-                    
-                    self._thread_status = CHECKER_STATUS_OK
                     
                 
             
@@ -5532,11 +5540,6 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._CheckThread( page_key )
                     
-                    with self._lock:
-                        
-                        self._PublishPageName( page_key )
-                        
-                    
                     time.sleep( 5 )
                     
                     HG.client_controller.WaitUntilViewFree()
@@ -5565,6 +5568,8 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._check_now = True
             
             self._thread_paused = False
+            
+            self._thread_status = CHECKER_STATUS_OK
             
             self._UpdateNextCheckTime()
             
