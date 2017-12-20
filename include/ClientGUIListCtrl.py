@@ -850,6 +850,16 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
     
+    def SelectNone( self ):
+        
+        currently_selected = set( self._GetSelected() )
+        
+        for index in currently_selected:
+            
+            self.Select( index, False )
+            
+        
+    
     def SetData( self, datas ):
         
         datas = set( datas )
@@ -1182,6 +1192,13 @@ class BetterListCtrlPanel( wx.Panel ):
         self._UpdateButtons()
         
         event.Skip()
+        
+    
+    def NewButtonRow( self ):
+        
+        self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        self._vbox.AddF( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
     
     def SetListCtrl( self, listctrl ):

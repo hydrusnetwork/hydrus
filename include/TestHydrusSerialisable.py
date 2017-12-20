@@ -495,7 +495,7 @@ class TestSerialisables( unittest.TestCase ):
         periodic_file_limit = 50
         paused = False
         
-        file_import_options = ClientImporting.FileImportOptions( automatic_archive = False, exclude_deleted = True, min_size = 8 * 1024, min_resolution = [ 25, 25 ] )
+        file_import_options = ClientImporting.FileImportOptions( automatic_archive = False, exclude_deleted = True, present_new_files = True, present_already_in_inbox_files = True, present_archived_files = False, min_size = 8 * 1024, min_resolution = [ 25, 25 ] )
         tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = { HydrusData.GenerateKey() : { 'series', '' } }, service_keys_to_explicit_tags = { HydrusData.GenerateKey() : { 'test explicit tag', 'and another' } } )
         
         no_work_until = HydrusData.GetNow() - 86400 * 20

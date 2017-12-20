@@ -701,6 +701,10 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
         self._exclude_deleted.SetToolTipString( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
         
+        self._present_new_files = wx.CheckBox( self, label = 'present new files' )
+        self._present_already_in_inbox_files = wx.CheckBox( self, label = 'present \'already in db\' files in inbox' )
+        self._present_archived_files = wx.CheckBox( self, label = 'present \'already in db\' files in archive' )
+        
         self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
         self._min_size.SetValue( 5120 )
         
@@ -709,10 +713,13 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = file_import_options.ToTuple()
+        ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution ) = file_import_options.ToTuple()
         
         self._auto_archive.SetValue( automatic_archive )
         self._exclude_deleted.SetValue( exclude_deleted )
+        self._present_new_files.SetValue( present_new_files )
+        self._present_already_in_inbox_files.SetValue( present_already_in_inbox_files )
+        self._present_archived_files.SetValue( present_archived_files )
         self._min_size.SetValue( min_size )
         self._min_resolution.SetValue( min_resolution )
         
@@ -722,6 +729,20 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         vbox.AddF( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        presentation_message = 'For regular import pages, \'presentation\' means if the imported file\'s thumbnail will be added. For quieter queues like subscriptions, it determines if the file will be in any popup message button.'
+        presentation_message += os.linesep * 2
+        presentation_message += 'If you have a very large (10k+ files) file import page, consider hiding some or all of its thumbs to reduce ui lag and increase import speed.'
+        
+        presentation_st = ClientGUICommon.BetterStaticText( self, presentation_message )
+        
+        presentation_st.Wrap( 440 )
+        
+        vbox.AddF( presentation_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._present_new_files, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._present_already_in_inbox_files, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.AddF( self._present_archived_files, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         vbox.AddF( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -733,10 +754,13 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         automatic_archive = self._auto_archive.GetValue()
         exclude_deleted = self._exclude_deleted.GetValue()
+        present_new_files = self._present_new_files.GetValue()
+        present_already_in_inbox_files = self._present_already_in_inbox_files.GetValue()
+        present_archived_files = self._present_archived_files.GetValue()
         min_size = self._min_size.GetValue()
         min_resolution = self._min_resolution.GetValue()
         
-        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
         
     
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):

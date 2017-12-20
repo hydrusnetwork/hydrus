@@ -97,7 +97,7 @@ def THREADDownloadURL( job_key, url, url_string ):
             job_key.SetVariable( 'popup_text_1', 'was already in the database!' )
             
         
-        job_key.SetVariable( 'popup_files', ( { hash }, 'download' ) )
+        job_key.SetVariable( 'popup_files', ( [ hash ], 'download' ) )
         
     elif result == CC.STATUS_DELETED:
         
@@ -116,7 +116,8 @@ def THREADDownloadURLs( job_key, urls, title ):
     num_deleted = 0
     num_failed = 0
     
-    successful_hashes = set()
+    presentation_hashes = []
+    presentation_hashes_fast = set()
     
     for ( i, url ) in enumerate( urls ):
         
@@ -189,7 +190,12 @@ def THREADDownloadURLs( job_key, urls, title ):
                 num_redundant += 1
                 
             
-            successful_hashes.add( hash )
+            if hash not in presentation_hashes_fast:
+                
+                presentation_hashes.append( hash )
+                
+            
+            presentation_hashes_fast.add( hash )
             
         elif result == CC.STATUS_DELETED:
             
@@ -223,9 +229,9 @@ def THREADDownloadURLs( job_key, urls, title ):
     
     job_key.SetVariable( 'popup_text_1', ', '.join( text_components ) )
     
-    if len( successful_hashes ) > 0:
+    if len( presentation_hashes ) > 0:
         
-        job_key.SetVariable( 'popup_files', ( successful_hashes, 'downloads' ) )
+        job_key.SetVariable( 'popup_files', ( presentation_hashes, 'downloads' ) )
         
     
     job_key.DeleteVariable( 'popup_gauge_1' )
@@ -300,9 +306,7 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_REDUNDANT:
             
-            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
-            
-            if automatic_archive:
+            if self._file_import_options.GetAutomaticArchive():
                 
                 service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( self._hash, ) ) ) ] }
                 
@@ -313,7 +317,7 @@ class FileImportJob( object ):
     
     def IsGoodToImport( self ):
         
-        ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
+        ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution ) = self._file_import_options.ToTuple()
         
         ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
         
@@ -350,9 +354,7 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_DELETED:
             
-            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = self._file_import_options.ToTuple()
-            
-            if not exclude_deleted:
+            if not self._file_import_options.GetExcludeDeleted():
                 
                 return True
                 
@@ -637,9 +639,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
                 
-                HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                if self._file_import_options.ShouldPresent( status, in_inbox ):
+                    
+                    ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                    
+                    HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    
                 
             
         except HydrusExceptions.CancelledException:
@@ -1392,28 +1399,71 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, automatic_archive = None, exclude_deleted = None, min_size = None, min_resolution = None ):
+    def __init__( self, automatic_archive = None, exclude_deleted = None, present_new_files = None, present_already_in_inbox_files = None, present_archived_files = None, min_size = None, min_resolution = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
+        if automatic_archive is None:
+            
+            automatic_archive = False
+            
+        
+        if exclude_deleted is None:
+            
+            exclude_deleted = True
+            
+        
+        if present_new_files is None:
+            
+            present_new_files = True
+            
+        
+        if present_already_in_inbox_files is None:
+            
+            present_already_in_inbox_files = True
+            
+        
+        if present_archived_files is None:
+            
+            present_archived_files = True
+            
+        
         self._automatic_archive = automatic_archive
         self._exclude_deleted = exclude_deleted
+        self._present_new_files = present_new_files
+        self._present_already_in_inbox_files = present_already_in_inbox_files
+        self._present_archived_files = present_archived_files
         self._min_size = min_size
         self._min_resolution = min_resolution
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
+        return ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution ) = serialisable_info
+        ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution ) = serialisable_info
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( automatic_archive, exclude_deleted, min_size, min_resolution ) = old_serialisable_info
+            
+            present_new_files = True
+            present_already_in_inbox_files = False
+            present_archived_files = False
+            
+            new_serialisable_info = ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution )
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def FileIsValid( self, size, resolution = None ):
         
         if self._min_size is not None and size < self._min_size:
@@ -1460,6 +1510,36 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             statements.append( 'excluding previously deleted' )
             
         
+        presentation_statements = []
+        
+        if self._present_new_files:
+            
+            presentation_statements.append( 'new' )
+            
+        
+        if self._present_already_in_inbox_files:
+            
+            presentation_statements.append( 'already in inbox' )
+            
+        
+        if self._present_archived_files:
+            
+            presentation_statements.append( 'already in archive' )
+            
+        
+        if len( presentation_statements ) == 0:
+            
+            statements.append( 'not presenting any files' )
+            
+        elif len( presentation_statements ) == 3:
+            
+            statements.append( 'presenting all files' )
+            
+        else:
+            
+            statements.append( 'presenting ' + ', '.join( presentation_statements ) + ' files' )
+            
+        
         if self._min_size is not None:
             
             statements.append( 'excluding < ' + HydrusData.ConvertIntToBytes( self._min_size ) )
@@ -1472,19 +1552,35 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             statements.append( 'excluding < ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
             
         
-        if len( statements ) == 0:
-            
-            statements.append( 'no options set' )
-            
-        
-        summary = ', '.join( statements )
+        summary = os.linesep.join( statements )
         
         return summary
         
     
+    def ShouldPresent( self, status, inbox ):
+        
+        if status == CC.STATUS_SUCCESSFUL and self._present_new_files:
+            
+            return True
+            
+        elif status == CC.STATUS_REDUNDANT:
+            
+            if inbox and self._present_already_in_inbox_files:
+                
+                return True
+                
+            elif not inbox and self._present_archived_files:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def ToTuple( self ):
         
-        return ( self._automatic_archive, self._exclude_deleted, self._min_size, self._min_resolution )
+        return ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS ] = FileImportOptions
@@ -1633,9 +1729,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
                 
-                HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                if self._file_import_options.ShouldPresent( status, in_inbox ):
+                    
+                    ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                    
+                    HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    
                 
                 if self._delete_after_success:
                     
@@ -1734,6 +1835,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFileImportOptions( self ):
+        
+        with self._lock:
+            
+            return self._file_import_options
+            
+        
+    
     def GetSeedCache( self ):
         
         return self._paths_cache
@@ -1754,6 +1863,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             self._paused = not self._paused
             
             self._new_files_event.set()
+            
+        
+    
+    def SetFileImportOptions( self, file_import_options ):
+        
+        with self._lock:
+            
+            self._file_import_options = file_import_options
             
         
     
@@ -1779,7 +1896,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if file_import_options is None:
             
-            file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+            file_import_options = ClientDefaults.GetDefaultFileImportOptions( for_quiet_queue = True )
             
         
         if tag_import_options is None:
@@ -2082,7 +2199,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._path_cache.AddPaths( new_paths )
                 
-                successful_hashes = set()
+                num_files_imported = 0
+                presentation_hashes = []
+                presentation_hashes_fast = set()
                 
                 i = 0
                 
@@ -2174,10 +2293,19 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                                     
                                 
-                            
-                            if status == CC.STATUS_SUCCESSFUL:
+                                num_files_imported += 1
                                 
-                                successful_hashes.add( hash )
+                                if hash not in presentation_hashes_fast:
+                                    
+                                    in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                                    
+                                    if self._file_import_options.ShouldPresent( status, in_inbox ):
+                                        
+                                        presentation_hashes.append( hash )
+                                        
+                                        presentation_hashes_fast.add( hash )
+                                        
+                                    
                                 
                             
                         else:
@@ -2202,16 +2330,16 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                if len( successful_hashes ) > 0:
+                if num_files_imported > 0:
                     
-                    HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ConvertIntToPrettyString( len( successful_hashes ) ) + ' files.' )
+                    HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ConvertIntToPrettyString( num_files_imported ) + ' files.' )
                     
-                    if self._open_popup:
+                    if len( presentation_hashes ) > 0 and self._open_popup:
                         
                         job_key = ClientThreading.JobKey()
                         
                         job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
-                        job_key.SetVariable( 'popup_files', ( successful_hashes, self._name ) )
+                        job_key.SetVariable( 'popup_files', ( presentation_hashes, self._name ) )
                         
                         HG.client_controller.pub( 'message', job_key )
                         
@@ -2466,7 +2594,9 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
                 seed.SetStatus( status, note = note )
                 
             
-            if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+            
+            if self._file_import_options.ShouldPresent( status, in_inbox ):
                 
                 ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
                 
@@ -3377,7 +3507,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     def AddPaths( self, paths ):
         
-        seeds = [ Seed( SEED_TYPE_HDD, path ) for path in paths ]
+        seeds = [ Seed( SEED_TYPE_HDD, path ) for path in paths if not self.HasPath( path ) ]
         
         self.AddSeeds( seeds )
         
@@ -3411,7 +3541,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     def AddURLs( self, urls ):
         
-        seeds = [ Seed( SEED_TYPE_URL, url ) for url in urls ]
+        seeds = [ Seed( SEED_TYPE_URL, url ) for url in urls if not self.HasURL( url ) ]
         
         self.AddSeeds( seeds )
         
@@ -3733,7 +3863,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = 50
         self._paused = False
         
-        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions( for_quiet_queue = True )
         
         new_options = HG.client_controller.new_options
         
@@ -3747,6 +3877,27 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._no_work_until = HydrusData.GetNow() + time_delta
         self._no_work_until_reason = reason
+        
+    
+    def _GetQueriesForProcessing( self ):
+        
+        queries = list( self._queries )
+        
+        if HG.client_controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
+            
+            random.shuffle( queries )
+            
+        else:
+            
+            def key( q ):
+                
+                return q.GetQueryText()
+                
+            
+            queries.sort( key = key )
+            
+        
+        return queries
         
     
     def _GetSerialisableInfo( self ):
@@ -3850,13 +4001,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_count = 0
         
-        # do it randomly so we don't have the first one choking the others for bandwidth over and over
+        all_presentation_hashes = []
         
-        random_queries = list( self._queries )
+        queries = self._GetQueriesForProcessing()
         
-        random.shuffle( random_queries )
-        
-        for query in random_queries:
+        for query in queries:
+            
+            this_query_has_done_work = False
             
             ( query_text, seed_cache ) = query.GetQueryAndSeedCache()
             
@@ -3884,7 +4035,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             num_urls = seed_cache.GetSeedCount()
             
-            successful_hashes = set()
+            presentation_hashes = []
+            presentation_hashes_fast = set()
             
             while True:
                 
@@ -3920,7 +4072,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if p1 or p3 or p4:
                     
-                    if p4:
+                    if p4 and this_query_has_done_work:
                         
                         job_key.SetVariable( 'popup_text_2', 'no more bandwidth to download files, so stopping for now' )
                         
@@ -3990,8 +4142,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                                 job_key.SetVariable( 'popup_text_2', x_out_of_y + 'import successful' )
                                 
-                                successful_hashes.add( hash )
-                                
                             elif status == CC.STATUS_DELETED:
                                 
                                 job_key.SetVariable( 'popup_text_2', x_out_of_y + 'previously deleted' )
@@ -3999,6 +4149,23 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             elif status == CC.STATUS_REDUNDANT:
                                 
                                 job_key.SetVariable( 'popup_text_2', x_out_of_y + 'already in db' )
+                                
+                            
+                            if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+                                
+                                if hash not in presentation_hashes_fast:
+                                    
+                                    in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                                    
+                                    if self._file_import_options.ShouldPresent( status, in_inbox ):
+                                        
+                                        all_presentation_hashes.append( hash )
+                                        
+                                        presentation_hashes.append( hash )
+                                        
+                                        presentation_hashes_fast.add( hash )
+                                        
+                                    
                                 
                             
                         finally:
@@ -4061,9 +4228,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                if len( successful_hashes ) > 0:
+                this_query_has_done_work = True
+                
+                if len( presentation_hashes ) > 0:
                     
-                    job_key.SetVariable( 'popup_files', ( set( successful_hashes ), file_popup_text ) )
+                    job_key.SetVariable( 'popup_files', ( list( presentation_hashes ), file_popup_text ) )
                     
                 
                 time.sleep( 0.1 )
@@ -4071,14 +4240,16 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 HG.client_controller.WaitUntilViewFree()
                 
             
-            if len( successful_hashes ) > 0:
-                
-                files_job_key = ClientThreading.JobKey()
-                
-                files_job_key.SetVariable( 'popup_files', ( set( successful_hashes ), file_popup_text ) )
-                
-                HG.client_controller.pub( 'message', files_job_key )
-                
+        
+        if len( all_presentation_hashes ) > 0:
+            
+            file_popup_text = self._name
+            
+            files_job_key = ClientThreading.JobKey()
+            
+            files_job_key.SetVariable( 'popup_files', ( all_presentation_hashes, file_popup_text ) )
+            
+            HG.client_controller.pub( 'message', files_job_key )
             
         
         job_key.DeleteVariable( 'popup_files' )
@@ -4132,7 +4303,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _SyncQuery( self, job_key ):
         
-        for query in self._queries:
+        queries = self._GetQueriesForProcessing()
+        
+        for query in queries:
             
             if not query.CanSync():
                 
@@ -4388,6 +4561,21 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return self._tag_import_options
         
     
+    def HasQuerySearchText( self, search_text ):
+        
+        for query in self._queries:
+            
+            query_text = query.GetQueryText()
+            
+            if search_text in query_text:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def Merge( self, potential_mergee_subscriptions ):
         
         unmergable_subscriptions = []
@@ -4443,10 +4631,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             subscription._queries = [ query.Duplicate() ]
             
+            subscription.SetName( self._name + ': ' + query.GetQueryText() )
+            
             subscriptions.append( subscription )
             
         
         return subscriptions
+        
+    
+    def SetCheckerOptions( self, checker_options ):
+        
+        self._checker_options = checker_options
+        
+        for query in self._queries:
+            
+            query.UpdateNextCheckTime( self._checker_options )
+            
         
     
     def SetTuple( self, gallery_identifier, gallery_stream_identifiers, queries, checker_options, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until ):
@@ -4650,6 +4850,11 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     def GetQueryAndSeedCache( self ):
         
         return ( self._query, self._seed_cache )
+        
+    
+    def GetQueryText( self ):
+        
+        return self._query
         
     
     def GetSeedCache( self ):
@@ -5433,9 +5638,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
                 
-                HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                if self._file_import_options.ShouldPresent( status, in_inbox ):
+                    
+                    ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                    
+                    HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    
                 
             
         except HydrusExceptions.MimeException as e:
@@ -5894,9 +6104,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
                 
-                ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
                 
-                HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                if self._file_import_options.ShouldPresent( status, in_inbox ):
+                    
+                    ( media_result, ) = HG.client_controller.Read( 'media_results', ( hash, ) )
+                    
+                    HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+                    
                 
             
         except HydrusExceptions.MimeException as e:

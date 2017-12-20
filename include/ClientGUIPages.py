@@ -524,6 +524,11 @@ class Page( wx.SplitterWindow ):
         return self._media_panel.GetSortedMedia()
         
     
+    def GetMediaPanel( self ):
+        
+        return self._media_panel
+        
+    
     def GetName( self ):
         
         return self._management_controller.GetPageName()
@@ -989,8 +994,6 @@ class PagesNotebook( wx.Notebook ):
                 return self
                 
             
-            not_on_my_label = flags & wx.NB_HITTEST_NOWHERE
-            
             if HC.PLATFORM_OSX:
                 
                 ( x, y ) = screen_position
@@ -1003,7 +1006,7 @@ class PagesNotebook( wx.Notebook ):
                 on_child_notebook_somewhere = flags & wx.NB_HITTEST_ONPAGE
                 
             
-            if not_on_my_label and on_child_notebook_somewhere:
+            if on_child_notebook_somewhere:
                 
                 return current_page._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1292,7 +1295,7 @@ class PagesNotebook( wx.Notebook ):
                     ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
                     
                 
-                ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetName() )
+                ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetDisplayName() )
                 
                 ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
                 
@@ -1816,6 +1819,91 @@ class PagesNotebook( wx.Notebook ):
         self.AppendGUISession( name, load_in_a_page_of_pages = False )
         
     
+    def MediaDragAndDropDropped( self, source_page_key, hashes ):
+        
+        source_page = self._GetPageFromPageKey( source_page_key )
+        
+        if source_page is None:
+            
+            return
+            
+        
+        screen_position = wx.GetMousePosition()
+        
+        dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
+        
+        ( x, y ) = screen_position
+        
+        ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
+        
+        do_add = True
+        # do chase - if we need to chase to an existing dest page on which we dropped files
+        # do return - if we need to return to source page if we created a new one
+        
+        if flags & wx.NB_HITTEST_ONPAGE:
+            
+            dest_page = dest_notebook.GetCurrentPage()
+            
+        elif tab_index == wx.NOT_FOUND:
+            
+            dest_page = dest_notebook.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+            
+            do_add = False
+            
+        else:
+            
+            dest_page = dest_notebook.GetPage( tab_index )
+            
+            if isinstance( dest_page, PagesNotebook ):
+                
+                result = dest_page.GetCurrentMediaPage()
+                
+                if result is None:
+                    
+                    dest_page = dest_page.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
+                    
+                    do_add = False
+                    
+                else:
+                    
+                    dest_page = result
+                    
+                
+            
+        
+        if dest_page is None:
+            
+            return # we somehow dropped onto a new notebook that has no pages
+            
+        
+        if dest_page.GetPageKey() == source_page_key:
+            
+            return # we dropped onto the same page we picked up on
+            
+        
+        if do_add:
+            
+            unsorted_media_results = self._controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            dest_page.GetMediaPanel().AddMediaResults( dest_page.GetPageKey(), sorted_media_results )
+            
+        else:
+            
+            self.ShowPage( source_page )
+            
+        
+        ctrl_down = wx.GetKeyState( wx.WXK_COMMAND ) or wx.GetKeyState( wx.WXK_CONTROL )
+        
+        if not ctrl_down:
+            
+            source_page.GetMediaPanel().RemoveMedia( source_page.GetPageKey(), hashes )
+            
+        
+    
     def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False ):
         
         current_page = self.GetCurrentPage()
@@ -2113,22 +2201,12 @@ class PagesNotebook( wx.Notebook ):
         
         ( tab_index, flags ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x, y ) )
         
-        EDGE_PADDING = 10
-        
-        ( left_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
-        ( right_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
-        
-        landed_near_left_edge = left_tab_index != tab_index
-        landed_near_right_edge = right_tab_index != tab_index
-        
-        landed_on_edge = landed_near_right_edge or landed_near_left_edge
-        landed_in_middle = not landed_on_edge
-        
-        there_is_a_page_to_the_left = tab_index > 0
-        there_is_a_page_to_the_right = tab_index < dest_notebook.GetPageCount() - 1
-        
-        page_on_left_is_source = there_is_a_page_to_the_left and dest_notebook.GetPage( tab_index - 1 ) == page
-        page_on_right_is_source = there_is_a_page_to_the_right and dest_notebook.GetPage( tab_index + 1 ) == page
+        if flags & wx.NB_HITTEST_ONPAGE:
+            
+            # was not dropped on label area, so ditch DnD
+            
+            return
+            
         
         if tab_index == wx.NOT_FOUND:
             
@@ -2145,6 +2223,23 @@ class PagesNotebook( wx.Notebook ):
                 
             
         else:
+            
+            EDGE_PADDING = 10
+            
+            ( left_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook, ( x - EDGE_PADDING, y ) )
+            ( right_tab_index, gumpf ) = ClientGUICommon.NotebookScreenToHitTest( dest_notebook,  ( x + EDGE_PADDING, y ) )
+            
+            landed_near_left_edge = left_tab_index != tab_index
+            landed_near_right_edge = right_tab_index != tab_index
+            
+            landed_on_edge = landed_near_right_edge or landed_near_left_edge
+            landed_in_middle = not landed_on_edge
+            
+            there_is_a_page_to_the_left = tab_index > 0
+            there_is_a_page_to_the_right = tab_index < dest_notebook.GetPageCount() - 1
+            
+            page_on_left_is_source = there_is_a_page_to_the_left and dest_notebook.GetPage( tab_index - 1 ) == page
+            page_on_right_is_source = there_is_a_page_to_the_right and dest_notebook.GetPage( tab_index + 1 ) == page
             
             # dropped on source and not on the right edge: do nothing
             

@@ -987,6 +987,7 @@ class NetworkJob( object ):
         
         self._stream_io = cStringIO.StringIO()
         
+        self._error_exception = Exception( 'Exception not initialised.' ) # PyLint hint, wew
         self._error_exception = None
         self._error_text = None
         

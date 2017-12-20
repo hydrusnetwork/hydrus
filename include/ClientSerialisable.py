@@ -182,28 +182,40 @@ def DumpToPng( width, payload, title, payload_description, text, path ):
         
         HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
         
-
-def GetPayloadTypeString( payload_obj ):
     
-    if isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
+def GetPayloadString( payload_obj ):
+    
+    if isinstance( payload_obj, ( str, unicode ) ):
         
-        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
+        return HydrusData.ToByteString( payload_obj )
         
     else:
         
-        if isinstance( payload_obj, HydrusSerialisable.SerialisableBase ):
-            
-            return payload_obj.SERIALISABLE_NAME
-            
-        else:
-            
-            return repr( type( payload_obj ) )
-            
+        return payload_obj.DumpToNetworkString()
+        
+    
+def GetPayloadTypeString( payload_obj ):
+    
+    if isinstance( payload_obj, ( str, unicode ) ):
+        
+        return 'String'
+        
+    elif isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
+        
+        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
+        
+    elif isinstance( payload_obj, HydrusSerialisable.SerialisableBase ):
+        
+        return payload_obj.SERIALISABLE_NAME
+        
+    else:
+        
+        return repr( type( payload_obj ) )
         
     
 def GetPayloadDescriptionAndString( payload_obj ):
     
-    payload_string = payload_obj.DumpToNetworkString()
+    payload_string = GetPayloadString( payload_obj )
     
     payload_description = GetPayloadTypeString( payload_obj ) + ' - ' + HydrusData.ConvertIntToBytes( len( payload_string ) )
     

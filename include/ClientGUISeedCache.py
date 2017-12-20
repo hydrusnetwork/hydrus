@@ -3,12 +3,15 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIListCtrl
 import ClientGUIMenus
+import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
+import ClientSerialisable
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
 import HydrusPaths
+import HydrusText
 import os
 import webbrowser
 import wx
@@ -320,6 +323,105 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
+    def _GetExportableSourcesString( self ):
+        
+        seed_cache = self._seed_cache_get_callable()
+        
+        seeds = seed_cache.GetSeeds()
+        
+        sources = [ seed.seed_data for seed in seeds ]
+        
+        return os.linesep.join( sources )
+        
+    
+    def _GetSourcesFromSourcesString( self, sources_string ):
+        
+        sources_string = HydrusData.ToUnicode( sources_string )
+        
+        sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
+        
+        return sources
+        
+    
+    def _ImportFromClipboard( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        sources = self._GetSourcesFromSourcesString( raw_text )
+        
+        try:
+            
+            self._ImportSources( sources )
+            
+        except:
+            
+            wx.MessageBox( 'Could not import!' )
+            
+            raise
+            
+        
+    
+    def _ImportFromPng( self ):
+        
+        with wx.FileDialog( self, 'select the png with the sources', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                payload = ClientSerialisable.LoadFromPng( path )
+                
+                try:
+                    
+                    sources = self._GetSourcesFromSourcesString( payload )
+                    
+                    self._ImportSources( sources )
+                    
+                except:
+                    
+                    wx.MessageBox( 'Could not import!' )
+                    
+                    raise
+                    
+                
+            
+        
+    
+    def _ImportSources( self, sources ):
+        
+        seed_cache = self._seed_cache_get_callable()
+        
+        if sources[0].startswith( 'http' ):
+            
+            seed_cache.AddURLs( sources )
+            
+        else:
+            
+            seed_cache.AddPaths( sources )
+            
+        
+    
+    def _ExportToPng( self ):
+        
+        payload = self._GetExportableSourcesString()
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            
+            panel = ClientGUISerialisable.PngExportPanel( dlg, payload )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+    
+    def _ExportToClipboard( self ):
+        
+        payload = self._GetExportableSourcesString()
+        
+        HG.client_controller.pub( 'clipboard', 'text', payload )
+        
+    
     def _RetryFailures( self ):
         
         message = 'Are you sure you want to retry all the failed files?'
@@ -386,15 +488,15 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def EventShowMenu( self, event ):
         
-        seed_cache = self._seed_cache_get_callable()
+        menu = wx.Menu()
         
-        menu_items = []
+        seed_cache = self._seed_cache_get_callable()
         
         num_failures = seed_cache.GetSeedCount( CC.STATUS_FAILED )
         
         if num_failures > 0:
             
-            menu_items.append( ( 'normal', 'retry ' + HydrusData.ConvertIntToPrettyString( num_failures ) + ' failures', 'Tell this cache to reattempt all its failures.', self._RetryFailures ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ConvertIntToPrettyString( num_failures ) + ' failures', 'Tell this cache to reattempt all its failures.', self._RetryFailures )
             
         
         num_unknown = seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
@@ -403,45 +505,29 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         if num_processed > 0:
             
-            menu_items.append( ( 'normal', 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' files from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' files from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed )
             
         
-        if len( menu_items ) > 0:
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        if len( seed_cache ) > 0:
             
-            menu = wx.Menu()
+            submenu = wx.Menu()
             
-            for ( item_type, title, description, data ) in menu_items:
-                
-                if item_type == 'normal':
-                    
-                    func = data
-                    
-                    ClientGUIMenus.AppendMenuItem( self, menu, title, description, func )
-                    
-                elif item_type == 'check':
-                    
-                    check_manager = data
-                    
-                    current_value = check_manager.GetCurrentValue()
-                    func = check_manager.Invert
-                    
-                    if current_value is not None:
-                        
-                        ClientGUIMenus.AppendMenuCheckItem( self, menu, title, description, current_value, func )
-                        
-                    
-                elif item_type == 'separator':
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
-                    
-                
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'to clipboard', 'Copy all the sources in this list to the clipboard.', self._ExportToClipboard )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'to png', 'Export all the sources in this list to a png file.', self._ExportToPng )
             
-            HG.client_controller.PopupMenu( self, menu )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'export all sources' )
             
-        else:
-            
-            event.Skip()
-            
+        
+        submenu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'from clipboard', 'Import new urls or paths to this list from the clipboard.', self._ImportFromClipboard )
+        ClientGUIMenus.AppendMenuItem( self, submenu, 'from png', 'Import new urls or paths to this list from a png file.', self._ImportFromPng )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'import new sources' )
+        
+        HG.client_controller.PopupMenu( self, menu )
         
     
 class SeedCacheStatusControl( wx.Panel ):

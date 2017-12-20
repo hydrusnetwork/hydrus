@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 287</h3></li>
+				<ul>
+					<li>thumbnails can now be drag-and-dropped to other pages!</li>
+					<li>dragging and dropping thumbs to another page tab will remove them from the source and append them to the destination, maintaining file order!</li>
+					<li>DnDing thumbs to a 'page of pages' tab will put the files in the next lowest selected media page</li>
+					<li>DnDing thumbs to a blank notebook area (or a page of pages without a selected media page) will create a new page for the thumbs</li>
+					<li>holding down ctrl when you drop thumbnails will not remove them from the source</li>
+					<li>please forgive the thumbnail DnD cursor, which for now will be in the 'copy' state, despite the internal DnD being move by default</li>
+					<li>improved page tab drag and drop drop logic--dropping onto the page area itself will no longer send the page to the right-end of the current notebook</li>
+					<li>the 'file import options' object now supports three 'presentation' booleans--for new/already_in_inbox/already_in_archive files--so you can customise whether new thumbnails appear based on each state. page imports will by default show everything, while 'quieter' import queues like import folders and subscriptions will continue to just show only 'new' files in their files popup buttons. if you have a gui page with 10k+ items in its queue, try reducing the presentation to speed it up!</li>
+					<li>all existing import queues will be updated when they are next loaded--but please note that for simplicity and safety they will all initialise to the 'quiet' presentation method, so if you have ongoing download pages in any of your gui sessions (including thread watchers!), they will only add 'new' thumbnails unless you edit them. I apologise for the inconvenience</li>
+					<li>the regular hdd import now has a file import options button!</li>
+					<li>subscription query 'finished' file popups are now merged up to the subscription level--so, a sub with five queries that each get 20 new files in a run will now ultimately leave one popup with 100 files</li>
+					<li>file popups (as produced by subscriptions and a couple other places) now preserve their import order!</li>
+					<li>if a subscription with many queries runs out of bandwidth, it should now only give you one 'no more bandwidth to download files' message, rather than one for every outstanding query to sync</li>
+					<li>added a checkbox to turn on/off the new random subscription syncing to the options->downloading panel</li>
+					<li>the file import status button's menu now supports import/export of sources to clipboard/png! it _should_ also support unicode. be careful not to paste paths into a url cache, or urls from one gallery site to another, or you'll just get errors--this is prototype, so please keep like with like for now</li>
+					<li>the png import/export system now supports raw string payloads</li>
+					<li>the new listctrlpanel can now hang its buttons in multiple rows</li>
+					<li>the manage subscriptions panel now has an 'overwrite checker options' button to mass-set checker options</li>
+					<li>the manage subscriptions panel now has a 'select subs' button that selects subs based on a basic query text search</li>
+					<li>separating merged subscriptions now sets better new subscription names of 'old_sub_name: query_text'</li>
+					<li>saving a session from a page of pages with a custom name will no longer suggest a session name prepended by [USER]</li>
+					<li>doubled the subscription and downloader instance default bandwidth rules to 400 and 200 rqs/day</li>
+					<li>the 'load_images_with_pil' and 'disable_cv_for_gifs' options are now officially BUGFIX in the options--unless you know you need them on, turn them off!</li>
+					<li>added some safeguards to the new dialog-panel system's OK stuff, which sometimes catches a duplicate OK event</li>
+					<li>shuffled some db update status texts around</li>
+				</ul>
 				<li><h3>version 286</h3></li>
 				<ul>
 					<li>simplified how thread watcher assigns DEAD and 404 status--it should do it more reliably now</li>

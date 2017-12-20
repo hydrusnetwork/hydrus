@@ -54,7 +54,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
+    # most gallery downloaders need two rqs per file (page and file), remember
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 200 ) # after that first sample of small files, take it easy
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
@@ -64,7 +65,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules = HydrusNetworking.BandwidthRules()
     
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 200 ) # catch up on a big sub in little chunks every day
+    # most gallery downloaders need two rqs per file (page and file), remember
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 400 ) # catch up on a big sub in little chunks every day
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
     
@@ -251,14 +253,28 @@ def GetDefaultHentaiFoundryInfo():
     
     return info
     
-def GetDefaultFileImportOptions():
+def GetDefaultFileImportOptions( for_quiet_queue = False ):
     
     automatic_archive = False
     exclude_deleted = HG.client_controller.options[ 'exclude_deleted_files' ]
+    
+    if for_quiet_queue:
+        
+        present_new_files = True
+        present_already_in_inbox_files = False
+        present_archived_files = False
+        
+    else:
+        
+        present_new_files = True
+        present_already_in_inbox_files = True
+        present_archived_files = True
+        
+    
     min_size = None
     min_resolution = None
     
-    file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+    file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
     
     return file_import_options
     
@@ -833,9 +849,9 @@ def GetDefaultURLMatches():
     name = '8chan file'
     url_type = HC.URL_TYPE_FILE
     preferred_scheme = 'https'
-    netloc = 'media.8ch.net'
-    allow_subdomains = False
-    keep_subdomains = False
+    netloc = '8ch.net'
+    allow_subdomains = True
+    keep_subdomains = True
     
     path_components = []
     

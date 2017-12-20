@@ -525,6 +525,11 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
     
     def DoOK( self ):
         
+        if not self.IsModal():
+            
+            return
+            
+        
         SaveTLWSizeAndPosition( self, self._frame_key )
         
         self.EndModal( wx.ID_OK )
@@ -536,12 +541,10 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
         
         DialogThatTakesScrollablePanelClose.__init__( self, parent, title, style_override = style_override )
         
-        self._ok_done = False
-        
     
     def DoOK( self ):
         
-        if self._ok_done:
+        if not self.IsModal():
             
             return
             
@@ -565,8 +568,6 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
         SaveTLWSizeAndPosition( self, self._frame_key )
         
         self.EndModal( wx.ID_OK )
-        
-        self._ok_done = True
         
     
 class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel ):
@@ -600,6 +601,11 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
     
     def DoOK( self ):
         
+        if not self.IsModal():
+            
+            return
+            
+        
         try:
             
             value = self._panel.GetValue()
@@ -624,6 +630,11 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
 class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
     
     def DoOK( self ):
+        
+        if not self.IsModal():
+            
+            return
+            
         
         try:
             

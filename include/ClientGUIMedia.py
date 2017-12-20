@@ -2465,7 +2465,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
                     
-                    data = json.dumps( [ hash.encode( 'hex' ) for hash in hashes ] )
+                    data = ( self._page_key.encode( 'hex' ), [ hash.encode( 'hex' ) for hash in hashes ] )
+                    
+                    data = json.dumps( data )
                     
                     hydrus_media_data_object.SetData( data )
                     

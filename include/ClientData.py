@@ -859,6 +859,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'thumbnail_fill' ] = False
         
+        self._dictionary[ 'booleans' ][ 'process_subs_in_random_order' ] = True
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()

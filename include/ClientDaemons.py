@@ -296,7 +296,14 @@ def DAEMONSynchroniseSubscriptions( controller ):
     
     subscription_names = list( controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ) )
     
-    random.shuffle( subscription_names )
+    if controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
+        
+        random.shuffle( subscription_names )
+        
+    else:
+        
+        subscription_names.sort()
+        
     
     HG.subscriptions_running = True
     

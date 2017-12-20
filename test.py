@@ -128,6 +128,7 @@ class Controller( object ):
         self._reads[ 'sessions' ] = []
         self._reads[ 'tag_parents' ] = {}
         self._reads[ 'tag_siblings' ] = {}
+        self._reads[ 'in_inbox' ] = False
         
         self._writes = collections.defaultdict( list )
         

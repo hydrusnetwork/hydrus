@@ -1635,6 +1635,12 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
+        self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
+        
+        file_import_options = self._hdd_import.GetFileImportOptions()
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._import_queue_panel, file_import_options, self._hdd_import.SetFileImportOptions )
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -1646,6 +1652,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1654,8 +1661,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self.SetSizer( vbox )
         
         #
-        
-        self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
         
         seed_cache = self._hdd_import.GetSeedCache()
         

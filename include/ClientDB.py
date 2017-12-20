@@ -152,6 +152,8 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.HydrusDB.__init__( self, controller, db_dir, db_name, no_wal = no_wal )
         
+        self._controller.pub( 'splash_set_title_text', u'booting db\u2026' )
+        
     
     def _AddFilesInfo( self, rows, overwrite = False ):
         
@@ -1411,7 +1413,7 @@ class DB( HydrusDB.HydrusDB ):
                     job_key.SetVariable( 'popup_text_1', text )
                     job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
                     
-                    HG.client_controller.pub( 'splash_set_status_text', text )
+                    HG.client_controller.pub( 'splash_set_status_subtext', text )
                     
                 
                 duplicate_hash_ids = [ duplicate_hash_id for duplicate_hash_id in self._CacheSimilarFilesSearch( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
@@ -1486,7 +1488,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 text = 'regenerating similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( total_done_previously + i, total_num_hash_ids_in_cache )
                 
-                HG.client_controller.pub( 'splash_set_status_text', text )
+                HG.client_controller.pub( 'splash_set_status_subtext', text )
                 job_key.SetVariable( 'popup_text_1', text )
                 job_key.SetVariable( 'popup_gauge_1', ( total_done_previously + i, total_num_hash_ids_in_cache ) )
                 
@@ -1603,7 +1605,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
                 
-                HG.client_controller.pub( 'splash_set_status_text', text )
+                HG.client_controller.pub( 'splash_set_status_subtext', text )
                 job_key.SetVariable( 'popup_text_1', text )
                 job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                 
@@ -6434,9 +6436,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_import_options = file_import_job.GetFileImportOptions()
             
-            ( archive, exclude_deleted_files, min_size, min_resolution ) = file_import_options.ToTuple()
-            
-            if archive:
+            if file_import_options.GetAutomaticArchive():
                 
                 self._ArchiveFiles( ( hash_id, ) )
                 
@@ -6574,6 +6574,13 @@ class DB( HydrusDB.HydrusDB ):
         self._db_filenames[ 'external_caches' ] = 'client.caches.db'
         self._db_filenames[ 'external_mappings' ] = 'client.mappings.db'
         self._db_filenames[ 'external_master' ] = 'client.master.db'
+        
+    
+    def _InInbox( self, hash ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        return hash_id in self._inbox_hash_ids
         
     
     def _IsAnOrphan( self, test_type, possible_hash ):
@@ -7999,6 +8006,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
         elif action == 'imageboards': result = self._GetYAMLDump( YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
+        elif action == 'in_inbox': result = self._InInbox( *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
         elif action == 'load_into_disk_cache': result = self._LoadIntoDiskCache( *args, **kwargs )
         elif action == 'local_booru_share_keys': result = self._GetYAMLDumpNames( YAML_DUMP_ID_LOCAL_BOORU )
@@ -8552,7 +8560,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _UpdateDB( self, version ):
         
-        self._controller.pub( 'splash_set_title_text', 'updating db to v' + str( version + 1 ) )
+        self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
         
         if version == 239:
             
@@ -8562,7 +8570,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._controller.pub( 'splash_set_status_text', 'setting up next step of similar files stuff' )
+            self._controller.pub( 'splash_set_status_subtext', 'setting up next step of similar files stuff' )
             
             self._c.execute( 'CREATE TABLE external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
             
@@ -8638,7 +8646,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # first, convert existing tag_id to subtag_id
             
-            self._controller.pub( 'splash_set_status_text', 'converting existing tags to subtags' )
+            self._controller.pub( 'splash_set_status_subtext', 'converting existing tags to subtags' )
             
             self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.subtags ( subtag_id INTEGER PRIMARY KEY, subtag TEXT UNIQUE );' )
             
@@ -8653,7 +8661,7 @@ class DB( HydrusDB.HydrusDB ):
             
             # now create the new tags table
             
-            self._controller.pub( 'splash_set_status_text', 'creating the new tags table' )
+            self._controller.pub( 'splash_set_status_subtext', 'creating the new tags table' )
             
             self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.tags ( tag_id INTEGER PRIMARY KEY, namespace_id INTEGER, subtag_id INTEGER );' )
             
@@ -8685,7 +8693,7 @@ class DB( HydrusDB.HydrusDB ):
                 return tag_id
                 
             
-            self._controller.pub( 'splash_set_status_text', 'compacting smaller tables' )
+            self._controller.pub( 'splash_set_status_subtext', 'compacting smaller tables' )
             
             #
             
@@ -8797,7 +8805,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for cache_table_name in cache_table_names:
                 
-                self._controller.pub( 'splash_set_status_text', 'compacting ' + cache_table_name )
+                self._controller.pub( 'splash_set_status_subtext', 'compacting ' + cache_table_name )
                 
                 if cache_table_name.startswith( 'combined_files_ac_cache_' ) or cache_table_name.startswith( 'specific_ac_cache_' ):
                     
@@ -8827,7 +8835,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for mapping_table_name in mapping_table_names:
                 
-                self._controller.pub( 'splash_set_status_text', 'compacting ' + mapping_table_name )
+                self._controller.pub( 'splash_set_status_subtext', 'compacting ' + mapping_table_name )
                 
                 if mapping_table_name.startswith( 'current_mappings_' ) or mapping_table_name.startswith( 'deleted_mappings_' ) or mapping_table_name.startswith( 'pending_mappings_' ):
                     
@@ -8839,7 +8847,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( 'DROP TABLE old_table;' )
                     
-                    self._controller.pub( 'splash_set_status_text', 'indexing ' + mapping_table_name )
+                    self._controller.pub( 'splash_set_status_subtext', 'indexing ' + mapping_table_name )
                     
                     self._c.execute( 'CREATE UNIQUE INDEX external_mappings.' + mapping_table_name + '_hash_id_tag_id_index ON ' + mapping_table_name + ' ( hash_id, tag_id );' )
                     
@@ -8853,13 +8861,13 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._c.execute( 'DROP TABLE old_table;' )
                     
-                    self._controller.pub( 'splash_set_status_text', 'indexing ' + mapping_table_name )
+                    self._controller.pub( 'splash_set_status_subtext', 'indexing ' + mapping_table_name )
                     
                     self._c.execute( 'CREATE UNIQUE INDEX external_mappings.' + mapping_table_name + '_hash_id_tag_id_index ON ' + mapping_table_name + ' ( hash_id, tag_id );' )
                     
                 
             
-            self._controller.pub( 'splash_set_status_text', 'committing to disk' )
+            self._controller.pub( 'splash_set_status_subtext', 'committing to disk' )
             
             self._CloseDBCursor()
             
@@ -8867,7 +8875,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for filename in [ 'client.mappings.db', 'client.master.db', 'client.caches.db', 'client.db' ]:
                     
-                    self._controller.pub( 'splash_set_status_text', 'vacuuming ' + filename )
+                    self._controller.pub( 'splash_set_status_subtext', 'vacuuming ' + filename )
                     
                     db_path = os.path.join( self._db_dir, filename )
                     
@@ -8892,7 +8900,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for schema in [ 'main', 'external_caches', 'external_master', 'external_mappings' ]:
                 
-                self._controller.pub( 'splash_set_status_text', 'analyzing ' + schema )
+                self._controller.pub( 'splash_set_status_subtext', 'analyzing ' + schema )
                 
                 try:
                     
@@ -8918,7 +8926,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._BeginImmediate()
                 
             
-            self._controller.pub( 'splash_set_status_text', 'updating services' )
+            self._controller.pub( 'splash_set_status_subtext', 'updating services' )
             
             old_service_info = self._c.execute( 'SELECT * FROM services;' ).fetchall()
             
@@ -9016,7 +9024,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._controller.pub( 'splash_set_status_text', 'deleting misc old cruft' )
+            self._controller.pub( 'splash_set_status_subtext', 'deleting misc old cruft' )
             
             self._c.execute( 'DROP TABLE news;' )
             self._c.execute( 'DROP TABLE contacts;' )
@@ -9032,7 +9040,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.execute( 'DROP TABLE incoming_message_statuses;' )
             self._c.execute( 'DROP TABLE messages;' )
             
-            self._controller.pub( 'splash_set_status_text', 'deleting old updates dir' )
+            self._controller.pub( 'splash_set_status_subtext', 'deleting old updates dir' )
             
             updates_dir = os.path.join( self._db_dir, 'client_updates' )
             
@@ -9181,7 +9189,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._controller.pub( 'splash_set_status_text', 'cleaning tags' )
+            self._controller.pub( 'splash_set_status_subtext', 'cleaning tags' )
             
             dirty_namespace_info = []
             dirty_subtag_info = []
@@ -9230,7 +9238,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            self._controller.pub( 'splash_set_status_text', HydrusData.ConvertIntToPrettyString( len( dirty_namespace_info ) + len( dirty_subtag_info ) ) + ' dirty tag parts found, now cleaning' )
+            self._controller.pub( 'splash_set_status_subtext', HydrusData.ConvertIntToPrettyString( len( dirty_namespace_info ) + len( dirty_subtag_info ) ) + ' dirty tag parts found, now cleaning' )
             
             dirty_and_clean_tag_ids = []
             
@@ -9313,7 +9321,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            self._controller.pub( 'splash_set_status_text', HydrusData.ConvertIntToPrettyString( len( invalid_subtag_ids ) ) + ' invalid tag parts found, now replacing' )
+            self._controller.pub( 'splash_set_status_subtext', HydrusData.ConvertIntToPrettyString( len( invalid_subtag_ids ) ) + ' invalid tag parts found, now replacing' )
             
             for ( i, invalid_subtag_id ) in enumerate( invalid_subtag_ids ):
                 
@@ -9340,7 +9348,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitCaches()
             
-            self._controller.pub( 'splash_set_status_text', 'cleaning tags again' )
+            self._controller.pub( 'splash_set_status_subtext', 'cleaning tags again' )
             
             tag_service_ids = [ service_id for ( service_id, ) in self._c.execute( 'SELECT service_id FROM services WHERE service_type IN ( ?, ? );', ( HC.TAG_REPOSITORY, HC.LOCAL_TAG ) ) ]
             
@@ -9609,7 +9617,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._controller.pub( 'splash_set_status_text', 'regenerating some tag search data' )
+            self._controller.pub( 'splash_set_status_subtext', 'regenerating some tag search data' )
             
             old_subtag_info = self._c.execute( 'SELECT docid, subtag FROM subtags_fts4;' ).fetchall()
             
@@ -9650,7 +9658,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 260:
             
-            self._controller.pub( 'splash_set_status_text', 'generating some new tag search data' )
+            self._controller.pub( 'splash_set_status_subtext', 'generating some new tag search data' )
             
             self._c.execute( 'CREATE TABLE external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
             
@@ -9707,7 +9715,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 262:
             
-            self._controller.pub( 'splash_set_status_text', 'moving some hash data' )
+            self._controller.pub( 'splash_set_status_subtext', 'moving some hash data' )
             
             self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.hashes ( hash_id INTEGER PRIMARY KEY, hash BLOB_BYTES UNIQUE );' )
             
@@ -9724,7 +9732,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._CloseDBCursor()
             
-            self._controller.pub( 'splash_set_status_text', 'vacuuming main db ' )
+            self._controller.pub( 'splash_set_status_subtext', 'vacuuming main db ' )
             
             db_path = os.path.join( self._db_dir, 'client.db' )
             
@@ -9757,7 +9765,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            self._controller.pub( 'splash_set_status_text', 'generating deleted tag cache' )
+            self._controller.pub( 'splash_set_status_subtext', 'generating deleted tag cache' )
             
             tag_service_ids = self._GetServiceIds( HC.TAG_SERVICES )
             file_service_ids = self._GetServiceIds( HC.AUTOCOMPLETE_CACHE_SPECIFIC_FILE_SERVICES )
@@ -9804,7 +9812,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 263:
             
-            self._controller.pub( 'splash_set_status_text', 'rebuilding urls table' )
+            self._controller.pub( 'splash_set_status_subtext', 'rebuilding urls table' )
             
             self._c.execute( 'ALTER TABLE urls RENAME TO urls_old;' )
             
@@ -9944,7 +9952,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 277:
             
-            self._controller.pub( 'splash_set_status_text', 'updating tumblr urls' )
+            self._controller.pub( 'splash_set_status_subtext', 'updating tumblr urls' )
             
             urls = self._c.execute( 'SELECT hash_id, url FROM urls;' ).fetchall()
             
@@ -10080,6 +10088,13 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 286:
+            
+            message = '\'File import options\' now support different \'presentation\' options that change which import files\' thumbnails appear in import pages. Although _new_ import pages will continue to show everything by default, all _existing_ file import options will update to a conservative, \'quiet\' default that will only show new files. Please double-check any existing import pages if you want to see thumbnails for files that are \'already in db\'. I apologise for the inconvenience.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

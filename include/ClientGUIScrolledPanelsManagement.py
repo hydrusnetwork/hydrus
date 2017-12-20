@@ -1767,6 +1767,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
+            general = ClientGUICommon.StaticBox( self, 'general' )
+            
+            self._verify_regular_https = wx.CheckBox( general )
+            
             self._external_host = wx.TextCtrl( self )
             self._external_host.SetToolTipString( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
@@ -1785,12 +1789,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._new_options = HG.client_controller.new_options
+            
+            self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
+            
             if HC.options[ 'external_host' ] is not None:
                 
                 self._external_host.SetValue( HC.options[ 'external_host' ] )
                 
-            
-            self._new_options = HG.client_controller.new_options
             
             self._network_timeout.SetValue( self._new_options.GetInteger( 'network_timeout' ) )
             
@@ -1823,6 +1829,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             #
+            
+            rows = []
+            
+            rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( general, rows )
+            
+            general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             text = 'You have to restart the client for proxy settings to take effect.'
             text += os.linesep
@@ -1857,6 +1871,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            vbox.AddF( general, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.AddF( proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -1864,6 +1879,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             
             if self._proxy_address.GetValue() == '':
                 
@@ -1904,15 +1921,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            general = ClientGUICommon.StaticBox( self, 'general' )
-            
-            self._verify_regular_https = wx.CheckBox( general )
-            
             #
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
             
             self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'by default, stop searching once this many files are found', none_phrase = 'no limit', min = 1, max = 1000000 )
+            
+            #
+            
+            subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
+            
+            self._process_subs_in_random_order = wx.CheckBox( subscriptions )
+            self._process_subs_in_random_order.SetToolTipString( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
             
             #
             
@@ -1929,7 +1949,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._verify_regular_https.SetValue( self._new_options.GetBoolean( 'verify_regular_https' ) )
+            self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
@@ -1940,17 +1960,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'BUGFIX: verify regular https traffic:', self._verify_regular_https ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( general, rows )
-            
-            general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gallery_downloader.AddF( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
-            gallery_downloader.AddF( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows = []
+            
+            rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
+            
+            subscriptions.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -1970,8 +1990,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( general, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.AddF( subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.AddF( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
@@ -1979,8 +1999,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetBoolean( 'verify_regular_https', self._verify_regular_https.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
+            
+            self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
             
             self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
             
@@ -2855,10 +2876,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_gifs = wx.CheckBox( self )
-            self._disable_cv_for_gifs.SetToolTipString( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead.' )
+            self._disable_cv_for_gifs.SetToolTipString( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
             self._load_images_with_pil = wx.CheckBox( self )
-            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images.' )
+            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
             self._do_not_import_decompression_bombs = wx.CheckBox( self )
             self._do_not_import_decompression_bombs.SetToolTipString( 'Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large (typically 100MegaPixel+) images. Check this to disallow them before they blat your computer.' )
@@ -2913,12 +2934,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
-            rows.append( ( 'Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
-            rows.append( ( 'Load images with PIL: ', self._load_images_with_pil ) )
             rows.append( ( 'Do not import Decompression Bombs: ', self._do_not_import_decompression_bombs ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
-            rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
+            rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
+            rows.append( ( 'BUGFIX: Load images with PIL: ', self._load_images_with_pil ) )
+            rows.append( ( 'BUGFIX: Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -5048,7 +5069,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
         subscriptions_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
         
-        subscriptions_panel.AddSeparator()
+        subscriptions_panel.NewButtonRow()
         
         subscriptions_panel.AddButton( 'merge', self.Merge, enabled_check_func = self._CanMerge )
         subscriptions_panel.AddButton( 'separate', self.Separate, enabled_check_func = self._CanSeparate )
@@ -5060,6 +5081,11 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
         subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
         subscriptions_panel.AddButton( 'reset', self.Reset, enabled_check_func = self._CanReset )
+        
+        subscriptions_panel.NewButtonRow()
+        
+        subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
+        subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
         
         #
         
@@ -5610,6 +5636,33 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._subscriptions.UpdateDatas( subscriptions )
         
     
+    def SelectSubscriptions( self ):
+        
+        message = 'This selects subscriptions based on query text. Please enter some search text, and any subscription that has a query that includes that text will be selected.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                search_text = dlg.GetValue()
+                
+                self._subscriptions.SelectNone()
+                
+                selectee_subscriptions = []
+                
+                for subscription in self._subscriptions.GetData():
+                    
+                    if subscription.HasQuerySearchText( search_text ):
+                        
+                        selectee_subscriptions.append( subscription )
+                        
+                    
+                
+                self._subscriptions.SelectDatas( selectee_subscriptions )
+                
+            
+        
+    
     def Separate( self ):
         
         message = 'Are you sure you want to separate the selected subscriptions? This will cause all the subscriptions with multiple queries to be split into duplicates that each only have one query.'
@@ -5635,6 +5688,32 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
                 self._subscriptions.Sort()
+                
+            
+        
+    
+    def SetCheckerOptions( self ):
+        
+        checker_options = ClientData.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
+            
+            panel = ClientGUITime.EditCheckerOptions( dlg, checker_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                checker_options = panel.GetValue()
+                
+                subscriptions = self._subscriptions.GetData( only_selected = True )
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetCheckerOptions( checker_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
                 
             
         
