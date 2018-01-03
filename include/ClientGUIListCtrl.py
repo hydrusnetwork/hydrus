@@ -67,13 +67,11 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self.Bind( wx.EVT_LIST_COL_BEGIN_DRAG, self.EventBeginColDrag )
         
     
-    _GetDataIndex = wx.ListCtrl.GetItemData
-    
     def _GetIndexFromDataIndex( self, data_index ):
         
         if self._data_indices_to_sort_indices_dirty:
             
-            self._data_indices_to_sort_indices = { self._GetDataIndex( index ) : index for index in range( self.GetItemCount() ) }
+            self._data_indices_to_sort_indices = { self.GetItemData( index ) : index for index in range( self.GetItemCount() ) }
             
             self._data_indices_to_sort_indices_dirty = False
             
@@ -185,7 +183,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         if index is None:
             
-            data_indicies = [ self._GetDataIndex( index ) for index in range( self.GetItemCount() ) ]
+            data_indicies = [ self.GetItemData( index ) for index in range( self.GetItemCount() ) ]
             
             datas = [ tuple( self.itemDataMap[ data_index ] ) for data_index in data_indicies ]
             
@@ -193,7 +191,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         else:
             
-            data_index = self._GetDataIndex( index )
+            data_index = self.GetItemData( index )
             
             return tuple( self.itemDataMap[ data_index ] )
             
@@ -305,12 +303,12 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for value in display_tuple:
             
-            self.SetStringItem( index, column, value )
+            self.SetItem( index, column, value )
             
             column += 1
             
         
-        data_index = self._GetDataIndex( index )
+        data_index = self.GetItemData( index )
         
         self.itemDataMap[ data_index ] = list( sort_tuple )
         
@@ -354,7 +352,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
     
     def GetObject( self, index ):
         
-        data_index = self._GetDataIndex( index )
+        data_index = self.GetItemData( index )
         
         return self._data_indices_to_objects[ data_index ]
         
@@ -370,7 +368,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
             indicies = range( self.GetItemCount() )
             
         
-        data_indicies = [ self._GetDataIndex( index ) for index in indicies ]
+        data_indicies = [ self.GetItemData( index ) for index in indicies ]
         
         datas = [ self._data_indices_to_objects[ data_index ] for data_index in data_indicies ]
         
@@ -420,7 +418,7 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         
         SaneListCtrl.UpdateRow( self, index, display_tuple, sort_tuple )
         
-        data_index = self._GetDataIndex( index )
+        data_index = self.GetItemData( index )
         
         self._data_indices_to_objects[ data_index ] = obj
         self._objects_to_data_indices[ obj ] = data_index
@@ -465,7 +463,7 @@ class SaneListCtrlPanel( wx.Panel ):
         
         button = ClientGUICommon.BetterButton( self, label, clicked_func )
         
-        self._buttonbox.AddF( button, CC.FLAGS_VCENTER )
+        self._buttonbox.Add( button, CC.FLAGS_VCENTER )
         
         if enabled_only_on_selection:
             
@@ -480,10 +478,15 @@ class SaneListCtrlPanel( wx.Panel ):
     
     def AddWindow( self, window ):
         
-        self._buttonbox.AddF( window, CC.FLAGS_VCENTER )
+        self._buttonbox.Add( window, CC.FLAGS_VCENTER )
         
     
     def EventContentChanged( self, event ):
+        
+        if not self._listctrl:
+            
+            return
+            
         
         self._UpdateButtons()
         
@@ -491,6 +494,11 @@ class SaneListCtrlPanel( wx.Panel ):
         
     
     def EventSelectionChanged( self, event ):
+        
+        if not self._listctrl:
+            
+            return
+            
         
         self._UpdateButtons()
         
@@ -501,8 +509,8 @@ class SaneListCtrlPanel( wx.Panel ):
         
         self._listctrl = listctrl
         
-        self._vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._vbox.AddF( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        self._vbox.Add( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( self._vbox )
         
@@ -665,7 +673,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for ( column_index, value ) in enumerate( display_tuple ):
             
-            self.SetStringItem( index, column_index, value )
+            self.SetItem( index, column_index, value )
             
         
     
@@ -946,7 +954,7 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_check_func = None ):
         
-        self._buttonbox.AddF( button, CC.FLAGS_VCENTER )
+        self._buttonbox.Add( button, CC.FLAGS_VCENTER )
         
         if enabled_only_on_selection:
             
@@ -1172,12 +1180,12 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def AddSeparator( self ):
         
-        self._buttonbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._buttonbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def AddWindow( self, window ):
         
-        self._buttonbox.AddF( window, CC.FLAGS_VCENTER )
+        self._buttonbox.Add( window, CC.FLAGS_VCENTER )
         
     
     def EventContentChanged( self, event ):
@@ -1198,15 +1206,15 @@ class BetterListCtrlPanel( wx.Panel ):
         
         self._buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        self._vbox.AddF( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
     
     def SetListCtrl( self, listctrl ):
         
         self._listctrl = listctrl
         
-        self._vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._vbox.AddF( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
+        self._vbox.Add( self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._vbox.Add( self._buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( self._vbox )
         

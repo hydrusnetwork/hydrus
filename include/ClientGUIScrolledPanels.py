@@ -54,7 +54,7 @@ class EditSingleCtrlPanel( EditPanel ):
         
         self._control = control
         
-        self._vbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._vbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
 class ManagePanel( ResizingScrolledPanel ):

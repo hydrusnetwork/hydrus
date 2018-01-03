@@ -72,14 +72,14 @@ class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._account_types_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._account_types_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -276,14 +276,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        add_remove_hbox.AddF( self._add_button, CC.FLAGS_LONE_BUTTON )
-        add_remove_hbox.AddF( self._edit_button, CC.FLAGS_LONE_BUTTON )
-        add_remove_hbox.AddF( self._delete_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.Add( self._add_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.Add( self._edit_button, CC.FLAGS_LONE_BUTTON )
+        add_remove_hbox.Add( self._delete_button, CC.FLAGS_LONE_BUTTON )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( add_remove_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( add_remove_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -460,11 +460,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             for panel in self._panels:
                 
-                vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             self.SetSizer( vbox )
@@ -608,7 +608,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self.AddF( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -650,14 +650,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._host, CC.FLAGS_EXPAND_BOTH_WAYS )
-                hbox.AddF( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
-                hbox.AddF( self._port, CC.FLAGS_VCENTER )
+                hbox.Add( self._host, CC.FLAGS_EXPAND_BOTH_WAYS )
+                hbox.Add( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
+                hbox.Add( self._port, CC.FLAGS_VCENTER )
                 
                 wrapped_hbox = ClientGUICommon.WrapInText( hbox, self, 'address: ' )
                 
-                self.AddF( wrapped_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self.AddF( self._test_address_button, CC.FLAGS_LONE_BUTTON )
+                self.Add( wrapped_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( self._test_address_button, CC.FLAGS_LONE_BUTTON )
                 
             
             def _TestAddress( self ):
@@ -767,13 +767,13 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._register, CC.FLAGS_LONE_BUTTON )
-                hbox.AddF( self._test_credentials_button, CC.FLAGS_LONE_BUTTON )
+                hbox.Add( self._register, CC.FLAGS_LONE_BUTTON )
+                hbox.Add( self._test_credentials_button, CC.FLAGS_LONE_BUTTON )
                 
                 wrapped_access_key = ClientGUICommon.WrapInText( self._access_key, self, 'access key: ' )
                 
-                self.AddF( wrapped_access_key, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+                self.Add( wrapped_access_key, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
                 
             
             def _GetAccessKeyFromRegistrationKey( self ):
@@ -1046,7 +1046,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1078,11 +1078,11 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._booru_options_panel.AddF( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.AddF( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._booru_options_panel.AddF( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._booru_options_panel.Add( self._port, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.Add( self._upnp, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._booru_options_panel.Add( self._bandwidth_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self.AddF( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self.Add( self._booru_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
             
             def GetValue( self ):
@@ -1146,8 +1146,8 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     hbox = wx.BoxSizer( wx.HORIZONTAL )
                     
-                    hbox.AddF( border_ctrl, CC.FLAGS_VCENTER )
-                    hbox.AddF( fill_ctrl, CC.FLAGS_VCENTER )
+                    hbox.Add( border_ctrl, CC.FLAGS_VCENTER )
+                    hbox.Add( fill_ctrl, CC.FLAGS_VCENTER )
                     
                     if colour_type == ClientRatings.LIKE: colour_text = 'liked'
                     elif colour_type == ClientRatings.DISLIKE: colour_text = 'disliked'
@@ -1159,7 +1159,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 gridbox = ClientGUICommon.WrapInGrid( self, rows )
                 
-                self.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1210,7 +1210,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 gridbox = ClientGUICommon.WrapInGrid( self, rows )
                 
-                self.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1248,7 +1248,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 tts += os.linesep
                 tts += 'http://ipfs.io/ipfs/'
                 
-                self._multihash_prefix.SetToolTipString( tts )
+                self._multihash_prefix.SetToolTip( tts )
                 
                 #
                 
@@ -1256,7 +1256,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self.AddF( ClientGUICommon.WrapInText( self._multihash_prefix, self, 'multihash prefix: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                self.Add( ClientGUICommon.WrapInText( self._multihash_prefix, self, 'multihash prefix: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             def GetValue( self ):
@@ -1292,7 +1292,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
-        #self._listbook.AddPage( 'file storage locations', 'file storage locations', self._ClientFilesPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
@@ -1300,291 +1299,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
-    class _ClientFilesPanel( wx.Panel ):
-        
-        def __init__( self, parent ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._client_files = ClientGUIListCtrl.SaneListCtrl( self, 120, [ ( 'preferred path', -1 ), ( 'how the client will store it', 180 ), ( 'weight', 80 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
-            
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
-            self._edit = wx.Button( self, label = 'edit weight' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEditWeight )
-            
-            self._delete = wx.Button( self, label = 'delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            self._resized_thumbnails_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
-            
-            self._full_size_thumbnails_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
-            
-            #
-            
-            self._new_options = HG.client_controller.new_options
-            
-            ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
-            
-            for ( location, weight ) in locations_to_ideal_weights.items():
-                
-                ( display_tuple, data_tuple ) = self._GetTuples( location, weight )
-                
-                self._client_files.Append( display_tuple, data_tuple )
-                
-            
-            if resized_thumbnail_override is not None:
-                
-                self._resized_thumbnails_override.SetPath( resized_thumbnail_override )
-                
-            
-            if full_size_thumbnail_override is not None:
-                
-                self._full_size_thumbnails_override.SetPath( full_size_thumbnail_override )
-                
-            
-            #
-            
-            current_locations_string = self._GenerateCurrentLocationsString()
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            text = 'Here you can change where you would like the client to store your files. This is not for new users!'
-            text += os.linesep * 2
-            text += 'As moving many files can take time, this dialog will not realign your storage folders instantly--instead, it changes your _preferred_ locations. If you add or remove folders here, it will take time for the client to incrementally rebalance your storage to the new selection.'
-            text += os.linesep * 2
-            text += 'Hence, if you wish to migrate your files, it is best started through this dialog, not by manually chopping up client_files while the client is closed and trying to catch up later. (This will lead to headaches!) If you have a portable/USB install or plan to move your install, review the \'how the client will store it\' column--paths beneath your database directory will be stored as relative! Plan migrations carefully and make backups!'
-            text += os.linesep * 2
-            text +='Setting a higher weight increases the proportion of your collection that that folder stores. Outstanding rebalancing will occur in your normal idle time, but if you want to perform it immediately, you can force a full rebalance from the database->maintain menu on the main gui.'
-            text += os.linesep * 2
-            text +='Currently, your files are distributed like so:'
-            text += os.linesep * 2
-            text += current_locations_string
-            text += os.linesep * 2
-            text +='And here are where you would like you files to eventually be:'
-            
-            st = ClientGUICommon.BetterStaticText( self, text )
-            
-            st.Wrap( 540 )
-            
-            vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.AddF( self._client_files, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( self._add, CC.FLAGS_VCENTER )
-            hbox.AddF( self._edit, CC.FLAGS_VCENTER )
-            hbox.AddF( self._delete, CC.FLAGS_VCENTER )
-            
-            vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            text = 'If you like, you can force your thumbnails to be stored elsewhere, for instance on a low-latency SSD.'
-            text += os.linesep * 2
-            text += 'Normally, your full size thumbnails are very rarely accessed--only to (re)generate resized thumbnails--so you can store them somewhere slow, but if you set the thumbnail size to be the maximum of 200x200, these originals will be used instead of resized thumbs and are thus good in a fast location.'
-            text += os.linesep * 2
-            text += 'Leave either of these blank to store the thumbnails alongside the original files.'
-            
-            st = ClientGUICommon.BetterStaticText( self, text )
-            
-            st.Wrap( 540 )
-            
-            vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'full size thumbnail override location: ' ), CC.FLAGS_VCENTER )
-            hbox.AddF( self._full_size_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'resized thumbnail override location: ' ), CC.FLAGS_VCENTER )
-            hbox.AddF( self._resized_thumbnails_override, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def _GenerateCurrentLocationsString( self ):
-            
-            prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
-            
-            locations_to_file_weights = collections.Counter()
-            locations_to_fs_thumb_weights = collections.Counter()
-            locations_to_r_thumb_weights = collections.Counter()
-            
-            for ( prefix, location ) in prefixes_to_locations.items():
-                
-                if prefix.startswith( 'f' ):
-                    
-                    locations_to_file_weights[ location ] += 1
-                    
-                
-                if prefix.startswith( 't' ):
-                    
-                    locations_to_fs_thumb_weights[ location ] += 1
-                    
-                
-                if prefix.startswith( 'r' ):
-                    
-                    locations_to_r_thumb_weights[ location ] += 1
-                    
-                
-            
-            all_locations = set()
-            
-            all_locations.update( locations_to_file_weights.keys() )
-            all_locations.update( locations_to_fs_thumb_weights.keys() )
-            all_locations.update( locations_to_r_thumb_weights.keys() )
-            
-            all_locations = list( all_locations )
-            
-            all_locations.sort()
-            
-            rows = []
-            
-            for l in all_locations:
-                
-                fp = locations_to_file_weights[ l ] / 256.0
-                ft = locations_to_fs_thumb_weights[ l ] / 256.0
-                fr = locations_to_r_thumb_weights[ l ] / 256.0
-                
-                p = HydrusData.ConvertFloatToPercentage
-                
-                rows.append( l + ': ' + p( fp ) + ' files, ' + p( ft ) + ' full-size thumbs, ' + p( fr ) + ' resized thumbs' )
-                
-            
-            return os.linesep.join( rows )
-            
-        
-        def _GetTuples( self, location, weight ):
-            
-            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-            pretty_weight = HydrusData.ConvertIntToPrettyString( weight )
-            
-            display_tuple = ( location, portable_location, pretty_weight )
-            data_tuple = ( location, portable_location, weight )
-            
-            return ( display_tuple, data_tuple )
-            
-        
-        def Delete( self ):
-            
-            if len( self._client_files.GetAllSelected() ) < self._client_files.GetItemCount():
-                
-                with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        self._client_files.RemoveAllSelected()
-                        
-                    
-                
-            
-        
-        def Edit( self ):
-            
-            for i in self._client_files.GetAllSelected():
-                
-                ( location, portable_location, weight ) = self._client_files.GetClientData( i )
-                
-                with wx.NumberEntryDialog( self, 'Enter the weight of ' + location + '.', '', 'Enter Weight', value = int( weight ), min = 1, max = 256 ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        weight = dlg.GetValue()
-                        
-                        weight = int( weight )
-                        
-                        ( display_tuple, data_tuple ) = self._GetTuples( location, weight )
-                        
-                        self._client_files.UpdateRow( i, display_tuple, data_tuple )
-                        
-                    
-                
-            
-        
-        def EventAdd( self, event ):
-            
-            with wx.DirDialog( self, 'Select the file location' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    path = HydrusData.ToUnicode( dlg.GetPath() )
-                    
-                    for ( location, portable_location, weight ) in self._client_files.GetClientData():
-                        
-                        if path == location:
-                            
-                            wx.MessageBox( 'You already have that location entered!' )
-                            
-                            return
-                            
-                        
-                    
-                    with wx.NumberEntryDialog( self, 'Enter the weight of ' + path + '.', '', 'Enter Weight', value = 1, min = 1, max = 256 ) as dlg_num:
-                        
-                        if dlg_num.ShowModal() == wx.ID_OK:
-                            
-                            weight = dlg_num.GetValue()
-                            
-                            weight = int( weight )
-                            
-                            ( display_tuple, data_tuple ) = self._GetTuples( path, weight )
-                            
-                            self._client_files.Append( display_tuple, data_tuple )
-                            
-                        
-                    
-                
-            
-        
-        def EventDelete( self, event ):
-            
-            self.Delete()
-            
-        
-        def EventEditWeight( self, event ):
-            
-            self.Edit()
-            
-        
-        def UpdateOptions( self ):
-            
-            locations_to_weights = {}
-            
-            for ( location, portable_location, weight ) in self._client_files.GetClientData():
-                
-                locations_to_weights[ location ] = weight
-                
-            
-            resized_thumbnails_override = self._resized_thumbnails_override.GetPath()
-            
-            if resized_thumbnails_override == '':
-                
-                resized_thumbnails_override = None
-                
-            
-            full_size_thumbnails_override = self._full_size_thumbnails_override.GetPath()
-            
-            if full_size_thumbnails_override == '':
-                
-                full_size_thumbnails_override = None
-                
-            
-            self._new_options.SetClientFilesLocationsToIdealWeights( locations_to_weights, resized_thumbnails_override, full_size_thumbnails_override )
-            
-        
-
     class _ColoursPanel( wx.Panel ):
         
         def __init__( self, parent ):
@@ -1643,19 +1362,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
                 
                 rows.append( ( 'thumbnail background (local: normal/selected, remote: normal/selected): ', hbox ) )
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_SELECTED ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE ], CC.FLAGS_VCENTER )
-                hbox.AddF( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_SELECTED ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE ], CC.FLAGS_VCENTER )
+                hbox.Add( self._gui_colours[ colourset ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ], CC.FLAGS_VCENTER )
                 
                 rows.append( ( 'thumbnail border (local: normal/selected, remote: normal/selected): ', hbox ) )
                 
@@ -1686,11 +1405,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ClientGUICommon.WrapInText( self._current_colourset, self, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( ClientGUICommon.WrapInText( self._current_colourset, self, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -1772,10 +1491,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._verify_regular_https = wx.CheckBox( general )
             
             self._external_host = wx.TextCtrl( self )
-            self._external_host.SetToolTipString( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
+            self._external_host.SetToolTip( 'If you have trouble parsing your external ip using UPnP, you can force it to be this.' )
             
             self._network_timeout = wx.SpinCtrl( self, min = 3, max = 300 )
-            self._network_timeout.SetToolTipString( 'If a network connection experiences any uninterrupted inactivity for this duration, it will throw an error.' )
+            self._network_timeout.SetToolTip( 'If a network connection experiences any uninterrupted inactivity for this duration, it will throw an error.' )
             
             proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
             
@@ -1836,7 +1555,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( general, rows )
             
-            general.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             text = 'You have to restart the client for proxy settings to take effect.'
             text += os.linesep
@@ -1844,7 +1563,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'Please send me your feedback.'
             
-            proxy_panel.AddF( wx.StaticText( proxy_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            proxy_panel.Add( wx.StaticText( proxy_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -1856,7 +1575,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( proxy_panel, rows )
             
-            proxy_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            proxy_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             proxy_panel.Hide() # proxy settings no longer in use for new engine
             
@@ -1871,9 +1590,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( general, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( general, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( proxy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -1932,7 +1651,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
             
             self._process_subs_in_random_order = wx.CheckBox( subscriptions )
-            self._process_subs_in_random_order.SetToolTipString( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
+            self._process_subs_in_random_order.SetToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
             
             #
             
@@ -1960,7 +1679,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            gallery_downloader.AddF( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            gallery_downloader.Add( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1970,7 +1689,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
             
-            subscriptions.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            subscriptions.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -1983,16 +1702,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
             
-            thread_checker.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            thread_checker.AddF( self._thread_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            thread_checker.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            thread_checker.Add( self._thread_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2075,7 +1794,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._idle_panel, rows )
             
-            self._idle_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._idle_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2086,7 +1805,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
             
-            self._shutdown_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2108,9 +1827,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             st.Wrap( 550 )
             
-            self._jobs_panel.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._jobs_panel.AddF( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._jobs_panel.AddF( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._jobs_panel.Add( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -2120,14 +1839,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._maintenance_panel, rows )
             
-            self._maintenance_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._maintenance_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2217,20 +1936,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._filter_inbox_and_archive_predicates, CC.FLAGS_VCENTER )
-            vbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._filter_inbox_and_archive_predicates, CC.FLAGS_VCENTER )
+            vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_age, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_duration, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_height, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_num_pixels, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_num_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_num_words, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_ratio, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_similar_to, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._file_system_predicate_width, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2291,15 +2010,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._add, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._edit, CC.FLAGS_BUTTON_SIZER )
-            hbox.AddF( self._delete, CC.FLAGS_BUTTON_SIZER )
+            hbox.Add( self._add, CC.FLAGS_BUTTON_SIZER )
+            hbox.Add( self._edit, CC.FLAGS_BUTTON_SIZER )
+            hbox.Add( self._delete, CC.FLAGS_BUTTON_SIZER )
             
-            vbox.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2489,13 +2208,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            mime_panel.AddF( self._mime_launch_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+            mime_panel.Add( self._mime_launch_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
             
-            vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -2621,7 +2340,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._total_pages_warning = wx.SpinCtrl( self, min = 5, max = 200 )
             
             self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
-            self._reverse_page_shift_drag_behaviour.SetToolTipString( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
+            self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
             self._always_embed_autocompletes = wx.CheckBox( self )
             
@@ -2633,19 +2352,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_fill = wx.CheckBox( self )
             
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
-            self._thumbnail_visibility_scroll_percent.SetToolTipString( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
+            self._thumbnail_visibility_scroll_percent.SetToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
             self._discord_dnd_fix = wx.CheckBox( self )
-            self._discord_dnd_fix.SetToolTipString( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
+            self._discord_dnd_fix.SetToolTip( 'This makes small file drag-and-drops a little laggier in exchange for discord support.' )
             
             self._always_show_hover_windows = wx.CheckBox( self )
-            self._always_show_hover_windows.SetToolTipString( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
+            self._always_show_hover_windows.SetToolTip( 'If your window manager doesn\'t like showing the hover windows on mouse-over (typically on some Linux flavours), please try this out and give the dev feedback on this forced size and position accuracy!' )
             
             self._hide_message_manager_on_gui_iconise = wx.CheckBox( self )
-            self._hide_message_manager_on_gui_iconise.SetToolTipString( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
+            self._hide_message_manager_on_gui_iconise.SetToolTip( 'If your message manager does not automatically minimise with your main gui, try this. It can lead to unusual show and positioning behaviour on window managers that do not support it, however.' )
             
             self._hide_message_manager_on_gui_deactive = wx.CheckBox( self )
-            self._hide_message_manager_on_gui_deactive.SetToolTipString( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
+            self._hide_message_manager_on_gui_deactive.SetToolTip( 'If your message manager stays up after you minimise the program to the system tray using a custom window manager, try this out! It hides the popup messages as soon as the main gui loses focus.' )
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
@@ -2763,14 +2482,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'This is an advanced control. If you aren\'t confident of what you are doing here, come back later!'
             
-            frame_locations_panel.AddF( wx.StaticText( frame_locations_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            frame_locations_panel.AddF( self._frame_locations, CC.FLAGS_EXPAND_BOTH_WAYS )
-            frame_locations_panel.AddF( self._frame_locations_edit_button, CC.FLAGS_LONE_BUTTON )
+            frame_locations_panel.Add( wx.StaticText( frame_locations_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            frame_locations_panel.Add( self._frame_locations, CC.FLAGS_EXPAND_BOTH_WAYS )
+            frame_locations_panel.Add( self._frame_locations_edit_button, CC.FLAGS_LONE_BUTTON )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( frame_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -2876,16 +2595,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_gifs = wx.CheckBox( self )
-            self._disable_cv_for_gifs.SetToolTipString( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            self._disable_cv_for_gifs.SetToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
             self._load_images_with_pil = wx.CheckBox( self )
-            self._load_images_with_pil.SetToolTipString( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            self._load_images_with_pil.SetToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
             self._do_not_import_decompression_bombs = wx.CheckBox( self )
-            self._do_not_import_decompression_bombs.SetToolTipString( 'Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large (typically 100MegaPixel+) images. Check this to disallow them before they blat your computer.' )
+            self._do_not_import_decompression_bombs.SetToolTip( 'Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large (typically 100MegaPixel+) images. Check this to disallow them before they blat your computer.' )
             
             self._use_system_ffmpeg = wx.CheckBox( self )
-            self._use_system_ffmpeg.SetToolTipString( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
+            self._use_system_ffmpeg.SetToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
             self._anchor_and_hide_canvas_drags = wx.CheckBox( self )
             
@@ -2943,12 +2662,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._media_viewer_panel.AddF( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._media_viewer_panel.AddF( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
+            self._media_viewer_panel.Add( self._media_viewer_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._media_viewer_panel.Add( self._media_viewer_edit_button, CC.FLAGS_LONE_BUTTON )
             
-            vbox.AddF( self._media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3077,7 +2796,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._regex_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._regex_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3157,10 +2876,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             sort_by_text += os.linesep
             sort_by_text += 'Any changes will be shown in the sort-by dropdowns of any new pages you open.'
             
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( ClientGUICommon.BetterStaticText( self, sort_by_text ), CC.FLAGS_VCENTER )
-            vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( ClientGUICommon.BetterStaticText( self, sort_by_text ), CC.FLAGS_VCENTER )
+            vbox.Add( self._sort_by, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._new_sort_by, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -3231,7 +2950,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._play_dumper_noises, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._play_dumper_noises, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -3253,13 +2972,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             disk_panel = ClientGUICommon.StaticBox( self, 'disk cache' )
             
             disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.GlobalBMPs.help, self._ShowDiskCacheHelp )
-            disk_cache_help_button.SetToolTipString( 'Show help regarding the disk cache.' )
+            disk_cache_help_button.SetToolTip( 'Show help regarding the disk cache.' )
             
             self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
-            self._disk_cache_init_period.SetToolTipString( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
+            self._disk_cache_init_period.SetToolTip( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
             
             self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'disk cache maintenance (MB)', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
-            self._disk_cache_maintenance_mb.SetToolTipString( 'The client can regularly check the front of its database is cached in memory. This represents how many megabytes it will ensure are cached.' )
+            self._disk_cache_maintenance_mb.SetToolTip( 'The client can regularly check the front of its database is cached in memory. This represents how many megabytes it will ensure are cached.' )
             
             #
             
@@ -3295,19 +3014,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             ac_panel = ClientGUICommon.StaticBox( self, 'tag autocomplete' )
             
             self._num_autocomplete_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
-            self._num_autocomplete_chars.SetToolTipString( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
+            self._num_autocomplete_chars.SetToolTip( 'how many characters you enter before the gui fetches autocomplete results from the db. (otherwise, it will only fetch exact matches)' + os.linesep + 'increase this if you find autocomplete results are slow' )
             
             self._fetch_ac_results_automatically = wx.CheckBox( ac_panel )
             self._fetch_ac_results_automatically.Bind( wx.EVT_CHECKBOX, self.EventFetchAuto )
             
             self._autocomplete_long_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
-            self._autocomplete_long_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a character, before it queries the db with what you have entered so far' )
+            self._autocomplete_long_wait.SetToolTip( 'how long the gui will typically wait, after you enter a character, before it queries the db with what you have entered so far' )
             
             self._autocomplete_short_wait_chars = wx.SpinCtrl( ac_panel, min = 1, max = 100 )
-            self._autocomplete_short_wait_chars.SetToolTipString( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
+            self._autocomplete_short_wait_chars.SetToolTip( 'how many characters you enter before the gui starts waiting the short time before querying the db' )
             
             self._autocomplete_short_wait = wx.SpinCtrl( ac_panel, min = 0, max = 10000 )
-            self._autocomplete_short_wait.SetToolTipString( 'how long the gui will typically wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
+            self._autocomplete_short_wait.SetToolTip( 'how long the gui will typically wait, after you enter a lot of characters, before it queries the db with what you have entered so far' )
             
             #
             
@@ -3355,33 +3074,33 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
             
-            help_hbox.AddF( st, CC.FLAGS_VCENTER )
-            help_hbox.AddF( disk_cache_help_button, CC.FLAGS_VCENTER )
+            help_hbox.Add( st, CC.FLAGS_VCENTER )
+            help_hbox.Add( disk_cache_help_button, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            disk_panel.AddF( help_hbox, CC.FLAGS_LONE_BUTTON )
-            disk_panel.AddF( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
-            disk_panel.AddF( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+            disk_panel.Add( help_hbox, CC.FLAGS_LONE_BUTTON )
+            disk_panel.Add( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
+            disk_panel.Add( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( disk_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( disk_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             thumbnails_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            thumbnails_sizer.AddF( self._thumbnail_cache_size, CC.FLAGS_VCENTER )
-            thumbnails_sizer.AddF( self._estimated_number_thumbnails, CC.FLAGS_VCENTER )
+            thumbnails_sizer.Add( self._thumbnail_cache_size, CC.FLAGS_VCENTER )
+            thumbnails_sizer.Add( self._estimated_number_thumbnails, CC.FLAGS_VCENTER )
             
             fullscreens_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            fullscreens_sizer.AddF( self._fullscreen_cache_size, CC.FLAGS_VCENTER )
-            fullscreens_sizer.AddF( self._estimated_number_fullscreens, CC.FLAGS_VCENTER )
+            fullscreens_sizer.Add( self._fullscreen_cache_size, CC.FLAGS_VCENTER )
+            fullscreens_sizer.Add( self._estimated_number_fullscreens, CC.FLAGS_VCENTER )
             
             video_buffer_sizer = wx.BoxSizer( wx.HORIZONTAL )
             
-            video_buffer_sizer.AddF( self._video_buffer_size_mb, CC.FLAGS_VCENTER )
-            video_buffer_sizer.AddF( self._estimated_number_video_frames, CC.FLAGS_VCENTER )
+            video_buffer_sizer.Add( self._video_buffer_size_mb, CC.FLAGS_VCENTER )
+            video_buffer_sizer.Add( self._estimated_number_video_frames, CC.FLAGS_VCENTER )
             
             rows = []
             
@@ -3392,9 +3111,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
-            media_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            media_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3404,7 +3123,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will loop smoothly.'
             
-            buffer_panel.AddF( wx.StaticText( buffer_panel, label = text ), CC.FLAGS_VCENTER )
+            buffer_panel.Add( wx.StaticText( buffer_panel, label = text ), CC.FLAGS_VCENTER )
             
             rows = []
             
@@ -3412,15 +3131,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( buffer_panel, rows )
             
-            buffer_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            buffer_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( buffer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( buffer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             text = 'If you disable automatic autocomplete results fetching, use Ctrl+Space to fetch results manually.'
             
-            ac_panel.AddF( wx.StaticText( ac_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            ac_panel.Add( wx.StaticText( ac_panel, label = text ), CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -3432,9 +3151,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( ac_panel, rows )
             
-            ac_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            ac_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( ac_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( ac_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3444,9 +3163,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
             
-            misc_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            misc_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( misc_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3730,9 +3449,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
             
-            general_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            general_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3743,18 +3462,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
             
-            render_panel.AddF( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            render_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            vbox.AddF( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             panel_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            panel_vbox.AddF( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
-            panel_vbox.AddF( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
-            panel_vbox.AddF( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            panel_vbox.Add( self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_favourites_panel.SetSizer( panel_vbox )
             
@@ -3771,7 +3490,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
-            panel_vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_related_panel.SetSizer( panel_vbox )
             
@@ -3786,7 +3505,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_file_lookup_script_panel, rows )
             
-            panel_vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_file_lookup_script_panel.SetSizer( panel_vbox )
             
@@ -3794,7 +3513,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             panel_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            panel_vbox.AddF( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            panel_vbox.Add( self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_recent_panel.SetSizer( panel_vbox )
             
@@ -3814,10 +3533,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_panel, rows )
             
-            suggested_tags_panel.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            suggested_tags_panel.AddF( suggest_tags_panel_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            suggested_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            suggested_tags_panel.Add( suggest_tags_panel_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.AddF( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -3958,14 +3677,14 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._services_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( hbox, CC.FLAGS_SMALL_INDENT )
+        vbox.Add( self._services_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( hbox, CC.FLAGS_SMALL_INDENT )
         
         self.SetSizer( vbox )
         
@@ -4136,7 +3855,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTipString( 'Show help regarding editing shortcuts.' )
+        help_button.SetToolTip( 'Show help regarding editing shortcuts.' )
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'reserved' )
         
@@ -4183,27 +3902,27 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        reserved_panel.AddF( self._reserved_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        reserved_panel.AddF( self._edit_reserved_button, CC.FLAGS_LONE_BUTTON )
+        reserved_panel.Add( self._reserved_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        reserved_panel.Add( self._edit_reserved_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._edit_custom_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._edit_custom_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
-        custom_panel.AddF( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        custom_panel.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        custom_panel.Add( self._custom_shortcuts, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        custom_panel.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( reserved_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( custom_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -4406,15 +4125,15 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             action_buttons = wx.BoxSizer( wx.HORIZONTAL )
             
-            action_buttons.AddF( self._add, CC.FLAGS_VCENTER )
-            action_buttons.AddF( self._edit, CC.FLAGS_VCENTER )
-            action_buttons.AddF( self._remove, CC.FLAGS_VCENTER )
+            action_buttons.Add( self._add, CC.FLAGS_VCENTER )
+            action_buttons.Add( self._edit, CC.FLAGS_VCENTER )
+            action_buttons.Add( self._remove, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( action_buttons, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( ClientGUICommon.WrapInText( self._name, self, 'name: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( self._shortcuts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( action_buttons, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -4708,56 +4427,56 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 #
                 
-                self._shortcut_panel.AddF( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._shortcut_panel.Add( self._shortcut, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 none_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                none_hbox.AddF( self._simple_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
-                none_hbox.AddF( self._set_simple, CC.FLAGS_VCENTER )
+                none_hbox.Add( self._simple_actions, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                none_hbox.Add( self._set_simple, CC.FLAGS_VCENTER )
                 
-                self._none_panel.AddF( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._none_panel.Add( none_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 tag_sub_vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                tag_sub_vbox.AddF( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
-                tag_sub_vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+                tag_sub_vbox.Add( self._tag_value, CC.FLAGS_EXPAND_PERPENDICULAR )
+                tag_sub_vbox.Add( self._tag_input, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 tag_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                tag_hbox.AddF( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-                tag_hbox.AddF( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-                tag_hbox.AddF( self._set_tag, CC.FLAGS_VCENTER )
+                tag_hbox.Add( self._tag_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                tag_hbox.Add( tag_sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                tag_hbox.Add( self._set_tag, CC.FLAGS_VCENTER )
                 
-                self._tag_panel.AddF( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._tag_panel.Add( tag_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 ratings_like_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                ratings_like_hbox.AddF( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-                ratings_like_hbox.AddF( self._ratings_like_like, CC.FLAGS_VCENTER )
-                ratings_like_hbox.AddF( self._ratings_like_dislike, CC.FLAGS_VCENTER )
-                ratings_like_hbox.AddF( self._ratings_like_remove, CC.FLAGS_VCENTER )
-                ratings_like_hbox.AddF( self._set_ratings_like, CC.FLAGS_VCENTER )
+                ratings_like_hbox.Add( self._ratings_like_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                ratings_like_hbox.Add( self._ratings_like_like, CC.FLAGS_VCENTER )
+                ratings_like_hbox.Add( self._ratings_like_dislike, CC.FLAGS_VCENTER )
+                ratings_like_hbox.Add( self._ratings_like_remove, CC.FLAGS_VCENTER )
+                ratings_like_hbox.Add( self._set_ratings_like, CC.FLAGS_VCENTER )
                 
-                self._ratings_like_panel.AddF( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._ratings_like_panel.Add( ratings_like_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 ratings_numerical_hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                ratings_numerical_hbox.AddF( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
-                ratings_numerical_hbox.AddF( self._ratings_numerical_slider, CC.FLAGS_VCENTER )
-                ratings_numerical_hbox.AddF( self._ratings_numerical_remove, CC.FLAGS_VCENTER )
-                ratings_numerical_hbox.AddF( self._set_ratings_numerical, CC.FLAGS_VCENTER )
+                ratings_numerical_hbox.Add( self._ratings_numerical_service_keys, CC.FLAGS_EXPAND_DEPTH_ONLY )
+                ratings_numerical_hbox.Add( self._ratings_numerical_slider, CC.FLAGS_VCENTER )
+                ratings_numerical_hbox.Add( self._ratings_numerical_remove, CC.FLAGS_VCENTER )
+                ratings_numerical_hbox.Add( self._set_ratings_numerical, CC.FLAGS_VCENTER )
                 
-                self._ratings_numerical_panel.AddF( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._ratings_numerical_panel.Add( ratings_numerical_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
-                self._content_panel.AddF( self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._content_panel.AddF( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._content_panel.AddF( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                self._content_panel.AddF( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.Add( self._flip_or_set_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.Add( self._tag_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.Add( self._ratings_like_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                self._content_panel.Add( self._ratings_numerical_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.AddF( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                vbox.AddF( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( self._none_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 is_custom_or_media = shortcuts_name not in CC.SHORTCUTS_RESERVED_NAMES or shortcuts_name == 'media'
                 
@@ -4770,9 +4489,9 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 hbox = wx.BoxSizer( wx.HORIZONTAL )
                 
-                hbox.AddF( self._shortcut_panel, CC.FLAGS_VCENTER )
-                hbox.AddF( ClientGUICommon.BetterStaticText( self, u'\u2192' ), CC.FLAGS_VCENTER )
-                hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                hbox.Add( self._shortcut_panel, CC.FLAGS_VCENTER )
+                hbox.Add( ClientGUICommon.BetterStaticText( self, u'\u2192' ), CC.FLAGS_VCENTER )
+                hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
                 self.SetSizer( hbox )
                 
@@ -5099,13 +4818,13 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
         
-        help_hbox.AddF( st, CC.FLAGS_VCENTER )
-        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        help_hbox.Add( st, CC.FLAGS_VCENTER )
+        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -5767,7 +5486,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -5799,7 +5518,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _OKParent( self ):
         
-        wx.PostEvent( self.GetParent(), wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+        wx.PostEvent( self.GetParent(), wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
         
     
     def _ProcessApplicationCommand( self, command ):
@@ -6005,9 +5724,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_deleted_checkbox = wx.CheckBox( self._tags_box_sorter, label = 'show deleted' )
             self._show_deleted_checkbox.Bind( wx.EVT_CHECKBOX, self.EventShowDeleted )
             
-            self._tags_box_sorter.AddF( self._add_parents_checkbox, CC.FLAGS_LONE_BUTTON )
-            self._tags_box_sorter.AddF( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
-            self._tags_box_sorter.AddF( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
+            self._tags_box_sorter.Add( self._add_parents_checkbox, CC.FLAGS_LONE_BUTTON )
+            self._tags_box_sorter.Add( self._collapse_siblings_checkbox, CC.FLAGS_LONE_BUTTON )
+            self._tags_box_sorter.Add( self._show_deleted_checkbox, CC.FLAGS_LONE_BUTTON )
             
             expand_parents = True
             
@@ -6062,28 +5781,28 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             copy_paste_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            copy_paste_hbox.AddF( self._copy_tags, CC.FLAGS_VCENTER )
-            copy_paste_hbox.AddF( self._paste_tags, CC.FLAGS_VCENTER )
+            copy_paste_hbox.Add( self._copy_tags, CC.FLAGS_VCENTER )
+            copy_paste_hbox.Add( self._paste_tags, CC.FLAGS_VCENTER )
             
             advanced_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            advanced_hbox.AddF( self._remove_tags, CC.FLAGS_VCENTER )
-            advanced_hbox.AddF( self._advanced_content_update_button, CC.FLAGS_VCENTER )
+            advanced_hbox.Add( self._remove_tags, CC.FLAGS_VCENTER )
+            advanced_hbox.Add( self._advanced_content_update_button, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( advanced_hbox, CC.FLAGS_BUTTON_SIZER )
-            vbox.AddF( self._modify_mappers, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( copy_paste_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( advanced_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( self._modify_mappers, CC.FLAGS_LONE_BUTTON )
             
             #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
-            hbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.Add( self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            hbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -6524,7 +6243,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def OK( self ):
             
-            wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+            wx.PostEvent( self, wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
             
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -6583,9 +6302,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._urls_listbox = wx.ListBox( self, style = wx.LB_SORT | wx.LB_SINGLE )
         self._urls_listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventListDoubleClick )
         
-        ideal_size = ClientData.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
+        ( width, height ) = ClientData.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
         
-        self._urls_listbox.SetBestFittingSize( ideal_size )
+        self._urls_listbox.SetInitialSize( ( width, height ) )
         
         self._url_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
         self._url_input.Bind( wx.EVT_CHAR_HOOK, self.EventInputCharHook )
@@ -6613,14 +6332,14 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._copy_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -6802,7 +6521,7 @@ class ManageURLMatchesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._url_matches, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._url_matches, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -6904,9 +6623,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._locations, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._set_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._locations, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._set_button, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         

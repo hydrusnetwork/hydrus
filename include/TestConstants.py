@@ -91,7 +91,7 @@ class TestFrame( wx.Frame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         

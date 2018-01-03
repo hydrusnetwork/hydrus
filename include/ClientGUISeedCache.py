@@ -7,6 +7,7 @@ import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientSerialisable
+import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
@@ -43,8 +44,8 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -303,7 +304,7 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         self._seed_cache_get_callable = seed_cache_get_callable
         self._seed_cache_set_callable = seed_cache_set_callable
         
-        self.SetToolTipString( 'open detailed file import status--right-click for quick actions, if applicable' )
+        self.SetToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
@@ -555,22 +556,20 @@ class SeedCacheStatusControl( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.AddF( self._seed_cache_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._seed_cache_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._import_summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._progress_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._import_summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._progress_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
         #
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
-        
-        self._update_timer = wx.Timer( self )
+        self._update_timer = ClientThreading.WXAwareTimer( self, self.TIMERUpdate )
         
     
     def _GetSeedCache( self ):
@@ -635,11 +634,11 @@ class SeedCacheStatusControl( wx.Panel ):
             
             self._seed_cache = seed_cache
             
-            self._update_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            self._update_timer.CallLater( 0.25, repeating = True )
             
         
     
-    def TIMEREventUpdate( self, event ):
+    def TIMERUpdate( self ):
         
         if self._controller.gui.IShouldRegularlyUpdate( self ):
             

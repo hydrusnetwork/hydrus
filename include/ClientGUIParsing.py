@@ -160,9 +160,9 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._attrs, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._index, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._attrs, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._index, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -284,21 +284,21 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        udd_button_vbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        udd_button_vbox.AddF( self._move_rule_up, CC.FLAGS_VCENTER )
-        udd_button_vbox.AddF( self._delete_rule, CC.FLAGS_VCENTER )
-        udd_button_vbox.AddF( self._move_rule_down, CC.FLAGS_VCENTER )
-        udd_button_vbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.Add( self._move_rule_up, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._delete_rule, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._move_rule_down, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         tag_rules_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        tag_rules_hbox.AddF( self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
-        tag_rules_hbox.AddF( udd_button_vbox, CC.FLAGS_VCENTER )
+        tag_rules_hbox.Add( self._tag_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+        tag_rules_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
         
         ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        ae_button_hbox.AddF( self._add_rule, CC.FLAGS_VCENTER )
-        ae_button_hbox.AddF( self._edit_rule, CC.FLAGS_VCENTER )
+        ae_button_hbox.Add( self._add_rule, CC.FLAGS_VCENTER )
+        ae_button_hbox.Add( self._edit_rule, CC.FLAGS_VCENTER )
         
         rows = []
         
@@ -309,11 +309,11 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         edit_panel.SetSizer( vbox )
         
@@ -321,9 +321,9 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         test_panel.SetSizer( vbox )
         
@@ -331,7 +331,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         info_panel.SetSizer( vbox )
         
@@ -345,7 +345,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -562,15 +562,15 @@ class EditNodes( wx.Panel ):
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._copy_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._duplicate_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._duplicate_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
-        vbox.AddF( self._nodes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._nodes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -900,7 +900,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._file_priority, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_priority, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._urls_panel.SetSizer( vbox )
         
@@ -934,15 +934,15 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         gridbox = ClientGUICommon.WrapInGrid( self._content_panel, rows )
         
-        self._content_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.AddF( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.AddF( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._content_panel.AddF( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        formula_panel.AddF( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        formula_panel.AddF( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
+        formula_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        formula_panel.Add( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -954,9 +954,9 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         gridbox = ClientGUICommon.WrapInGrid( self._edit_panel, rows )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._edit_panel.SetSizer( vbox )
         
@@ -964,9 +964,9 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         test_panel.SetSizer( vbox )
         
@@ -974,7 +974,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         info_panel.SetSizer( vbox )
         
@@ -986,7 +986,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1208,10 +1208,10 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         #
         
-        formula_panel.AddF( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        formula_panel.AddF( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
+        formula_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        formula_panel.Add( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        children_panel.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+        children_panel.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -1223,9 +1223,9 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         edit_panel.SetSizer( vbox )
         
@@ -1233,11 +1233,11 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._test_fetch_result, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._my_example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_fetch_result, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._my_example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         test_panel.SetSizer( vbox )
         
@@ -1245,7 +1245,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         info_panel.SetSizer( vbox )
         
@@ -1257,7 +1257,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1512,18 +1512,18 @@ And pass that html to a number of 'parsing children' that will each look through
         
         gridbox = ClientGUICommon.WrapInGrid( query_panel, rows )
         
-        static_args_panel.AddF( self._static_args, CC.FLAGS_EXPAND_BOTH_WAYS )
+        static_args_panel.Add( self._static_args, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         query_message = 'This query will be executed first.'
         
-        query_panel.AddF( wx.StaticText( query_panel, label = query_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        query_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        query_panel.AddF( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        query_panel.Add( wx.StaticText( query_panel, label = query_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        query_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        query_panel.Add( static_args_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         children_message = 'The data returned by the query will be passed to each of these children for content parsing.'
         
-        children_panel.AddF( wx.StaticText( children_panel, label = children_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        children_panel.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+        children_panel.Add( wx.StaticText( children_panel, label = children_message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        children_panel.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1533,9 +1533,9 @@ And pass that html to a number of 'parsing children' that will each look through
         
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( query_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         edit_panel.SetSizer( vbox )
         
@@ -1543,12 +1543,12 @@ And pass that html to a number of 'parsing children' that will each look through
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._test_script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._test_parsing, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._test_arg, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._fetch_data, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_parsing, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         test_panel.SetSizer( vbox )
         
@@ -1556,7 +1556,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         info_panel.SetSizer( vbox )
         
@@ -1568,7 +1568,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1744,8 +1744,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( transformations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -2094,8 +2094,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( self._transformation_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -2223,8 +2223,8 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._example_string_matches, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -2404,15 +2404,15 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( self._add_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._export_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._import_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._duplicate_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._add_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._export_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._import_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._duplicate_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._edit_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._delete_button, CC.FLAGS_VCENTER )
         
-        vbox.AddF( self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._scripts, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2686,31 +2686,27 @@ class ScriptManagementControl( wx.Panel ):
         
         self._link_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.link )
         self._link_button.Bind( wx.EVT_BUTTON, self.EventLinkButton )
-        self._link_button.SetToolTipString( 'urls found by the script' )
+        self._link_button.SetToolTip( 'urls found by the script' )
         
         self._cancel_button = wx.BitmapButton( main_panel, bitmap = CC.GlobalBMPs.stop )
         self._cancel_button.Bind( wx.EVT_BUTTON, self.EventCancelButton )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate, id = ID_TIMER_SCRIPT_UPDATE )
-        
-        self._update_timer = wx.Timer( self, id = ID_TIMER_SCRIPT_UPDATE )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._link_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._gauge, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._link_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
         
-        main_panel.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        main_panel.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        main_panel.Add( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        main_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( main_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( main_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -2797,15 +2793,15 @@ class ScriptManagementControl( wx.Panel ):
             
         
     
-    def TIMEREventUpdate( self, event ):
+    def TIMERUIUpdate( self, event ):
         
         with self._lock:
             
             self._Update()
             
-            if self._job_key is not None:
+            if self._job_key is None:
                 
-                self._update_timer.Start( 100, wx.TIMER_ONE_SHOT )
+                HG.client_controller.gui.UnregisterUIUpdateWindow( self )
                 
             
         
@@ -2851,6 +2847,6 @@ class ScriptManagementControl( wx.Panel ):
             self._job_key = job_key
             
         
-        self._update_timer.Start( 100, wx.TIMER_ONE_SHOT )
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     

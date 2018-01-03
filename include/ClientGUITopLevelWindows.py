@@ -24,7 +24,7 @@ def GetDisplayPosition( window ):
     
     rect = display.GetClientArea()
     
-    return rect.GetPosition()
+    return tuple( rect.GetPosition() )
     
 def GetDisplaySize( window ):
     
@@ -39,7 +39,7 @@ def GetDisplaySize( window ):
     
     rect = display.GetClientArea()
     
-    return rect.GetSize()
+    return tuple( rect.GetSize() )
     
 def GetSafePosition( position ):
     
@@ -157,11 +157,11 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
     if not ( maximised or fullscreen ):
         
-        safe_position = GetSafePosition( tlw.GetPositionTuple() )
+        safe_position = GetSafePosition( tuple( tlw.GetPosition() ) )
         
         if safe_position != wx.DefaultPosition:
             
-            last_size = tlw.GetSizeTuple()
+            last_size = tuple( tlw.GetSize() )
             last_position = safe_position
             
         
@@ -218,7 +218,7 @@ def SetTLWSizeAndPosition( tlw, frame_key ):
                 parent_tlp = parent.GetTopLevelParent()
                 
             
-            ( parent_x, parent_y ) = parent_tlp.GetPositionTuple()
+            ( parent_x, parent_y ) = parent_tlp.GetPosition()
             
             tlw.SetPosition( ( parent_x + CHILD_POSITION_PADDING, parent_y + CHILD_POSITION_PADDING ) )
             
@@ -484,8 +484,8 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -502,7 +502,7 @@ class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
         
         buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttonbox.AddF( self._close, CC.FLAGS_VCENTER )
+        buttonbox.Add( self._close, CC.FLAGS_VCENTER )
         
         return buttonbox
         
@@ -576,8 +576,8 @@ class DialogThatTakesScrollablePanelApplyCancel( DialogThatTakesScrollablePanel 
         
         buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttonbox.Add( self._apply, CC.FLAGS_VCENTER )
+        buttonbox.Add( self._cancel, CC.FLAGS_VCENTER )
         
         return buttonbox
         
@@ -714,7 +714,7 @@ class Frame( wx.Frame ):
             
             menu = self._menu_stack[-1]
             
-            if menu is not None:
+            if bool( menu ) and menu is not None:
                 
                 menu_item = menu.FindItemById( event.GetMenuId() )
                 
@@ -846,8 +846,8 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         

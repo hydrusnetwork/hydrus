@@ -121,18 +121,18 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._action_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._tag_type_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._action_text, CC.FLAGS_VCENTER )
-        hbox.AddF( self._service_key_dropdown, CC.FLAGS_VCENTER )
-        hbox.AddF( self._go, CC.FLAGS_VCENTER )
+        hbox.Add( self._action_dropdown, CC.FLAGS_VCENTER )
+        hbox.Add( self._tag_type_dropdown, CC.FLAGS_VCENTER )
+        hbox.Add( self._action_text, CC.FLAGS_VCENTER )
+        hbox.Add( self._service_key_dropdown, CC.FLAGS_VCENTER )
+        hbox.Add( self._go, CC.FLAGS_VCENTER )
         
-        self._command_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._command_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        self._hta_panel.AddF( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
-        self._hta_panel.AddF( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
+        self._hta_panel.Add( self._import_from_hta, CC.FLAGS_LONE_BUTTON )
+        self._hta_panel.Add( self._export_to_hta, CC.FLAGS_LONE_BUTTON )
         
         #
         
@@ -163,10 +163,10 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         st.Wrap( 540 )
         
-        vbox.AddF( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._command_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._hta_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._command_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._hta_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -322,7 +322,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._reset_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
         
         default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowDefaultRulesHelp )
-        default_rules_help_button.SetToolTipString( 'Show help regarding default bandwidth rules.' )
+        default_rules_help_button.SetToolTip( 'Show help regarding default bandwidth rules.' )
         
         self._delete_record_button = ClientGUICommon.BetterButton( self, 'delete selected history', self._DeleteNetworkContexts )
         
@@ -332,9 +332,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths.Sort( 0 )
         
-        self._update_timer = wx.Timer( self )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
+        self._update_timer = ClientThreading.WXAwareTimer( self, self._Update )
         
         self._Update()
         
@@ -342,22 +340,22 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'Show network contexts with usage in the past: ' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._history_time_delta_threshold, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._history_time_delta_none, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'Show network contexts with usage in the past: ' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._history_time_delta_threshold, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._history_time_delta_none, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( self._edit_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._reset_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( default_rules_help_button, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._delete_record_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._edit_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._reset_default_bandwidth_rules_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( default_rules_help_button, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._delete_record_button, CC.FLAGS_VCENTER )
         
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._bandwidths, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._bandwidths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -503,7 +501,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         timer_duration_s = max( len( network_contexts ), 20 )
         
-        self._update_timer.Start( 1000 * timer_duration_s, wx.TIMER_ONE_SHOT )
+        self._update_timer.CallLater( timer_duration_s )
         
     
     def EventTimeDeltaChanged( self, event ):
@@ -516,11 +514,6 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._history_time_delta_threshold.Enable()
             
-        
-        self._Update()
-        
-    
-    def TIMEREventUpdate( self, event ):
         
         self._Update()
         
@@ -613,56 +606,48 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_panel.AddF( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._name, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._time_delta_usage_bandwidth_type, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( usage_panel, ' in the past ' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._time_delta_usage_time_delta, CC.FLAGS_VCENTER )
-        hbox.AddF( self._time_delta_usage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._time_delta_usage_bandwidth_type, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( usage_panel, ' in the past ' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._time_delta_usage_time_delta, CC.FLAGS_VCENTER )
+        hbox.Add( self._time_delta_usage_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        usage_panel.AddF( self._current_usage_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        usage_panel.AddF( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        usage_panel.AddF( self._barchart_canvas, CC.FLAGS_EXPAND_BOTH_WAYS )
+        usage_panel.Add( self._current_usage_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        usage_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        usage_panel.Add( self._barchart_canvas, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._edit_rules_button, CC.FLAGS_SIZER_VCENTER )
-        hbox.AddF( self._use_default_rules_button, CC.FLAGS_SIZER_VCENTER )
+        hbox.Add( self._edit_rules_button, CC.FLAGS_SIZER_VCENTER )
+        hbox.Add( self._use_default_rules_button, CC.FLAGS_SIZER_VCENTER )
         
-        rules_panel.AddF( self._uses_default_rules_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        rules_panel.AddF( self._rules_rows_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        rules_panel.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        rules_panel.Add( self._uses_default_rules_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        rules_panel.Add( self._rules_rows_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        rules_panel.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( usage_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( usage_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
         #
         
-        self._rules_rows_panel.Bind( wx.EVT_TIMER, self.TIMEREventUpdateRules )
+        self._rules_timer = ClientThreading.WXAwareTimer( self, self._UpdateRules )
         
-        self._rules_timer = wx.Timer( self._rules_rows_panel )
-        
-        self._rules_timer.Start( 5000, wx.TIMER_CONTINUOUS )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
-        
-        self._timer = wx.Timer( self )
-        
-        self._timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        self._update_timer = ClientThreading.WXAwareTimer( self, self._Update )
         
         self._UpdateRules()
         self._Update()
@@ -714,6 +699,8 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_time_delta_usage = ': ' + converter( time_delta_usage )
         
         self._time_delta_usage_st.SetLabelText( pretty_time_delta_usage )
+        
+        self._update_timer.CallLater( 1.0 )
         
     
     def _UpdateRules( self ):
@@ -776,7 +763,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 tg.SetValue( status, v, r )
                 
-                vbox.AddF( tg, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( tg, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             self._rules_rows_panel.SetSizer( vbox )
@@ -791,6 +778,8 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             ClientGUITopLevelWindows.PostSizeChangedEvent( self )
             
         
+        self._rules_timer.CallLater( 5.0 )
+        
     
     def _UseDefaultRules( self ):
         
@@ -803,16 +792,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._UpdateRules()
                 
             
-        
-    
-    def TIMEREventUpdate( self, event ):
-        
-        self._Update()
-        
-    
-    def TIMEREventUpdateRules( self, event ):
-        
-        self._UpdateRules()
         
     
 class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -837,7 +816,7 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1053,49 +1032,49 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
         
-        help_hbox.AddF( st, CC.FLAGS_VCENTER )
-        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        help_hbox.Add( st, CC.FLAGS_VCENTER )
+        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         #
         
         r_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        r_hbox.AddF( ClientGUICommon.BetterStaticText( info_panel, 'resized thumbnail location' ), CC.FLAGS_VCENTER )
-        r_hbox.AddF( self._resized_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        r_hbox.AddF( self._resized_thumbs_location_set, CC.FLAGS_VCENTER )
-        r_hbox.AddF( self._resized_thumbs_location_clear, CC.FLAGS_VCENTER )
+        r_hbox.Add( ClientGUICommon.BetterStaticText( info_panel, 'resized thumbnail location' ), CC.FLAGS_VCENTER )
+        r_hbox.Add( self._resized_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        r_hbox.Add( self._resized_thumbs_location_set, CC.FLAGS_VCENTER )
+        r_hbox.Add( self._resized_thumbs_location_clear, CC.FLAGS_VCENTER )
         
         t_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        t_hbox.AddF( ClientGUICommon.BetterStaticText( info_panel, 'full-size thumbnail location' ), CC.FLAGS_VCENTER )
-        t_hbox.AddF( self._fullsize_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        t_hbox.AddF( self._fullsize_thumbs_location_set, CC.FLAGS_VCENTER )
-        t_hbox.AddF( self._fullsize_thumbs_location_clear, CC.FLAGS_VCENTER )
+        t_hbox.Add( ClientGUICommon.BetterStaticText( info_panel, 'full-size thumbnail location' ), CC.FLAGS_VCENTER )
+        t_hbox.Add( self._fullsize_thumbs_location, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        t_hbox.Add( self._fullsize_thumbs_location_set, CC.FLAGS_VCENTER )
+        t_hbox.Add( self._fullsize_thumbs_location_clear, CC.FLAGS_VCENTER )
         
         rebalance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        rebalance_hbox.AddF( self._rebalance_status_st, CC.FLAGS_EXPAND_BOTH_WAYS )
-        rebalance_hbox.AddF( self._rebalance_button, CC.FLAGS_VCENTER )
+        rebalance_hbox.Add( self._rebalance_status_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        rebalance_hbox.Add( self._rebalance_button, CC.FLAGS_VCENTER )
         
-        info_panel.AddF( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        info_panel.AddF( r_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        info_panel.AddF( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        info_panel.Add( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        info_panel.Add( r_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        info_panel.Add( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        migration_panel.AddF( self._migrate_db_button, CC.FLAGS_LONE_BUTTON )
+        migration_panel.Add( self._migrate_db_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -1739,7 +1718,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     def wx_code( job_key ):
         
-        wx.CallLater( 3000, controller.gui.Exit )
+        ClientThreading.CallLater( controller.gui, 3, controller.gui.Exit )
         
         # no parent because this has to outlive the gui, obvs
         

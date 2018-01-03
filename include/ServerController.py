@@ -376,30 +376,23 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( 'Server is running. Press Ctrl+C to quit.' )
         
-        interrupt_received = False
-        
-        while not self._model_shutdown:
+        try:
             
-            try:
-                
+            while not self._model_shutdown:
+            
                 time.sleep( 1 )
                 
-            except KeyboardInterrupt:
+            
+        except KeyboardInterrupt:
+            
+            def do_it():
                 
-                if not interrupt_received:
-                    
-                    interrupt_received = True
-                    
-                    def do_it():
-                        
-                        HydrusData.Print( u'Received a keyboard interrupt\u2026' )
-                        
-                        self.Exit()
-                        
-                    
-                    self.CallToThread( do_it )
-                    
+                HydrusData.Print( u'Received a keyboard interrupt\u2026' )
                 
+                self.Exit()
+                
+            
+            self.CallToThread( do_it )
             
         
         HydrusData.Print( u'Shutting down controller\u2026' )

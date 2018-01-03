@@ -23,6 +23,7 @@ import ClientMedia
 import ClientRatings
 import ClientSearch
 import ClientServices
+import ClientThreading
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -115,19 +116,19 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
         #
         
         add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._restore_default, CC.FLAGS_VCENTER )
-        add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._add, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._remove, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._restore_default, CC.FLAGS_VCENTER )
+        add_remove_hbox.Add( self._export, CC.FLAGS_VCENTER )
         
         ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-        ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        ok_hbox.Add( self._ok, CC.FLAGS_VCENTER )
+        ok_hbox.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
-        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-        vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+        vbox.Add( ok_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -411,8 +412,8 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._search_panel, rows )
             
-            self._search_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._search_panel.AddF( self._example_html_search, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._search_panel.Add( self._example_html_search, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             rows = []
@@ -423,30 +424,30 @@ class DialogManageBoorus( ClientGUIDialogs.Dialog ):
             
             gridbox = ClientGUICommon.WrapInGrid( self._image_panel, rows )
             
-            self._image_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._image_panel.AddF( self._example_html_image, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._image_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._image_panel.Add( self._example_html_image, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._tag_classname, CC.FLAGS_VCENTER )
-            hbox.AddF( self._namespace, CC.FLAGS_VCENTER )
-            hbox.AddF( self._add, CC.FLAGS_VCENTER )
+            hbox.Add( self._tag_classname, CC.FLAGS_VCENTER )
+            hbox.Add( self._namespace, CC.FLAGS_VCENTER )
+            hbox.Add( self._add, CC.FLAGS_VCENTER )
             
-            self._tag_panel.AddF( self._tag_classnames_to_namespaces, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._tag_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._tag_panel.AddF( self._example_html_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._tag_panel.Add( self._tag_classnames_to_namespaces, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._tag_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._tag_panel.Add( self._example_html_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
-            self._booru_panel.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._booru_panel.AddF( self._image_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._booru_panel.AddF( self._tag_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._booru_panel.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.Add( self._image_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._booru_panel.Add( self._tag_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._booru_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._booru_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -637,19 +638,19 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
         def ArrangeControls():
             
             add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add_manually, CC.FLAGS_VCENTER )
-            add_remove_hbox.AddF( self._add_contact_address, CC.FLAGS_VCENTER )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._add_manually, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._add_contact_address, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._remove, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._export, CC.FLAGS_VCENTER )
             
             ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+            ok_hbox.Add( self._ok, CC.FLAGS_VCENTER )
+            ok_hbox.Add( self._cancel, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._contacts, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( self._contacts, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+            vbox.Add( ok_hbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -1003,22 +1004,22 @@ class DialogManageContacts( ClientGUIDialogs.Dialog ):
             
             def ArrangeControls():
                 
-                gridbox = wx.FlexGridSizer( 0, 2 )
+                gridbox = wx.FlexGridSizer( 2 )
                 
                 gridbox.AddGrowableCol( 1, 1 )
                 
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'name' ), CC.FLAGS_VCENTER )
-                gridbox.AddF( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'contact address' ), CC.FLAGS_VCENTER )
-                gridbox.AddF( self._contact_address, CC.FLAGS_EXPAND_BOTH_WAYS )
-                gridbox.AddF( wx.StaticText( self._contact_panel, label = 'public key' ), CC.FLAGS_VCENTER )
-                gridbox.AddF( self._public_key, CC.FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.Add( wx.StaticText( self._contact_panel, label = 'name' ), CC.FLAGS_VCENTER )
+                gridbox.Add( self._name, CC.FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.Add( wx.StaticText( self._contact_panel, label = 'contact address' ), CC.FLAGS_VCENTER )
+                gridbox.Add( self._contact_address, CC.FLAGS_EXPAND_BOTH_WAYS )
+                gridbox.Add( wx.StaticText( self._contact_panel, label = 'public key' ), CC.FLAGS_VCENTER )
+                gridbox.Add( self._public_key, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
-                self._contact_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._contact_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.AddF( self._contact_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                vbox.Add( self._contact_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.SetSizer( vbox )
                 
@@ -1142,23 +1143,23 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         file_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        file_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
-        file_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        file_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._ok, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._export_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1391,7 +1392,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._path_box, rows )
         
-        self._path_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._path_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1404,34 +1405,34 @@ If you select synchronise, be careful!'''
         st = wx.StaticText( self._type_box, label = text )
         st.Wrap( 440 )
         
-        self._type_box.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._type_box.AddF( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._type_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._type_box.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._query_box.AddF( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._query_box.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_box.Add( self._predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._query_box.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._period_box.AddF( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._period_box.Add( self._period, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         phrase_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        phrase_hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        phrase_hbox.AddF( self._examples, CC.FLAGS_VCENTER )
+        phrase_hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        phrase_hbox.Add( self._examples, CC.FLAGS_VCENTER )
         
-        self._phrase_box.AddF( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._ok, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._type_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._query_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._period_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._phrase_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1533,18 +1534,18 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
         def ArrangeControls():
             
             add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-            add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-            add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._add, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._remove, CC.FLAGS_VCENTER )
+            add_remove_hbox.Add( self._export, CC.FLAGS_VCENTER )
             
             ok_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            ok_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-            ok_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+            ok_hbox.Add( self._ok, CC.FLAGS_VCENTER )
+            ok_hbox.Add( self._cancel, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
-            vbox.AddF( self._sites, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
-            vbox.AddF( ok_hbox, CC.FLAGS_BUTTON_SIZER )
+            vbox.Add( self._sites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+            vbox.Add( ok_hbox, CC.FLAGS_BUTTON_SIZER )
             
             self.SetSizer( vbox )
             
@@ -1735,16 +1736,16 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
             def ArrangeControls():
                 
                 add_remove_hbox = wx.BoxSizer( wx.HORIZONTAL )
-                add_remove_hbox.AddF( self._add, CC.FLAGS_VCENTER )
-                add_remove_hbox.AddF( self._remove, CC.FLAGS_VCENTER )
-                add_remove_hbox.AddF( self._export, CC.FLAGS_VCENTER )
+                add_remove_hbox.Add( self._add, CC.FLAGS_VCENTER )
+                add_remove_hbox.Add( self._remove, CC.FLAGS_VCENTER )
+                add_remove_hbox.Add( self._export, CC.FLAGS_VCENTER )
                 
-                self._site_panel.AddF( self._imageboards, CC.FLAGS_EXPAND_BOTH_WAYS )
-                self._site_panel.AddF( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
+                self._site_panel.Add( self._imageboards, CC.FLAGS_EXPAND_BOTH_WAYS )
+                self._site_panel.Add( add_remove_hbox, CC.FLAGS_SMALL_INDENT )
                 
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
-                vbox.AddF( self._site_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                vbox.Add( self._site_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                 
                 self.SetSizer( vbox )
                 
@@ -1977,51 +1978,51 @@ class DialogManageImageboards( ClientGUIDialogs.Dialog ):
                 
                 def ArrangeControls():
                     
-                    gridbox = wx.FlexGridSizer( 0, 2 )
+                    gridbox = wx.FlexGridSizer( 2 )
                     
                     gridbox.AddGrowableCol( 1, 1 )
                     
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'POST URL' ), CC.FLAGS_VCENTER )
-                    gridbox.AddF( self._post_url, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    gridbox.AddF( wx.StaticText( self._basic_info_panel, label = 'flood time' ), CC.FLAGS_VCENTER )
-                    gridbox.AddF( self._flood_time, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox.Add( wx.StaticText( self._basic_info_panel, label = 'POST URL' ), CC.FLAGS_VCENTER )
+                    gridbox.Add( self._post_url, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    gridbox.Add( wx.StaticText( self._basic_info_panel, label = 'flood time' ), CC.FLAGS_VCENTER )
+                    gridbox.Add( self._flood_time, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
-                    self._basic_info_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                    self._basic_info_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                     
                     #
                     
                     h_b_box = wx.BoxSizer( wx.HORIZONTAL )
-                    h_b_box.AddF( self._add, CC.FLAGS_VCENTER )
-                    h_b_box.AddF( self._edit, CC.FLAGS_VCENTER )
-                    h_b_box.AddF( self._delete, CC.FLAGS_VCENTER )
+                    h_b_box.Add( self._add, CC.FLAGS_VCENTER )
+                    h_b_box.Add( self._edit, CC.FLAGS_VCENTER )
+                    h_b_box.Add( self._delete, CC.FLAGS_VCENTER )
                     
-                    self._form_fields_panel.AddF( self._form_fields, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    self._form_fields_panel.AddF( h_b_box, CC.FLAGS_BUTTON_SIZER )
+                    self._form_fields_panel.Add( self._form_fields, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    self._form_fields_panel.Add( h_b_box, CC.FLAGS_BUTTON_SIZER )
                     
                     #
                     
                     mime_buttons_box = wx.BoxSizer( wx.HORIZONTAL )
-                    mime_buttons_box.AddF( self._mime_choice, CC.FLAGS_VCENTER )
-                    mime_buttons_box.AddF( self._add_mime, CC.FLAGS_VCENTER )
-                    mime_buttons_box.AddF( self._remove_mime, CC.FLAGS_VCENTER )
+                    mime_buttons_box.Add( self._mime_choice, CC.FLAGS_VCENTER )
+                    mime_buttons_box.Add( self._add_mime, CC.FLAGS_VCENTER )
+                    mime_buttons_box.Add( self._remove_mime, CC.FLAGS_VCENTER )
                     
-                    self._allowed_mimes_panel.AddF( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    self._allowed_mimes_panel.AddF( mime_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                    self._allowed_mimes_panel.Add( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    self._allowed_mimes_panel.Add( mime_buttons_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                     
-                    self._restrictions_panel.AddF( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._restrictions_panel.AddF( self._max_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._restrictions_panel.AddF( self._max_file_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._restrictions_panel.AddF( self._allowed_mimes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    self._restrictions_panel.Add( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.Add( self._max_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.Add( self._max_file_size, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._restrictions_panel.Add( self._allowed_mimes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                     #
                     
-                    self._imageboard_panel.AddF( self._basic_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    self._imageboard_panel.AddF( self._form_fields_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    self._imageboard_panel.AddF( self._restrictions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._imageboard_panel.Add( self._basic_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    self._imageboard_panel.Add( self._form_fields_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    self._imageboard_panel.Add( self._restrictions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                     vbox = wx.BoxSizer( wx.VERTICAL )
                     
-                    vbox.AddF( self._imageboard_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    vbox.Add( self._imageboard_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
                     
                     self.SetSizer( vbox )
                     
@@ -2248,23 +2249,23 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         file_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        file_buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
-        file_buttons.AddF( self._edit_button, CC.FLAGS_VCENTER )
-        file_buttons.AddF( self._delete_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
+        file_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._ok, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         intro = 'Here you can set the client to regularly check certain folders for new files to import.'
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( file_buttons, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2538,7 +2539,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
         
-        self._folder_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._folder_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -2548,54 +2549,54 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         mimes_gridbox = ClientGUICommon.WrapInGrid( self._file_box, rows, expand_text = True )
         
-        gridbox = wx.FlexGridSizer( 0, 3 )
+        gridbox = wx.FlexGridSizer( 3 )
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_VCENTER )
-        gridbox.AddF( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file imports successfully: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_successful, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_VCENTER )
-        gridbox.AddF( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file is already in the db: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_redundant, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file has previously been deleted from the db: '), CC.FLAGS_VCENTER )
-        gridbox.AddF( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file has previously been deleted from the db: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_deleted, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        gridbox.AddF( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_VCENTER )
-        gridbox.AddF( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( wx.StaticText( self._file_box, label = 'when a file fails to import: '), CC.FLAGS_VCENTER )
+        gridbox.Add( self._action_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._location_failed, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self._file_box.AddF( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._file_box.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._file_box.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._file_box.Add( mimes_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_box.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._file_box.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        self._tag_box.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._tag_box.AddF( filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._tag_box.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._tag_box.Add( filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._ok, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._folder_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._panel.SetSizer( vbox )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2937,8 +2938,8 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2948,11 +2949,11 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
         text += os.linesep
         text += 'You can use a throwaway account if you want--this only needs to log in.'
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._test, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2997,7 +2998,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
                 
                 self._status.SetLabelText( 'OK!' )
                 
-                wx.CallLater( 5000, self._status.SetLabel, '' )
+                ClientThreading.CallLater( self, 5, self._status.SetLabel, '' )
                 
             else:
                 
@@ -3063,17 +3064,17 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         buttonbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttonbox.AddF( self._apply, CC.FLAGS_VCENTER )
-        buttonbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttonbox.Add( self._apply, CC.FLAGS_VCENTER )
+        buttonbox.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         for panel in self._panels:
             
-            vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.AddF( buttonbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( buttonbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -3170,7 +3171,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             ( remember, position ) = HC.options[ 'rating_dialog_position' ]
             
-            current_position = self.GetPositionTuple()
+            current_position = self.GetPosition()
             
             if remember and position != current_position:
                 
@@ -3367,8 +3368,8 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -3378,9 +3379,9 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         st.Wrap( 350 )
         
-        vbox.AddF( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -3453,9 +3454,9 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._blacklist, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._tag_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -3542,13 +3543,13 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -3664,21 +3665,21 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             tags_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            tags_box.AddF( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
-            tags_box.AddF( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tags_box.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
+            tags_box.Add( self._parents, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             input_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            input_box.AddF( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            input_box.AddF( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -4167,13 +4168,13 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-        buttons.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._ok, CC.FLAGS_SMALL_INDENT )
+        buttons.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -4286,27 +4287,27 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             new_sibling_box = wx.BoxSizer( wx.VERTICAL )
             
-            new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-            new_sibling_box.AddF( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
-            new_sibling_box.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+            new_sibling_box.Add( self._new_sibling, CC.FLAGS_EXPAND_PERPENDICULAR )
+            new_sibling_box.Add( ( 10, 10 ), CC.FLAGS_EXPAND_BOTH_WAYS )
             
             text_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            text_box.AddF( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
-            text_box.AddF( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            text_box.Add( self._old_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            text_box.Add( new_sibling_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             input_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            input_box.AddF( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            input_box.AddF( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            input_box.Add( self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.AddF( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._add, CC.FLAGS_LONE_BUTTON )
-            vbox.AddF( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.AddF( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
+            vbox.Add( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -4858,16 +4859,16 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         edit_buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        edit_buttons.AddF( self._add_custom, CC.FLAGS_VCENTER )
-        edit_buttons.AddF( self._edit, CC.FLAGS_VCENTER )
-        edit_buttons.AddF( self._remove, CC.FLAGS_VCENTER )
+        edit_buttons.Add( self._add_custom, CC.FLAGS_VCENTER )
+        edit_buttons.Add( self._edit, CC.FLAGS_VCENTER )
+        edit_buttons.Add( self._remove, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._mappings_list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( edit_buttons, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._mappings_list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( edit_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         

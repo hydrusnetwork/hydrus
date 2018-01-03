@@ -17,8 +17,6 @@ import threading
 import time
 import traceback
 import wx
-import wx.combo
-import wx.richtext
 import wx.lib.newevent
 
 ID_TIMER_ANIMATED = wx.NewId()
@@ -89,18 +87,33 @@ def GetXYTopTLP( screen_position ):
     
     return most_childish
     
-def IsWXAncestor( child, ancestor ):
+def IsWXAncestor( child, ancestor, through_tlws = False ):
     
     parent = child
     
-    while not isinstance( parent, wx.TopLevelWindow ):
+    if through_tlws:
         
-        if parent == ancestor:
+        while not parent is None:
             
-            return True
+            if parent == ancestor:
+                
+                return True
+                
+            
+            parent = parent.GetParent()
             
         
-        parent = parent.GetParent()
+    else:
+        
+        while not isinstance( parent, wx.TopLevelWindow ):
+            
+            if parent == ancestor:
+                
+                return True
+                
+            
+            parent = parent.GetParent()
+            
         
     
     return False
@@ -187,7 +200,7 @@ def WindowOrSameTLPChildHasFocus( window ):
     
 def WrapInGrid( parent, rows, expand_text = False ):
     
-    gridbox = wx.FlexGridSizer( 0, 2 )
+    gridbox = wx.FlexGridSizer( 2 )
     
     if expand_text:
         
@@ -219,8 +232,8 @@ def WrapInGrid( parent, rows, expand_text = False ):
         
         st = BetterStaticText( parent, text )
         
-        gridbox.AddF( st, text_flags )
-        gridbox.AddF( control, cflags )
+        gridbox.Add( st, text_flags )
+        gridbox.Add( control, cflags )
         
     
     return gridbox
@@ -231,62 +244,10 @@ def WrapInText( control, parent, text ):
     
     st = BetterStaticText( parent, text )
     
-    hbox.AddF( st, CC.FLAGS_VCENTER )
-    hbox.AddF( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+    hbox.Add( st, CC.FLAGS_VCENTER )
+    hbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
     
     return hbox
-    
-class AnimatedStaticTextTimestamp( wx.StaticText ):
-    
-    def __init__( self, parent, prefix, rendering_function, timestamp, suffix ):
-        
-        self._prefix = prefix
-        self._rendering_function = rendering_function
-        self._timestamp = timestamp
-        self._suffix = suffix
-        
-        self._last_tick = HydrusData.GetNow()
-        
-        wx.StaticText.__init__( self, parent, label = self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimated, id = ID_TIMER_ANIMATED )
-        
-        self._timer_animated = wx.Timer( self, ID_TIMER_ANIMATED )
-        self._timer_animated.Start( 1000, wx.TIMER_CONTINUOUS )
-        
-    
-    def TIMEREventAnimated( self ):
-        
-        try:
-            
-            update = False
-            
-            now = HydrusData.GetNow()
-            
-            difference = abs( now - self._timestamp )
-            
-            if difference < 3600: update = True
-            elif difference < 3600 * 24 and now - self._last_tick > 60: update = True
-            elif now - self._last_tick > 3600: update = True
-            
-            if update:
-                
-                self.SetLabelText( self._prefix + self._rendering_function( self._timestamp ) + self._suffix )
-                
-                wx.PostEvent( self.GetEventHandler(), wx.SizeEvent() )
-                
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_animated.Stop()
-            
-        except:
-            
-            self._timer_animated.Stop()
-            
-            raise
-            
-        
     
 class BetterBitmapButton( wx.BitmapButton ):
     
@@ -424,11 +385,11 @@ class BufferedWindow( wx.Window ):
             
             ( x, y ) = kwargs[ 'size' ]
             
-            self._canvas_bmp = wx.EmptyBitmap( x, y, 24 )
+            self._canvas_bmp = wx.Bitmap( x, y, 24 )
             
         else:
             
-            self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+            self._canvas_bmp = wx.Bitmap( 20, 20, 24 )
             
         
         self._dirty = True
@@ -463,7 +424,7 @@ class BufferedWindow( wx.Window ):
         
         if my_width != current_bmp_width or my_height != current_bmp_height:
             
-            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+            self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
             
             self._dirty = True
             
@@ -493,11 +454,11 @@ class BufferedWindowIcon( BufferedWindow ):
         self._dirty = False
         
     
-class CheckboxCollect( wx.combo.ComboCtrl ):
+class CheckboxCollect( wx.ComboCtrl ):
     
     def __init__( self, parent, page_key = None ):
         
-        wx.combo.ComboCtrl.__init__( self, parent, style = wx.CB_READONLY )
+        wx.ComboCtrl.__init__( self, parent, style = wx.CB_READONLY )
         
         self._page_key = page_key
         
@@ -526,18 +487,18 @@ class CheckboxCollect( wx.combo.ComboCtrl ):
         HG.client_controller.pub( 'collect_media', self._page_key, self._collect_by )
         
     
-    class _Popup( wx.combo.ComboPopup ):
+    class _Popup( wx.ComboPopup ):
         
         def __init__( self, collect_by ):
             
-            wx.combo.ComboPopup.__init__( self )
+            wx.ComboPopup.__init__( self )
             
             self._initial_collect_by = collect_by
             
         
         def Create( self, parent ):
             
-            self._control = self._Control( parent, self.GetCombo(), self._initial_collect_by )
+            self._control = self._Control( parent, self.GetComboCtrl(), self._initial_collect_by )
             
             return True
             
@@ -768,8 +729,8 @@ class ChoiceSort( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._sort_asc_choice, CC.FLAGS_VCENTER )
+        hbox.Add( self._sort_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._sort_asc_choice, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -1069,12 +1030,12 @@ class ListBook( wx.Panel ):
         
         self._panel_sizer = wx.BoxSizer( wx.VERTICAL )
         
-        self._panel_sizer.AddF( self._empty_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._panel_sizer.Add( self._empty_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        hbox.AddF( self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.Add( self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox.Add( self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._list_box.Bind( wx.EVT_LISTBOX, self.EventSelection )
         
@@ -1091,7 +1052,7 @@ class ListBook( wx.Panel ):
         
         page.Hide()
         
-        self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._panel_sizer.Add( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._keys_to_active_pages[ key ] = page
         
@@ -1181,7 +1142,7 @@ class ListBook( wx.Panel ):
             
             page.Hide()
             
-            self._panel_sizer.AddF( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._panel_sizer.Add( page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
         # Can't do LB_SORT because of Linux not being able to track clientdata, have to do it manually.
@@ -1257,9 +1218,9 @@ class ListBook( wx.Panel ):
         
         self._panel_sizer.Detach( self._empty_panel )
         
-        self._panel_sizer.Clear( deleteWindows = True )
+        self._panel_sizer.Clear( delete_windows = True )
         
-        self._panel_sizer.AddF( self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._panel_sizer.Add( self._empty_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self._current_key = None
         
@@ -1636,23 +1597,23 @@ class NoneableSpinCtrl( wx.Panel ):
         
         if len( message ) > 0:
             
-            hbox.AddF( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
+            hbox.Add( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
             
         
-        hbox.AddF( self._one, CC.FLAGS_VCENTER )
+        hbox.Add( self._one, CC.FLAGS_VCENTER )
         
         if self._num_dimensions == 2:
             
-            hbox.AddF( BetterStaticText( self, 'x' ), CC.FLAGS_VCENTER )
-            hbox.AddF( self._two, CC.FLAGS_VCENTER )
+            hbox.Add( BetterStaticText( self, 'x' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._two, CC.FLAGS_VCENTER )
             
         
         if self._unit is not None:
             
-            hbox.AddF( BetterStaticText( self, self._unit ), CC.FLAGS_VCENTER )
+            hbox.Add( BetterStaticText( self, self._unit ), CC.FLAGS_VCENTER )
             
         
-        hbox.AddF( self._checkbox, CC.FLAGS_VCENTER )
+        hbox.Add( self._checkbox, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -1702,13 +1663,13 @@ class NoneableSpinCtrl( wx.Panel ):
             
         
     
-    def SetToolTipString( self, text ):
+    def SetToolTip( self, text ):
         
-        wx.Panel.SetToolTipString( self, text )
+        wx.Panel.SetToolTip( self, text )
         
         for c in self.GetChildren():
             
-            c.SetToolTipString( text )
+            c.SetToolTip( text )
             
         
     
@@ -1756,11 +1717,11 @@ class NoneableTextCtrl( wx.Panel ):
         
         if len( message ) > 0:
             
-            hbox.AddF( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
+            hbox.Add( BetterStaticText( self, message + ': ' ), CC.FLAGS_VCENTER )
             
         
-        hbox.AddF( self._text, CC.FLAGS_VCENTER )
-        hbox.AddF( self._checkbox, CC.FLAGS_VCENTER )
+        hbox.Add( self._text, CC.FLAGS_VCENTER )
+        hbox.Add( self._checkbox, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -1796,13 +1757,13 @@ class NoneableTextCtrl( wx.Panel ):
             
         
     
-    def SetToolTipString( self, text ):
+    def SetToolTip( self, text ):
         
-        wx.Panel.SetToolTipString( self, text )
+        wx.Panel.SetToolTip( self, text )
         
         for c in self.GetChildren():
             
-            c.SetToolTipString( text )
+            c.SetToolTip( text )
             
         
     
@@ -1884,7 +1845,7 @@ class RatingLike( wx.Window ):
         
         self._service_key = service_key
         
-        self._canvas_bmp = wx.EmptyBitmap( 16, 16, 24 )
+        self._canvas_bmp = wx.Bitmap( 16, 16, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -2001,7 +1962,7 @@ class RatingLikeCanvas( RatingLike ):
         
         name = service.GetName()
         
-        self.SetToolTipString( name )
+        self.SetToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
@@ -2113,7 +2074,7 @@ class RatingNumerical( wx.Window ):
         
         my_width = ClientRatings.GetNumericalWidth( self._service_key )
         
-        self._canvas_bmp = wx.EmptyBitmap( my_width, 16, 24 )
+        self._canvas_bmp = wx.Bitmap( my_width, 16, 24 )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -2286,7 +2247,7 @@ class RatingNumericalCanvas( RatingNumerical ):
         
         name = self._service.GetName()
         
-        self.SetToolTipString( name )
+        self.SetToolTip( name )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
@@ -2526,18 +2487,18 @@ class Shortcut( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( BetterStaticText( self, 'Mouse events only work for the duplicate and archive/delete filters atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( BetterStaticText( self, 'Mouse events only work for the duplicate and archive/delete filters atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        gridbox = wx.FlexGridSizer( 2 )
         
         gridbox.AddGrowableCol( 1, 1 )
         
-        gridbox.AddF( self._mouse_radio, CC.FLAGS_VCENTER )
-        gridbox.AddF( self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._keyboard_radio, CC.FLAGS_VCENTER )
-        gridbox.AddF( self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._mouse_radio, CC.FLAGS_VCENTER )
+        gridbox.Add( self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._keyboard_radio, CC.FLAGS_VCENTER )
+        gridbox.Add( self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -2692,12 +2653,12 @@ class StaticBox( wx.Panel ):
         title_text = wx.StaticText( self, label = title, style = wx.ALIGN_CENTER )
         title_text.SetFont( title_font )
         
-        self._sizer.AddF( title_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._sizer.Add( title_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( self._sizer )
         
     
-    def AddF( self, widget, flags ): self._sizer.AddF( widget, flags )
+    def Add( self, widget, flags ): self._sizer.Add( widget, flags )
     
 class StaticBoxSorterForListBoxTags( StaticBox ):
     
@@ -2727,7 +2688,7 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._sorter.Bind( wx.EVT_CHOICE, self.EventSort )
         
-        self.AddF( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._sorter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def ChangeTagService( self, service_key ): self._tags_box.ChangeTagService( service_key )
@@ -2748,7 +2709,7 @@ class StaticBoxSorterForListBoxTags( StaticBox ):
         
         self._tags_box = tags_box
         
-        self.AddF( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self.Add( self._tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def SetTagsByMedia( self, media, force_reload = False ):
@@ -2779,7 +2740,7 @@ class RadioBox( StaticBox ):
             
             radio_button = wx.RadioButton( self, label = text, style = style )
             
-            self.AddF( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._indices_to_radio_buttons[ index ] = radio_button
             self._radio_buttons_to_data[ radio_button ] = data
@@ -2817,8 +2778,8 @@ class TextAndGauge( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -2853,14 +2814,14 @@ class TextAndPasteCtrl( wx.Panel ):
         self._text_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
         self._paste_button = BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
-        self._paste_button.SetToolTipString( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
+        self._paste_button.SetToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._paste_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -2927,8 +2888,6 @@ class ThreadToGUIUpdater( object ):
         self._args = None
         self._kwargs = None
         
-        self._my_object_alive = True
-        
         event_handler.Bind( EVT_DIRTY, self.EventDirty )
         
     
@@ -2959,28 +2918,16 @@ class ThreadToGUIUpdater( object ):
             self._args = args
             self._kwargs = kwargs
             
-            if self._dirty_count == 0 and self._my_object_alive:
+            if self._dirty_count == 0 and not HG.view_shutdown:
                 
                 def wx_code():
                     
-                    try:
+                    if not self._event_handler:
                         
-                        wx.PostEvent( self._event_handler, DirtyEvent() )
-                        
-                    except TypeError:
-                        
-                        if not bool( self._event_handler ):
-                            
-                            # Event Handler is dead (would give PyDeadObjectError if accessed--PostEvent throws TypeError)
-                            
-                            self._my_object_alive = False
-                            
-                        else:
-                            
-                            raise
-                            
+                        return
                         
                     
+                    wx.PostEvent( self._event_handler, DirtyEvent() )
                     
                 
                 wx.CallAfter( wx_code )

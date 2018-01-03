@@ -13,6 +13,7 @@ callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False
 gui_report_mode = False
+menu_profile_mode = False
 network_report_mode = False
 pubsub_profile_mode = False
 daemon_report_mode = False

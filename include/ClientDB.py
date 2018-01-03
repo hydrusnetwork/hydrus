@@ -10097,6 +10097,16 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_initial_message( message )
             
         
+        if version == 287:
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                message = 'The wx (user interface) library has been updated. I could not get the flash window embed working without crashes, so I have disabled it for now. Instead of the embeds, you will see \'open externally\' buttons. I am going to continue working on this and hope to have support back in the coming weeks.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10727,7 +10737,10 @@ class DB( HydrusDB.HydrusDB ):
     
     def publish_status_update( self ):
         
-        self._controller.pubimmediate( 'refresh_status' )
+        if self._controller.IsBooted() and self._controller.gui:
+            
+            self._controller.gui.SetStatusBarDirty()
+            
         
     
     def GetInitialMessages( self ):

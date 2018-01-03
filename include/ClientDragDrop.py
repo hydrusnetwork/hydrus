@@ -3,11 +3,11 @@ import HydrusGlobals as HG
 import json
 import wx
 
-class FileDropTarget( wx.PyDropTarget ):
+class FileDropTarget( wx.DropTarget ):
     
     def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None, page_callable = None ):
         
-        wx.PyDropTarget.__init__( self )
+        wx.DropTarget.__init__( self )
         
         self._parent = parent
         
@@ -68,7 +68,9 @@ class FileDropTarget( wx.PyDropTarget ):
                 
                 if format_id == 'application/hydrus-media' and self._media_callable is not None:
                     
-                    data = self._hydrus_media_data_object.GetData()
+                    mview = self._hydrus_media_data_object.GetData()
+                    
+                    data = mview.tobytes()
                     
                     ( encoded_page_key, encoded_hashes ) = json.loads( data )
                     
@@ -82,7 +84,9 @@ class FileDropTarget( wx.PyDropTarget ):
                 
                 if format_id == 'application/hydrus-page-tab' and self._page_callable is not None:
                     
-                    page_key = self._hydrus_page_tab_data_object.GetData()
+                    mview = self._hydrus_page_tab_data_object.GetData()
+                    
+                    page_key = mview.tobytes()
                     
                     wx.CallAfter( self._page_callable, page_key ) # callafter so we can terminate dnd event now
                     

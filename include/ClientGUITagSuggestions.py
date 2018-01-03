@@ -105,8 +105,8 @@ class RecentTagsPanel( wx.Panel ):
         
         self._recent_tags = ListBoxTagsSuggestionsFavourites( self, activate_callable, sort_tags = False )
         
-        vbox.AddF( clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( clear_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._recent_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -166,11 +166,11 @@ class RelatedTagsPanel( wx.Panel ):
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        button_hbox.AddF( button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        button_hbox.Add( button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        button_hbox.Add( button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        vbox.AddF( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -281,11 +281,11 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._SetTags( [] )
         
@@ -432,7 +432,7 @@ class SuggestedTagsPanel( wx.Panel ):
                 notebook.AddPage( panel, name )
                 
             
-            hbox.AddF( notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -442,7 +442,7 @@ class SuggestedTagsPanel( wx.Panel ):
             
             for ( name, panel ) in panels:
                 
-                hbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+                hbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
             self.SetSizer( hbox )

@@ -9,6 +9,7 @@ import ClientGUIMenus
 import ClientGUICanvas
 import ClientDownloading
 import ClientSearch
+import ClientThreading
 import hashlib
 import HydrusData
 import HydrusExceptions
@@ -46,17 +47,17 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self._button_2 = wx.Button( self, label = '', id = 2 )
         self._button_3 = wx.Button( self, label = '', id = 3 )
         
-        gridbox = wx.GridSizer( 0, 3 )
+        gridbox = wx.GridSizer( 3 )
         
-        gridbox.AddF( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.AddF( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+        gridbox.Add( self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( gridbox )
         
@@ -440,7 +441,7 @@ class Page( wx.SplitterWindow ):
         
         self._pretty_status = status
         
-        self._controller.pubimmediate( 'refresh_status' )
+        self._controller.gui.SetStatusBarDirty()
         
     
     def _SwapMediaPanel( self, new_panel ):
@@ -454,7 +455,7 @@ class Page( wx.SplitterWindow ):
         self._media_panel.Hide()
         
         # If this is a CallAfter, OS X segfaults on refresh jej
-        wx.CallLater( 500, self._media_panel.Destroy )
+        ClientThreading.CallLater( self, 0.5, self._media_panel.Destroy )
         
         self._media_panel = new_panel
         
@@ -739,9 +740,9 @@ class Page( wx.SplitterWindow ):
         wx.CallAfter( self.SetMediaResults, sorted_initial_media_results )
         
     
-    def TIMERUpdate( self ):
+    def TIMERPageUpdate( self ):
         
-        self._management_panel.TIMERUpdate()
+        self._management_panel.TIMERPageUpdate()
         
     
 class PagesNotebook( wx.Notebook ):
@@ -1563,6 +1564,11 @@ class PagesNotebook( wx.Notebook ):
         
     
     def EventMenu( self, event ):
+        
+        if not self.IsShown(): # can't clienttoscreen if not shown, like during init
+            
+            return
+            
         
         screen_position = self.ClientToScreen( event.GetPosition() )
         
@@ -2510,7 +2516,7 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def TIMERUpdate( self ):
+    def TIMERPageUpdate( self ):
         
         pass
         

@@ -31,7 +31,7 @@ class BarChartBandwidthHistory( FigureCanvasWxAgg ):
         
         monthly_usage = [ ( month_str, month_value / divisor ) for ( month_str, month_value ) in monthly_usage ]
         
-        ( r, g, b ) = wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ).Get()
+        ( r, g, b, a ) = wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ).Get()
         
         facecolor = '#' + chr( r ).encode( 'hex' ) + chr( g ).encode( 'hex' ) + chr( b ).encode( 'hex' )
         

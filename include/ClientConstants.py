@@ -212,7 +212,7 @@ media_viewer_capabilities[ HC.IMAGE_PNG ] = static_full_support
 media_viewer_capabilities[ HC.IMAGE_APNG ] = animated_full_support
 media_viewer_capabilities[ HC.IMAGE_GIF ] = animated_full_support
 
-if HC.PLATFORM_WINDOWS:
+if False and HC.PLATFORM_WINDOWS: # currently disabled due to wx 4.0 update, which was crashing with FlashWindow
     
     media_viewer_capabilities[ HC.APPLICATION_FLASH ] = [ MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
     

@@ -39,7 +39,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         #
         
-        self.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _Add( self ):
@@ -181,10 +181,10 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._bandwidth_type, CC.FLAGS_VCENTER )
-            hbox.AddF( self._time_delta, CC.FLAGS_VCENTER )
-            hbox.AddF( self._max_allowed, CC.FLAGS_VCENTER )
-            hbox.AddF( self._max_allowed_st, CC.FLAGS_VCENTER )
+            hbox.Add( self._bandwidth_type, CC.FLAGS_VCENTER )
+            hbox.Add( self._time_delta, CC.FLAGS_VCENTER )
+            hbox.Add( self._max_allowed, CC.FLAGS_VCENTER )
+            hbox.Add( self._max_allowed_st, CC.FLAGS_VCENTER )
             
             self.SetSizer( hbox )
             
@@ -251,7 +251,7 @@ class EditStringToStringDictControl( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -397,27 +397,21 @@ class NetworkJobControl( wx.Panel ):
         
         st_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        st_hbox.AddF( self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        st_hbox.AddF( self._right_text, CC.FLAGS_VCENTER )
+        st_hbox.Add( self._left_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        st_hbox.Add( self._right_text, CC.FLAGS_VCENTER )
         
         left_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        left_vbox.AddF( st_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        left_vbox.AddF( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        left_vbox.Add( st_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        left_vbox.Add( self._gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        hbox.AddF( self._cog_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
+        hbox.Add( left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
-        
-        #
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUpdate )
-        
-        self._update_timer = wx.Timer( self )
         
     
     def _OverrideBandwidthIfAppropriate( self ):
@@ -535,7 +529,7 @@ class NetworkJobControl( wx.Panel ):
             
             self._Update()
             
-            self._update_timer.Stop()
+            HG.client_controller.gui.UnregisterUIUpdateWindow( self )
             
         
     
@@ -571,11 +565,11 @@ class NetworkJobControl( wx.Panel ):
             self._network_job = network_job
             self._download_started = False
             
-            self._update_timer.Start( 250, wx.TIMER_CONTINUOUS )
+            HG.client_controller.gui.RegisterUIUpdateWindow( self )
             
         
     
-    def TIMEREventUpdate( self, event ):
+    def TIMERUIUpdate( self ):
         
         self._OverrideBandwidthIfAppropriate()
         

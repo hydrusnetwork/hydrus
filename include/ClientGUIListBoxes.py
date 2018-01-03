@@ -53,22 +53,22 @@ class QueueListBox( wx.Panel ):
         
         buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        buttons_vbox.AddF( self._up_button, CC.FLAGS_VCENTER )
-        buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
-        buttons_vbox.AddF( self._down_button, CC.FLAGS_VCENTER )
+        buttons_vbox.Add( self._up_button, CC.FLAGS_VCENTER )
+        buttons_vbox.Add( self._delete_button, CC.FLAGS_VCENTER )
+        buttons_vbox.Add( self._down_button, CC.FLAGS_VCENTER )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( buttons_vbox, CC.FLAGS_VCENTER )
+        hbox.Add( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( buttons_vbox, CC.FLAGS_VCENTER )
         
         buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons_hbox.AddF( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        buttons_hbox.AddF( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -313,7 +313,7 @@ class ListBox( wx.ScrolledWindow ):
         self._last_view_start = None
         self._dirty = True
         
-        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        self._client_bmp = wx.Bitmap( 20, 20, 24 )
         
         dc = wx.MemoryDC( self._client_bmp )
         
@@ -387,20 +387,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def _DataHasChanged( self ):
         
-        ( my_x, my_y ) = self.GetClientSize()
-        
-        total_height = max( self._text_y * len( self._ordered_terms ), my_y )
-        
-        ( virtual_x, virtual_y ) = self.GetVirtualSize()
-        
-        if total_height != virtual_y:
-            
-            wx.PostEvent( self, wx.SizeEvent() )
-            
-        else:
-            
-            self._SetDirty()
-            
+        self._SetDirty()
         
         wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
@@ -843,7 +830,7 @@ class ListBox( wx.ScrolledWindow ):
         
         if ( my_x, my_y ) != self._client_bmp.GetSize():
             
-            self._client_bmp = wx.EmptyBitmap( my_x, my_y, 24 )
+            self._client_bmp = wx.Bitmap( my_x, my_y, 24 )
             
             self._dirty = True
             

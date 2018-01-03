@@ -49,9 +49,9 @@ class PopupDismissAll( PopupWindow ):
         button.Bind( wx.EVT_BUTTON, self.EventButton )
         button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         
-        hbox.AddF( self._text, CC.FLAGS_VCENTER )
-        hbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( button, CC.FLAGS_VCENTER )
+        hbox.Add( self._text, CC.FLAGS_VCENTER )
+        hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( button, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -151,28 +151,28 @@ class PopupMessage( PopupWindow ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._pause_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._cancel_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._pause_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._cancel_button, CC.FLAGS_VCENTER )
         
         yes_no_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        yes_no_hbox.AddF( self._yes, CC.FLAGS_VCENTER )
-        yes_no_hbox.AddF( self._no, CC.FLAGS_VCENTER )
+        yes_no_hbox.Add( self._yes, CC.FLAGS_VCENTER )
+        yes_no_hbox.Add( self._no, CC.FLAGS_VCENTER )
         
-        vbox.AddF( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( yes_no_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._title, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._text_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._gauge_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._text_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._gauge_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._text_yes_no, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( yes_no_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._network_job_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._copy_to_clipboard_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._show_files_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._show_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._tb_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._copy_tb_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -541,8 +541,8 @@ class PopupMessageManager( wx.Frame ):
         self._dismiss_all = PopupDismissAll( self )
         self._dismiss_all.Hide()
         
-        vbox.AddF( self._message_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._dismiss_all, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._message_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._dismiss_all, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -593,7 +593,7 @@ class PopupMessageManager( wx.Frame ):
             
             window.Update()
             
-            self._message_vbox.AddF( window, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._message_vbox.Add( window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             size_and_position_needed = True
             
@@ -853,6 +853,10 @@ class PopupMessageManager( wx.Frame ):
                 
             
         
+        self._timer.Stop()
+        
+        self._timer = None
+        
         sys.excepthook = self._old_excepthook
         
         HydrusData.ShowException = self._old_show_exception
@@ -909,10 +913,6 @@ class PopupMessageManager( wx.Frame ):
                 self._CheckPending()
                 
             
-        except wx.PyDeadObjectError:
-            
-            self._timer.Stop()
-            
         except:
             
             self._timer.Stop()
@@ -933,7 +933,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._message_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._message_window, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -944,6 +944,16 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         self._timer.Start( 500, wx.TIMER_CONTINUOUS )
         
         self._message_pubbed = False
+        
+    
+    def _DestroyTimer( self ):
+        
+        if self._timer is not None:
+            
+            self._timer.Stop()
+            
+            self._timer = None
+            
         
     
     def _ReleaseMessage( self ):
@@ -979,6 +989,8 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
             self._ReleaseMessage()
             
+            self._DestroyTimer()
+            
         else:
             
             if self._job_key.IsCancellable():
@@ -990,6 +1002,8 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                         self._job_key.Cancel()
                         
                         self._ReleaseMessage()
+                        
+                        self._DestroyTimer()
                         
                     else:
                         
@@ -1022,13 +1036,9 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                 self._Update()
                 
             
-        except wx.PyDeadObjectError:
-            
-            self._timer.Stop()
-            
         except:
             
-            self._timer.Stop()
+            self._DestroyTimer()
             
             raise
             

@@ -16,6 +16,7 @@ import HydrusText
 import os
 import re
 import wx
+import wx.adv
 
 class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
@@ -48,7 +49,7 @@ class FileImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _SetToolTip( self ):
         
-        self.SetToolTipString( self._file_import_options.GetSummary() )
+        self.SetToolTip( self._file_import_options.GetSummary() )
         
     
     def _SetValue( self, file_import_options ):
@@ -100,7 +101,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -180,8 +181,8 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
             
-            self._regex_intro_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-            self._regex_practise_link = wx.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
+            self._regex_intro_link = wx.adv.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+            self._regex_practise_link = wx.adv.HyperlinkCtrl( self._regexes_panel, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
             
             #
             
@@ -218,49 +219,49 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             button_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            button_box.AddF( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.AddF( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-            button_box.AddF( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            button_box.Add( self._add_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            button_box.Add( self._edit_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            button_box.Add( self._delete_quick_namespace_button, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._quick_namespaces_panel.AddF( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._quick_namespaces_panel.AddF( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._quick_namespaces_panel.Add( self._quick_namespaces_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._quick_namespaces_panel.Add( button_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
             
-            self._regexes_panel.AddF( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._regexes_panel.AddF( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._regexes_panel.AddF( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-            self._regexes_panel.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.Add( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._regexes_panel.Add( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._regexes_panel.Add( self._regex_shortcuts, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.Add( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+            self._regexes_panel.Add( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
             
             #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_VCENTER )
-            hbox.AddF( self._num_base, CC.FLAGS_VCENTER )
-            hbox.AddF( self._num_step, CC.FLAGS_VCENTER )
+            hbox.Add( wx.StaticText( self._num_panel, label = '# base/step: ' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._num_base, CC.FLAGS_VCENTER )
+            hbox.Add( self._num_step, CC.FLAGS_VCENTER )
             
-            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_VCENTER )
-            hbox.AddF( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( wx.StaticText( self._num_panel, label = '# namespace: ' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._num_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._num_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._num_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             second_vbox = wx.BoxSizer( wx.VERTICAL )
             
-            second_vbox.AddF( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            second_vbox.AddF( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            second_vbox.Add( self._regexes_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            second_vbox.Add( self._num_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.Add( self._quick_namespaces_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( second_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             self.SetSizer( hbox )
             
@@ -482,7 +483,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             self._load_from_txt_files_checkbox = wx.CheckBox( self._checkboxes_panel, label = 'try to load tags from neighbouring .txt files' )
             
             txt_files_help_button = ClientGUICommon.BetterBitmapButton( self._checkboxes_panel, CC.GlobalBMPs.help, self._ShowTXTHelp )
-            txt_files_help_button.SetToolTipString( 'Show help regarding importing tags from .txt files.' )
+            txt_files_help_button.SetToolTip( 'Show help regarding importing tags from .txt files.' )
             
             self._filename_namespace = wx.TextCtrl( self._checkboxes_panel )
             self._filename_namespace.SetMinSize( ( 100, -1 ) )
@@ -533,50 +534,50 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             #
             
-            self._tags_panel.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._tags_panel.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._tags_panel.AddF( self._tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._tags_panel.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._tags_panel.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._tags_panel.Add( self._tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._single_tags_panel.AddF( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._single_tags_panel.AddF( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._single_tags_panel.AddF( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._single_tags_panel.Add( self._single_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self._single_tags_panel.Add( self._single_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             txt_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            txt_hbox.AddF( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-            txt_hbox.AddF( txt_files_help_button, CC.FLAGS_VCENTER )
+            txt_hbox.Add( self._load_from_txt_files_checkbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            txt_hbox.Add( txt_files_help_button, CC.FLAGS_VCENTER )
             
             filename_hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            filename_hbox.AddF( self._filename_checkbox, CC.FLAGS_VCENTER )
-            filename_hbox.AddF( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+            filename_hbox.Add( self._filename_checkbox, CC.FLAGS_VCENTER )
+            filename_hbox.Add( self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             dir_hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
             
-            dir_hbox_1.AddF( self._dir_checkbox_1, CC.FLAGS_VCENTER )
-            dir_hbox_1.AddF( self._dir_namespace_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+            dir_hbox_1.Add( self._dir_checkbox_1, CC.FLAGS_VCENTER )
+            dir_hbox_1.Add( self._dir_namespace_1, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             dir_hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
             
-            dir_hbox_2.AddF( self._dir_checkbox_2, CC.FLAGS_VCENTER )
-            dir_hbox_2.AddF( self._dir_namespace_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+            dir_hbox_2.Add( self._dir_checkbox_2, CC.FLAGS_VCENTER )
+            dir_hbox_2.Add( self._dir_namespace_2, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             dir_hbox_3 = wx.BoxSizer( wx.HORIZONTAL )
             
-            dir_hbox_3.AddF( self._dir_checkbox_3, CC.FLAGS_VCENTER )
-            dir_hbox_3.AddF( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
+            dir_hbox_3.Add( self._dir_checkbox_3, CC.FLAGS_VCENTER )
+            dir_hbox_3.Add( self._dir_namespace_3, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            self._checkboxes_panel.AddF( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.AddF( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.AddF( dir_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.AddF( dir_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self._checkboxes_panel.AddF( dir_hbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( txt_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( dir_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( dir_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( dir_hbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            hbox.AddF( self._checkboxes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            hbox.Add( self._tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( self._single_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( self._checkboxes_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( hbox )
             
@@ -841,7 +842,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._tag_repositories, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -887,8 +888,8 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.AddF( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.AddF( self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( self._filename_tagging_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -968,9 +969,9 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._example_path_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._example_output, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._example_path_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._example_output, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._filename_tagging_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1039,7 +1040,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _SetToolTip( self ):
         
-        self.SetToolTipString( self._tag_import_options.GetSummary() )
+        self.SetToolTip( self._tag_import_options.GetSummary() )
         
     
     def _SetValue( self, tag_import_options ):

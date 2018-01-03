@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 288</h3></li>
+				<ul>
+					<li>updated to wxPython Phoenix (4.0) build!</li>
+					<li>all builds now require the new wx, so if you run from source, please consult the help files for new info on figuring this out</li>
+					<li>did a ton of wx refactoring</li>
+					<li>merged a large number of timers</li>
+					<li>wrote a new wx-aware timer to replace some of the more awkward old timers that could not be neatly merged</li>
+					<li>replaced wx.calllaters (the new ones aren't always garbage collecting nicely) with the new custom timer object</li>
+					<li>misc wx deprecation refactoring</li>
+					<li>cleaned up some wx test code</li>
+					<li>fixed some crashing wx test code</li>
+					<li>fixed 'select from list of strings' object, which was no longer processing enter key properly</li>
+					<li>cleaned up a bunch of ui object interaction code</li>
+					<li>cleaned up a bunch of wx-related shutdown code</li>
+					<li>fixed an issue with the splash window not shutting down cleanly</li>
+					<li>fixed a shutdown db-gui status report crash</li>
+					<li>was unable to get flash embed windows working properly without edge-case crashing on windows, so they are disabled for now (you'll likely get an 'open externally' button instead)</li>
+					<li>animations now clean up their memory buffer faster in certain circumstances--all users who view animations in the preview window should notice significantly leaner 'idle' memory usage over time</li>
+					<li>fixed a very important inefficiency bug that meant select->inbox/archive on large pages with more than a handful of inbox files was taking extremely long periods of 100% CPU</li>
+					<li>wrote a faster way of fetching some media and their paths</li>
+					<li>copying files to clipboard is now much faster</li>
+					<li>initialising any large file drag-and-drop event is now much faster</li>
+					<li>certain redundant image pre-fetching will no longer be done</li>
+					<li>'open externally' panels will no longer draw a (slightly buggy and useless) animation bar if the underlying media would have had one</li>
+					<li>added a new 'menu profile mode' that will profile any menu click</li>
+					<li>cleaned up the debug menu</li>
+					<li>deleted some old options code that is no longer used</li>
+				</ul>
 				<li><h3>version 287</h3></li>
 				<ul>
 					<li>thumbnails can now be drag-and-dropped to other pages!</li>

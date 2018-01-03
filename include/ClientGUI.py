@@ -50,9 +50,12 @@ import traceback
 import types
 import webbrowser
 import wx
+import wx.adv
 
 ID_TIMER_GUI_BANDWIDTH = wx.NewId()
-ID_TIMER_GUI_PAGE_UPDATE = wx.NewId()
+ID_TIMER_PAGE_UPDATE = wx.NewId()
+ID_TIMER_UI_UPDATE = wx.NewId()
+ID_TIMER_ANIMATION_UPDATE = wx.NewId()
 
 # Sizer Flags
 
@@ -78,8 +81,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         system_busy_width = ClientData.ConvertTextToPixelWidth( self, 13 )
         db_width = ClientData.ConvertTextToPixelWidth( self, 14 )
         
-        self._statusbar = self.CreateStatusBar()
-        self._statusbar.SetFieldsCount( 5 )
+        stb_style = wx.STB_SIZEGRIP | wx.STB_ELLIPSIZE_END | wx.FULL_REPAINT_ON_RESIZE
+        
+        self._statusbar = self.CreateStatusBar( 5, stb_style )
         self._statusbar.SetStatusWidths( [ -1, bandwidth_width, idle_width, system_busy_width, db_width ] )
         
         self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
@@ -105,7 +109,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventPageUpdate, id = ID_TIMER_GUI_PAGE_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventPageUpdate, id = ID_TIMER_PAGE_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventUIUpdate, id = ID_TIMER_UI_UPDATE )
+        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimationUpdate, id = ID_TIMER_ANIMATION_UPDATE )
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
@@ -120,7 +126,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
-        self._controller.sub( self._statusbar_thread_updater, 'Update', 'refresh_status' )
         self._controller.sub( self, 'RenamePage', 'rename_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
@@ -131,7 +136,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -149,15 +154,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._bandwidth_timer.Start( 1000, wx.TIMER_CONTINUOUS )
         
-        self._import_update_timer = wx.Timer( self, id = ID_TIMER_GUI_PAGE_UPDATE )
+        self._page_update_timer = wx.Timer( self, id = ID_TIMER_PAGE_UPDATE )
         
-        self._import_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
+        self._page_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
         
+        self._ui_update_timer = wx.Timer( self, id = ID_TIMER_UI_UPDATE )
+        
+        self._ui_update_windows = set()
+        
+        self._animation_update_timer = wx.Timer( self, id = ID_TIMER_ANIMATION_UPDATE )
+        
+        self._animation_update_windows = set()
         
     
     def _AboutWindow( self ):
         
-        aboutinfo = wx.AboutDialogInfo()
+        aboutinfo = wx.adv.AboutDialogInfo()
         
         aboutinfo.SetIcon( self._controller.frame_icon )
         aboutinfo.SetName( 'hydrus client' )
@@ -202,7 +214,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         aboutinfo.SetDevelopers( [ 'Anonymous' ] )
         aboutinfo.SetWebSite( 'https://hydrusnetwork.github.io/hydrus/' )
         
-        wx.AboutBox( aboutinfo )
+        wx.adv.AboutBox( aboutinfo )
         
     
     def _AccountInfo( self, service_key ):
@@ -533,7 +545,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 self._notebook.SaveGUISession( 'last session' )
                 
                 # session save causes a db read in the menu refresh, so let's put this off just a bit
-                wx.CallLater( 1500, self._controller.Write, 'backup', path )
+                ClientThreading.CallLater( self, 1.5, self._controller.Write, 'backup', path )
                 
             
         
@@ -738,8 +750,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.pub( 'message', job_key )
         
-        wx.CallLater( 2000, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
-        wx.CallLater( 2000, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
+        ClientThreading.CallLater( self, 2, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
+        ClientThreading.CallLater( self, 2, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
         
         #
         
@@ -751,7 +763,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for i in range( 1, 4 ):
             
-            wx.CallLater( 500 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
+            ClientThreading.CallLater( self, 0.5 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
             
         
     
@@ -795,6 +807,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        
+        HydrusData.DebugPrint( 'garbage printing finished' )
         
     
     def _DeleteGUISession( self, name ):
@@ -848,6 +862,28 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         gc.collect()
+        
+    
+    def _DestroyTimers( self ):
+        
+        if self._bandwidth_timer is not None:
+            
+            self._bandwidth_timer.Stop()
+            
+            self._bandwidth_timer = None
+            
+            self._page_update_timer.Stop()
+            
+            self._page_update_timer = None
+            
+            self._ui_update_timer.Stop()
+            
+            self._ui_update_timer = None
+            
+            self._animation_update_timer.Stop()
+            
+            self._animation_update_timer = None
+            
         
     
     def _FetchIP( self, service_key ):
@@ -1516,27 +1552,38 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             debug_modes = wx.Menu()
             
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
-            ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
             
-            ClientGUIMenus.AppendMenu( debug, debug_modes, 'modes' )
+            ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
+            
+            profile_modes = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            
+            ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
+            
+            report_modes = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            
+            ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', wx.CallLater, 5000, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', ClientThreading.CallLater, self, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             ClientGUIMenus.AppendMenuItem( self, debug, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
             
@@ -1755,7 +1802,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
         
-        wx.CallLater( last_session_save_period_minutes * 60 * 1000, self.SaveLastSession )
+        ClientThreading.CallLater( self, last_session_save_period_minutes * 60, self.SaveLastSession )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -1853,7 +1900,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.pub( 'wake_daemons' )
-        self._controller.pubimmediate( 'refresh_status' )
+        self._controller.gui.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
         
     
@@ -2283,12 +2330,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         ( db_status, job_name ) = HG.client_controller.GetDBStatus()
         
-        self._statusbar.SetToolTipString( job_name )
+        self._statusbar.SetToolTip( job_name )
         
-        self._statusbar.SetStatusText( media_status, number = 0 )
-        self._statusbar.SetStatusText( idle_status, number = 2 )
-        self._statusbar.SetStatusText( busy_status, number = 3 )
-        self._statusbar.SetStatusText( db_status, number = 4 )
+        self._statusbar.SetStatusText( media_status, 0 )
+        self._statusbar.SetStatusText( idle_status, 2 )
+        self._statusbar.SetStatusText( busy_status, 3 )
+        self._statusbar.SetStatusText( db_status, 4 )
         
     
     def _RegenerateACCache( self ):
@@ -2617,6 +2664,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.gui_report_mode = not HG.gui_report_mode
             
+        elif name == 'menu_profile_mode':
+            
+            HG.menu_profile_mode = not HG.menu_profile_mode
+            
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode
@@ -2630,7 +2681,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HG.force_idle_mode = not HG.force_idle_mode
             
             self._controller.pub( 'wake_daemons' )
-            self._controller.pubimmediate( 'refresh_status' )
+            self._controller.gui.SetStatusBarDirty()
             
         elif name == 'no_page_limit_mode':
             
@@ -2967,7 +3018,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self.IsIconized():
             
-            wx.CallLater( 10000, self.AddModalMessage, job_key )
+            ClientThreading.CallLater( self, 10, self.AddModalMessage, job_key )
             
         else:
             
@@ -3111,6 +3162,35 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.EventMenuFromScreenPosition( screen_position )
         
     
+    def TIMEREventAnimationUpdate( self, event ):
+        
+        for window in list( self._animation_update_windows ):
+            
+            if not window:
+                
+                self._animation_update_windows.discard( window )
+                
+                continue
+                
+            
+            try:
+                
+                window.TIMERAnimationUpdate()
+                
+            except Exception as e:
+                
+                self._animation_update_windows.discard( window )
+                
+                HydrusData.ShowException( e )
+                
+            
+        
+        if len( self._animation_update_windows ) == 0:
+            
+            self._animation_update_timer.Stop()
+            
+        
+    
     def TIMEREventBandwidth( self, event ):
         
         global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT )
@@ -3130,7 +3210,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             bandwidth_status += ' (' + HydrusData.ConvertIntToBytes( current_usage ) + '/s)'
             
         
-        self._statusbar.SetStatusText( bandwidth_status, number = 1 )
+        self._statusbar.SetStatusText( bandwidth_status, 1 )
         
     
     def TIMEREventPageUpdate( self, event ):
@@ -3139,7 +3219,36 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if page is not None:
             
-            page.TIMERUpdate()
+            page.TIMERPageUpdate()
+            
+        
+    
+    def TIMEREventUIUpdate( self, event ):
+        
+        for window in list( self._ui_update_windows ):
+            
+            if not window:
+                
+                self._ui_update_windows.discard( window )
+                
+                continue
+                
+            
+            try:
+                
+                window.TIMERUIUpdate()
+                
+            except Exception as e:
+                
+                self._ui_update_windows.discard( window )
+                
+                HydrusData.ShowException( e )
+                
+            
+        
+        if len( self._ui_update_windows ) == 0:
+            
+            self._ui_update_timer.Stop()
             
         
     
@@ -3160,16 +3269,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
-                    call_later = wx.CallLater( 15000, dlg.EndModal, wx.ID_YES )
+                    timer = ClientThreading.CallLater( self, 15, dlg.EndModal, wx.ID_YES )
                     
                     if dlg.ShowModal() == wx.ID_NO:
                         
-                        call_later.Stop()
+                        timer.Stop()
                         
                         return False
                         
                     
-                    call_later.Stop()
+                    timer.Stop()
                     
                 
             
@@ -3191,6 +3300,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         try:
             
             self._notebook.SaveGUISession( 'last session' )
+            
+            self._DestroyTimers()
             
             self._message_manager.CleanBeforeDestroy()
             
@@ -3216,7 +3327,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusData.PrintException( e )
             
         
-        self.Hide()
+        for tlp in wx.GetTopLevelWindows():
+            
+            tlp.Hide()
+            
         
         if HG.emergency_exit:
             
@@ -3482,16 +3596,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for ( time_closed, page ) in self._closed_pages:
                 
-                try:
-                    
-                    if page.GetPageKey() == page_key:
-                        
-                        return True
-                        
-                    
-                except wx.PyDeadObjectError:
-                    
-                    # page is dead, being cleaned up--it probably just called itself during exit, asking if it should be playing video or w/e
+                if page and page.GetPageKey() == page_key:
                     
                     return True
                     
@@ -3507,7 +3612,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if db_going_to_hang_if_we_hit_it:
             
-            wx.CallLater( 2500, self.RefreshMenu )
+            ClientThreading.CallLater( self, 2.5, self.RefreshMenu )
             
             return
             
@@ -3571,6 +3676,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._RefreshStatusBar()
         
     
+    def RegisterAnimationUpdateWindow( self, window ):
+        
+        self._animation_update_windows.add( window )
+        
+        if self._animation_update_timer is not None and not self._animation_update_timer.IsRunning():
+            
+            self._animation_update_timer.Start( 5, wx.TIMER_CONTINUOUS )
+            
+        
+    
+    def RegisterUIUpdateWindow( self, window ):
+        
+        self._ui_update_windows.add( window )
+        
+        if self._ui_update_timer is not None and not self._ui_update_timer.IsRunning():
+            
+            self._ui_update_timer.Start( 100, wx.TIMER_CONTINUOUS )
+            
+        
+    
     def RenamePage( self, page_key, name ):
         
         self._notebook.RenamePage( page_key, name )
@@ -3585,14 +3710,123 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
         
-        wx.CallLater( last_session_save_period_minutes * 60 * 1000, self.SaveLastSession )
+        ClientThreading.CallLater( self, last_session_save_period_minutes * 60, self.SaveLastSession )
         
     
-    def SetMediaFocus( self ): self._SetMediaFocus()
+    def SetMediaFocus( self ):
+        
+        self._SetMediaFocus()
+        
+    
+    def SetStatusBarDirty( self ):
+        
+        if not self:
+            
+            return
+            
+        
+        self._statusbar_thread_updater.Update()
+        
     
     def SyncToTagArchive( self, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes = None ):
         
         self._controller.CallToThread( self._THREADSyncToTagArchive, hta_path, tag_service_key, file_service_key, adding, namespaces, hashes )
+        
+    
+    def UnregisterAnimationUpdateWindow( self, window ):
+        
+        self._animation_update_windows.discard( window )
+        
+    
+    def UnregisterUIUpdateWindow( self, window ):
+        
+        self._ui_update_windows.discard( window )
+        
+    
+# We have this to be an off-wx-thread-happy container for this info, as the framesplash has to deal with messages in the fuzzy time of shutdown
+# all of a sudden, pubsubs are processed in non wx-thread time, so this handles that safely and lets the gui know if the wx controller is still running
+class FrameSplashStatus( object ):
+    
+    def __init__( self, controller, ui ):
+        
+        self._controller = controller
+        self._ui = ui
+        
+        self._lock = threading.Lock()
+        
+        self._title_text = ''
+        self._status_text = ''
+        self._status_subtext = ''
+        
+        self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
+        self._controller.sub( self, 'SetText', 'splash_set_status_text' )
+        self._controller.sub( self, 'SetSubtext', 'splash_set_status_subtext' )
+        
+    
+    def _NotifyUI( self ):
+        
+        def wx_code():
+            
+            if not self._ui:
+                
+                return
+                
+            
+            self._ui.SetDirty()
+            
+        
+        wx.CallAfter( wx_code )
+        
+    
+    def GetTexts( self ):
+        
+        with self._lock:
+            
+            return ( self._title_text, self._status_text, self._status_subtext )
+            
+        
+    
+    def SetText( self, text, print_to_log = True ):
+        
+        if print_to_log:
+            
+            HydrusData.Print( text )
+            
+        
+        with self._lock:
+            
+            self._status_text = text
+            self._status_subtext = ''
+            
+        
+        self._NotifyUI()
+        
+    
+    def SetSubtext( self, text ):
+        
+        with self._lock:
+            
+            self._status_subtext = text
+            
+        
+        self._NotifyUI()
+        
+    
+    def SetTitleText( self, text, print_to_log = True ):
+        
+        if print_to_log:
+            
+            HydrusData.Print( text )
+            
+        
+        with self._lock:
+            
+            self._title_text = text
+            self._status_text = ''
+            self._status_subtext = ''
+            
+        
+        self._NotifyUI()
         
     
 class FrameSplash( wx.Frame ):
@@ -3609,11 +3843,10 @@ class FrameSplash( wx.Frame ):
         wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         
         self._dirty = True
-        self._title_text = ''
-        self._status_text = ''
-        self._status_subtext = ''
         
-        self._bmp = wx.EmptyBitmap( self.WIDTH, self.HEIGHT, 24 )
+        self._my_status = FrameSplashStatus( self._controller, self )
+        
+        self._bmp = wx.Bitmap( self.WIDTH, self.HEIGHT, 24 )
         
         self.SetSize( ( self.WIDTH, self.HEIGHT ) )
         
@@ -3634,14 +3867,12 @@ class FrameSplash( wx.Frame ):
         
         self.Show( True )
         
-        self._controller.sub( self, 'SetTitleText', 'splash_set_title_text' )
-        self._controller.sub( self, 'SetText', 'splash_set_status_text' )
-        self._controller.sub( self, 'SetSubtext', 'splash_set_status_subtext' )
-        
         self.Raise()
         
     
     def _Redraw( self, dc ):
+        
+        ( title_text, status_text, status_subtext ) = self._my_status.GetTexts()
         
         dc.SetBackground( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_WINDOW ) ) )
         
@@ -3660,34 +3891,34 @@ class FrameSplash( wx.Frame ):
         
         #
         
-        ( width, height ) = dc.GetTextExtent( self._title_text )
+        ( width, height ) = dc.GetTextExtent( title_text )
         
         text_gap = ( self.HEIGHT - y - height * 3 ) / 4
         
         x = ( self.WIDTH - width ) / 2
         y += text_gap
         
-        dc.DrawText( self._title_text, x, y )
+        dc.DrawText( title_text, x, y )
         
         #
         
         y += height + text_gap
         
-        ( width, height ) = dc.GetTextExtent( self._status_text )
+        ( width, height ) = dc.GetTextExtent( status_text )
         
         x = ( self.WIDTH - width ) / 2
         
-        dc.DrawText( self._status_text, x, y )
+        dc.DrawText( status_text, x, y )
         
         #
         
         y += height + text_gap
         
-        ( width, height ) = dc.GetTextExtent( self._status_subtext )
+        ( width, height ) = dc.GetTextExtent( status_subtext )
         
         x = ( self.WIDTH - width ) / 2
         
-        dc.DrawText( self._status_subtext, x, y )
+        dc.DrawText( status_subtext, x, y )
         
     
     def EventDrag( self, event ):
@@ -3740,41 +3971,15 @@ class FrameSplash( wx.Frame ):
             
         
     
-    def SetText( self, text, print_to_log = True ):
+    def SetDirty( self ):
         
-        if print_to_log:
+        if not self:
             
-            HydrusData.Print( text )
+            return
             
-        
-        self._status_subtext = ''
-        self._status_text = text
         
         self._dirty = True
         
-        wx.CallAfter( self.Refresh )
-        
-    
-    def SetSubtext( self, text ):
-        
-        self._status_subtext = text
-        
-        self._dirty = True
-        
-        wx.CallAfter( self.Refresh )
-        
-    
-    def SetTitleText( self, text, print_to_log = True ):
-        
-        if print_to_log:
-            
-            HydrusData.Print( text )
-            
-        
-        self._title_text = text
-        
-        self._dirty = True
-        
-        wx.CallAfter( self.Refresh )
+        self.Refresh()
         
     

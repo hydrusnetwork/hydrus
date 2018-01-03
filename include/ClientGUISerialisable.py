@@ -3,6 +3,7 @@ import ClientGUICommon
 import ClientGUIScrolledPanels
 import ClientParsing
 import ClientSerialisable
+import ClientThreading
 import HydrusConstants as HC
 import HydrusData
 import wx
@@ -106,6 +107,6 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.SetLabelText( 'done!' )
         
-        wx.CallLater( 2000, self._export.SetLabelText, 'export' )
+        ClientThreading.CallLater( self, 2, self._export.SetLabelText, 'export' )
         
     

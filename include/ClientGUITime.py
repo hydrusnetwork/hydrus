@@ -14,7 +14,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTipString( 'Show help regarding these checker options.' )
+        help_button.SetToolTip( 'Show help regarding these checker options.' )
         
         # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
         # or indeed this could just take the seed cache and last check of the caller, if there is one
@@ -56,11 +56,11 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
         
-        help_hbox.AddF( st, CC.FLAGS_VCENTER )
-        help_hbox.AddF( help_button, CC.FLAGS_VCENTER )
+        help_hbox.Add( st, CC.FLAGS_VCENTER )
+        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
-        vbox.AddF( help_hbox, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( help_hbox, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -187,8 +187,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._days = wx.SpinCtrl( self, min = 0, max = 3653, size = ( 50, -1 ) )
             self._days.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
-            hbox.AddF( self._days, CC.FLAGS_VCENTER )
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._days, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
             
         
         if self._show_hours:
@@ -196,8 +196,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._hours = wx.SpinCtrl( self, min = 0, max = 23, size = ( 45, -1 ) )
             self._hours.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
-            hbox.AddF( self._hours, CC.FLAGS_VCENTER )
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._hours, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
             
         
         if self._show_minutes:
@@ -205,8 +205,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._minutes = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
             self._minutes.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
-            hbox.AddF( self._minutes, CC.FLAGS_VCENTER )
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'minutes' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._minutes, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, 'minutes' ), CC.FLAGS_VCENTER )
             
         
         if self._show_seconds:
@@ -214,8 +214,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._seconds = wx.SpinCtrl( self, min = 0, max = 59, size = ( 45, -1 ) )
             self._seconds.Bind( wx.EVT_SPINCTRL, self.EventChange )
             
-            hbox.AddF( self._seconds, CC.FLAGS_VCENTER )
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, 'seconds' ), CC.FLAGS_VCENTER )
+            hbox.Add( self._seconds, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, 'seconds' ), CC.FLAGS_VCENTER )
             
         
         if self._monthly_allowed:
@@ -223,8 +223,8 @@ class TimeDeltaCtrl( wx.Panel ):
             self._monthly = wx.CheckBox( self )
             self._monthly.Bind( wx.EVT_CHECKBOX, self.EventChange )
             
-            hbox.AddF( self._monthly, CC.FLAGS_VCENTER )
-            hbox.AddF( ClientGUICommon.BetterStaticText( self, monthly_label ), CC.FLAGS_VCENTER )
+            hbox.Add( self._monthly, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, monthly_label ), CC.FLAGS_VCENTER )
             
         
         self.SetSizer( hbox )
@@ -393,7 +393,7 @@ class VelocityCtrl( wx.Panel ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._num, CC.FLAGS_VCENTER )
+        hbox.Add( self._num, CC.FLAGS_VCENTER )
         
         mid_text = per_phrase
         
@@ -402,9 +402,9 @@ class VelocityCtrl( wx.Panel ):
             mid_text = unit + ' ' + mid_text
             
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, mid_text ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, mid_text ), CC.FLAGS_VCENTER )
         
-        hbox.AddF( self._times, CC.FLAGS_VCENTER )
+        hbox.Add( self._times, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -417,13 +417,13 @@ class VelocityCtrl( wx.Panel ):
         return ( num, time_delta )
         
     
-    def SetToolTipString( self, text ):
+    def SetToolTip( self, text ):
         
-        wx.Panel.SetToolTipString( self, text )
+        wx.Panel.SetToolTip( self, text )
         
         for c in self.GetChildren():
             
-            c.SetToolTipString( text )
+            c.SetToolTip( text )
             
         
     

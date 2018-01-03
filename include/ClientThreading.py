@@ -132,7 +132,7 @@ class JobKey( object ):
             
         else:
             
-            wx.CallAfter( wx.CallLater, seconds * 1000, self.Cancel )
+            CallLater( HG.client_controller.gui, seconds, self.Cancel )
             
         
     
@@ -166,7 +166,7 @@ class JobKey( object ):
             
         else:
             
-            wx.CallAfter( wx.CallLater, seconds * 1000, self.Finish )
+            CallLater( HG.client_controller.gui, seconds, self.Finish )
             
         
     
@@ -353,4 +353,166 @@ class JobKey( object ):
         
         return ( i_paused, should_quit )
         
+
+class WXAwareTimer( object ):
     
+    def __init__( self, window, callable ):
+        
+        self._window = window
+        self._callable = callable
+        
+        self._running = False
+        
+        self._event = threading.Event()
+        
+        self._last_call = HydrusData.GetNowPrecise()
+        self._seconds = 0.100
+        self._next_call = None
+        
+        self._repeating = True
+        
+        HG.client_controller.sub( self, 'wake', 'wake_daemons' )
+        
+    
+    def _Call( self ):
+        
+        def wx_code():
+            
+            if not self._window:
+                
+                self._repeating = False
+                
+                self._next_call = None
+                
+                return
+                
+            
+            if self._repeating:
+                
+                while HydrusData.TimeHasPassedPrecise( self._next_call ):
+                    
+                    self._next_call += self._seconds
+                    
+                
+            else:
+                
+                self._next_call = None
+                
+            
+            # important the recalc occurs before the call, as the call often does another calllater
+            
+            self._callable()
+            
+        
+        HG.client_controller.CallBlockingToWx( wx_code )
+        
+    
+    def _StartIfNeeded( self ):
+        
+        if not self._running:
+            
+            self._running = True
+            
+            HG.client_controller.CallToThreadLongRunning( self.MainLoop )
+            
+        else:
+            
+            self._event.set()
+            
+        
+    
+    def CallLater( self, seconds, repeating = False ):
+        
+        if not self._window:
+            
+            return
+            
+        
+        if seconds == 0.0:
+            
+            raise HydrusExceptions.SizeException( 'Cannot set a 0 timer!' )
+            
+        
+        self._seconds = seconds
+        
+        self._next_call = HydrusData.GetNowPrecise() + self._seconds
+        
+        self._repeating = repeating
+        
+        self._StartIfNeeded()
+        
+    
+    def IsRunning( self ):
+        
+        return self._running
+        
+    
+    def MainLoop( self ):
+        
+        while not HG.view_shutdown:
+            
+            next_call = self._next_call
+            
+            if next_call is None:
+                
+                self._running = False
+                
+                return
+                
+            
+            if HydrusData.TimeHasPassedPrecise( next_call ):
+                
+                self._Call()
+                
+            else:
+                
+                ttw = min( 30, abs( next_call - HydrusData.GetNowPrecise() ) )
+                
+                self._event.wait( ttw )
+                
+                self._event.clear()
+                
+            
+        
+    
+    def Delay( self, seconds ):
+        
+        if not self._window:
+            
+            return
+            
+        
+        if self._next_call is None:
+            
+            self._next_call = HydrusData.GetNowPrecise()
+            
+        
+        while HydrusData.TimeHasPassedPrecise( self._next_call ):
+            
+            self._next_call += seconds
+            
+        
+        self._StartIfNeeded()
+        
+    
+    def Stop( self ):
+        
+        self._next_call = None
+        
+        self._running = False
+        
+    
+    def wake( self ):
+        
+        self._event.set()
+        
+    
+def CallLater( window, seconds, callable, *args, **kwargs ):
+    
+    call = HydrusData.Call( callable, *args, **kwargs )
+    
+    timer = WXAwareTimer( window, call )
+    
+    timer.CallLater( seconds )
+    
+    return timer

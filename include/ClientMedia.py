@@ -560,7 +560,10 @@ class Media( object ):
     
     def __eq__( self, other ): return self.__hash__() == other.__hash__()
     
-    def __hash__( self ): return self._id_hash
+    def __hash__( self ):
+        
+        return self._id_hash
+        
     
     def __ne__( self, other ): return self.__hash__() != other.__hash__()
     
@@ -1347,13 +1350,19 @@ class MediaCollection( MediaList, Media ):
                 
                 result = []
                 
-                for media in self._sorted_media: result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                for media in self._sorted_media:
+                    
+                    result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    
                 
             else:
                 
                 result = set()
                 
-                for media in self._sorted_media: result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                for media in self._sorted_media:
+                    
+                    result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    
                 
             
             return result
@@ -1479,7 +1488,7 @@ class MediaSingleton( Media ):
         return self._media_result.GetHash()
         
     
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+    def MatchesDiscriminant( self, has_location = None, discriminant = None, not_uploaded_to = None ):
         
         if discriminant is not None:
             
@@ -1514,14 +1523,7 @@ class MediaSingleton( Media ):
             
             if not p:
                 
-                if ordered:
-                    
-                    return []
-                    
-                else:
-                    
-                    return set()
-                    
+                return False
                 
             
         
@@ -1531,14 +1533,7 @@ class MediaSingleton( Media ):
             
             if has_location not in locations_manager.GetCurrent():
                 
-                if ordered:
-                    
-                    return []
-                    
-                else:
-                    
-                    return set()
-                    
+                return False
                 
             
         
@@ -1548,24 +1543,36 @@ class MediaSingleton( Media ):
             
             if not_uploaded_to in locations_manager.GetCurrentRemote():
                 
-                if ordered:
-                    
-                    return []
-                    
-                else:
-                    
-                    return set()
-                    
+                return False
                 
             
         
-        if ordered:
+        return True
+        
+    
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+        
+        if self.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ):
             
-            return [ self._media_result.GetHash() ]
+            if ordered:
+                
+                return [ self._media_result.GetHash() ]
+                
+            else:
+                
+                return { self._media_result.GetHash() }
+                
             
         else:
             
-            return { self._media_result.GetHash() }
+            if ordered:
+                
+                return []
+                
+            else:
+                
+                return set()
+                
             
         
     

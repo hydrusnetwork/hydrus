@@ -35,10 +35,6 @@ import HydrusData
 import HydrusGlobals as HG
 import webbrowser
 
-# Option Enums
-
-ID_TIMER_ANIMATION = wx.NewId()
-
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
     services_manager = HG.client_controller.services_manager
@@ -182,9 +178,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         client_files_manager = HG.client_controller.client_files_manager
         
-        hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
+        media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
         
-        paths = [ client_files_manager.GetFilePath( hash ) for hash in hashes ]
+        paths = []
+        
+        for m in media:
+            
+            hash = m.GetHash()
+            mime = m.GetMime()
+            
+            path = client_files_manager.GetFilePath( hash, mime )
+            
+            paths.append( path )
+            
         
         HG.client_controller.pub( 'clipboard', 'paths', paths )
         
@@ -648,21 +654,28 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         return result
         
     
-    def _GetSelectedFlatMedia( self ):
+    def _GetSelectedFlatMedia( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+        
+        # this now always delivers sorted results
         
         flat_media = []
         
-        for media in self._selected_media:
+        for media in self._sorted_media:
             
-            if media.IsCollection():
+            if media in self._selected_media:
                 
-                flat_media.extend( media.GetFlatMedia() )
-                
-            else:
-                
-                flat_media.append( media )
+                if media.IsCollection():
+                    
+                    flat_media.extend( media.GetFlatMedia() )
+                    
+                else:
+                    
+                    flat_media.append( media )
+                    
                 
             
+        
+        flat_media = [ media for media in flat_media if media.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ) ]
         
         return flat_media
         
@@ -1235,7 +1248,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             elif select_type in ( 'inbox', 'archive' ):
                 
                 inbox_media = [ m for m in self._sorted_media if m.HasInbox() ]
-                archive_media = [ m for m in self._sorted_media if m not in inbox_media ]
+                archive_media = [ m for m in self._sorted_media if not m.HasInbox() ]
                 
                 if select_type == 'inbox':
                     
@@ -1775,7 +1788,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def __init__( self, parent, page_key, file_service_key, media_results ):
         
-        self._client_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        self._client_bmp = wx.Bitmap( 20, 20, 24 )
         self._clean_canvas_pages = {}
         self._dirty_canvas_pages = []
         self._num_rows_per_canvas_page = 1
@@ -1786,7 +1799,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self._num_columns = 1
         
         self._drag_init_coordinates = None
-        self._timer_animation = wx.Timer( self, ID_TIMER_ANIMATION )
         self._thumbnails_being_faded_in = {}
         self._hashes_faded = set()
         
@@ -1794,14 +1806,13 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.SetScrollRate( 0, thumbnail_span_height )
         
-        self.Bind( wx.EVT_LEFT_DOWN, self.EventSelection )
+        self.Bind( wx.EVT_LEFT_DOWN, self.EventLeftDown )
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventMouseFullScreen )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventMouseFullScreen )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventAnimation, id = ID_TIMER_ANIMATION )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
         self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
@@ -1844,7 +1855,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        self._dirty_canvas_pages.append( wx.EmptyBitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 24 ) )
+        self._dirty_canvas_pages.append( wx.Bitmap( client_width, self._num_rows_per_canvas_page * thumbnail_span_height, 24 ) )
         
     
     def _DeleteAllDirtyPages( self ):
@@ -1973,6 +1984,11 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _FadeThumbnails( self, thumbnails ):
         
+        if len( thumbnails ) == 0:
+            
+            return
+            
+        
         if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             self._DirtyAllPages()
@@ -2015,17 +2031,14 @@ class MediaPanelThumbnails( MediaPanel ):
             
             image = image.AdjustChannels( 1, 1, 1, 0.20 )
             
-            alpha_bmp = wx.BitmapFromImage( image, 32 )
+            alpha_bmp = wx.Bitmap( image, 32 )
             
             image.Destroy()
             
             self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
             
         
-        if not self._timer_animation.IsRunning():
-            
-            self._timer_animation.Start( 1, wx.TIMER_ONE_SHOT )
-            
+        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
     
     def _GenerateMediaCollection( self, media_results ):
@@ -2273,7 +2286,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if client_dimensions_changed or thumb_layout_changed:
             
-            self._client_bmp = wx.EmptyBitmap( client_width, client_height, 24 )
+            self._client_bmp = wx.Bitmap( client_width, client_height, 24 )
             
             width_got_bigger = old_client_width < client_width
             
@@ -2441,7 +2454,9 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def EventDrag( self, event ):
         
-        if event.Dragging() and self._drag_init_coordinates is not None:
+        we_started_dragging_on_this_panel = self._drag_init_coordinates is not None
+        
+        if we_started_dragging_on_this_panel and event.LeftIsDown() and event.Dragging():
             
             ( old_x, old_y ) = self._drag_init_coordinates
             
@@ -2451,9 +2466,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if abs( delta_x ) > 5 or abs( delta_y ) > 5:
                 
-                hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_LOCAL, ordered = True )
+                media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
                 
-                if len( hashes ) > 0:
+                if len( media ) > 0:
                     
                     self._drag_init_coordinates = None
                     
@@ -2464,6 +2479,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     #
                     
                     hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
+                    
+                    hashes = [ m.GetHash() for m in media ]
                     
                     data = ( self._page_key.encode( 'hex' ), [ hash.encode( 'hex' ) for hash in hashes ] )
                     
@@ -2481,10 +2498,17 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     original_paths = []
                     
-                    for hash in hashes:
+                    for m in media:
                         
-                        original_paths.append( client_files_manager.GetFilePath( hash ) )
+                        hash = m.GetHash()
+                        mime = m.GetMime()
                         
+                        original_path = client_files_manager.GetFilePath( hash, mime )
+                        
+                        original_paths.append( original_path )
+                        
+                    
+                    original_paths = []
                     
                     #
                     
@@ -2585,6 +2609,17 @@ class MediaPanelThumbnails( MediaPanel ):
             self._MoveFocussedThumbnail( self._num_rows_per_canvas_page * direction, 0, shift )
             
         else: event.Skip()
+        
+    
+    def EventLeftDown( self, event ):
+        
+        self._drag_init_coordinates = wx.GetMousePosition()
+        
+        self._HitMedia( self._GetThumbnailUnderMouse( event ), event.CmdDown(), event.ShiftDown() )
+        
+        # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
+        
+        event.Skip()
         
     
     def EventMenu( self, event ):
@@ -2733,17 +2768,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self._RecalculateVirtualSize()
         
         self._last_client_size = self.GetClientSize()
-        
-    
-    def EventSelection( self, event ):
-        
-        self._drag_init_coordinates = wx.GetMousePosition()
-        
-        self._HitMedia( self._GetThumbnailUnderMouse( event ), event.CmdDown(), event.ShiftDown() )
-        
-        # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
-        
-        event.Skip()
         
     
     def EventShowMenu( self, event ):
@@ -3380,73 +3404,76 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'Refresh the current search.', HG.client_controller.pub, 'refresh_query', self._page_key )
         
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        select_menu = wx.Menu()
-        
-        if len( self._selected_media ) < len( self._sorted_media ):
+        if len( self._sorted_media ) > 0:
             
-            all_label = 'all (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) ) + ')'
+            ClientGUIMenus.AppendSeparator( menu )
             
-            if media_has_archive and not media_has_inbox:
-                
-                all_label += ' (all in archive)'
-                
-            elif media_has_inbox and not media_has_archive:
-                
-                all_label += ' (all in inbox)'
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
-            
-        
-        if media_has_archive and media_has_inbox:
-            
-            inbox_label = 'inbox (' + HydrusData.ConvertIntToPrettyString( num_inbox ) + ')'
-            archive_label = 'archive (' + HydrusData.ConvertIntToPrettyString( num_archive ) + ')'
-            
-            ClientGUIMenus.AppendMenuItem( self, select_menu, inbox_label, 'Select everything in the inbox.', self._Select, 'inbox' )
-            ClientGUIMenus.AppendMenuItem( self, select_menu, archive_label, 'Select everything that is archived.', self._Select, 'archive' )
-            
-        
-        if len( all_specific_file_domains ) > 1:
-            
-            selectable_file_domains = list( all_local_file_domains )
-            
-            if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
-                
-                selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
-                
-            
-            selectable_file_domains.extend( all_file_repos )
-            
-            for service_key in selectable_file_domains:
-                
-                name = services_manager.GetName( service_key )
-                
-                ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
-                
-            
-        
-        if has_local and has_remote:
-            
-            ClientGUIMenus.AppendMenuItem( self, select_menu, 'local', 'Select everything in the client.', self._Select, 'local' )
-            ClientGUIMenus.AppendMenuItem( self, select_menu, 'remote', 'Select everything that is not in the client.', self._Select, 'remote' )
-            
-        
-        if len( self._selected_media ) > 0:
+            select_menu = wx.Menu()
             
             if len( self._selected_media ) < len( self._sorted_media ):
-            
-                invert_label = 'invert (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) - len( self._selected_media ) ) + ')'
                 
-                ClientGUIMenus.AppendMenuItem( self, select_menu, invert_label, 'Swap what is and is not selected.', self._Select, 'invert' )
+                all_label = 'all (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) ) + ')'
+                
+                if media_has_archive and not media_has_inbox:
+                    
+                    all_label += ' (all in archive)'
+                    
+                elif media_has_inbox and not media_has_archive:
+                    
+                    all_label += ' (all in inbox)'
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, all_label, 'Select everything.', self._Select, 'all' )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, select_menu, 'none (0)', 'Deselect everything.', self._Select, 'none' )
+            if media_has_archive and media_has_inbox:
+                
+                inbox_label = 'inbox (' + HydrusData.ConvertIntToPrettyString( num_inbox ) + ')'
+                archive_label = 'archive (' + HydrusData.ConvertIntToPrettyString( num_archive ) + ')'
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, inbox_label, 'Select everything in the inbox.', self._Select, 'inbox' )
+                ClientGUIMenus.AppendMenuItem( self, select_menu, archive_label, 'Select everything that is archived.', self._Select, 'archive' )
+                
             
-        
-        ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+            if len( all_specific_file_domains ) > 1:
+                
+                selectable_file_domains = list( all_local_file_domains )
+                
+                if CC.TRASH_SERVICE_KEY in all_specific_file_domains:
+                    
+                    selectable_file_domains.append( CC.TRASH_SERVICE_KEY )
+                    
+                
+                selectable_file_domains.extend( all_file_repos )
+                
+                for service_key in selectable_file_domains:
+                    
+                    name = services_manager.GetName( service_key )
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, name, 'Select everything in ' + name + '.', self._Select, 'file_service', service_key )
+                    
+                
+            
+            if has_local and has_remote:
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'local', 'Select everything in the client.', self._Select, 'local' )
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'remote', 'Select everything that is not in the client.', self._Select, 'remote' )
+                
+            
+            if len( self._selected_media ) > 0:
+                
+                if len( self._selected_media ) < len( self._sorted_media ):
+                
+                    invert_label = 'invert (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) - len( self._selected_media ) ) + ')'
+                    
+                    ClientGUIMenus.AppendMenuItem( self, select_menu, invert_label, 'Swap what is and is not selected.', self._Select, 'invert' )
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, select_menu, 'none (0)', 'Deselect everything.', self._Select, 'none' )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )
+            
         
         if self._focussed_media is not None:
             
@@ -3595,6 +3622,11 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def RefreshAcceleratorTable( self ):
         
+        if not self:
+            
+            return
+            
+        
         entries = [
         ( wx.ACCEL_NORMAL, wx.WXK_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'scroll_home' ) ),
         ( wx.ACCEL_NORMAL, wx.WXK_NUMPAD_HOME, ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetPermanentId( 'scroll_home' ) ),
@@ -3689,145 +3721,139 @@ class MediaPanelThumbnails( MediaPanel ):
         self._DirtyAllPages()
         
     
-    def TIMEREventAnimation( self, event ):
+    def TIMERAnimationUpdate( self ):
         
-        try:
+        FRAME_DURATION = 1.0 / 60
+        NUM_FRAMES_TO_FILL_IN = 15
+        
+        loop_started = HydrusData.GetNowPrecise()
+        loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+        
+        hashes = list( self._thumbnails_being_faded_in.keys() )
+        
+        random.shuffle( hashes )
+        
+        dcs = {}
+        
+        ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
+        
+        y_start = self._GetYStart()
+        
+        earliest_y = y_start * yUnit
+        
+        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
+        
+        for hash in hashes:
             
-            FRAME_DURATION = 1.0 / 60
-            NUM_FRAMES_TO_FILL_IN = 15
+            ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
             
-            loop_started = HydrusData.GetNowPrecise()
-            loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
+            num_frames_supposed_to_be_rendered = int( ( loop_started - animation_started ) / FRAME_DURATION )
             
-            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+            num_frames_to_render = num_frames_supposed_to_be_rendered - num_frames_rendered
             
-            hashes = list( self._thumbnails_being_faded_in.keys() )
-            
-            random.shuffle( hashes )
-            
-            dcs = {}
-            
-            ( xUnit, yUnit ) = self.GetScrollPixelsPerUnit()
-            
-            y_start = self._GetYStart()
-            
-            earliest_y = y_start * yUnit
-            
-            page_height = self._num_rows_per_canvas_page * thumbnail_span_height
-            d = False
-            for hash in hashes:
+            if num_frames_to_render == 0:
                 
-                ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
+                continue
                 
-                num_frames_supposed_to_be_rendered = int( ( loop_started - animation_started ) / FRAME_DURATION )
+            
+            delete_entry = False
+            
+            try:
                 
-                num_frames_to_render = num_frames_supposed_to_be_rendered - num_frames_rendered
+                expected_thumbnail = self._sorted_media[ thumbnail_index ]
                 
-                if num_frames_to_render == 0:
-                    
-                    continue
-                    
+            except:
                 
-                delete_entry = False
+                expected_thumbnail = None
                 
-                try:
-                    
-                    expected_thumbnail = self._sorted_media[ thumbnail_index ]
-                    
-                except:
-                    
-                    expected_thumbnail = None
-                    
+            
+            page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+            
+            if expected_thumbnail != thumbnail:
                 
-                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                delete_entry = True
                 
-                if expected_thumbnail != thumbnail:
+            elif page_index not in self._clean_canvas_pages:
+                
+                delete_entry = True
+                
+            else:
+                
+                times_to_draw = 1
+                
+                if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
                     
-                    delete_entry = True
-                    
-                elif page_index not in self._clean_canvas_pages:
+                    bmp_to_use = original_bmp
                     
                     delete_entry = True
                     
                 else:
                     
-                    times_to_draw = 1
+                    times_to_draw = num_frames_to_render
                     
-                    if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
-                        
-                        bmp_to_use = original_bmp
-                        
-                        delete_entry = True
-                        
-                    else:
-                        
-                        times_to_draw = num_frames_to_render
-                        
-                        bmp_to_use = alpha_bmp
-                        
-                        num_frames_rendered += times_to_draw
-                        
-                        self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
-                        
+                    bmp_to_use = alpha_bmp
                     
-                    thumbnail_col = thumbnail_index % self._num_columns
+                    num_frames_rendered += times_to_draw
                     
-                    thumbnail_row = thumbnail_index / self._num_columns
-                    
-                    x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
-                    
-                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
-                    
-                    if page_index not in dcs:
-                        
-                        canvas_bmp = self._clean_canvas_pages[ page_index ]
-                        
-                        dc = wx.MemoryDC( canvas_bmp )
-                        
-                        dcs[ page_index ] = dc
-                        
-                    
-                    dc = dcs[ page_index ]
-                    
-                    for i in range( times_to_draw ):
-                        
-                        dc.DrawBitmap( bmp_to_use, x, y, True )
-                        
-                    
-                    #
-                    
-                    page_virtual_y = page_height * page_index
-                    
-                    page_client_y = page_virtual_y - earliest_y
-                    
-                    client_y = page_client_y + y
-                    d = True
-                    self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
+                    self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
                     
                 
-                if delete_entry:
+                thumbnail_col = thumbnail_index % self._num_columns
+                
+                thumbnail_row = thumbnail_index / self._num_columns
+                
+                x = thumbnail_col * thumbnail_span_width + CC.THUMBNAIL_MARGIN
+                
+                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + CC.THUMBNAIL_MARGIN
+                
+                if page_index not in dcs:
                     
-                    del self._thumbnails_being_faded_in[ hash ]
+                    canvas_bmp = self._clean_canvas_pages[ page_index ]
                     
-                    original_bmp.Destroy()
-                    alpha_bmp.Destroy()
+                    dc = wx.MemoryDC( canvas_bmp )
+                    
+                    dcs[ page_index ] = dc
                     
                 
-                if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
+                dc = dcs[ page_index ]
+                
+                for i in range( times_to_draw ):
                     
-                    break
+                    dc.DrawBitmap( bmp_to_use, x, y, True )
                     
+                
+                #
+                
+                page_virtual_y = page_height * page_index
+                
+                page_client_y = page_virtual_y - earliest_y
+                
+                client_y = page_client_y + y
+                d = True
+                self.RefreshRect( wx.Rect( x, client_y, thumbnail_span_width - CC.THUMBNAIL_MARGIN, thumbnail_span_height - CC.THUMBNAIL_MARGIN ) )
                 
             
-            if len( self._thumbnails_being_faded_in ) > 0:
+            if delete_entry:
                 
-                self._timer_animation.Start( 5, wx.TIMER_ONE_SHOT )
+                del self._thumbnails_being_faded_in[ hash ]
+                
+                original_bmp.Destroy()
+                alpha_bmp.Destroy()
                 
             
-        except wx.PyDeadObjectError:
+            if HydrusData.TimeHasPassedPrecise( loop_should_break_time ):
+                
+                break
+                
             
-            pass
+        
+        if len( self._thumbnails_being_faded_in ) == 0:
             
+            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            
+        
         
     
     def WaterfallThumbnails( self, page_key, thumbnails ):
@@ -3894,7 +3920,7 @@ class Thumbnail( Selectable ):
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], CC.THUMBNAIL_BORDER * 2 )
         
-        bmp = wx.EmptyBitmap( width, height, 24 )
+        bmp = wx.Bitmap( width, height, 24 )
         
         dc = wx.MemoryDC( bmp )
         
@@ -3943,7 +3969,7 @@ class Thumbnail( Selectable ):
             
             wx_image = wx_image.Scale( destination_width, destination_height, wx.IMAGE_QUALITY_HIGH )
             
-            wx_bmp = wx.BitmapFromImage( wx_image )
+            wx_bmp = wx.Bitmap( wx_image )
             
             wx_image.Destroy()
             
@@ -4123,7 +4149,7 @@ class Thumbnail( Selectable ):
                 
             
         
-        dc.SetPen( wx.Pen( new_options.GetColour( colour_type ), style=wx.SOLID ) )
+        dc.SetPen( wx.Pen( new_options.GetColour( colour_type ), style = wx.PENSTYLE_SOLID ) )
         
         dc.DrawRectangle( 0, 0, width, height )
         

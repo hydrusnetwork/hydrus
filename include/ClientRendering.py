@@ -115,11 +115,11 @@ class ImageRenderer( object ):
         
         if wx_depth == 3:
             
-            return wx.BitmapFromBuffer( wx_width, wx_height, wx_data )
+            return wx.Bitmap.FromBuffer( wx_width, wx_height, wx_data )
             
         else:
             
-            return wx.BitmapFromBufferRGBA( wx_width, wx_height, wx_data )
+            return wx.Bitmap.FromBufferRGBA( wx_width, wx_height, wx_data )
             
         
     
@@ -636,11 +636,11 @@ class HydrusBitmap( object ):
         
         if self._format == wx.BitmapBufferFormat_RGB:
             
-            return wx.BitmapFromBuffer( width, height, self._GetData() )
+            return wx.Bitmap.FromBuffer( width, height, self._GetData() )
             
         else:
             
-            return wx.BitmapFromBufferRGBA( width, height, self._GetData() )
+            return wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
             
         
     
@@ -654,7 +654,7 @@ class HydrusBitmap( object ):
             
         else:
             
-            bitmap = wx.BitmapFromBufferRGBA( width, height, self._GetData() )
+            bitmap = wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
             
             image = wx.ImageFromBitmap( bitmap )
             

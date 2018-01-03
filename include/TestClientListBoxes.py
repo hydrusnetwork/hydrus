@@ -187,7 +187,5 @@ class TestListBoxes( unittest.TestCase ):
             
             frame.Destroy()
             
-            wx.YieldIfNeeded()
-            
         
     

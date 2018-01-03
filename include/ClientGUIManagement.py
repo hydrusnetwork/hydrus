@@ -237,7 +237,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
+        self._bitmap = wx.Bitmap( 20, 20, 24 )
         
         self._timer = wx.Timer( self, ID_TIMER_CAPTCHA )
         self.Bind( wx.EVT_TIMER, self.TIMEREvent, id = ID_TIMER_CAPTCHA )
@@ -260,25 +260,25 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         sub_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        sub_vbox.AddF( self._refresh_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        sub_vbox.AddF( self._captcha_time_left, CC.FLAGS_SMALL_INDENT )
+        sub_vbox.Add( self._refresh_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        sub_vbox.Add( self._captcha_time_left, CC.FLAGS_SMALL_INDENT )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._captcha_panel, CC.FLAGS_NONE )
-        hbox.AddF( sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        hbox.Add( self._captcha_panel, CC.FLAGS_NONE )
+        hbox.Add( sub_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         hbox2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox2.AddF( self._captcha_entry, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox2.AddF( self._ready_button, CC.FLAGS_VCENTER )
+        hbox2.Add( self._captcha_entry, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox2.Add( self._ready_button, CC.FLAGS_VCENTER )
         
-        self._captcha_box_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._captcha_box_panel.AddF( hbox2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._captcha_box_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._captcha_box_panel.Add( hbox2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._captcha_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._captcha_box_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -372,7 +372,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         self._captcha_challenge = None
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
+        self._bitmap = wx.Bitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()
@@ -385,7 +385,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         self._captcha_challenge = ''
         self._captcha_runs_out = 0
-        self._bitmap = wx.EmptyBitmap( 20, 20, 24 )
+        self._bitmap = wx.Bitmap( 20, 20, 24 )
         
         self._DrawMain()
         self._DrawEntry()
@@ -469,10 +469,6 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
                 self._DrawMain()
                 
             
-        except wx.PyDeadObjectError:
-            
-            self._timer.Stop()
-            
         except:
             
             self._timer.Stop()
@@ -497,12 +493,12 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         self._comment_append = ClientGUICommon.SaneMultilineTextCtrl( self._comment_panel, style = wx.TE_PROCESS_ENTER )
         self._comment_append.Bind( wx.EVT_KEY_UP, self.EventKeyDown )
         
-        self._comment_panel.AddF( self._comment, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._comment_panel.AddF( self._comment_append, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._comment_panel.Add( self._comment, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._comment_panel.Add( self._comment_append, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._comment_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._comment_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -757,7 +753,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         tags_box.SetTagsBox( t )
         
-        sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        sizer.Add( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def CleanBeforeDestroy( self ):
@@ -790,7 +786,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-    def TIMERUpdate( self ):
+    def TIMERPageUpdate( self ):
         
         pass
         
@@ -863,7 +859,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._file_domain_button = ClientGUICommon.BetterButton( self._filtering_panel, 'file domain', self._FileDomainButtonHit )
         self._num_unknown_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._num_better_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._num_better_duplicates.SetToolTipString( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
+        self._num_better_duplicates.SetToolTip( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
         self._num_same_quality_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._num_alternate_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some random pairs', self._ShowSomeDupes )
@@ -884,60 +880,60 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._sort_by.Hide()
         self._collect_by.Hide()
         
-        gridbox_1 = wx.FlexGridSizer( 0, 3 )
+        gridbox_1 = wx.FlexGridSizer( 3 )
         
         gridbox_1.AddGrowableCol( 0, 1 )
         
-        gridbox_1.AddF( self._num_phashes_to_regen, CC.FLAGS_VCENTER )
-        gridbox_1.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.AddF( self._phashes_button, CC.FLAGS_VCENTER )
-        gridbox_1.AddF( self._num_branches_to_regen, CC.FLAGS_VCENTER )
-        gridbox_1.AddF( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        gridbox_1.AddF( self._branches_button, CC.FLAGS_VCENTER )
+        gridbox_1.Add( self._num_phashes_to_regen, CC.FLAGS_VCENTER )
+        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox_1.Add( self._phashes_button, CC.FLAGS_VCENTER )
+        gridbox_1.Add( self._num_branches_to_regen, CC.FLAGS_VCENTER )
+        gridbox_1.Add( ( 10, 10 ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        gridbox_1.Add( self._branches_button, CC.FLAGS_VCENTER )
         
-        self._preparing_panel.AddF( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._preparing_panel.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
         distance_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        distance_hbox.AddF( ClientGUICommon.BetterStaticText( self._searching_panel, label = 'search distance: ' ), CC.FLAGS_VCENTER )
-        distance_hbox.AddF( self._search_distance_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        distance_hbox.AddF( self._search_distance_spinctrl, CC.FLAGS_VCENTER )
+        distance_hbox.Add( ClientGUICommon.BetterStaticText( self._searching_panel, label = 'search distance: ' ), CC.FLAGS_VCENTER )
+        distance_hbox.Add( self._search_distance_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        distance_hbox.Add( self._search_distance_spinctrl, CC.FLAGS_VCENTER )
         
-        gridbox_2 = wx.FlexGridSizer( 0, 2 )
+        gridbox_2 = wx.FlexGridSizer( 2 )
         
         gridbox_2.AddGrowableCol( 0, 1 )
         
-        gridbox_2.AddF( self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        gridbox_2.AddF( self._search_button, CC.FLAGS_VCENTER )
+        gridbox_2.Add( self._num_searched, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        gridbox_2.Add( self._search_button, CC.FLAGS_VCENTER )
         
-        self._searching_panel.AddF( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._searching_panel.AddF( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._searching_panel.Add( distance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._searching_panel.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
-        self._filtering_panel.AddF( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.AddF( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._cog_button, CC.FLAGS_VCENTER )
-        hbox.AddF( self._help_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._cog_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._help_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._preparing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._searching_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -1269,7 +1265,7 @@ class ManagementPanelImporter( ManagementPanel ):
             
         
     
-    def TIMERUpdate( self ):
+    def TIMERPageUpdate( self ):
         
         self._UpdateStatus()
         
@@ -1339,7 +1335,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
-        self._file_limit.SetToolTipString( 'per query, stop searching the gallery once this many files has been reached' )
+        self._file_limit.SetToolTip( 'per query, stop searching the gallery once this many files has been reached' )
         
         self._gallery_import.SetDownloadControls( self._file_download_control, self._gallery_download_control )
         
@@ -1356,53 +1352,53 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         button_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.AddF( self._gallery_pause_button, CC.FLAGS_VCENTER )
-        button_sizer.AddF( self._gallery_cancel_button, CC.FLAGS_VCENTER )
+        button_sizer.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
+        button_sizer.Add( self._gallery_cancel_button, CC.FLAGS_VCENTER )
         
-        self._gallery_panel.AddF( self._gallery_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_panel.AddF( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_panel.AddF( button_sizer, CC.FLAGS_LONE_BUTTON )
+        self._gallery_panel.Add( self._gallery_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( button_sizer, CC.FLAGS_LONE_BUTTON )
         
         #
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._advance_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._delete_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._delay_button, CC.FLAGS_VCENTER )
         
         queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        queue_hbox.AddF( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
+        queue_hbox.Add( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        queue_hbox.Add( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
-        self._pending_queries_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_queries_panel.AddF( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_queries_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._pending_queries_panel.Add( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
         
-        self._gallery_downloader_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._cog_button, CC.FLAGS_LONE_BUTTON )
-        self._gallery_downloader_panel.AddF( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._cog_button, CC.FLAGS_LONE_BUTTON )
+        self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
-        vbox.AddF( self._gallery_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._gallery_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1645,16 +1641,16 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
-        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
-        self._import_queue_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1776,11 +1772,11 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._download_image_links = wx.CheckBox( self._page_of_images_panel, label = 'download image links' )
         self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
-        self._download_image_links.SetToolTipString( 'i.e. download the href url of an <a> tag if there is an <img> tag nested beneath it' )
+        self._download_image_links.SetToolTip( 'i.e. download the href url of an <a> tag if there is an <img> tag nested beneath it' )
         
         self._download_unlinked_images = wx.CheckBox( self._page_of_images_panel, label = 'download unlinked images' )
         self._download_unlinked_images.Bind( wx.EVT_CHECKBOX, self.EventDownloadUnlinkedImages )
-        self._download_unlinked_images.SetToolTipString( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
+        self._download_unlinked_images.SetToolTip( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
         
         self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
         
@@ -1790,45 +1786,45 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         #
         
-        self._import_queue_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.AddF( self._pause_files_button, CC.FLAGS_LONE_BUTTON )
+        self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._pause_files_button, CC.FLAGS_LONE_BUTTON )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
-        queue_buttons_vbox.AddF( self._advance_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.AddF( self._delete_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.AddF( self._delay_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._advance_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._delete_button, CC.FLAGS_VCENTER )
+        queue_buttons_vbox.Add( self._delay_button, CC.FLAGS_VCENTER )
         
         queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        queue_hbox.AddF( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.AddF( queue_buttons_vbox, CC.FLAGS_VCENTER )
+        queue_hbox.Add( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        queue_hbox.Add( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
-        self._pending_page_urls_panel.AddF( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.AddF( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.AddF( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_page_urls_panel.AddF( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.AddF( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
+        self._pending_page_urls_panel.Add( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_page_urls_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_page_urls_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._pending_page_urls_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_page_urls_panel.Add( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
-        self._page_of_images_panel.AddF( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.AddF( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.AddF( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.AddF( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.Add( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.Add( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.Add( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._page_of_images_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
-        vbox.AddF( self._page_of_images_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._page_of_images_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2087,51 +2083,51 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
-        hbox.AddF( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
+        hbox.Add( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
         
-        imports_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        imports_panel.AddF( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        imports_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        imports_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        gridbox = wx.FlexGridSizer( 2 )
         
         gridbox.AddGrowableCol( 0, 1 )
         
-        gridbox.AddF( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.AddF( self._thread_pause_button, CC.FLAGS_LONE_BUTTON )
-        gridbox.AddF( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.AddF( self._thread_check_now_button, CC.FLAGS_VCENTER )
+        gridbox.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        gridbox.Add( self._thread_pause_button, CC.FLAGS_LONE_BUTTON )
+        gridbox.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        gridbox.Add( self._thread_check_now_button, CC.FLAGS_VCENTER )
         
-        checker_panel.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        checker_panel.AddF( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.AddF( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.Add( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._options_panel.SetSizer( vbox )
         
-        self._thread_watcher_panel.AddF( self._thread_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.AddF( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.AddF( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._thread_watcher_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.AddF( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.Add( self._thread_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.Add( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._thread_watcher_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._thread_watcher_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
-        vbox.AddF( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2409,24 +2405,24 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        self._url_panel.AddF( self._pause_button, CC.FLAGS_LONE_BUTTON )
-        self._url_panel.AddF( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
-        self._url_panel.AddF( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.AddF( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.Add( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._collect_by.Hide()
         
-        vbox.AddF( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._url_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2585,8 +2581,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-            hbox.AddF( button, CC.FLAGS_VCENTER )
+            hbox.Add( st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+            hbox.Add( button, CC.FLAGS_VCENTER )
             
             content_type_hboxes.append( hbox )
             
@@ -2619,34 +2615,34 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         #
         
-        self._petitions_info_panel.AddF( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petitions_info_panel.Add( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for hbox in content_type_hboxes:
             
-            self._petitions_info_panel.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._petitions_info_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         check_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        check_hbox.AddF( check_all, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        check_hbox.AddF( flip_selected, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        check_hbox.AddF( check_none, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        check_hbox.Add( check_all, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        check_hbox.Add( flip_selected, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        check_hbox.Add( check_none, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         
-        self._petition_panel.AddF( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petition_panel.AddF( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petition_panel.AddF( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petition_panel.AddF( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        self._petition_panel.AddF( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._petition_panel.AddF( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petition_panel.AddF( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._petition_panel.Add( self._contents, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.AddF( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._petition_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -3061,16 +3057,16 @@ class ManagementPanelQuery( ManagementPanel ):
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
             self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
-            self._search_panel.AddF( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._search_panel.AddF( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        if self._search_enabled: vbox.AddF( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        if self._search_enabled: vbox.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -3146,7 +3142,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         tags_box.SetTagsBox( t )
         
-        sizer.AddF( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        sizer.Add( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def AddMediaResultsFromQuery( self, query_job_key, media_results ):
@@ -3170,6 +3166,11 @@ class ManagementPanelQuery( ManagementPanel ):
         ManagementPanel.CleanBeforeDestroy( self )
         
         self._query_job_key.Cancel()
+        
+        if self._search_enabled:
+            
+            self._searchbox.CleanBeforeDestroy()
+            
         
     
     def GetPredicates( self ):

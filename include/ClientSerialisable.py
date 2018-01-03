@@ -31,7 +31,7 @@ text_size = 0.4
 
 def CreateTopImage( width, title, payload_description, text ):
     
-    text_extent_bmp = wx.EmptyBitmap( 20, 20, 24 )
+    text_extent_bmp = wx.Bitmap( 20, 20, 24 )
     
     dc = wx.MemoryDC( text_extent_bmp )
     
@@ -76,7 +76,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     #
     
-    top_bmp = wx.EmptyBitmap( width, top_height, 24 )
+    top_bmp = wx.Bitmap( width, top_height, 24 )
     
     dc = wx.MemoryDC( top_bmp )
     

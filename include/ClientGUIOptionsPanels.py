@@ -51,7 +51,7 @@ class OptionsPanelMimes( OptionsPanel ):
                 
             
         
-        gridbox = wx.FlexGridSizer( 0, 2 )
+        gridbox = wx.FlexGridSizer( 2 )
         
         gridbox.AddGrowableCol( 1, 1 )
         
@@ -65,7 +65,7 @@ class OptionsPanelMimes( OptionsPanel ):
             self._mime_groups_to_checkboxes[ mime_group ] = mg_checkbox
             self._mime_groups_to_values[ mime_group ] = mg_checkbox.GetValue()
             
-            gridbox.AddF( mg_checkbox, CC.FLAGS_VCENTER )
+            gridbox.Add( mg_checkbox, CC.FLAGS_VCENTER )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
@@ -76,10 +76,10 @@ class OptionsPanelMimes( OptionsPanel ):
                 
                 self._mimes_to_checkboxes[ mime ] = m_checkbox
                 
-                vbox.AddF( m_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                vbox.Add( m_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gridbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
         self.SetSizer( gridbox )
@@ -164,7 +164,7 @@ class OptionsPanelTags( OptionsPanel ):
         #
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
-        help_button.SetToolTipString( 'Show help regarding these tag options.' )
+        help_button.SetToolTip( 'Show help regarding these tag options.' )
         
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -172,8 +172,8 @@ class OptionsPanelTags( OptionsPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( help_button, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -191,7 +191,7 @@ class OptionsPanelTags( OptionsPanel ):
     
     def EventChecked( self, event ):
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
         
         event.Skip()
         
@@ -218,7 +218,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
         
-        wx.PostEvent( self, wx.CommandEvent( commandType = wx.wxEVT_COMMAND_MENU_SELECTED, winid = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
+        wx.PostEvent( self, wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
         
     
     def GetOptions( self ):
@@ -253,7 +253,7 @@ class OptionsPanelTags( OptionsPanel ):
         
         if len( services ) > 0:
             
-            outer_gridbox = wx.FlexGridSizer( 0, 2 )
+            outer_gridbox = wx.FlexGridSizer( 2 )
             
             outer_gridbox.AddGrowableCol( 1, 1 )
             
@@ -263,7 +263,7 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 
-                outer_gridbox.AddF( ClientGUICommon.BetterStaticText( self, service.GetName() ), CC.FLAGS_VCENTER )
+                outer_gridbox.Add( ClientGUICommon.BetterStaticText( self, service.GetName() ), CC.FLAGS_VCENTER )
             
                 vbox = wx.BoxSizer( wx.VERTICAL )
                 
@@ -277,7 +277,7 @@ class OptionsPanelTags( OptionsPanel ):
                     
                     self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
                     
-                    vbox.AddF( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    vbox.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 explicit_tags = set()
@@ -292,12 +292,12 @@ class OptionsPanelTags( OptionsPanel ):
                 
                 button_id += 1
                 
-                vbox.AddF( explicit_button, CC.FLAGS_VCENTER )
+                vbox.Add( explicit_button, CC.FLAGS_VCENTER )
                 
-                outer_gridbox.AddF( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                outer_gridbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
                 
             
-            self._services_vbox.AddF( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._services_vbox.Add( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
     

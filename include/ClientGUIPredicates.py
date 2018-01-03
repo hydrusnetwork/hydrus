@@ -56,16 +56,16 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:age' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._years, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._months, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'months' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._days, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._hours, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:age' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._years, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._months, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'months' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._days, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'days' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._hours, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'hours' ), CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -106,10 +106,10 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:num duplicate relationships' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._num, CC.FLAGS_VCENTER )
-        hbox.AddF( self._dupe_type, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num duplicate relationships' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._num, CC.FLAGS_VCENTER )
+        hbox.Add( self._dupe_type, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -153,12 +153,12 @@ class PanelPredicateSystemDuration( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:duration' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._duration_s, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 's' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._duration_ms, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'ms' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:duration' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._duration_s, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 's' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._duration_ms, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'ms' ), CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -192,10 +192,10 @@ class PanelPredicateSystemFileService( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:file service:' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._current_pending, CC.FLAGS_VCENTER )
-        hbox.AddF( self._file_service_key, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:file service:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._current_pending, CC.FLAGS_VCENTER )
+        hbox.Add( self._file_service_key, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -217,7 +217,7 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         PanelPredicateSystem.__init__( self, parent )
         
-        self.SetToolTipString( 'As this can only ever return one result, it overrules the active file domain and any other active predicate.' )
+        self.SetToolTip( 'As this can only ever return one result, it overrules the active file domain and any other active predicate.' )
         
         self._hash = wx.TextCtrl( self, size = ( 200, -1 ) )
         
@@ -227,9 +227,9 @@ class PanelPredicateSystemHash( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:hash=' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._hash, CC.FLAGS_VCENTER )
-        hbox.AddF( self._hash_type, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:hash=' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._hash, CC.FLAGS_VCENTER )
+        hbox.Add( self._hash_type, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -277,9 +277,9 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:height' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._height, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:height' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._height, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -311,8 +311,8 @@ class PanelPredicateSystemLimit( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:limit=' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._limit, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:limit=' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._limit, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -349,8 +349,8 @@ class PanelPredicateSystemMime( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:mime' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._mimes, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:mime' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._mimes, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -388,10 +388,10 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:num_pixels' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._num_pixels, CC.FLAGS_VCENTER )
-        hbox.AddF( self._unit, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_pixels' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._num_pixels, CC.FLAGS_VCENTER )
+        hbox.Add( self._unit, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -427,9 +427,9 @@ class PanelPredicateSystemNumTags( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:num_tags' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._num_tags, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_tags' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._num_tags, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -465,9 +465,9 @@ class PanelPredicateSystemNumWords( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:num_words' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._num_words, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:num_words' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._num_words, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -497,7 +497,7 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
         
         self._like_rating_ctrls = []
         
-        gridbox = wx.FlexGridSizer( 0, 5 )
+        gridbox = wx.FlexGridSizer( 5 )
         
         gridbox.AddGrowableCol( 0, 1 )
         
@@ -514,11 +514,11 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             self._like_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._like_rating_ctrls.append( rating_ctrl )
             
-            gridbox.AddF( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
-            gridbox.AddF( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.AddF( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            gridbox.AddF( rating_ctrl, CC.FLAGS_VCENTER )
+            gridbox.Add( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
+            gridbox.Add( rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.Add( not_rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            gridbox.Add( rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
@@ -545,18 +545,18 @@ class PanelPredicateSystemRating( PanelPredicateSystem ):
             self._numerical_checkboxes_to_info[ not_rated_checkbox ] = ( service_key, ClientRatings.NULL )
             self._numerical_rating_ctrls_to_info[ rating_ctrl ] = choice
             
-            gridbox.AddF( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
-            gridbox.AddF( rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.AddF( not_rated_checkbox, CC.FLAGS_VCENTER )
-            gridbox.AddF( choice, CC.FLAGS_VCENTER )
-            gridbox.AddF( rating_ctrl, CC.FLAGS_VCENTER )
+            gridbox.Add( ClientGUICommon.BetterStaticText( self, name ), CC.FLAGS_VCENTER )
+            gridbox.Add( rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.Add( not_rated_checkbox, CC.FLAGS_VCENTER )
+            gridbox.Add( choice, CC.FLAGS_VCENTER )
+            gridbox.Add( rating_ctrl, CC.FLAGS_VCENTER )
             
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -680,11 +680,11 @@ class PanelPredicateSystemRatio( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:ratio' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._width, CC.FLAGS_VCENTER )
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._height, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:ratio' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._width, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._height, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -720,10 +720,10 @@ class PanelPredicateSystemSimilarTo( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:similar_to' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._hash, CC.FLAGS_VCENTER )
-        hbox.AddF( wx.StaticText( self, label=u'\u2248' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._max_hamming, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:similar_to' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._hash, CC.FLAGS_VCENTER )
+        hbox.Add( wx.StaticText( self, label=u'\u2248' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._max_hamming, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -773,10 +773,10 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:size' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._size, CC.FLAGS_VCENTER )
-        hbox.AddF( self._unit, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:size' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._size, CC.FLAGS_VCENTER )
+        hbox.Add( self._unit, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -816,10 +816,10 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:tag as number' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._namespace, CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._num, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:tag as number' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._namespace, CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._num, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
@@ -855,9 +855,9 @@ class PanelPredicateSystemWidth( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( ClientGUICommon.BetterStaticText( self, 'system:width' ), CC.FLAGS_VCENTER )
-        hbox.AddF( self._sign, CC.FLAGS_VCENTER )
-        hbox.AddF( self._width, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:width' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._width, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         

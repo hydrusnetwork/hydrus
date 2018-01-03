@@ -43,9 +43,9 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._save_to_file, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._done, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._text_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._save_to_file, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._done, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         

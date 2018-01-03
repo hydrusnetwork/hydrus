@@ -43,6 +43,11 @@ class HydrusPubSub( object ):
                 
                 for object in objects:
                     
+                    if not object: # catch for wx PyDeadObject stuff. not really happy with this, but works for now
+                        
+                        continue
+                        
+                    
                     method_names = self._topics_to_method_names[ topic ]
                     
                     for method_name in method_names:
@@ -55,10 +60,6 @@ class HydrusPubSub( object ):
                                 
                                 callables.append( callable )
                                 
-                            except TypeError as e:
-                                
-                                if '_wxPyDeadObject' not in HydrusData.ToUnicode( e ): raise
-                                
                             except Exception as e:
                                 
                                 if not isinstance( e, self._binding_errors_to_ignore ):
@@ -70,7 +71,10 @@ class HydrusPubSub( object ):
                         
                     
                 
-            except: pass
+            except:
+                
+                pass
+                
             
         
         return callables

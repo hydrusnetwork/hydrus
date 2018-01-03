@@ -11,6 +11,8 @@ from include import HydrusGlobals as HG
 from include import ClientDefaults
 from include import ClientNetworking
 from include import ClientServices
+from include import ClientThreading
+from include import HydrusExceptions
 from include import HydrusPubSub
 from include import HydrusSessions
 from include import HydrusTags
@@ -196,6 +198,68 @@ class Controller( object ):
         self._pubsub.sub( object, method_name, topic )
         
     
+    def CallBlockingToWx( self, func, *args, **kwargs ):
+        
+        def wx_code( job_key ):
+            
+            try:
+                
+                result = func( *args, **kwargs )
+                
+                job_key.SetVariable( 'result', result )
+                
+            except HydrusExceptions.PermissionException as e:
+                
+                job_key.SetVariable( 'error', e )
+                
+            except Exception as e:
+                
+                job_key.SetVariable( 'error', e )
+                
+                HydrusData.Print( 'CallBlockingToWx just caught this error:' )
+                HydrusData.DebugPrint( traceback.format_exc() )
+                
+            finally:
+                
+                job_key.Finish()
+                
+            
+        
+        job_key = ClientThreading.JobKey()
+        
+        job_key.Begin()
+        
+        wx.CallAfter( wx_code, job_key )
+        
+        while not job_key.IsDone():
+            
+            if HG.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+                
+            
+            time.sleep( 0.05 )
+            
+        
+        if job_key.HasVariable( 'result' ):
+            
+            # result can be None, for wx_code that has no return variable
+            
+            result = job_key.GetIfHasVariable( 'result' )
+            
+            return result
+            
+        
+        error = job_key.GetIfHasVariable( 'error' )
+        
+        if error is not None:
+            
+            raise error
+            
+        
+        raise HydrusExceptions.ShutdownException()
+        
+    
     def CallToThread( self, callable, *args, **kwargs ):
         
         call_to_thread = self._GetCallToThread()
@@ -295,6 +359,13 @@ class Controller( object ):
         if only_run is None: run_all = True
         else: run_all = False
         
+        # the gui stuff runs fine on its own but crashes in the full test if it is not early, wew
+        # something to do with the delayed button clicking stuff
+        if run_all or only_run == 'gui':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
+            
         if run_all or only_run == 'daemons':
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientDaemons ) )
@@ -317,11 +388,6 @@ class Controller( object ):
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientNetworking ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
             
-        if run_all or only_run == 'gui':
-            
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestDialogs ) )
-            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientListBoxes ) )
-            
         if run_all or only_run == 'image':
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImageHandling ) )
@@ -337,7 +403,7 @@ class Controller( object ):
         
         suite = unittest.TestSuite( suites )
         
-        runner = unittest.TextTestRunner( verbosity = 1 )
+        runner = unittest.TextTestRunner( verbosity = 2 )
         
         runner.run( suite )
         
@@ -345,6 +411,11 @@ class Controller( object ):
     def SetRead( self, name, value ):
         
         self._reads[ name ] = value
+        
+    
+    def SetStatusBarDirty( self ):
+        
+        pass
         
     
     def SetWebCookies( self, name, value ):
@@ -423,6 +494,9 @@ if __name__ == '__main__':
         
         try:
             
+            # we run the tests on the wx thread atm
+            # keep a window alive the whole time so the app doesn't finish its mainloop
+            
             win = wx.Frame( None )
             
             def do_it():
@@ -433,6 +507,7 @@ if __name__ == '__main__':
                 
             
             wx.CallAfter( do_it )
+            
             app.MainLoop()
             
         except:

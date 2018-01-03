@@ -43,6 +43,7 @@ import traceback
 import urllib
 import wx
 import wx.lib.agw.customtreectrl
+import wx.adv
 import yaml
 import HydrusData
 import ClientSearch
@@ -114,7 +115,7 @@ class Dialog( wx.Dialog ):
                 parent_tlp = parent.GetTopLevelParent()
                 
             
-            ( pos_x, pos_y ) = parent_tlp.GetPositionTuple()
+            ( pos_x, pos_y ) = parent_tlp.GetPosition()
             
             pos = ( pos_x + 50, pos_y + 50 )
             
@@ -180,7 +181,7 @@ class DialogButtonChoice( Dialog ):
             
             button = wx.Button( self, label = text, id = i )
             
-            button.SetToolTipString( tooltip )
+            button.SetToolTip( tooltip )
             
             self._buttons.append( button )
             
@@ -193,14 +194,14 @@ class DialogButtonChoice( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for button in self._buttons:
             
-            vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.AddF( self._always_do_checkbox, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._always_do_checkbox, CC.FLAGS_LONE_BUTTON )
         
         if not show_always_checkbox:
             
@@ -258,9 +259,9 @@ class DialogChooseNewServiceMethod( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._register, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._setup, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -295,10 +296,10 @@ class DialogCommitInterstitialFiltering( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._commit, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -325,15 +326,15 @@ class DialogFinishFiltering( Dialog ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._commit, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._forget, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( wx.StaticText( self, label = label, style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( wx.StaticText( self, label = '-or-', style = wx.ALIGN_CENTER ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._back, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -393,20 +394,20 @@ class DialogGenerateNewAccounts( Dialog ):
         
         ctrl_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        ctrl_box.AddF( ClientGUICommon.BetterStaticText( self, 'generate' ), CC.FLAGS_VCENTER )
-        ctrl_box.AddF( self._num, CC.FLAGS_VCENTER )
-        ctrl_box.AddF( self._account_types, CC.FLAGS_VCENTER )
-        ctrl_box.AddF( ClientGUICommon.BetterStaticText( self, 'accounts, to expire in' ), CC.FLAGS_VCENTER )
-        ctrl_box.AddF( self._lifetime, CC.FLAGS_VCENTER )
+        ctrl_box.Add( ClientGUICommon.BetterStaticText( self, 'generate' ), CC.FLAGS_VCENTER )
+        ctrl_box.Add( self._num, CC.FLAGS_VCENTER )
+        ctrl_box.Add( self._account_types, CC.FLAGS_VCENTER )
+        ctrl_box.Add( ClientGUICommon.BetterStaticText( self, 'accounts, to expire in' ), CC.FLAGS_VCENTER )
+        ctrl_box.Add( self._lifetime, CC.FLAGS_VCENTER )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ctrl_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -540,7 +541,7 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             panel = self._Panel( self, pred_class )
             
-            vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         self.SetSizer( vbox )
@@ -575,8 +576,8 @@ class DialogInputFileSystemPredicates( Dialog ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            hbox.AddF( self._ok, CC.FLAGS_VCENTER )
+            hbox.Add( self._predicate_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            hbox.Add( self._ok, CC.FLAGS_VCENTER )
             
             self.SetSizer( hbox )
             
@@ -689,16 +690,16 @@ class DialogInputLocalBooruShare( Dialog ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         timeout_box = wx.BoxSizer( wx.HORIZONTAL )
-        timeout_box.AddF( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
-        timeout_box.AddF( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
+        timeout_box.Add( self._timeout_number, CC.FLAGS_EXPAND_BOTH_WAYS )
+        timeout_box.Add( self._timeout_multiplier, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         link_box = wx.BoxSizer( wx.HORIZONTAL )
-        link_box.AddF( self._copy_internal_share_link, CC.FLAGS_VCENTER )
-        link_box.AddF( self._copy_external_share_link, CC.FLAGS_VCENTER )
+        link_box.Add( self._copy_internal_share_link, CC.FLAGS_VCENTER )
+        link_box.Add( self._copy_external_share_link, CC.FLAGS_VCENTER )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -707,11 +708,11 @@ class DialogInputLocalBooruShare( Dialog ):
         
         if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( link_box, CC.FLAGS_BUTTON_SIZER )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( timeout_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( link_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -772,7 +773,7 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def __init__( self, parent, paths = None ):
         
-        ( pos_x, pos_y ) = parent.GetPositionTuple()
+        ( pos_x, pos_y ) = parent.GetPosition()
         
         pos = ( pos_x + 50, pos_y + 50 )
         
@@ -833,28 +834,28 @@ class FrameInputLocalFiles( wx.Frame ):
         
         gauge_sizer = wx.BoxSizer( wx.HORIZONTAL )
         
-        gauge_sizer.AddF( self._progress, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        gauge_sizer.AddF( self._progress_pause, CC.FLAGS_VCENTER )
-        gauge_sizer.AddF( self._progress_cancel, CC.FLAGS_VCENTER )
+        gauge_sizer.Add( self._progress, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        gauge_sizer.Add( self._progress_pause, CC.FLAGS_VCENTER )
+        gauge_sizer.Add( self._progress_cancel, CC.FLAGS_VCENTER )
         
         delete_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        delete_hbox.AddF( self._delete_after_success_st, CC.FLAGS_EXPAND_BOTH_WAYS )
-        delete_hbox.AddF( self._delete_after_success, CC.FLAGS_VCENTER )
+        delete_hbox.Add( self._delete_after_success_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        delete_hbox.Add( self._delete_after_success, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._add_button, CC.FLAGS_VCENTER )
-        buttons.AddF( self._tag_button, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._add_button, CC.FLAGS_VCENTER )
+        buttons.Add( self._tag_button, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._file_import_options, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gauge_sizer, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( delete_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._file_import_options, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1229,8 +1230,8 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._shortcuts = ClientGUICommon.RegexButton( self )
         
-        self._regex_intro_link = wx.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
-        self._regex_practise_link = wx.HyperlinkCtrl( self, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
+        self._regex_intro_link = wx.adv.HyperlinkCtrl( self, id = -1, label = 'a good regex introduction', url = 'http://www.aivosto.com/vbtips/regex.html' )
+        self._regex_practise_link = wx.adv.HyperlinkCtrl( self, id = -1, label = 'regex practise', url = 'http://regexr.com/3cvmf' )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'OK' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -1248,24 +1249,24 @@ class DialogInputNamespaceRegex( Dialog ):
         
         control_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        control_box.AddF( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-        control_box.AddF( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
-        control_box.AddF( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
+        control_box.Add( self._namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
+        control_box.Add( ClientGUICommon.BetterStaticText( self, ':' ), CC.FLAGS_VCENTER )
+        control_box.Add( self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         intro = r'Put the namespace (e.g. page) on the left.' + os.linesep + r'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + r'All files will be tagged with "namespace:regex".'
         
-        vbox.AddF( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( self._shortcuts, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._shortcuts, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._regex_intro_link, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._regex_practise_link, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1362,13 +1363,13 @@ class DialogInputNewFormField( Dialog ):
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1420,14 +1421,14 @@ class DialogInputTags( Dialog ):
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1516,13 +1517,13 @@ class DialogInputUPnPMapping( Dialog ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         b_box = wx.BoxSizer( wx.HORIZONTAL )
-        b_box.AddF( self._ok, CC.FLAGS_VCENTER )
-        b_box.AddF( self._cancel, CC.FLAGS_VCENTER )
+        b_box.Add( self._ok, CC.FLAGS_VCENTER )
+        b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( b_box, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( b_box, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1639,39 +1640,39 @@ class DialogModifyAccounts( Dialog ):
         
         #
         
-        self._account_info_panel.AddF( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._account_info_panel.Add( self._subject_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         account_types_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        account_types_hbox.AddF( self._account_types, CC.FLAGS_VCENTER )
-        account_types_hbox.AddF( self._account_types_ok, CC.FLAGS_VCENTER )
+        account_types_hbox.Add( self._account_types, CC.FLAGS_VCENTER )
+        account_types_hbox.Add( self._account_types_ok, CC.FLAGS_VCENTER )
         
-        self._account_types_panel.AddF( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._account_types_panel.Add( account_types_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         add_to_expires_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        add_to_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_VCENTER )
-        add_to_expires_box.AddF( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        add_to_expires_box.AddF( self._add_to_expires_ok, CC.FLAGS_VCENTER )
+        add_to_expires_box.Add( wx.StaticText( self._expiration_panel, label = 'add to expires: ' ), CC.FLAGS_VCENTER )
+        add_to_expires_box.Add( self._add_to_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        add_to_expires_box.Add( self._add_to_expires_ok, CC.FLAGS_VCENTER )
         
         set_expires_box = wx.BoxSizer( wx.HORIZONTAL )
         
-        set_expires_box.AddF( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_VCENTER )
-        set_expires_box.AddF( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
-        set_expires_box.AddF( self._set_expires_ok, CC.FLAGS_VCENTER )
+        set_expires_box.Add( wx.StaticText( self._expiration_panel, label = 'set expires to: ' ), CC.FLAGS_VCENTER )
+        set_expires_box.Add( self._set_expires, CC.FLAGS_EXPAND_BOTH_WAYS )
+        set_expires_box.Add( self._set_expires_ok, CC.FLAGS_VCENTER )
         
-        self._expiration_panel.AddF( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._expiration_panel.AddF( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._expiration_panel.Add( add_to_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._expiration_panel.Add( set_expires_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._ban_panel.AddF( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._ban_panel.AddF( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._ban_panel.Add( self._ban, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._ban_panel.Add( self._superban, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
-        vbox.AddF( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._exit, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._account_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._account_types_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._expiration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._ban_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._exit, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1774,8 +1775,8 @@ class DialogSelectBooru( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( self._ok, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._boorus, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
@@ -1850,13 +1851,13 @@ class DialogSelectFromURLTree( Dialog ):
         
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-        button_hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._ok, CC.FLAGS_VCENTER )
+        button_hbox.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( button_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( button_hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -1967,7 +1968,7 @@ class DialogSelectImageboard( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._tree, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -2014,13 +2015,13 @@ class DialogCheckFromList( Dialog ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._ok, CC.FLAGS_VCENTER )
-        hbox.AddF( self._cancel, CC.FLAGS_VCENTER )
+        hbox.Add( self._ok, CC.FLAGS_VCENTER )
+        hbox.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._check_list_box, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._check_list_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2043,8 +2044,12 @@ class DialogSelectFromList( Dialog ):
         Dialog.__init__( self, parent, title )
         
         self._list = wx.ListBox( self )
-        self._list.Bind( wx.EVT_KEY_DOWN, self.EventListKeyDown )
         self._list.Bind( wx.EVT_LISTBOX_DCLICK, self.EventSelect )
+        
+        self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
+        self._ok.SetDefault()
+        
+        #
         
         list_of_tuples.sort()
         
@@ -2053,9 +2058,12 @@ class DialogSelectFromList( Dialog ):
             self._list.Append( label, value )
             
         
+        #
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._ok, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
@@ -2065,41 +2073,6 @@ class DialogSelectFromList( Dialog ):
         y = max( y, 320 )
         
         self.SetInitialSize( ( x, y ) )
-        
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        
-    
-    def EventCharHook( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key == wx.WXK_ESCAPE:
-            
-            self.EndModal( wx.ID_CANCEL )
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def EventListKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_SPACE, wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            selection = self._list.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                self.EndModal( wx.ID_OK )
-                
-            
-        else:
-            
-            event.Skip()
-            
         
     
     def EventSelect( self, event ):
@@ -2151,13 +2124,13 @@ class DialogSelectYoutubeURL( Dialog ):
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons.AddF( self._ok, CC.FLAGS_VCENTER )
-        buttons.AddF( self._cancel, CC.FLAGS_VCENTER )
+        buttons.Add( self._ok, CC.FLAGS_VCENTER )
+        buttons.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._urls, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._urls, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2237,7 +2210,7 @@ class DialogSetupExport( Dialog ):
         text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
         
         self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
-        self._export_tag_txts.SetToolTipString( text )
+        self._export_tag_txts.SetToolTip( text )
         self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
         
         self._export = wx.Button( self, label = 'export' )
@@ -2274,32 +2247,32 @@ class DialogSetupExport( Dialog ):
         
         top_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        top_hbox.AddF( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        top_hbox.AddF( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        top_hbox.Add( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        top_hbox.Add( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._open_location, CC.FLAGS_VCENTER )
+        hbox.Add( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._open_location, CC.FLAGS_VCENTER )
         
-        self._export_path_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._export_path_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.AddF( self._update, CC.FLAGS_VCENTER )
-        hbox.AddF( self._examples, CC.FLAGS_VCENTER )
+        hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._update, CC.FLAGS_VCENTER )
+        hbox.Add( self._examples, CC.FLAGS_VCENTER )
         
-        self._filenames_box.AddF( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        vbox.AddF( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.AddF( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._export, CC.FLAGS_LONE_BUTTON )
-        vbox.AddF( self._cancel, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._cancel, CC.FLAGS_LONE_BUTTON )
         
         self.SetSizer( vbox )
         
@@ -2591,23 +2564,23 @@ class DialogTextEntry( Dialog ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._ok, CC.FLAGS_SMALL_INDENT )
-        hbox.AddF( self._cancel, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._ok, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
         st_message.Wrap( 480 )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( st_message, CC.FLAGS_BIG_INDENT )
+        vbox.Add( st_message, CC.FLAGS_BIG_INDENT )
         
         for button in button_choices:
             
-            vbox.AddF( button, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
-        vbox.AddF( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2687,8 +2660,8 @@ class DialogYesNo( Dialog ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.AddF( self._yes, CC.FLAGS_SMALL_INDENT )
-        hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._yes, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._no, CC.FLAGS_SMALL_INDENT )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2696,8 +2669,8 @@ class DialogYesNo( Dialog ):
         
         text.Wrap( 480 )
         
-        vbox.AddF( text, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         
@@ -2745,10 +2718,10 @@ class DialogYesYesNo( Dialog ):
         
         for yes_button in yes_buttons:
             
-            hbox.AddF( yes_button, CC.FLAGS_SMALL_INDENT )
+            hbox.Add( yes_button, CC.FLAGS_SMALL_INDENT )
             
         
-        hbox.AddF( self._no, CC.FLAGS_SMALL_INDENT )
+        hbox.Add( self._no, CC.FLAGS_SMALL_INDENT )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2756,8 +2729,8 @@ class DialogYesYesNo( Dialog ):
         
         text.Wrap( 480 )
         
-        vbox.AddF( text, CC.FLAGS_BIG_INDENT )
-        vbox.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( text, CC.FLAGS_BIG_INDENT )
+        vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
         

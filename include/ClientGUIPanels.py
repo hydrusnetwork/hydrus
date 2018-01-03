@@ -81,7 +81,7 @@ class ReviewServicePanel( wx.Panel ):
         
         for panel in subpanels:
             
-            vbox.AddF( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
         
         self.SetSizer( vbox )
@@ -226,7 +226,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._name_and_type, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -275,7 +275,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._file_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._file_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -351,10 +351,10 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._address, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._functional, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self.Add( self._address, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._functional, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -394,7 +394,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 gauge.SetValue( status, value, range )
                 
-                b_vbox.AddF( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                b_vbox.Add( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
             self._bandwidth_panel.SetSizer( b_vbox )
@@ -443,16 +443,16 @@ class ReviewServicePanel( wx.Panel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._refresh_account_button, CC.FLAGS_LONE_BUTTON )
-            hbox.AddF( self._copy_account_key_button, CC.FLAGS_LONE_BUTTON )
-            hbox.AddF( self._permissions_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._refresh_account_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._copy_account_key_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._permissions_button, CC.FLAGS_LONE_BUTTON )
             
-            self.AddF( self._title_and_expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._next_sync_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+            self.Add( self._title_and_expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._next_sync_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._bandwidth_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._bandwidth_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -513,7 +513,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 gauge.SetValue( status, value, range )
                 
-                b_vbox.AddF( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                b_vbox.Add( gauge, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
             self._bandwidth_panel.SetSizer( b_vbox )
@@ -631,15 +631,15 @@ class ReviewServicePanel( wx.Panel ):
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.AddF( self._sync_now_button, CC.FLAGS_LONE_BUTTON )
-            hbox.AddF( self._pause_play_button, CC.FLAGS_LONE_BUTTON )
-            hbox.AddF( self._export_updates_button, CC.FLAGS_LONE_BUTTON )
-            hbox.AddF( self._reset_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._sync_now_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._pause_play_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._export_updates_button, CC.FLAGS_LONE_BUTTON )
+            hbox.Add( self._reset_button, CC.FLAGS_LONE_BUTTON )
             
-            self.AddF( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( hbox, CC.FLAGS_BUTTON_SIZER )
+            self.Add( self._metadata_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._download_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._processing_progress, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( hbox, CC.FLAGS_BUTTON_SIZER )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -907,14 +907,14 @@ class ReviewServicePanel( wx.Panel ):
             
             button_box = wx.BoxSizer( wx.HORIZONTAL )
             
-            button_box.AddF( self._copy_multihash_button, CC.FLAGS_VCENTER )
-            button_box.AddF( self._show_selected_button, CC.FLAGS_VCENTER )
-            button_box.AddF( self._set_notes_button, CC.FLAGS_VCENTER )
-            button_box.AddF( self._unpin_button, CC.FLAGS_VCENTER )
+            button_box.Add( self._copy_multihash_button, CC.FLAGS_VCENTER )
+            button_box.Add( self._show_selected_button, CC.FLAGS_VCENTER )
+            button_box.Add( self._set_notes_button, CC.FLAGS_VCENTER )
+            button_box.Add( self._unpin_button, CC.FLAGS_VCENTER )
             
-            self.AddF( self._check_running_button, CC.FLAGS_LONE_BUTTON )
-            self.AddF( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self.AddF( button_box, CC.FLAGS_BUTTON_SIZER )
+            self.Add( self._check_running_button, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._ipfs_shares, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self.Add( button_box, CC.FLAGS_BUTTON_SIZER )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1155,8 +1155,8 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( booru_search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            self.Add( self._service_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( booru_search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1395,7 +1395,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._rating_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1464,8 +1464,8 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self.AddF( self._advanced_content_update, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._tag_info_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self.Add( self._advanced_content_update, CC.FLAGS_LONE_BUTTON )
             
             HG.client_controller.sub( self, 'ServiceUpdated', 'service_updated' )
             
@@ -1538,7 +1538,7 @@ class ReviewServicePanel( wx.Panel ):
             
             #
             
-            self.AddF( self._clear_trash, CC.FLAGS_LONE_BUTTON )
+            self.Add( self._clear_trash, CC.FLAGS_LONE_BUTTON )
             
         
         def _ClearTrash( self ):

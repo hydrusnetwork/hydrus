@@ -57,14 +57,6 @@ def CatchExceptionClient( etype, value, tb ):
             
         else:
             
-            if etype == wx.PyDeadObjectError:
-                
-                HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-                HydrusData.Print( trace )
-                
-                return
-                
-            
             try: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype.__name__ ) )
             except: job_key.SetVariable( 'popup_title', HydrusData.ToUnicode( etype ) )
             
@@ -98,7 +90,7 @@ def CatchExceptionClient( etype, value, tb ):
     
 def ColourIsBright( colour ):
     
-    ( r, g, b ) = colour.Get()
+    ( r, g, b, a ) = colour.Get()
     
     brightness_estimate = ( r + g + b ) // 3
     
@@ -108,7 +100,7 @@ def ColourIsBright( colour ):
     
 def ColourIsGreyish( colour ):
     
-    ( r, g, b ) = colour.Get()
+    ( r, g, b, a ) = colour.Get()
     
     greyish = r // 16 == g // 16 and g // 16 == b // 16
     
@@ -256,7 +248,7 @@ def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
     
     dialog_units = ( char_cols * 4, char_rows * 8 )
     
-    return window.ConvertDialogSizeToPixels( dialog_units )
+    return window.ConvertDialogToPixels( dialog_units )
     
 def ConvertTextToPixelWidth( window, char_cols ):
     
@@ -290,7 +282,7 @@ def DeletePath( path ):
     
 def GetDifferentLighterDarkerColour( colour, intensity = 3 ):
     
-    ( r, g, b ) = colour.Get()
+    ( r, g, b, a ) = colour.Get()
     
     if ColourIsGreyish( colour ):
         
@@ -323,7 +315,7 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         
     else:
         
-        ( r, g, b ) = colour.Get()
+        ( r, g, b, a ) = colour.Get()
         
         ( r, g, b ) = [ max( value, 32 ) for value in ( r, g, b ) ]
         
@@ -561,14 +553,6 @@ def ShowExceptionClient( e, do_wait = True ):
         return
         
     else:
-        
-        if etype == wx.PyDeadObjectError:
-            
-            HydrusData.Print( 'Got a PyDeadObjectError, which can probably be ignored, but here it is anyway:' )
-            HydrusData.Print( trace )
-            
-            return
-            
         
         if hasattr( etype, '__name__' ): title = HydrusData.ToUnicode( etype.__name__ )
         else: title = HydrusData.ToUnicode( etype )
@@ -1442,6 +1426,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
             
+            if media_show_action not in CC.media_viewer_capabilities[ mime ]:
+                
+                return CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+                
+            
             return media_show_action
             
         
@@ -1516,6 +1505,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            if preview_show_action not in CC.media_viewer_capabilities[ mime ]:
+                
+                return CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+                
             
             return preview_show_action
             
@@ -1606,7 +1600,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if isinstance( colour, wx.Colour ):
                 
-                ( r, g, b ) = colour.Get()
+                ( r, g, b, a ) = colour.Get()
                 
             else:
                 

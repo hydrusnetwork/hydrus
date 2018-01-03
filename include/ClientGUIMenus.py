@@ -1,5 +1,5 @@
-import ClientConstants as CC
 import collections
+import HydrusData
 import HydrusGlobals as HG
 import wx
 
@@ -10,7 +10,7 @@ def AppendMenu( menu, submenu, label ):
     
     label = SanitiseLabel( label )
     
-    menu.AppendMenu( CC.ID_NULL, label, submenu )
+    menu.AppendSubMenu( submenu, label )
     
     menus_to_submenus[ menu ].add( submenu )
     
@@ -24,7 +24,7 @@ def AppendMenuBitmapItem( event_handler, menu, label, description, bitmap, calla
     
     menu_item.SetBitmap( bitmap )
     
-    menu.AppendItem( menu_item )
+    menu.Append( menu_item )
     
     BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs )
     
@@ -85,9 +85,7 @@ def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
     menus_to_menu_item_data[ menu ].add( ( menu_item, event_handler ) )
     
-def DestroyMenuItems( menu ):
-    
-    handler = HG.client_controller.GetApp()
+def UnbindMenuItems( menu ):
     
     menu_item_data = menus_to_menu_item_data[ menu ]
     
@@ -97,8 +95,6 @@ def DestroyMenuItems( menu ):
         
         event_handler.Unbind( wx.EVT_MENU, source = menu_item )
         
-        menu_item.Destroy()
-        
     
     submenus = menus_to_submenus[ menu ]
     
@@ -106,12 +102,12 @@ def DestroyMenuItems( menu ):
     
     for submenu in submenus:
         
-        DestroyMenuItems( submenu )
+        UnbindMenuItems( submenu )
         
     
 def DestroyMenu( menu ):
     
-    DestroyMenuItems( menu )
+    UnbindMenuItems( menu )
     
     menu.Destroy()
     
@@ -119,7 +115,18 @@ def GetEventCallable( callable, *args, **kwargs ):
     
     def event_callable( event ):
         
-        callable( *args, **kwargs )
+        if HG.menu_profile_mode:
+            
+            summary = 'Profiling menu: ' + repr( callable )
+            
+            HydrusData.ShowText( summary )
+            
+            HydrusData.Profile( summary, 'callable( *args, **kwargs )', globals(), locals() )
+            
+        else:
+            
+            callable( *args, **kwargs )
+            
         
     
     return event_callable

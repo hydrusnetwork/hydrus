@@ -2,6 +2,7 @@ import ClientCaches
 import ClientData
 import ClientDaemons
 import ClientDefaults
+import ClientGUICommon
 import ClientGUIMenus
 import ClientNetworking
 import ClientNetworkingDomain
@@ -24,6 +25,7 @@ import ClientGUI
 import ClientGUIDialogs
 import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
+import gc
 import os
 import psutil
 import threading
@@ -35,9 +37,20 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import reactor, defer
     
+
+wx_first_num = int( wx.__version__[0] )
+
+if wx_first_num < 4:
+    
+    wx_error = 'Unfortunately, hydrus now requires the new Phoenix (4.x) version of wx.'
+    wx_error += os.linesep * 2
+    wx_error += 'The good news is that you can get the new version via pip. If you still need the old version of wx, Phoenix works a lot better with virtual environments.'
+    
+    raise Exception( wx_error )
+    
 class Controller( HydrusController.HydrusController ):
     
-    pubsub_binding_errors_to_ignore = [ wx.PyDeadObjectError ]
+    pubsub_binding_errors_to_ignore = [ RuntimeError ] # wxPython now gives this instead of PyDeadObjectError
     
     def __init__( self, db_dir, no_daemons, no_wal ):
         
@@ -147,7 +160,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self._model_shutdown:
                 
-                return
+                raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
             
             time.sleep( 0.05 )
@@ -231,7 +244,7 @@ class Controller( HydrusController.HydrusController ):
             
             if move_knocked_us_out_of_idle:
                 
-                self.pubimmediate( 'refresh_status' )
+                self.gui.SetStatusBarDirty()
                 
             
         
@@ -359,7 +372,7 @@ class Controller( HydrusController.HydrusController ):
                             
                             with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
-                                call_later = wx.CallLater( 15000, dlg_yn.EndModal, wx.ID_NO )
+                                call_later = ClientThreading.CallLater( dlg_yn, 15, dlg_yn.EndModal, wx.ID_NO )
                                 
                                 if dlg_yn.ShowModal() == wx.ID_YES:
                                     
@@ -624,10 +637,6 @@ class Controller( HydrusController.HydrusController ):
         def wx_code_gui():
             
             self.gui = ClientGUI.FrameGUI( self )
-            
-            # this is because of some bug in wx C++ that doesn't add these by default
-            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextHTMLHandler() )
-            wx.richtext.RichTextBuffer.AddHandler( wx.richtext.RichTextXMLHandler() )
             
             self.ResetIdleTimer()
             
@@ -994,9 +1003,6 @@ class Controller( HydrusController.HydrusController ):
         self._app = wx.App()
         
         self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
-        
-        # I have had this as 'suppress' before
-        self._app.SetAssertMode( wx.PYAPP_ASSERT_EXCEPTION )
         
         HydrusData.Print( u'booting controller\u2026' )
         

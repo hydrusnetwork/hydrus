@@ -3,6 +3,7 @@ import ClientDefaults
 import ClientGUIDialogs
 import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
+import ClientThreading
 import collections
 import HydrusConstants as HC
 import os
@@ -11,12 +12,18 @@ import unittest
 import wx
 import HydrusGlobals as HG
 
-def HitButton( button ): wx.PostEvent( button, wx.CommandEvent( wx.EVT_BUTTON.typeId, button.GetId() ) )
-
-def HitCancelButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_CANCEL ) )
-
-def HitOKButton( window ): wx.PostEvent( window, wx.CommandEvent( wx.EVT_BUTTON.typeId, wx.ID_OK ) )
-
+def HitButton( button ):
+    
+    wx.PostEvent( button, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = button.GetId() ) )
+    
+def HitCancelButton( window ):
+    
+    wx.PostEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_CANCEL ) )
+    
+def HitOKButton( window ):
+    
+    wx.PostEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_OK ) )
+    
 def CancelChildDialog( window ):
     
     children = window.GetChildren()
@@ -40,16 +47,14 @@ def OKChildDialog( window ):
             HitOKButton( child )
             
         
-
+    
 def PressKey( window, key ):
     
-    event = wx.KeyEvent( wx.EVT_KEY_DOWN.typeId )
+    window.SetFocus()
     
-    event.m_keyCode = key
-    event.SetEventObject( window )
-    event.SetId( window.GetId() )
+    uias = wx.UIActionSimulator()
     
-    wx.PostEvent( window, event )
+    uias.Char( key )
     
 class TestDBDialogs( unittest.TestCase ):
     
@@ -79,11 +84,11 @@ class TestDBDialogs( unittest.TestCase ):
             
             dlg.SetPanel( panel )
             
-            wx.CallAfter( panel.Add )
+            ClientThreading.CallLater( dlg, 2, panel.Add )
             
-            wx.CallLater( 2000, OKChildDialog, panel )
+            ClientThreading.CallLater( dlg, 4, OKChildDialog, panel )
             
-            wx.CallLater( 4000, HitCancelButton, dlg )
+            ClientThreading.CallLater( dlg, 6, HitCancelButton, dlg )
             
             result = dlg.ShowModal()
             
@@ -167,8 +172,8 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', list_of_tuples ) as dlg:
             
-            wx.CallLater( 500, dlg._list.Select, 1 )
-            wx.CallLater( 1000, PressKey, dlg._list, wx.WXK_RETURN )
+            ClientThreading.CallLater( self, 0.5, dlg._list.Select, 1 )
+            ClientThreading.CallLater( self,1, PressKey, dlg._list, wx.WXK_RETURN )
             
             result = dlg.ShowModal()
             

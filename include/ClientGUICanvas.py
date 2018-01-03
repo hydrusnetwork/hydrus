@@ -18,6 +18,7 @@ import ClientMedia
 import ClientRatings
 import ClientRendering
 import ClientTags
+import ClientThreading
 import gc
 import HydrusImageHandling
 import HydrusPaths
@@ -44,9 +45,9 @@ if HC.PLATFORM_WINDOWS:
         
         HydrusData.PrintException( e )
         
+
+FLASHWIN_OK = False # this is currently a bit dodgy in wxPython 4.0, so disabled for now
     
-ID_TIMER_SLIDESHOW = wx.NewId()
-ID_TIMER_CURSOR_HIDE = wx.NewId()
 ID_TIMER_HOVER_SHOW = wx.NewId()
 
 ANIMATED_SCANBAR_HEIGHT = 20
@@ -240,15 +241,11 @@ def ShouldHaveAnimationBar( media ):
     
 class Animation( wx.Window ):
     
-    TIMER_MS = 5
-    
     def __init__( self, parent ):
         
         wx.Window.__init__( self, parent )
         
         self._media = None
-        
-        self._animation_bar = None
         
         self._drag_happened = False
         self._left_down_event = None
@@ -270,11 +267,8 @@ class Animation( wx.Window ):
         self._canvas_bmp = None
         self._frame_bmp = None
         
-        self._timer_video = wx.Timer( self )
-        
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventVideo )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_KEY_UP, self.EventPropagateKey )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
@@ -286,18 +280,24 @@ class Animation( wx.Window ):
             
             self._video_container.Stop()
             
+            self._video_container = None
+            
         
         if self._frame_bmp is not None:
             
             self._frame_bmp.Destroy()
+            
+            self._frame_bmp = None
             
         
         if self._canvas_bmp is not None:
             
             self._canvas_bmp.Destroy()
             
+            self._canvas_bmp = None
+            
         
-        wx.CallLater( 500, gc.collect )
+        wx.CallAfter( gc.collect )
         
     
     def _DrawFrame( self, dc ):
@@ -308,9 +308,16 @@ class Animation( wx.Window ):
         
         ( frame_width, frame_height ) = current_frame.GetSize()
         
-        if self._frame_bmp is None or self._frame_bmp.GetSize() != current_frame.GetSize():
+        if self._frame_bmp is not None and self._frame_bmp.GetSize() != current_frame.GetSize():
             
-            self._frame_bmp = wx.EmptyBitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
+            self._frame_bmp.Destroy()
+            
+            self._frame_bmp = None
+            
+        
+        if self._frame_bmp is None:
+            
+            self._frame_bmp = wx.Bitmap( frame_width, frame_height, current_frame.GetDepth() * 8 )
             
         
         current_frame.CopyToWxBitmap( self._frame_bmp )
@@ -353,11 +360,6 @@ class Animation( wx.Window ):
             dc.StretchBlit( 0, 0, my_width, my_height, mdc, 0, 0, frame_width, frame_height )
             
         
-        if self._animation_bar is not None:
-            
-            self._animation_bar.GotoFrame( self._current_frame_index )
-            
-        
         self._current_frame_drawn = True
         
         next_frame_time_s = self._video_container.GetDuration( self._current_frame_index ) / 1000.0
@@ -383,14 +385,6 @@ class Animation( wx.Window ):
         dc.SetBackground( wx.Brush( new_options.GetColour( CC.COLOUR_MEDIA_BACKGROUND ) ) )
         
         dc.Clear()
-        
-    
-    def _TellAnimationBarAboutPausedStatus( self ):
-        
-        if self._animation_bar is not None:
-            
-            self._animation_bar.SetPaused( self._paused )
-            
         
     
     def CurrentFrame( self ):
@@ -426,37 +420,34 @@ class Animation( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self._animation_bar is not None:
+        if not ( event.ShiftDown() or event.CmdDown() or event.AltDown() ):
             
-            if not ( event.ShiftDown() or event.CmdDown() or event.AltDown() ):
+            if event.LeftDClick():
                 
-                if event.LeftDClick():
-                    
-                    hash = self._media.GetHash()
-                    mime = self._media.GetMime()
-                    
-                    client_files_manager = HG.client_controller.client_files_manager
-                    
-                    path = client_files_manager.GetFilePath( hash, mime )
-                    
-                    new_options = HG.client_controller.new_options
-                    
-                    launch_path = new_options.GetMimeLaunch( mime )
-                    
-                    HydrusPaths.LaunchFile( path, launch_path )
-                    
-                    self.Pause()
-                    
-                    return
-                    
-                elif event.LeftDown():
-                    
-                    self.PausePlay()
-                    
-                    self.GetParent().BeginDrag()
-                    
-                    return
-                    
+                hash = self._media.GetHash()
+                mime = self._media.GetMime()
+                
+                client_files_manager = HG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                new_options = HG.client_controller.new_options
+                
+                launch_path = new_options.GetMimeLaunch( mime )
+                
+                HydrusPaths.LaunchFile( path, launch_path )
+                
+                self.Pause()
+                
+                return
+                
+            elif event.LeftDown():
+                
+                self.PausePlay()
+                
+                self.GetParent().BeginDrag()
+                
+                return
                 
             
         
@@ -497,7 +488,7 @@ class Animation( wx.Window ):
                     wx.CallAfter( self._canvas_bmp.Destroy )
                     
                 
-                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
                 
                 self._current_frame_drawn = False
                 self._a_frame_has_been_drawn = False
@@ -542,6 +533,20 @@ class Animation( wx.Window ):
             
         
     
+    def GetAnimationBarStatus( self ):
+        
+        if self._video_container is None:
+            
+            buffer_indices = None
+            
+        else:
+            
+            buffer_indices = self._video_container.GetBufferIndices()
+            
+        
+        return ( self._current_frame_index, self._paused, buffer_indices )
+        
+    
     def GotoFrame( self, frame_index ):
         
         if self._video_container is not None and self._video_container.IsInitialised():
@@ -556,8 +561,6 @@ class Animation( wx.Window ):
                 
             
             self._paused = True
-            
-            self._TellAnimationBarAboutPausedStatus()
             
         
     
@@ -575,33 +578,15 @@ class Animation( wx.Window ):
         
         self._paused = False
         
-        self._TellAnimationBarAboutPausedStatus()
-        
     
     def Pause( self ):
         
         self._paused = True
         
-        self._TellAnimationBarAboutPausedStatus()
-        
     
     def PausePlay( self ):
         
         self._paused = not self._paused
-        
-        self._TellAnimationBarAboutPausedStatus()
-        
-    
-    def SetAnimationBar( self, animation_bar ):
-        
-        self._animation_bar = animation_bar
-        
-        if self._animation_bar is not None:
-            
-            self._animation_bar.GotoFrame( self._current_frame_index )
-            
-            self._TellAnimationBarAboutPausedStatus()
-            
         
     
     def SetMedia( self, media, start_paused ):
@@ -632,12 +617,12 @@ class Animation( wx.Window ):
         
         self._frame_bmp = None
         
-        self._timer_video.Start( self.TIMER_MS, wx.TIMER_CONTINUOUS )
+        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
         self.Refresh()
         
     
-    def TIMEREventVideo( self, event ):
+    def TIMERAnimationUpdate( self ):
         
         try:
             
@@ -645,7 +630,7 @@ class Animation( wx.Window ):
                 
                 if self._current_frame_drawn:
                     
-                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at - self.TIMER_MS / 1000.0 ):
+                    if not self._paused and HydrusData.TimeHasPassedPrecise( self._next_frame_due_at ):
                         
                         num_frames = self._media.GetNumFrames()
                         
@@ -672,22 +657,11 @@ class Animation( wx.Window ):
                             
                         
                     
-                    if self._animation_bar is not None:
-                        
-                        buffer_indices = self._video_container.GetBufferIndices()
-                        
-                        self._animation_bar.SetBufferIndices( buffer_indices )
-                        
-                    
                 
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_video.Stop()
             
         except:
             
-            self._timer_video.Stop()
+            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
             raise
             
@@ -703,25 +677,20 @@ class AnimationBar( wx.Window ):
         
         self._canvas_bmp = None
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+        self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
         
         self._media_window = None
-        self._paused = False
         self._num_frames = 1
-        self._current_frame_index = 0
-        self._buffer_indices = None
+        self._last_drawn_info = None
         
         self._has_experienced_mouse_down = False
         self._currently_in_a_drag = False
         self._it_was_playing = False
         
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        self.Bind( wx.EVT_TIMER, self.TIMERFlashIndexUpdate )
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
-        
-        self._flash_index_update_timer = wx.Timer( self )
         
     
     def _GetXFromFrameIndex( self, index, width_offset = 0 ):
@@ -738,13 +707,17 @@ class AnimationBar( wx.Window ):
     
     def _Redraw( self, dc ):
         
+        self._last_drawn_info = self._media_window.GetAnimationBarStatus()
+        
+        ( current_frame_index, paused, buffer_indices )  = self._last_drawn_info
+        
         ( my_width, my_height ) = self._canvas_bmp.GetSize()
         
         dc.SetPen( wx.TRANSPARENT_PEN )
         
         background_colour = wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNFACE )
         
-        if self._paused:
+        if paused:
             
             background_colour = ClientData.GetLighterDarkerColour( background_colour )
             
@@ -755,9 +728,9 @@ class AnimationBar( wx.Window ):
         
         #
         
-        if self._buffer_indices is not None:
+        if buffer_indices is not None:
             
-            ( start_index, rendered_to_index, end_index ) = self._buffer_indices
+            ( start_index, rendered_to_index, end_index ) = buffer_indices
             
             start_x = self._GetXFromFrameIndex( start_index )
             rendered_to_x = self._GetXFromFrameIndex( rendered_to_index )
@@ -802,7 +775,7 @@ class AnimationBar( wx.Window ):
         
         dc.SetBrush( wx.Brush( wx.SystemSettings.GetColour( wx.SYS_COLOUR_BTNSHADOW ) ) )
         
-        caret_x = self._GetXFromFrameIndex( self._current_frame_index, width_offset = ANIMATED_SCANBAR_CARET_WIDTH )
+        caret_x = self._GetXFromFrameIndex( current_frame_index, width_offset = ANIMATED_SCANBAR_CARET_WIDTH )
         
         dc.DrawRectangle( caret_x, 0, ANIMATED_SCANBAR_CARET_WIDTH, ANIMATED_SCANBAR_HEIGHT )
         
@@ -810,7 +783,7 @@ class AnimationBar( wx.Window ):
         
         dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
         
-        s = HydrusData.ConvertValueRangeToPrettyString( self._current_frame_index + 1, self._num_frames )
+        s = HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames )
         
         ( x, y ) = dc.GetTextExtent( s )
         
@@ -827,6 +800,13 @@ class AnimationBar( wx.Window ):
     def EventMouse( self, event ):
         
         if self._media_window is not None:
+            
+            if not self._media_window:
+                
+                self.SetNoneMedia()
+                
+                return
+                
             
             CC.CAN_HIDE_MOUSE = False
             
@@ -849,7 +829,9 @@ class AnimationBar( wx.Window ):
                 self._currently_in_a_drag = True
                 
             
-            if event.ButtonIsDown( wx.MOUSE_BTN_ANY ):
+            a_button_is_down = event.LeftIsDown() or event.MiddleIsDown() or event.RightIsDown()
+            
+            if a_button_is_down:
                 
                 if not self._currently_in_a_drag:
                     
@@ -865,13 +847,13 @@ class AnimationBar( wx.Window ):
                 if proportion < 0: proportion = 0
                 if proportion > 1: proportion = 1
                 
-                self._current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
+                current_frame_index = int( proportion * ( self._num_frames - 1 ) + 0.5 )
                 
                 self._dirty = True
                 
                 self.Refresh()
                 
-                self._media_window.GotoFrame( self._current_frame_index )
+                self._media_window.GotoFrame( current_frame_index )
                 
             elif event.ButtonUp( wx.MOUSE_BTN_ANY ):
                 
@@ -922,7 +904,7 @@ class AnimationBar( wx.Window ):
                     wx.CallAfter( self._canvas_bmp.Destroy )
                     
                 
-                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
                 
                 self._dirty = True
                 
@@ -931,47 +913,17 @@ class AnimationBar( wx.Window ):
             
         
     
-    def GotoFrame( self, frame_index ):
-        
-        self._current_frame_index = frame_index
-        
-        self._dirty = True
-        
-        self.Refresh()
-        
-    
-    def SetBufferIndices( self, buffer_indices ):
-        
-        if buffer_indices != self._buffer_indices:
-            
-            self._buffer_indices = buffer_indices
-            
-            self._dirty = True
-            
-            self.Refresh()
-            
-        
-    
     def SetMediaAndWindow( self, media, media_window ):
         
         self._media_window = media_window
-        self._paused = False
         self._num_frames = max( media.GetNumFrames(), 1 )
-        self._current_frame_index = 0
-        self._buffer_indices = None
+        self._last_drawn_info = None
         
         self._has_experienced_mouse_down = False
         self._currently_in_a_drag = False
         self._it_was_playing = False
         
-        if media.GetMime() == HC.APPLICATION_FLASH:
-            
-            self._flash_index_update_timer.Start( 100, wx.TIMER_CONTINUOUS )
-            
-        else:
-            
-            self._flash_index_update_timer.Stop()
-            
+        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
         self._dirty = True
         
@@ -980,58 +932,41 @@ class AnimationBar( wx.Window ):
         
         self._media_window = None
         
-        self._flash_index_update_timer.Stop()
+        HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
         
     
-    def SetPaused( self, paused ):
+    def TIMERAnimationUpdate( self ):
         
-        self._paused = paused
-        
-        self._dirty = True
-        
-        self.Refresh()
-        
-    
-    def TIMERFlashIndexUpdate( self, event ):
-        
-        try:
+        if self.IsShownOnScreen():
             
-            if self.IsShownOnScreen():
+            if not self._media_window:
                 
-                try:
-                    
-                    frame_index = self._media_window.CurrentFrame()
-                    
-                except AttributeError:
-                    
-                    text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
-                    text += os.linesep * 2
-                    text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
-                    
-                    HydrusData.ShowText( text )
-                    
-                    raise
-                    
+                self.SetNoneMedia()
                 
-                if frame_index != self._current_frame_index:
-                    
-                    self._current_frame_index = frame_index
-                    
-                    self._dirty = True
-                    
-                    self.Refresh()
-                    
+                return
                 
             
-        except wx.PyDeadObjectError:
+            try:
+                
+                frame_index = self._media_window.CurrentFrame()
+                
+            except AttributeError:
+                
+                text = 'The flash window produced an unusual error that probably means it never initialised properly. This is usually because Flash has not been installed for Internet Explorer. '
+                text += os.linesep * 2
+                text += 'Please close the client, open Internet Explorer, and install flash from Adobe\'s site and then try again. If that does not work, please tell the hydrus developer.'
+                
+                HydrusData.ShowText( text )
+                
+                raise
+                
             
-            self._flash_index_update_timer.Stop()
-            
-        except:
-            
-            self._flash_index_update_timer.Stop()
-            
-            raise
+            if self._last_drawn_info != self._media_window.GetAnimationBarStatus():
+                
+                self._dirty = True
+                
+                self.Refresh()
+                
             
         
     
@@ -1049,6 +984,8 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, parent, 'hydrus client media viewer', 'media_viewer', float_on_parent = float_on_parent )
+        
+        self._canvas_window = None
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         
@@ -1154,7 +1091,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.AddF( self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
@@ -1210,7 +1147,7 @@ class Canvas( wx.Window ):
         
         self._UpdateBackgroundColour()
         
-        self._canvas_bmp = wx.EmptyBitmap( 20, 20, 24 )
+        self._canvas_bmp = wx.Bitmap( 20, 20, 24 )
         
         self.Bind( wx.EVT_SIZE, self.EventResize )
         
@@ -2311,7 +2248,7 @@ class Canvas( wx.Window ):
             
             self._canvas_bmp.Destroy()
             
-            self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+            self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
             
             if self._current_media is not None:
                 
@@ -2936,9 +2873,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         #
         
-        self._timer_cursor_hide = wx.Timer( self, id = ID_TIMER_CURSOR_HIDE )
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventCursorHide, id = ID_TIMER_CURSOR_HIDE )
+        self._timer_cursor_hide = ClientThreading.WXAwareTimer( self, self.TIMERCursorHide )
         
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         
@@ -2987,7 +2922,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         ( x, y ) = event.GetPosition()
         
-        show_mouse = self.GetCursor() == wx.StockCursor( wx.CURSOR_ARROW )
+        show_mouse = self.GetCursor() == wx.Cursor( wx.CURSOR_ARROW )
         
         is_dragging = event.Dragging() and self._last_drag_coordinates is not None
         has_moved = ( x, y ) != self._last_motion_coordinates
@@ -3042,17 +2977,17 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         if show_mouse:
             
-            self.SetCursor( wx.StockCursor( wx.CURSOR_ARROW ) )
+            self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
             
-            self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+            self._timer_cursor_hide.CallLater( 0.8 )
             
         else:
             
-            self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+            self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
             
         
     
-    def TIMEREventCursorHide( self, event ):
+    def TIMERCursorHide( self ):
         
         try:
             
@@ -3063,16 +2998,12 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             if HG.client_controller.MenuIsOpen():
                 
-                self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+                self._timer_cursor_hide.CallLater( 0.8 )
                 
             else:
                 
-                self.SetCursor( wx.StockCursor( wx.CURSOR_BLANK ) )
+                self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
                 
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_cursor_hide.Stop()
             
         except:
             
@@ -3793,7 +3724,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             
         
-        wx.CallLater( 100, catch_up )
+        ClientThreading.CallLater( self, 0.1, catch_up )
         
     
     def SetMedia( self, media ):
@@ -3919,7 +3850,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if self._just_started:
             
-            delay_base = 800
+            delay_base = 0.8
             
             num_to_go_back = 1
             num_to_go_forward = 1
@@ -3928,7 +3859,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         else:
             
-            delay_base = 400
+            delay_base = 0.4
             
             num_to_go_back = 3
             num_to_go_forward = 5
@@ -3985,7 +3916,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    wx.CallLater( delay, image_cache.GetImageRenderer, media )
+                    ClientThreading.CallLater( self, delay, image_cache.GetImageRenderer, media )
                     
                 
             
@@ -4079,7 +4010,10 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             
         
     
-    def KeepCursorAlive( self ): self._timer_cursor_hide.Start( 800, wx.TIMER_ONE_SHOT )
+    def KeepCursorAlive( self ):
+        
+        self._timer_cursor_hide.CallLater( 0.8 )
+        
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
         
@@ -4604,10 +4538,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         CanvasMediaListNavigable.__init__( self, parent, page_key, media_results )
         
-        self._timer_slideshow = wx.Timer( self, id = ID_TIMER_SLIDESHOW )
+        self._timer_slideshow = ClientThreading.WXAwareTimer( self, self.TIMERSlideshow )
         self._timer_slideshow_interval = 0
-        
-        self.Bind( wx.EVT_TIMER, self.TIMEREventSlideshow, id = ID_TIMER_SLIDESHOW )
         
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
         self.Bind( wx.EVT_MIDDLE_DOWN, self.EventClose )
@@ -4641,9 +4573,9 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow.Stop()
             
-        elif self._timer_slideshow.GetInterval() > 0:
+        elif self._timer_slideshow_interval > 0:
             
-            self._timer_slideshow.Start()
+            self._timer_slideshow.CallLater( self._timer_slideshow_interval, repeating = True )
             
         
     
@@ -4659,7 +4591,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     try:
                         
-                        interval = int( float( dlg.GetValue() ) * 1000 )
+                        interval = float( dlg.GetValue() )
                         
                     except:
                         
@@ -4673,7 +4605,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow_interval = interval
             
-            self._timer_slideshow.Start( self._timer_slideshow_interval, wx.TIMER_CONTINUOUS )
+            self._timer_slideshow.CallLater( self._timer_slideshow_interval, repeating = True )
             
         
     
@@ -4709,8 +4641,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             else:
                 
-                if event.GetWheelRotation() > 0: self._ShowPrevious()
-                else: self._ShowNext()
+                if event.GetWheelRotation() > 0:
+                    
+                    self._ShowPrevious()
+                    
+                else:
+                    
+                    self._ShowNext()
+                    
                 
             
         else:
@@ -4859,12 +4797,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             slideshow = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1000 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5000 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10000 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30000 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60000 )
-            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 80 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '1 second', 'Start a slideshow with a one second interval.', self._StartSlideshow, 1.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '5 second', 'Start a slideshow with a five second interval.', self._StartSlideshow, 5.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '10 second', 'Start a slideshow with a ten second interval.', self._StartSlideshow, 10.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '30 second', 'Start a slideshow with a thirty second interval.', self._StartSlideshow, 30.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, '60 second', 'Start a slideshow with a one minute interval.', self._StartSlideshow, 60.0 )
+            ClientGUIMenus.AppendMenuItem( self, slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
             ClientGUIMenus.AppendMenuItem( self, slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshow )
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
@@ -4891,7 +4829,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         event.Skip()
         
     
-    def TIMEREventSlideshow( self, event ):
+    def TIMERSlideshow( self ):
         
         try:
             
@@ -4901,17 +4839,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     self._ShowNext()
                     
-                    self._timer_slideshow.Start( self._timer_slideshow_interval, wx.TIMER_CONTINUOUS )
-                    
                 else:
                     
-                    self._timer_slideshow.Start( 1000, wx.TIMER_CONTINUOUS )
+                    self._timer_slideshow.Delay( 0.5 )
                     
                 
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_slideshow.Stop()
             
         except:
             
@@ -4950,7 +4882,8 @@ class MediaContainer( wx.Window ):
             
             media_window.Hide()
             
-            wx.CallLater( 50, media_window.Destroy )
+            media_window.Destroy()
+            #ClientThreading.CallLater( self, 0.05, media_window.Destroy )
             
         
     
@@ -4981,6 +4914,8 @@ class MediaContainer( wx.Window ):
             
             self._media_window = OpenExternallyPanel( self, self._media )
             
+            self._HideAnimationBar()
+            
         else:
             
             start_paused = self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL_PAUSED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED_PAUSED )
@@ -4996,16 +4931,23 @@ class MediaContainer( wx.Window ):
                 
                 if self._media.GetMime() == HC.APPLICATION_FLASH:
                     
-                    self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
-                    
-                    if self._media_window is None:
+                    if isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
                         
-                        raise Exception( 'Failed to initialise the flash window' )
+                        destroy_old_media_window = False
+                        
+                    else:
+                        
+                        self._media_window = wx.lib.flashwin.FlashWindow( self, size = media_initial_size, pos = media_initial_position )
+                        
+                        if self._media_window is None:
+                            
+                            raise Exception( 'Failed to initialise the flash window' )
+                            
                         
                     
                     client_files_manager = HG.client_controller.client_files_manager
                     
-                    self._media_window.movie = client_files_manager.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH )
+                    self._media_window.LoadMovie( 0, client_files_manager.GetFilePath( self._media.GetHash(), HC.APPLICATION_FLASH ) )
                     
                 else:
                     
@@ -5016,8 +4958,6 @@ class MediaContainer( wx.Window ):
                     else:
                         
                         self._media_window = Animation( self )
-                        
-                        self._media_window.SetAnimationBar( self._animation_bar )
                         
                     
                     self._media_window.SetMedia( self._media, start_paused )
@@ -5070,9 +5010,11 @@ class MediaContainer( wx.Window ):
                 
             else:
                 
+                is_open_externally = isinstance( self._media_window, OpenExternallyPanel )
+                
                 ( media_width, media_height ) = ( my_width, my_height )
                 
-                if ShouldHaveAnimationBar( self._media ):
+                if ShouldHaveAnimationBar( self._media ) and not is_open_externally:
                     
                     media_height -= ANIMATED_SCANBAR_HEIGHT
                     
@@ -5281,6 +5223,8 @@ class MediaContainer( wx.Window ):
         
         self._DestroyThisMediaWindow( self._media_window )
         
+        self._HideAnimationBar()
+        
         self._media_window = None
         
         self.Hide()
@@ -5299,7 +5243,7 @@ class EmbedButton( wx.Window ):
         self._canvas_bmp = None
         self._thumbnail_bmp = None
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
+        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -5426,7 +5370,7 @@ class EmbedButton( wx.Window ):
                     wx.CallAfter( self._canvas_bmp.Destroy )
                     
                 
-                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
                 
                 self._SetDirty()
                 
@@ -5490,18 +5434,18 @@ class OpenExternallyPanel( wx.Panel ):
             
             thumbnail.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
             
-            vbox.AddF( thumbnail, CC.FLAGS_CENTER )
+            vbox.Add( thumbnail, CC.FLAGS_CENTER )
             
         
         m_text = HC.mime_string_lookup[ media.GetMime() ]
         
         button = wx.Button( self, label = 'open ' + m_text + ' externally', size = OPEN_EXTERNALLY_BUTTON_SIZE )
         
-        vbox.AddF( button, CC.FLAGS_CENTER )
+        vbox.Add( button, CC.FLAGS_CENTER )
         
         self.SetSizer( vbox )
         
-        self.SetCursor( wx.StockCursor( wx.CURSOR_HAND ) )
+        self.SetCursor( wx.Cursor( wx.CURSOR_HAND ) )
         
         self.Bind( wx.EVT_LEFT_DOWN, self.EventButton )
         button.Bind( wx.EVT_BUTTON, self.EventButton )
@@ -5539,11 +5483,8 @@ class StaticImage( wx.Window ):
         
         self._canvas_bmp = None
         
-        self._timer_render_wait = wx.Timer( self )
-        
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventRenderWait )
         self.Bind( wx.EVT_MOUSE_EVENTS, self.EventPropagateMouse )
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
@@ -5645,7 +5586,7 @@ class StaticImage( wx.Window ):
                     wx.CallAfter( self._canvas_bmp.Destroy )
                     
                 
-                self._canvas_bmp = wx.EmptyBitmap( my_width, my_height, 24 )
+                self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
                 
                 self._first_background_drawn = False
                 
@@ -5671,7 +5612,7 @@ class StaticImage( wx.Window ):
         
         if not self._image_renderer.IsReady():
             
-            self._timer_render_wait.Start( 16, wx.TIMER_CONTINUOUS )
+            HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
         
         self._dirty = True
@@ -5679,7 +5620,7 @@ class StaticImage( wx.Window ):
         self.Refresh()
         
     
-    def TIMEREventRenderWait( self, event ):
+    def TIMERAnimationUpdate( self ):
         
         try:
             
@@ -5687,16 +5628,12 @@ class StaticImage( wx.Window ):
                 
                 self._SetDirty()
                 
-                self._timer_render_wait.Stop()
+                HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
                 
-            
-        except wx.PyDeadObjectError:
-            
-            self._timer_render_wait.Stop()
             
         except:
             
-            self._timer_render_wait.Stop()
+            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
             raise
             
