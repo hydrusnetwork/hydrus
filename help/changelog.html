@@ -8,6 +8,36 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 289</h3></li>
+				<ul>
+					<li>fixed an issue where scrollbars were only appearing on taglists after a resize event</li>
+					<li>fixed the raw filename component of file drag and drop events from the client to external programs</li>
+					<li>fixed the tag lookup scripts</li>
+					<li>fixed some wx menuhighlight issues</li>
+					<li>improved some shutdown code</li>
+					<li>fixed the add/edit namespace colours options panel, which needed to be updated to deal with the new wx's better alpha channel reporting</li>
+					<li>fixed an issue when hitting 'open externally' on a media collection</li>
+					<li>fixed a crash on client shutdown whenever closed pages were in the undo menu</li>
+					<li>think I fixed another shutdown crash</li>
+					<li>fixed a rare issue with the collect by dropdown not being able to generate a string to display</li>
+					<li>misc wx fixes</li>
+					<li>added a 'importing' page to the options dialog, which now sets the default file import options for quiet and loud file import contexts</li>
+					<li>the old and no longer used 'exclude deleted files' option is now removed from the 'files and trash' panel</li>
+					<li>finished off default url matches for all downloaders that come with the program--these will be set on update, so if you have custom ones, please export them before you update so you can import them again!</li>
+					<li>improved how urls are matched and presented for the user in the media viewer</li>
+					<li>added a 'delete "successful" file imports from the queue' entry to the file import status button right-click menu--this only removes 'successful' and 'already in db', leaving anomalies</li>
+					<li>improved locale instantiation in the client and added locale strings to the help->about dialog</li>
+					<li>you can now set the page name prefix for a paused thread checker. it defaults to a unicode pause character: ?</li>
+					<li>thread watchers will no longer pause on a network error during a check--they now have a 'delay' system like subscriptions, and on a network error, they will delay four hours (unless you hit 'check now')</li>
+					<li>patched in some simple 'connection cutoff' network error handling, we'll see how it does</li>
+					<li>wrote in some more proper error handling for a specific connection cutoff error that is being produced</li>
+					<li>the similar files search tree regen code now clears out orphaned files. if you have had blank 'unknown' files appear in similar files searches, please run database->regen->similar files search tree</li>
+					<li>bitmap buttons on download pages will now update using less CPU and will flicker less</li>
+					<li>improved some video rendering error reporting</li>
+					<li>fixed the 'author name' regex favourite default, which had a superfluous asterisk. if you would like to fix it yourself, please try: [^\\]+(?=\s-)</li>
+					<li>added 'flush log' debug command</li>
+					<li>client.pyw now makes a safe 'system' ui error popup if it fails to boot</li>
+				</ul>
 				<li><h3>version 288</h3></li>
 				<ul>
 					<li>updated to wxPython Phoenix (4.0) build!</li>
