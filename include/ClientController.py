@@ -86,22 +86,6 @@ class Controller( HydrusController.HydrusController ):
         return ClientDB.DB( self, self.db_dir, 'client', no_wal = self._no_wal )
         
     
-    def _CreateSplash( self ):
-        
-        try:
-            
-            self._splash = ClientGUI.FrameSplash( self )
-            
-        except:
-            
-            HydrusData.Print( 'There was an error trying to start the splash screen!' )
-            
-            HydrusData.Print( traceback.format_exc() )
-            
-            raise
-            
-        
-    
     def _DestroySplash( self ):
         
         if self._splash is not None:
@@ -249,6 +233,22 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def CreateSplash( self ):
+        
+        try:
+            
+            self._splash = ClientGUI.FrameSplash( self )
+            
+        except:
+            
+            HydrusData.Print( 'There was an error trying to start the splash screen!' )
+            
+            HydrusData.Print( traceback.format_exc() )
+            
+            raise
+            
+        
+    
     def CurrentlyIdle( self ):
         
         if HG.force_idle_mode:
@@ -350,11 +350,11 @@ class Controller( HydrusController.HydrusController ):
             self.ShutdownView()
             self.ShutdownModel()
             
+            HydrusData.CleanRunningFile( self.db_dir, 'client' )
+            
         else:
             
             try:
-                
-                self._CreateSplash()
                 
                 idle_shutdown_action = self.options[ 'idle_shutdown' ]
                 
@@ -553,6 +553,8 @@ class Controller( HydrusController.HydrusController ):
         if domain_manager is None:
             
             domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+            
+            ClientDefaults.SetDefaultDomainManagerData( domain_manager )
             
             domain_manager._dirty = True
             
@@ -770,7 +772,7 @@ class Controller( HydrusController.HydrusController ):
         
         if HydrusData.TimeHasPassed( self._timestamps[ 'last_page_change' ] + 30 * 60 ):
             
-            self.pub( 'clear_closed_pages' )
+            self.pub( 'delete_old_closed_pages' )
             
             self._timestamps[ 'last_page_change' ] = HydrusData.GetNow()
             
@@ -1004,11 +1006,15 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
         
+        import locale
+        
+        locale.setlocale( locale.LC_ALL, '' )
+        
         HydrusData.Print( u'booting controller\u2026' )
         
         self.frame_icon = wx.Icon( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ), wx.BITMAP_TYPE_PNG )
         
-        self._CreateSplash()
+        self.CreateSplash()
         
         self.CallToThreadLongRunning( self.THREADBootEverything )
         

@@ -333,12 +333,12 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         if self._current_media.HasInbox():
             
-            self._archive_button.SetBitmapLabel( CC.GlobalBMPs.archive )
+            ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
             self._archive_button.SetToolTip( 'archive' )
             
         else:
             
-            self._archive_button.SetBitmapLabel( CC.GlobalBMPs.to_inbox )
+            ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.to_inbox )
             self._archive_button.SetToolTip( 'return to inbox' )
             
         
@@ -535,7 +535,7 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
     
     def _ResetArchiveButton( self ):
         
-        self._archive_button.SetBitmapLabel( CC.GlobalBMPs.archive )
+        ClientGUICommon.SetBitmapButtonBitmap( self._archive_button, CC.GlobalBMPs.archive )
         self._archive_button.SetToolTip( 'archive' )
         
     

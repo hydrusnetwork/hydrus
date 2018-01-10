@@ -336,13 +336,16 @@ class NewDialog( wx.Dialog ):
     
     def EventMenuHighlight( self, event ):
         
-        status_bar = HG.client_controller.GetGUI().GetStatusBar()
-        
         if len( self._menu_stack ) > 0:
             
             text = ''
             
             menu = self._menu_stack[-1]
+            
+            if not menu:
+                
+                return
+                
             
             if menu is not None:
                 
@@ -353,6 +356,8 @@ class NewDialog( wx.Dialog ):
                     text = menu_item.GetHelp()
                     
                 
+            
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             status_bar.SetStatusText( text )
             
@@ -706,13 +711,16 @@ class Frame( wx.Frame ):
     
     def EventMenuHighlight( self, event ):
         
-        status_bar = HG.client_controller.GetGUI().GetStatusBar()
-        
         if len( self._menu_stack ) > 0:
             
             text = ''
             
             menu = self._menu_stack[-1]
+            
+            if not menu:
+                
+                return
+                
             
             if bool( menu ) and menu is not None:
                 
@@ -723,6 +731,8 @@ class Frame( wx.Frame ):
                     text = menu_item.GetHelp()
                     
                 
+            
+            status_bar = HG.client_controller.GetGUI().GetStatusBar()
             
             status_bar.SetStatusText( text )
             

@@ -3324,11 +3324,12 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddButton( 'add the examples', self._AddExamples )
         
-        self._list_ctrl.Sort( 0 )
-        
         #
         
         self._list_ctrl.AddDatas( url_matches )
+        
+        self._list_ctrl.Sort( 0 )
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )

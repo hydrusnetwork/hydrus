@@ -223,7 +223,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'try again', 'Reset the progress of all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_UNKNOWN ) )
             ClientGUIMenus.AppendMenuItem( self, menu, 'skip', 'Skip all the selected imports.', HydrusData.Call( self._SetSelected, CC.STATUS_SKIPPED ) )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete', 'Remove all the selected imports.', self._DeleteSelected )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
             
             HG.client_controller.PopupMenu( self, menu )
             
@@ -311,7 +311,7 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def _ClearProcessed( self ):
         
-        message = 'Are you sure you want to delete all the processed (i.e. anything with a non-blank status in the larger window) files? This is useful for cleaning up and de-laggifying a very large list, but not much else.'
+        message = 'Are you sure you want to delete all the processed (i.e. anything with a non-blank status in the larger window) file imports? This is useful for cleaning up and de-laggifying a very large list, but not much else.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -320,6 +320,21 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                 seed_cache = self._seed_cache_get_callable()
                 
                 seed_cache.RemoveProcessedSeeds()
+                
+            
+        
+    
+    def _ClearSuccessful( self ):
+        
+        message = 'Are you sure you want to delete all the successful/already in db file imports? This is useful for cleaning up and de-laggifying a very large list and leaving only failed and otherwise skipped entries.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                seed_cache = self._seed_cache_get_callable()
+                
+                seed_cache.RemoveSuccessfulSeeds()
                 
             
         
@@ -502,11 +517,18 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         num_unknown = seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
         
+        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL ) + seed_cache.GetSeedCount( CC.STATUS_REDUNDANT )
+        
+        if num_successful > 0:
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_successful ) + ' \'successful\' file imports from the queue', 'Tell this cache to clear out successful/already in db files, reducing the size of the queue.', self._ClearSuccessful )
+            
+        
         num_processed = len( seed_cache ) - num_unknown
         
         if num_processed > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' files from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' file imports from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed )
             
         
         ClientGUIMenus.AppendSeparator( menu )

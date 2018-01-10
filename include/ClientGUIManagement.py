@@ -1109,9 +1109,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._cog_button.Enable()
         
-        self._phashes_button.SetBitmap( CC.GlobalBMPs.play )
-        self._branches_button.SetBitmap( CC.GlobalBMPs.play )
-        self._search_button.SetBitmap( CC.GlobalBMPs.play )
+        ClientGUICommon.SetBitmapButtonBitmap( self._phashes_button, CC.GlobalBMPs.play )
+        ClientGUICommon.SetBitmapButtonBitmap( self._branches_button, CC.GlobalBMPs.play )
+        ClientGUICommon.SetBitmapButtonBitmap( self._search_button, CC.GlobalBMPs.play )
         
         total_num_files = max( num_phashes_to_regen, sum( searched_distances_to_count.values() ) )
         
@@ -1466,32 +1466,20 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         if files_paused:
             
-            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._files_pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._files_pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
             
         
         if gallery_paused:
             
-            if self._gallery_pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._gallery_pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._gallery_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._gallery_pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.pause )
             
         
         if gallery_cancellable:
@@ -1671,17 +1659,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         if paused:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
         
         if paused:
@@ -1905,32 +1887,20 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         if queue_paused:
             
-            if self._pause_queue_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._pause_queue_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._pause_queue_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._pause_queue_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_queue_button, CC.GlobalBMPs.pause )
             
         
         if files_paused:
             
-            if self._pause_files_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._pause_files_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._pause_files_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._pause_files_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.pause )
             
         
     
@@ -2076,8 +2046,10 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         ( thread_url, file_import_options, tag_import_options ) = self._thread_watcher_import.GetOptions()
         
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
+        
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._thread_watcher_panel, [ 'filename' ], tag_import_options, self._thread_watcher_import.SetTagImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._thread_watcher_panel, namespaces, tag_import_options, self._thread_watcher_import.SetTagImportOptions )
         
         #
         
@@ -2208,17 +2180,11 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 current_action = 'pausing, ' + current_action
                 
             
-            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._files_pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._files_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._files_pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
             
         
         self._current_action.SetLabelText( current_action )
@@ -2232,10 +2198,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 watcher_status = 'paused'
                 
             
-            if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._thread_pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._thread_pause_button, CC.GlobalBMPs.play )
             
         else:
             
@@ -2244,10 +2207,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 watcher_status = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
                 
             
-            if self._thread_pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._thread_pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._thread_pause_button, CC.GlobalBMPs.pause )
             
         
         self._watcher_status.SetLabelText( watcher_status )
@@ -2481,17 +2441,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         if paused:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.play:
-                
-                self._pause_button.SetBitmap( CC.GlobalBMPs.play )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            if self._pause_button.GetBitmap() != CC.GlobalBMPs.pause:
-                
-                self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
-                
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
         
     

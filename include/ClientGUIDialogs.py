@@ -810,7 +810,7 @@ class FrameInputLocalFiles( wx.Frame ):
         self._progress_cancel = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.stop, self.StopProgress )
         self._progress_cancel.Disable()
         
-        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
@@ -1064,14 +1064,14 @@ class FrameInputLocalFiles( wx.Frame ):
             self._add_button.Enable()
             self._tag_button.Enable()
             
-            self._progress_pause.SetBitmap( CC.GlobalBMPs.play )
+            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
             
         else:
             
             self._add_button.Disable()
             self._tag_button.Disable()
             
-            self._progress_pause.SetBitmap( CC.GlobalBMPs.pause )
+            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
             
         
     

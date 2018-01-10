@@ -764,13 +764,7 @@ class TestClientDB( unittest.TestCase ):
         test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, 4010, 120, None ) )
         test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, None, None, None ) )
         test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49', 31452, HC.IMAGE_PNG, 191, 196, None, None, None ) )
-        
-        if '3.2.4' in HydrusVideoHandling.GetFFMPEGVersion():
-            apng_duration = 3133
-        else:
-            apng_duration = 1880
-        
-        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, apng_duration, 47, None ) )
+        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.IMAGE_APNG, 500, 500, 'apng_duration', 47, None ) )
         test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.IMAGE_GIF, 329, 302, 600, 5, None ) )
         
         for ( filename, hex_hash, size, mime, width, height, duration, num_frames, num_words ) in test_files:
@@ -820,7 +814,11 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( mr_width, width )
             self.assertEqual( mr_height, height )
             
-            if duration == 'mp4_duration': # diff ffmpeg versions report differently
+            if duration == 'apng_duration': # diff ffmpeg versions report differently
+                
+                self.assertIn( mr_duration, ( 3133, 1880 ) )
+                
+            elif duration == 'mp4_duration':
                 
                 self.assertIn( mr_duration, ( 6266, 6290 ) )
                 
@@ -931,8 +929,6 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        HC.options[ 'exclude_deleted_files' ] = True
-        
         ( status, hash, note ) = self._read( 'md5_status', md5 )
         
         self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
@@ -943,8 +939,6 @@ class TestClientDB( unittest.TestCase ):
         TestClientDB._clear_db()
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-        
-        HC.options[ 'exclude_deleted_files' ] = False
         
         file_import_job = ClientImporting.FileImportJob( path )
         

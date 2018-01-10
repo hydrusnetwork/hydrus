@@ -245,7 +245,7 @@ class FileImportJob( object ):
         
         if file_import_options is None:
             
-            file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
             
         
         self._temp_path = temp_path
@@ -441,7 +441,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_paused = False
         self._files_paused = False
         
-        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         self._tag_import_options = new_options.GetDefaultTagImportOptions( self._gallery_identifier )
         
@@ -1896,14 +1896,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if file_import_options is None:
             
-            file_import_options = ClientDefaults.GetDefaultFileImportOptions( for_quiet_queue = True )
+            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
             
         
         if tag_import_options is None:
             
-            new_options = HG.client_controller.new_options
-            
-            tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
+            tag_import_options = HG.client_controller.new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
             
         
         if tag_service_keys_to_filename_tagging_options is None:
@@ -2413,7 +2411,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         self._pending_page_urls = []
         self._urls_cache = SeedCache()
@@ -3798,6 +3796,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         self.RemoveSeeds( seeds_to_delete )
         
     
+    def RemoveSuccessfulSeeds( self ):
+        
+        with self._lock:
+            
+            seeds_to_delete = [ seed for seed in self._seeds if seed.status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ) ]
+            
+        
+        self.RemoveSeeds( seeds_to_delete )
+        
+    
     def RetryFailures( self ):
         
         with self._lock:
@@ -3863,7 +3871,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._periodic_file_limit = 50
         self._paused = False
         
-        self._file_import_options = ClientDefaults.GetDefaultFileImportOptions( for_quiet_queue = True )
+        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'quiet' )
         
         new_options = HG.client_controller.new_options
         
@@ -5154,7 +5162,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT
     SERIALISABLE_NAME = 'Thread Watcher'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     MIN_CHECK_PERIOD = 30
     
@@ -5162,7 +5170,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         new_options = HG.client_controller.new_options
         
@@ -5189,6 +5197,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._check_now = False
         self._files_paused = False
         self._thread_paused = False
+        
+        self._no_work_until = 0
+        self._no_work_until_reason = ''
         
         self._file_velocity_status = ''
         self._current_action = ''
@@ -5313,6 +5324,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             watcher_status = ''
             
+        except HydrusExceptions.NetworkException as e:
+            
+            self._DelayWork( 4 * 3600, 'Network problem: ' + HydrusData.ToUnicode( e ) )
+            
+            watcher_status = ''
+            
+            HydrusData.PrintException( e )
+            
         except Exception as e:
             
             error_occurred = True
@@ -5361,6 +5380,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def _DelayWork( self, time_delta, reason ):
+        
+        self._no_work_until = HydrusData.GetNow() + time_delta
+        self._no_work_until_reason = reason
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_url_cache = self._urls_cache.GetSerialisableTuple()
@@ -5368,7 +5393,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject )
+        return ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject, self._no_work_until, self._no_work_until_reason )
         
     
     def _HasThread( self ):
@@ -5413,6 +5438,15 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 page_name = thread_watcher_dead_page_string + ' ' + page_name
                 
             
+        elif self._thread_paused:
+            
+            thread_watcher_paused_page_string = new_options.GetNoneableString( 'thread_watcher_paused_page_string' )
+            
+            if thread_watcher_paused_page_string is not None:
+                
+                page_name = thread_watcher_paused_page_string + ' ' + page_name
+                
+            
         
         if page_name != self._last_pubbed_page_name:
             
@@ -5425,7 +5459,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject ) = serialisable_info
+        ( self._thread_url, serialisable_url_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject, self._no_work_until, self._no_work_until_reason ) = serialisable_info
         
         self._urls_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_cache )
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
@@ -5446,17 +5480,24 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            if self._thread_status != CHECKER_STATUS_404:
+            if not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                if self._checker_options.IsDead( self._urls_cache, self._last_check_time ):
+                self._next_check_time = self._no_work_until + 1
+                
+            else:
+                
+                if self._thread_status != CHECKER_STATUS_404:
                     
-                    self._thread_status = CHECKER_STATUS_DEAD
-                    
-                    self._thread_paused = True
+                    if self._checker_options.IsDead( self._urls_cache, self._last_check_time ):
+                        
+                        self._thread_status = CHECKER_STATUS_DEAD
+                        
+                        self._thread_paused = True
+                        
                     
                 
-            
-            self._next_check_time = self._checker_options.GetNextCheckTime( self._urls_cache, self._last_check_time )
+                self._next_check_time = self._checker_options.GetNextCheckTime( self._urls_cache, self._last_check_time )
+                
             
         
     
@@ -5488,6 +5529,18 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject ) = old_serialisable_info
+            
+            no_work_until = 0
+            no_work_until_reason = ''
+            
+            new_serialisable_info = ( thread_url, serialisable_url_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject, no_work_until, no_work_until_reason )
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -5736,8 +5789,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 able_to_check = self._HasThread() and not self._thread_paused
                 check_due = HydrusData.TimeHasPassed( self._next_check_time )
+                no_delays = HydrusData.TimeHasPassed( self._no_work_until )
                 
-                time_to_check = able_to_check and check_due
+                time_to_check = able_to_check and check_due and no_delays
                 
             
             if not time_to_check or HG.client_controller.PageClosedButNotDestroyed( page_key ):
@@ -5779,6 +5833,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._thread_paused = False
             
+            self._no_work_until = 0
+            self._no_work_until_reason = ''
+            
             self._thread_status = CHECKER_STATUS_OK
             
             self._UpdateNextCheckTime()
@@ -5814,7 +5871,11 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if self._thread_status == CHECKER_STATUS_404:
+            if not HydrusData.TimeHasPassed( self._no_work_until ):
+                
+                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
+                
+            elif self._thread_status == CHECKER_STATUS_404:
                 
                 watcher_status = 'Thread 404'
                 
@@ -5958,7 +6019,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        file_import_options = ClientDefaults.GetDefaultFileImportOptions()
+        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
         self._urls_cache = SeedCache()
         self._file_import_options = file_import_options

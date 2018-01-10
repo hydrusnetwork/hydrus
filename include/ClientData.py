@@ -949,6 +949,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_not_found_page_string' ] = '[404]'
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_dead_page_string' ] = '[DEAD]'
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_paused_page_string' ] = u'\u23F8'
         
         self._dictionary[ 'strings' ] = {}
         
@@ -968,6 +969,34 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
         self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
         self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = None
+        
+        #
+        
+        self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        automatic_archive = False
+        exclude_deleted = True
+        
+        min_size = None
+        min_resolution = None
+        
+        present_new_files = True
+        present_already_in_inbox_files = False
+        present_archived_files = False
+        
+        import ClientImporting
+        
+        quiet_file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
+        
+        self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
+        
+        present_new_files = True
+        present_already_in_inbox_files = True
+        present_archived_files = True
+        
+        loud_file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
+        
+        self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
         
         #
         
@@ -1260,6 +1289,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
             
             return wx.Colour( r, g, b )
+            
+        
+    
+    def GetDefaultFileImportOptions( self, options_type ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_file_import_options' ][ options_type ]
             
         
     
@@ -1648,6 +1685,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'fallback_sort' ] = media_sort
+            
+        
+    
+    def SetDefaultFileImportOptions( self, options_type, file_import_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_file_import_options' ][ options_type ] = file_import_options
             
         
     

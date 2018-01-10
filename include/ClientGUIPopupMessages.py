@@ -244,11 +244,11 @@ class PopupMessage( PopupWindow ):
         
         if self._job_key.IsPaused():
             
-            self._pause_button.SetBitmap( CC.GlobalBMPs.play )
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.play )
             
         else:
             
-            self._pause_button.SetBitmap( CC.GlobalBMPs.pause )
+            ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
         
     

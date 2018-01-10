@@ -387,6 +387,8 @@ class ListBox( wx.ScrolledWindow ):
     
     def _DataHasChanged( self ):
         
+        self._SetVirtualSize()
+        
         self._SetDirty()
         
         wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
@@ -730,6 +732,18 @@ class ListBox( wx.ScrolledWindow ):
         self.Refresh()
         
     
+    def _SetVirtualSize( self ):
+        
+        ( my_x, my_y ) = self.GetClientSize()
+        
+        ideal_virtual_size = ( my_x, max( self._text_y * len( self._ordered_terms ), my_y ) )
+        
+        if ideal_virtual_size != self.GetVirtualSize():
+            
+            self.SetVirtualSize( ideal_virtual_size )
+            
+        
+    
     def _SortByText( self ):
         
         def lexicographic_key( term ):
@@ -849,12 +863,7 @@ class ListBox( wx.ScrolledWindow ):
         
         self._num_rows_per_page = my_y / self._text_y
         
-        ideal_virtual_size = ( my_x, max( self._text_y * len( self._ordered_terms ), my_y ) )
-        
-        if ideal_virtual_size != self.GetVirtualSize():
-            
-            self.SetVirtualSize( ideal_virtual_size )
-            
+        self._SetVirtualSize()
         
         self._SetDirty()
         
@@ -1765,7 +1774,9 @@ class ListBoxTagsColourOptions( ListBoxTags ):
     
     def SetNamespaceColour( self, namespace, colour ):
         
-        colour = tuple( colour )
+        ( r, g, b, a ) = colour.Get()
+        
+        colour_tuple = ( r, g, b )
         
         for ( existing_namespace, existing_colour ) in self._terms:
             
@@ -1777,7 +1788,7 @@ class ListBoxTagsColourOptions( ListBoxTags ):
                 
             
         
-        self._AppendTerm( ( namespace, colour ) )
+        self._AppendTerm( ( namespace, colour_tuple ) )
         
         self._SortByText()
         

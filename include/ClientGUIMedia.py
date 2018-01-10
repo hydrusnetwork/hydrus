@@ -926,10 +926,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if self._focussed_media is not None:
             
-            if self._focussed_media.GetLocationsManager().IsLocal():
+            open_externally_media = self._focussed_media.GetDisplayMedia()
+            
+            if open_externally_media.GetLocationsManager().IsLocal():
                 
-                hash = self._focussed_media.GetHash()
-                mime = self._focussed_media.GetMime()
+                hash = open_externally_media.GetHash()
+                mime = open_externally_media.GetMime()
                 
                 client_files_manager = HG.client_controller.client_files_manager
                 
@@ -2507,8 +2509,6 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                         original_paths.append( original_path )
                         
-                    
-                    original_paths = []
                     
                     #
                     

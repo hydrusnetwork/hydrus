@@ -1830,6 +1830,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
+            job_key.SetVariable( 'popup_text_1', 'purging search info of orphans' )
+            
+            self._c.execute( 'DELETE FROM shape_perceptual_hash_map WHERE hash_id NOT IN ( SELECT hash_id FROM current_files );' )
+            
             job_key.SetVariable( 'popup_text_1', 'gathering all leaves' )
             
             self._c.execute( 'DELETE FROM shape_vptree;' )
@@ -10105,6 +10109,15 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 288:
+            
+            domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+            
+            domain_manager.SetURLMatches( ClientDefaults.GetDefaultURLMatches() )
+            
+            self._SetJSONDump( domain_manager )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

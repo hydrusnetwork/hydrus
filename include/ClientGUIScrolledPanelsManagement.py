@@ -1293,6 +1293,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         #
@@ -1661,6 +1662,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
+            self._thread_watcher_paused_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             
             checker_options = self._new_options.GetDefaultThreadCheckerOptions()
             
@@ -1676,6 +1678,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._thread_watcher_not_found_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_not_found_page_string' ) )
             self._thread_watcher_dead_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_dead_page_string' ) )
+            self._thread_watcher_paused_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_paused_page_string' ) )
             
             #
             
@@ -1697,8 +1700,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
-            rows.append( ( 'Prepend thread checker page names with this on 404:', self._thread_watcher_not_found_page_string ) )
-            rows.append( ( 'Prepend thread checker page names with this on death:', self._thread_watcher_dead_page_string ) )
+            rows.append( ( 'Prepend 404 thread checker page names with this:', self._thread_watcher_not_found_page_string ) )
+            rows.append( ( 'Prepend dead thread checker page names with this:', self._thread_watcher_dead_page_string ) )
+            rows.append( ( 'Prepend paused thread checker page names with this:', self._thread_watcher_paused_page_string ) )
             
             gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
             
@@ -1728,6 +1732,56 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetNoneableString( 'thread_watcher_not_found_page_string', self._thread_watcher_not_found_page_string.GetValue() )
             self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
+            self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
+            
+        
+    
+    class _ImportingPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            default_fios = ClientGUICommon.StaticBox( self, 'default file import options' )
+            
+            import ClientGUIImport
+            
+            quiet_file_import_options = self._new_options.GetDefaultFileImportOptions( 'quiet' )
+            
+            self._quiet_fios = ClientGUIImport.FileImportOptionsButton( default_fios, quiet_file_import_options )
+            
+            loud_file_import_options = self._new_options.GetDefaultFileImportOptions( 'loud' )
+            
+            self._loud_fios = ClientGUIImport.FileImportOptionsButton( default_fios, loud_file_import_options )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
+            rows.append( ( 'For import contexts that work on pages:', self._loud_fios ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( default_fios, rows )
+            
+            default_fios.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
+            self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
             
         
     
@@ -2150,7 +2204,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
             self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
-            self._exclude_deleted_files = wx.CheckBox( self, label = '' )
             
             self._remove_filtered_files = wx.CheckBox( self, label = '' )
             self._remove_trashed_files = wx.CheckBox( self, label = '' )
@@ -2175,7 +2228,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._delete_to_recycle_bin.SetValue( HC.options[ 'delete_to_recycle_bin' ] )
-            self._exclude_deleted_files.SetValue( HC.options[ 'exclude_deleted_files' ] )
             self._remove_filtered_files.SetValue( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.SetValue( HC.options[ 'remove_trashed_files' ] )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
@@ -2200,7 +2252,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Default export directory: ', self._export_location ) )
             rows.append( ( 'When deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
-            rows.append( ( 'By default, do not reimport files that have been previously deleted: ', self._exclude_deleted_files ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
@@ -2292,7 +2343,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( HydrusData.ToUnicode( self._export_location.GetPath() ) )
             
             HC.options[ 'delete_to_recycle_bin' ] = self._delete_to_recycle_bin.GetValue()
-            HC.options[ 'exclude_deleted_files' ] = self._exclude_deleted_files.GetValue()
             HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.GetValue()
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()

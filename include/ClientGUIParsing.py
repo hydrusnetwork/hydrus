@@ -2793,7 +2793,7 @@ class ScriptManagementControl( wx.Panel ):
             
         
     
-    def TIMERUIUpdate( self, event ):
+    def TIMERUIUpdate( self ):
         
         with self._lock:
             

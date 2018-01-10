@@ -743,6 +743,11 @@ class VideoRendererFFMPEG( object ):
             
             if len(s) != nbytes:
                 
+                if self.lastread is None:
+                    
+                    raise Exception( 'Unable to render that video! Please send it to hydrus dev so he can look at it!' )
+                    
+                
                 result = self.lastread
                 
                 self.close()

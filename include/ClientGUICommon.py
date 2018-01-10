@@ -142,6 +142,24 @@ def NotebookScreenToHitTest( notebook, screen_position ):
     
     return notebook.HitTest( position )
     
+def SetBitmapButtonBitmap( button, bitmap ):
+    
+    # the button's bitmap, retrieved via GetBitmap, is not the same as the one we gave it!
+    # hence testing bitmap vs that won't work to save time on an update loop, so we'll just save it here custom
+    # this isn't a big memory deal for our purposes since they are small and mostly if not all from the GlobalBMPs library so shared anyway
+    
+    if hasattr( button, 'last_bitmap' ):
+        
+        if button.last_bitmap == bitmap:
+            
+            return
+            
+        
+    
+    button.SetBitmap( bitmap )
+    
+    button.last_bitmap = bitmap
+    
 def TLPHasFocus( window ):
     
     focus_tlp = GetFocusTLP()
@@ -495,6 +513,8 @@ class CheckboxCollect( wx.ComboCtrl ):
             
             self._initial_collect_by = collect_by
             
+            self._control = None
+            
         
         def Create( self, parent ):
             
@@ -511,6 +531,21 @@ class CheckboxCollect( wx.ComboCtrl ):
         def GetControl( self ):
             
             return self._control
+            
+        
+        def GetStringValue( self ):
+            
+            # this is an abstract method that provides the strin to put in the comboctrl
+            # I've never used/needed it, but one user reported getting the NotImplemented thing by repeatedly clicking, so let's add it anyway
+            
+            if self._control is None:
+                
+                return 'initialising'
+                
+            else:
+                
+                return self._control.GetDescription()
+                
             
         
         class _Control( wx.CheckListBox ):
@@ -606,6 +641,13 @@ class CheckboxCollect( wx.ComboCtrl ):
             def EventChanged( self, event ):
                 
                 self._BroadcastCollect()
+                
+            
+            def GetDescription( self ):
+                
+                ( collect_by, description ) = self._GetValues()
+                
+                return description
                 
             
             def SetValue( self, collect_by ):

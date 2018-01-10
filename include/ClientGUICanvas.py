@@ -693,6 +693,22 @@ class AnimationBar( wx.Window ):
         self.Bind( wx.EVT_ERASE_BACKGROUND, self.EventEraseBackground )
         
     
+    def _GetAnimationBarStatus( self ):
+        
+        if FLASHWIN_OK and isinstance( self._media_window, wx.lib.flashwin.FlashWindow ):
+            
+            current_frame = self._media_window.CurrentFrame()
+            paused = False
+            buffer_indices = None
+            
+            return ( current_frame, paused, buffer_indices )
+            
+        else:
+            
+            return self._media_window.GetAnimationBarStatus()
+            
+        
+    
     def _GetXFromFrameIndex( self, index, width_offset = 0 ):
         
         if self._num_frames < 2:
@@ -707,7 +723,7 @@ class AnimationBar( wx.Window ):
     
     def _Redraw( self, dc ):
         
-        self._last_drawn_info = self._media_window.GetAnimationBarStatus()
+        self._last_drawn_info = self._GetAnimationBarStatus()
         
         ( current_frame_index, paused, buffer_indices )  = self._last_drawn_info
         
@@ -961,7 +977,7 @@ class AnimationBar( wx.Window ):
                 raise
                 
             
-            if self._last_drawn_info != self._media_window.GetAnimationBarStatus():
+            if self._last_drawn_info != self._GetAnimationBarStatus():
                 
                 self._dirty = True
                 
@@ -4883,7 +4899,6 @@ class MediaContainer( wx.Window ):
             media_window.Hide()
             
             media_window.Destroy()
-            #ClientThreading.CallLater( self, 0.05, media_window.Destroy )
             
         
     

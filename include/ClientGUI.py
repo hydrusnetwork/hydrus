@@ -114,7 +114,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimationUpdate, id = ID_TIMER_ANIMATION_UPDATE )
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
-        self._controller.sub( self, 'ClearClosedPages', 'clear_closed_pages' )
+        self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
@@ -200,6 +200,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         library_versions.append( ( 'wx', wx.version() ) )
         library_versions.append( ( 'temp dir', HydrusPaths.tempfile.gettempdir() ) )
+        
+        import locale
+        
+        l_string = locale.getlocale()[0]
+        wxl_string = self._controller._app.locale.GetCanonicalName()
+        
+        library_versions.append( ( 'locale strings', HydrusData.ToUnicode( ( l_string, wxl_string ) ) ) )
         
         description = 'This client is the media management application of the hydrus software suite.'
         
@@ -1578,6 +1585,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', ClientThreading.CallLater, self, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
@@ -3040,7 +3048,31 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def ClearClosedPages( self ):
+    def CurrentlyBusy( self ):
+        
+        return False
+        
+    
+    def DeleteAllClosedPages( self ):
+        
+        with self._lock:
+            
+            deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
+            
+            self._closed_pages = []
+            
+        
+        if len( deletee_pages ) > 0:
+            
+            self._DestroyPages( deletee_pages )
+            
+            self._focus_holder.SetFocus()
+            
+            self._controller.pub( 'notify_new_undo' )
+            
+        
+    
+    def DeleteOldClosedPages( self ):
         
         new_closed_pages = []
         
@@ -3075,27 +3107,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._DestroyPages( deletee_pages )
-        
-    
-    def CurrentlyBusy( self ):
-        
-        return False
-        
-    
-    def DeleteAllClosedPages( self ):
-        
-        with self._lock:
-            
-            deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
-            
-            self._closed_pages = []
-            
-        
-        self._DestroyPages( deletee_pages )
-        
-        self._focus_holder.SetFocus()
-        
-        self._controller.pub( 'notify_new_undo' )
         
     
     def EventCharHook( self, event ):
@@ -3254,6 +3265,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def Exit( self, restart = False ):
         
+        # the return value here is 'exit allowed'
+        
         if not HG.emergency_exit:
             
             if HC.options[ 'confirm_client_exit' ]:
@@ -3303,6 +3316,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._DestroyTimers()
             
+            self.DeleteAllClosedPages() # wx crashes if any are left in here, wew
+            
             self._message_manager.CleanBeforeDestroy()
             
             self._message_manager.Hide()
@@ -3334,9 +3349,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if HG.emergency_exit:
             
+            self.Destroy()
+            
             self._controller.Exit()
             
         else:
+            
+            ClientThreading.CallLater( self, 2, self.Destroy )
+            
+            self._controller.CreateSplash()
             
             wx.CallAfter( self._controller.Exit )
             

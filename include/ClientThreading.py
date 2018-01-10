@@ -509,6 +509,24 @@ class WXAwareTimer( object ):
     
 def CallLater( window, seconds, callable, *args, **kwargs ):
     
+    if HG.callto_report_mode:
+        
+        what_to_report = [ callable ]
+        
+        if len( args ) > 0:
+            
+            what_to_report.append( args )
+            
+        
+        if len( kwargs ) > 0:
+            
+            what_to_report.append( kwargs )
+            
+        
+        HydrusData.ShowText( tuple( what_to_report ) )
+        
+        
+    
     call = HydrusData.Call( callable, *args, **kwargs )
     
     timer = WXAwareTimer( window, call )

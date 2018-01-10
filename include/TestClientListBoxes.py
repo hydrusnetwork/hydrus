@@ -67,7 +67,9 @@ class TestListBoxes( unittest.TestCase ):
             new_namespace_colours = dict( initial_namespace_colours )
             new_namespace_colours[ 'character' ] = ( 0, 170, 0 )
             
-            panel.SetNamespaceColour( 'character', ( 0, 170, 0 ) )
+            colour = wx.Colour( 0, 170, 0 )
+            
+            panel.SetNamespaceColour( 'character', colour )
             
             self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
             

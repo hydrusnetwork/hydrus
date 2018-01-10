@@ -90,6 +90,23 @@ try:
             
             HydrusData.Print( traceback.format_exc() )
             
+            try:
+                
+                import wx
+                
+                message = 'The client failed to start. The error follows (it has also been written to the log in the db directory). If it is not obvious, please inform hydrus dev.'
+                
+                message += os.linesep * 2
+                
+                message += traceback.format_exc()
+                
+                wx.SafeShowMessage( 'hydrus client failed', message )
+                
+            except:
+                
+                pass
+                
+            
         finally:
             
             HG.view_shutdown = True
