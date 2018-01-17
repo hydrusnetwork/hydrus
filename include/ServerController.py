@@ -232,7 +232,7 @@ class Controller( HydrusController.HydrusController ):
                     HydrusData.Print( traceback.format_exc() )
                     
                 
-        
+            
             if service_key in self._service_keys_to_connected_ports:
                 
                 deferred = defer.maybeDeferred( self._service_keys_to_connected_ports[ service_key ].stopListening )

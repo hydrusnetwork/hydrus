@@ -1098,6 +1098,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 command_processed = False
                 
             
+        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
+            
         else:
             
             command_processed = False

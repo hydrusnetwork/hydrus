@@ -1569,6 +1569,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'db profile mode', 'Run detailed \'profiles\' on every database query and dump this information to the log (this is very useful for hydrus dev to have, if something is running slow for you!).', HG.db_profile_mode, self._SwitchBoolean, 'db_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'menu profile mode', 'Run detailed \'profiles\' on menu actions.', HG.menu_profile_mode, self._SwitchBoolean, 'menu_profile_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'pubsub profile mode', 'Run detailed \'profiles\' on every internal publisher/subscriber message and dump this information to the log. This can hammer your log with dozens of large dumps every second. Don\'t run it unless you know you need to.', HG.pubsub_profile_mode, self._SwitchBoolean, 'pubsub_profile_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, profile_modes, 'ui timer profile mode', 'Run detailed \'profiles\' on every ui timer update. This will likely spam you!', HG.ui_timer_profile_mode, self._SwitchBoolean, 'ui_timer_profile_mode' )
             
             ClientGUIMenus.AppendMenu( debug, profile_modes, 'profile modes' )
             
@@ -1578,6 +1579,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'daemon report mode', 'Have the daemons report whenever they fire their jobs.', HG.daemon_report_mode, self._SwitchBoolean, 'daemon_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'db report mode', 'Have the db report query information, where supported.', HG.db_report_mode, self._SwitchBoolean, 'db_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
@@ -2094,17 +2096,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             domain_manager = self._controller.network_engine.domain_manager
             
-            ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ) = domain_manager.GetURLMatchLinks()
+            url_matches = domain_manager.GetURLMatches()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
+            ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = domain_manager.GetURLMatchLinks()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, url_match_keys_to_display, url_match_keys_to_parser_keys )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ) = panel.GetValue()
+                ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = panel.GetValue()
                 
-                domain_manager.SetURLMatchLinks( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
+                domain_manager.SetURLMatchLinks( url_match_keys_to_display, url_match_keys_to_parser_keys )
                 
             
         
@@ -2672,6 +2676,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.gui_report_mode = not HG.gui_report_mode
             
+        elif name == 'hover_window_report_mode':
+            
+            HG.hover_window_report_mode = not HG.hover_window_report_mode
+            
         elif name == 'menu_profile_mode':
             
             HG.menu_profile_mode = not HG.menu_profile_mode
@@ -2683,6 +2691,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'pubsub_profile_mode':
             
             HG.pubsub_profile_mode = not HG.pubsub_profile_mode
+            
+        elif name == 'ui_timer_profile_mode':
+            
+            HG.ui_timer_profile_mode = not HG.ui_timer_profile_mode
+            
+            if HG.ui_timer_profile_mode:
+                
+                HydrusData.ShowText( 'ui timer profile mode activated' )
+                
+            else:
+                
+                HydrusData.ShowText( 'ui timer profile mode deactivated' )
+                
             
         elif name == 'force_idle_mode':
             
@@ -3186,7 +3207,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             try:
                 
-                window.TIMERAnimationUpdate()
+                if HG.ui_timer_profile_mode:
+                    
+                    summary = 'Profiling animation timer: ' + repr( window )
+                    
+                    HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3 )
+                    
+                else:
+                    
+                    window.TIMERAnimationUpdate()
+                    
                 
             except Exception as e:
                 
@@ -3230,7 +3260,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if page is not None:
             
-            page.TIMERPageUpdate()
+            if HG.ui_timer_profile_mode:
+                
+                summary = 'Profiling page timer: ' + repr( page )
+                
+                HydrusData.Profile( summary, 'page.TIMERPageUpdate()', globals(), locals(), min_duration_ms = 3 )
+                
+            else:
+                
+                page.TIMERPageUpdate()
+                
             
         
     
@@ -3247,7 +3286,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             try:
                 
-                window.TIMERUIUpdate()
+                if HG.ui_timer_profile_mode:
+                    
+                    summary = 'Profiling ui update timer: ' + repr( window )
+                    
+                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3 )
+                    
+                else:
+                    
+                    window.TIMERUIUpdate()
+                    
                 
             except Exception as e:
                 
@@ -3466,16 +3514,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportURL( self, url ):
         
-        # do sophisticated domain engine filtering here
-        # generalise this to more cleverly figure out if a page can do what we want, and if not, create one that can
+        ( url_type, match_name, can_parse ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
         
-        if ClientDownloading.IsImageboardThread( url ):
-            
-            # change this when thread watchers can support multiple sub-pages etc...
-            
-            self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
-            
-        else:
+        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE ):
             
             page = self._notebook.GetOrMakeURLImportPage()
             
@@ -3485,8 +3526,35 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 page_key = page.GetPageKey()
                 
-                HG.client_controller.pub( 'set_page_url_input', page_key, url )
+                HG.client_controller.pub( 'pend_raw_url', page_key, url )
                 
+            
+        else:
+            
+            # this is temporary until I can get the parser link going and actually do this dynamically
+            
+            if url_type == HC.URL_TYPE_WATCHABLE:
+                
+                self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
+                
+                return
+                
+            
+            if not can_parse:
+                
+                message = 'This URL was recognised as a ' + match_name + ' but this URL class does not yet have a parsing script linked to it!'
+                message += os.linesep * 2
+                message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
+                
+                wx.MessageBox( message )
+                
+                return
+                
+            
+            # watchable url (thread url) -> open new watcher, set it
+                # at some point, append it to existing multiple-thread-supporting-page
+            # gallery url -> open gallery page for the respective parser for import options, but no query input stuff, queue up gallery page to be parsed for page urls
+            # page url -> open gallery page for the respective parser for import options, but no query input stuff (maybe no gallery stuff, but this is prob overkill), queue up file page to be parsed for tags and file
             
         
     

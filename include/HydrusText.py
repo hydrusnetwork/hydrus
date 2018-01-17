@@ -6,6 +6,7 @@ re_trailing_space = re.compile( '\\s+$', re.UNICODE )
 re_leading_space = re.compile( '^\\s+', re.UNICODE )
 re_leading_space_or_garbage = re.compile( '^(\\s|-|system:)+', re.UNICODE )
 re_leading_single_colon = re.compile( '^:(?!:)', re.UNICODE )
+re_leading_byte_order_mark = re.compile( u'^\ufeff', re.UNICODE ) # unicode .txt files prepend with this, wew
 
 def DeserialiseNewlinedTexts( text ):
     
@@ -20,6 +21,8 @@ def DeserialiseNewlinedTexts( text ):
     return texts
     
 def StripTrailingAndLeadingSpaces( t ):
+    
+    t = re_leading_byte_order_mark.sub( '', t )
     
     t = re_trailing_space.sub( '', t )
     

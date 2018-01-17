@@ -1190,12 +1190,22 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def EventContentChanged( self, event ):
         
+        if not self._listctrl:
+            
+            return
+            
+        
         self._UpdateButtons()
         
         event.Skip()
         
     
     def EventSelectionChanged( self, event ):
+        
+        if not self._listctrl:
+            
+            return
+            
         
         self._UpdateButtons()
         

@@ -104,7 +104,15 @@ class FullscreenHoverFrame( wx.Frame ):
         
         if self._current_media is None or not self.GetParent().IsShown(): # Can't ClientToScreen if not shown, like in init
             
-            self.Hide()
+            if self.IsShown():
+                
+                if HG.hover_window_report_mode:
+                    
+                    HydrusData.ShowText( repr( self ) + ' - hiding because nothing to show or parent hidden.' )
+                    
+                
+                self.Hide()
+                
             
         else:
             
@@ -166,15 +174,47 @@ class FullscreenHoverFrame( wx.Frame ):
             ready_to_show = in_position and not mouse_is_over_something_important and focus_is_good and not dialog_open and not menu_open
             ready_to_hide = not menu_open and ( not in_position or dialog_open or not focus_is_good )
             
+            def get_logic_report_string():
+                
+                tuples = []
+                
+                tuples.append( ( 'in position: ', in_position ) )
+                tuples.append( ( 'menu open: ', menu_open ) )
+                tuples.append( ( 'dialog open: ', dialog_open ) )
+                tuples.append( ( 'mouse over interactable media: ', mouse_is_over_interactable_media ) )
+                tuples.append( ( 'mouse near animation bar: ', mouse_is_near_animation_bar ) )
+                tuples.append( ( 'focus is good: ', focus_is_good ) )
+                
+                message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) ) + os.linesep
+                
+                return message
+                
+            
             if ready_to_show:
                 
                 self._SizeAndPosition()
                 
-                self.Show()
+                if not self.IsShown():
+                    
+                    if HG.hover_window_report_mode:
+                        
+                        HydrusData.ShowText( repr( self ) + ' - showing.' + get_logic_report_string() )
+                        
+                    
+                    self.Show()
+                    
                 
             elif ready_to_hide:
                 
-                self.Hide()
+                if self.IsShown():
+                    
+                    if HG.hover_window_report_mode:
+                        
+                        HydrusData.ShowText( repr( self ) + ' - hiding.' + get_logic_report_string() )
+                        
+                    
+                    self.Hide()
+                    
                 
             
         

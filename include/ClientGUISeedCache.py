@@ -526,7 +526,7 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         num_processed = len( seed_cache ) - num_unknown
         
-        if num_processed > 0:
+        if num_processed > 0 and num_processed != num_successful:
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' file imports from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed )
             

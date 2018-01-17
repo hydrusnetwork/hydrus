@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 290</h3></li>
+				<ul>
+					<li>content (tag and rating) shortcuts in the 'media' shortcut set now work on the thumbnail view!</li>
+					<li>tags in lexicophically sorted taglists will now sort numerically if their subtags start with decimals (e.g. page:3 will come before page:20 now)</li>
+					<li>trying to add/edit a subscription query that is a dupe will now give you a messagebox saying no, and pasting multiple queries will filter out the dupes and inform you (so, if you aren't sure if some of your list of ten artists to add is already in your big 'artist sub', just paste them anyway--it'll take out the dupes for you)</li>
+					<li>string converters now support regex substitution! (I expect to eventually integrate this into the filename tag parsing panel!)</li>
+					<li>'modal' popup messages (that create a new dialog and stop interaction with the program, like the one launched for repository processing) will now minimise non-main-gui frames while they work. these frames will be restored when the job is done (this should relieve the problem of this modal dialog sometimes letting other semi-stay_on_top frames obscure it while still prohibiting interaction, wew</li>
+					<li>simplified and sped up how importers decide whether to do file work or wait</li>
+					<li>made file importers do ui-polite pauses during the file import loop more intelligently--if the files make no big change to db or ui (e.g file was known already deleted because of its url), no wait will occur at all, meaning redundant lean queue-sections should work real quick</li>
+					<li>fixed an issue with multiply-nested submenus sometimes not deleting themselves neatly and resulting in highlight-related RuntimeErrors.</li>
+					<li>fixed an issue where the 'select from list' dialog could sometimes be ok'd without a valid entry--I believe this may be have been causing a delayed crash as well</li>
+					<li>added a 'ui timer profile' mode, which profiles some common unified ui update loops that draw animations and keep downloader ui synced and so on</li>
+					<li>the 'delete processed' file import status right-click menu entry will no longer show if it has the same count as the 'successful' line</li>
+					<li>the options->colours panel has some better layout and the namespace listbox asks a yes/no  to delete if you double-click/enter a colour</li>
+					<li>dropping a raw file url onto the client will now automatically pend it to a raw url importer (previously, it would be put in the input box, but after rethinking how this could go wrong, I concluded it wasn't such a big deal). if you use this a lot, see how you like it, and let me know if you would want an option to revert to the old behaviour</li>
+					<li>updated domain manager so it tracks url class identity in a neater way (renaming them will no longer break links or display options)</li>
+					<li>improved some widget feedback of edit url class panel</li>
+					<li>simplified the manage url class links panel</li>
+					<li>url classes now normalise gallery and page urls differently (page urls strip all non-declared data, gallery urls just switch scheme). this may change in future</li>
+					<li>url classes can now convert a normalised url to an api url--for instance for informing the program that an imageboard thread url has an api version that'll be better to check</li>
+					<li>the domain manager can now determine arbitrary url parsability capability, and this is just starting to be integrated into url drag-and-drop--try dropping a known url class on the client, like a booru link: it'll now tell you it sees what it is but can't yet parse it!</li>
+					<li>the 4chan and 8chan thread url classes will reset to defaults again this week--replacing with url classes that convert to the api versions--and you'll get the new api url classes themselves</li>
+					<li>if missing, the primary tables in client.caches.db can now regenerate on boot. they aren't properly repopulated yet, but the client will boot and you'll get an error message telling you what to do next</li>
+					<li>improved .txt and clipboard tag import unicode support</li>
+					<li>removed leading BOM (byte order mark) from .txt and clipboard tag imports</li>
+					<li>improved some clipboard text fetching code</li>
+					<li>added a new 'hover window profile mode' to the debug menu--it will print the logic info behind any media viewer's hover window show/hide decision</li>
+					<li>tweaked the locale-setting code, which was stopping some users (on Win10 creator's update, it seems) from booting the client</li>
+					<li>added system:rating to 'all known files' query contexts (so you can now search for deleted files that have ratings)</li>
+					<li>the manage import folders dialog now has a redtext warning about subdirectories</li>
+					<li>some file importers deal with shutdown events more gracefully</li>
+					<li>lz4 is no longer required. if it is absent, or the version is too old, a simple statement will be printed to the log and it will not be used in either the client or server</li>
+					<li>updated to ffmpeg 3.4.1 on windows</li>
+					<li>updated opencv to 3.4 on windows and linux (had trouble with os x--will continue working on it next week)</li>
+					<li>fixed an important grammar typo in the help</li>
+				</ul>
 				<li><h3>version 289</h3></li>
 				<ul>
 					<li>fixed an issue where scrollbars were only appearing on taglists after a resize event</li>
@@ -34,7 +70,7 @@
 					<li>the similar files search tree regen code now clears out orphaned files. if you have had blank 'unknown' files appear in similar files searches, please run database->regen->similar files search tree</li>
 					<li>bitmap buttons on download pages will now update using less CPU and will flicker less</li>
 					<li>improved some video rendering error reporting</li>
-					<li>fixed the 'author name' regex favourite default, which had a superfluous asterisk. if you would like to fix it yourself, please try: [`\\]+(?=\s-)</li>
+					<li>fixed the 'author name' regex favourite default, which had a superfluous asterisk. if you would like to fix it yourself, please try: [^\\]+(?=\s-)</li>
 					<li>added 'flush log' debug command</li>
 					<li>client.pyw now makes a safe 'system' ui error popup if it fails to boot</li>
 				</ul>

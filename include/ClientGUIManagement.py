@@ -2394,7 +2394,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._UpdateStatus()
         
-        HG.client_controller.sub( self, 'SetURLInput', 'set_page_url_input' )
+        HG.client_controller.sub( self, 'PendURL', 'pend_raw_url' )
         
     
     def _PendURLs( self, urls ):
@@ -2456,19 +2456,17 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def SetSearchFocus( self, page_key ):
+    def PendURL( self, page_key, url ):
         
         if page_key == self._page_key:
             
-            self._url_input.SetFocus()
+            self._PendURLs( ( url, ) )
             
         
     
-    def SetURLInput( self, page_key, url ):
+    def SetSearchFocus( self, page_key ):
         
         if page_key == self._page_key:
-            
-            self._url_input.SetValue( url )
             
             self._url_input.SetFocus()
             

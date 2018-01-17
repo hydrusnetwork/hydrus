@@ -1,6 +1,18 @@
 import json
-import lz4.block
 import zlib
+
+LZ4_OK = False
+
+try:
+    
+    import lz4.block
+    
+    LZ4_OK = True
+    
+except ImportError:
+    
+    print( 'Could not import lz4.' )
+    
 
 SERIALISABLE_TYPE_BASE = 0
 SERIALISABLE_TYPE_BASE_NAMED = 1
@@ -72,7 +84,14 @@ def CreateFromNetworkString( network_string ):
         
     except zlib.error:
         
-        obj_string = lz4.block.decompress( network_string )
+        if LZ4_OK:
+            
+            obj_string = lz4.block.decompress( network_string )
+            
+        else:
+            
+            raise
+            
         
     
     return CreateFromString( obj_string )

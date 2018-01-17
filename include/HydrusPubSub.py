@@ -43,7 +43,7 @@ class HydrusPubSub( object ):
                 
                 for object in objects:
                     
-                    if not object: # catch for wx PyDeadObject stuff. not really happy with this, but works for now
+                    if not object:
                         
                         continue
                         

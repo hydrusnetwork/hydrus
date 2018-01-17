@@ -1094,6 +1094,7 @@ STRING_TRANSFORMATION_DECODE = 5
 STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING = 6
 STRING_TRANSFORMATION_CLIP_TEXT_FROM_END = 7
 STRING_TRANSFORMATION_REVERSE = 8
+STRING_TRANSFORMATION_REGEX_SUB = 9
 
 transformation_type_str_lookup = {}
 
@@ -1106,6 +1107,7 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_DECODE ] = 'decode'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING ] = 'take the start of the string'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_REGEX_SUB ] = 'regex substitution'
 
 class StringConverter( HydrusSerialisable.SerialisableBase ):
     
@@ -1139,7 +1141,19 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.transformations, self.example_string ) = serialisable_info
+        ( serialisable_transformations, self.example_string ) = serialisable_info
+        
+        self.transformations = []
+        
+        for ( transformation_type, data ) in serialisable_transformations:
+            
+            if transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+                
+                data = tuple( data ) # convert from list to tuple thing
+                
+            
+            self.transformations.append( ( transformation_type, data ) )
+            
         
     
     def Convert( self, s, max_steps_allowed = None ):
@@ -1202,6 +1216,12 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                     
                     s = s[::-1]
                     
+                elif transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+                    
+                    ( pattern, repl ) = data
+                    
+                    s = re.sub( pattern, repl, s, flags = re.UNICODE )
+                    
                 
             except:
                 
@@ -1262,6 +1282,10 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         elif transformation_type == STRING_TRANSFORMATION_REVERSE:
             
             return transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ]
+            
+        elif transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+            
+            return 'regex substitution: ' + HydrusData.ToUnicode( data )
             
         
     

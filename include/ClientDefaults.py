@@ -775,6 +775,35 @@ def GetDefaultURLMatches():
     
     example_url = 'https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651'
     
+    # convert
+    # https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651
+    # to
+    # https://a.4cdn.org/m/thread/16086187.json
+    api_lookup_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( r'.*?([^/]+/thread/\d+).+', r'https://a.4cdn.org/\1.json' ) ) ] )
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = '4chan thread json api'
+    url_type = HC.URL_TYPE_WATCHABLE
+    preferred_scheme = 'https'
+    netloc = 'a.4cdn.org'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'm' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'thread', example_string = 'thread' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\.json', example_string = '16086187.json' ) )
+    
+    parameters = {}
+    
+    example_url = 'https://a.4cdn.org/m/thread/16086187.json'
+    
     url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
     
     url_matches.append( url_match )
@@ -819,6 +848,35 @@ def GetDefaultURLMatches():
     parameters = {}
     
     example_url = 'https://8ch.net/tv/res/1002432.html'
+    
+    # convert
+    # https://8ch.net/tv/res/1002432.html
+    # to
+    # https://8ch.net/tv/res/1002432.json
+    api_lookup_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( r'(.+)html', r'\1json' ) ) ] )
+    
+    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
+    
+    url_matches.append( url_match )
+    
+    #
+    
+    name = '8chan thread json api'
+    url_type = HC.URL_TYPE_WATCHABLE
+    preferred_scheme = 'https'
+    netloc = '8ch.net'
+    allow_subdomains = False
+    keep_subdomains = False
+    
+    path_components = []
+    
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'tv' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'res', example_string = 'res' ) )
+    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\.json', example_string = '1002432.json' ) )
+    
+    parameters = {}
+    
+    example_url = 'https://8ch.net/tv/res/1002432.json'
     
     url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
     

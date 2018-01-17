@@ -3700,6 +3700,8 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
+        have_ratings = len( self._GetServiceIds( HC.RATINGS_SERVICES ) ) > 0
+        
         predicates = []
         
         if service_type in ( HC.COMBINED_FILE, HC.COMBINED_TAG ):
@@ -3714,7 +3716,14 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
+            
+            if have_ratings:
+                
+                predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
+                
+            
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ] ] )
             
         elif service_type in HC.FILE_SERVICES:
             
@@ -3756,9 +3765,7 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.extend( [ ClientSearch.Predicate( predicate_type ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME ] ] )
             
-            ratings_service_ids = self._GetServiceIds( HC.RATINGS_SERVICES )
-            
-            if len( ratings_service_ids ) > 0:
+            if have_ratings:
                 
                 predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_RATING ) )
                 
@@ -8141,6 +8148,81 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RepairDB( self ):
+        
+        HydrusDB.HydrusDB._RepairDB( self )
+        
+        cache_table_names = self._STS( self._c.execute( 'SELECT name FROM external_caches.sqlite_master WHERE type = "table";' ) )
+        
+        expected_table_names = { 'shape_perceptual_hashes', 'shape_perceptual_hash_map', 'shape_vptree', 'shape_maintenance_phash_regen', 'shape_maintenance_branch_regen', 'shape_search_cache', 'duplicate_pairs', 'integer_subtags' }
+        missing_table_names = expected_table_names.difference( cache_table_names )
+        
+        if len( missing_table_names ) == 0:
+            
+            return
+            
+        
+        if 'shape_perceptual_hashes' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hashes ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );' )
+            
+        
+        if 'shape_perceptual_hash_map' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_perceptual_hash_map ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );' )
+            self._CreateIndex( 'external_caches.shape_perceptual_hash_map', [ 'hash_id' ] )
+            
+        
+        if 'shape_vptree' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_vptree ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );' )
+            self._CreateIndex( 'external_caches.shape_vptree', [ 'parent_id' ] )
+            
+        
+        if 'shape_maintenance_phash_regen' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_maintenance_phash_regen ( hash_id INTEGER PRIMARY KEY );' )
+            
+        
+        if 'shape_maintenance_branch_regen' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
+            
+        
+        if 'shape_search_cache' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
+            
+        
+        if 'duplicate_pairs' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.duplicate_pairs ( smaller_hash_id INTEGER, larger_hash_id INTEGER, duplicate_type INTEGER, PRIMARY KEY ( smaller_hash_id, larger_hash_id ) );' )
+            self._CreateIndex( 'external_caches.duplicate_pairs', [ 'larger_hash_id', 'smaller_hash_id' ], unique = True )
+            
+        
+        if 'integer_subtags' in missing_table_names:
+            
+            self._c.execute( 'CREATE TABLE external_caches.integer_subtags ( subtag_id INTEGER PRIMARY KEY, integer_subtag INTEGER );' )
+            self._CreateIndex( 'external_caches.integer_subtags', [ 'integer_subtag' ] )
+            
+        
+        missing_table_names = list( missing_table_names )
+        
+        missing_table_names.sort()
+        
+        message = 'On boot, some cache tables were missing from the database! This could mean your hard drive has a serious problem!'
+        message += os.linesep * 2
+        message += 'The missing tables were:'
+        message += os.linesep * 2
+        message += os.linesep.join( missing_table_names )
+        message += os.linesep * 2
+        message += 'They have been recreated but are now empty. It may be possible to regenerate their contents through the database maintenance menus.'
+        message += os.linesep * 2
+        message += 'Please check that your hard drive and system are otherwise healthy. If you have a working recent backup, you may wish to restore to it as there may be other faults with your database. You might also like to contact hydrus dev or read \'help my db is broke.txt\' in the install_dir/db directory as background reading.'
+        
+        self.pub_initial_message( message )
+        
+    
     def _ReparseFiles( self, hashes ):
         
         job_key = ClientThreading.JobKey()
@@ -8565,26 +8647,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.pub( 'splash_set_status_text', 'updating db to v' + str( version + 1 ) )
-        
-        if version == 239:
-            
-            self._c.execute( 'DROP TABLE analyze_timestamps;' )
-            
-            self._c.execute( 'CREATE TABLE analyze_timestamps ( name TEXT, num_rows INTEGER, timestamp INTEGER );' )
-            
-            #
-            
-            self._controller.pub( 'splash_set_status_subtext', 'setting up next step of similar files stuff' )
-            
-            self._c.execute( 'CREATE TABLE external_caches.shape_search_cache ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );' )
-            
-            self._c.execute( 'CREATE TABLE external_caches.duplicate_pairs ( smaller_hash_id INTEGER, larger_hash_id INTEGER, duplicate_type INTEGER, PRIMARY KEY ( smaller_hash_id, larger_hash_id ) );' )
-            self._c.execute( 'CREATE UNIQUE INDEX external_caches.duplicate_pairs_reversed_hash_ids ON duplicate_pairs ( larger_hash_id, smaller_hash_id );' )
-            
-            combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-            
-            self._c.execute( 'INSERT OR IGNORE INTO shape_search_cache SELECT hash_id, NULL FROM current_files NATURAL JOIN files_info  WHERE service_id = ? and mime IN ( ?, ? );', ( combined_local_file_service_id, HC.IMAGE_JPEG, HC.IMAGE_PNG ) )
-            
         
         if version == 240:
             
@@ -10118,6 +10180,40 @@ class DB( HydrusDB.HydrusDB ):
             domain_manager.SetURLMatches( ClientDefaults.GetDefaultURLMatches() )
             
             self._SetJSONDump( domain_manager )
+            
+        
+        if version == 289:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                old_url_matches = domain_manager.GetURLMatches()
+                
+                pertinent_urls = [ 'https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651', 'https://a.4cdn.org/m/thread/16086187.json', 'https://8ch.net/tv/res/1002432.html', 'https://8ch.net/tv/res/1002432.json' ]
+                
+                # clear out the old 4chan/8chan thread url matches
+                
+                url_matches = [ url_match for url_match in old_url_matches if True not in ( url_match.Matches( url ) for url in pertinent_urls ) ]
+                
+                new_url_matches = ClientDefaults.GetDefaultURLMatches()
+                
+                # select the new 4chan/chan thread html/api url matches
+                
+                new_url_matches = [ url_match for url_match in new_url_matches if True in ( url_match.Matches( url ) for url in pertinent_urls ) ]
+                
+                url_matches.extend( new_url_matches )
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                self.pub_initial_message( 'The client was unable to update your url classes. Please check them under _networking->manage url classes_ and restore to defaults.' )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

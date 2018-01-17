@@ -41,7 +41,7 @@
 			<p>OS X 10.9 is easier these days. If you can't get opencv working from pip, this should do it:</p>
 			<p><ul>
 				<li>brew tap homebrew/homebrew-science</li>
-				<li>brew install opencv</li>
+				<li>brew install opencv <i>(or try opencv3, although I have had trouble with this)</i></li>
 				<li>export PYTHONPATH=/usr/local/lib/python2.7/site-packages:$PYTHONPATH</li>
 			</ul></p>
 			<p>If you don't have ffmpeg in your path and you want to import videos, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in the install_dir/bin directory. Have a look at how I do it in the extractable compiled releases if you can't figure it out. You can either copy the exe from one of those releases, or download the latest build right from the FFMPEG site. I don't include these exes in the source release just because they are so big.</a>

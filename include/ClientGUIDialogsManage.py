@@ -2263,6 +2263,14 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         intro = 'Here you can set the client to regularly check certain folders for new files to import.'
         
         vbox.Add( ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        
+        warning_st.SetForegroundColour( ( 128, 0, 0 ) )
+        
+        vbox.Add( warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
         vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )

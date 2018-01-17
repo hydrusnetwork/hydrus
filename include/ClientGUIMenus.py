@@ -85,6 +85,12 @@ def BindMenuItem( event_handler, menu, menu_item, callable, *args, **kwargs ):
     
     menus_to_menu_item_data[ menu ].add( ( menu_item, event_handler ) )
     
+def CreateMenu():
+    
+    menu = wx.Menu()
+    
+    return menu
+    
 def UnbindMenuItems( menu ):
     
     menu_item_data = menus_to_menu_item_data[ menu ]
@@ -96,18 +102,25 @@ def UnbindMenuItems( menu ):
         event_handler.Unbind( wx.EVT_MENU, source = menu_item )
         
     
-    submenus = menus_to_submenus[ menu ]
-    
-    del menus_to_submenus[ menu ]
-    
-    for submenu in submenus:
+    if menu in menus_to_submenus:
         
-        UnbindMenuItems( submenu )
+        submenus = menus_to_submenus[ menu ]
+        
+        for submenu in submenus:
+            
+            UnbindMenuItems( submenu )
+            
+            submenu.is_dead = True
+            
+        
+        del menus_to_submenus[ menu ]
         
     
 def DestroyMenu( menu ):
     
     UnbindMenuItems( menu )
+    
+    menu.is_dead = True
     
     menu.Destroy()
     
@@ -130,6 +143,12 @@ def GetEventCallable( callable, *args, **kwargs ):
         
     
     return event_callable
+    
+def MenuIsDead( menu ):
+    
+    # doing 'if menu' doesn't work for the deadobject test, wew
+    
+    return hasattr( menu, 'is_dead' )
     
 def SanitiseLabel( label ):
     

@@ -23,7 +23,7 @@ import time
 import webbrowser
 import wx
 
-ID_TIMER_SCRIPT_UPDATE = wx.NewId()
+( StringConverterEvent, EVT_STRING_CONVERTER ) = wx.lib.newevent.NewCommandEvent()
 
 class StringConverterButton( ClientGUICommon.BetterButton ):
     
@@ -33,6 +33,8 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
         
         self._string_converter = string_converter
         
+        self._example_string_override = None
+        
         self._UpdateLabel()
         
     
@@ -40,7 +42,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit string converter' ) as dlg:
             
-            panel = EditStringConverterPanel( dlg, self._string_converter )
+            panel = EditStringConverterPanel( dlg, self._string_converter, example_string_override = self._example_string_override )
             
             dlg.SetPanel( panel )
             
@@ -51,6 +53,8 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
                 self._UpdateLabel()
                 
             
+        
+        wx.PostEvent( self.GetEventHandler(), StringConverterEvent( -1 ) )
         
     
     def _UpdateLabel( self ):
@@ -72,6 +76,11 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
     def GetValue( self ):
         
         return self._string_converter
+        
+    
+    def SetExampleString( self, example_string ):
+        
+        self._example_string_override = example_string
         
     
     def SetValue( self, string_converter ):
@@ -1704,7 +1713,7 @@ And pass that html to a number of 'parsing children' that will each look through
     
 class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_converter ):
+    def __init__( self, parent, string_converter, example_string_override = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1728,7 +1737,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._transformations.AddDatas( [ ( i + 1, transformation_type, data ) for ( i, ( transformation_type, data ) ) in enumerate( string_converter.transformations ) ] )
-        self._example_string.SetValue( string_converter.example_string )
+        
+        if example_string_override is None:
+            
+            self._example_string.SetValue( string_converter.example_string )
+            
+        else:
+            
+            self._example_string.SetValue( example_string_override )
+            
         
         self._transformations.UpdateDatas() # to refresh, now they are all in the list
         
@@ -2044,7 +2061,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._transformation_type = ClientGUICommon.BetterChoice( self )
             
-            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE ):
+            for t_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_PREPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ClientParsing.STRING_TRANSFORMATION_ENCODE, ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_REVERSE, ClientParsing.STRING_TRANSFORMATION_REGEX_SUB ):
                 
                 self._transformation_type.Append( ClientParsing.transformation_type_str_lookup[ t_type ], t_type )
                 
@@ -2052,6 +2069,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text = wx.TextCtrl( self )
             self._data_number = wx.SpinCtrl( self, min = 0, max = 65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self )
+            self._data_regex_pattern = wx.TextCtrl( self )
+            self._data_regex_repl = wx.TextCtrl( self )
             
             for e in ( 'hex', 'base64' ):
                 
@@ -2069,6 +2088,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             if transformation_type in ( ClientParsing.STRING_TRANSFORMATION_DECODE, ClientParsing.STRING_TRANSFORMATION_ENCODE ):
                 
                 self._data_encoding.SelectClientData( data )
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                ( pattern, repl ) = data
+                
+                self._data_regex_pattern.SetValue( pattern )
+                self._data_regex_repl.SetValue( repl )
                 
             elif data is not None:
                 
@@ -2089,6 +2115,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'string data: ', self._data_text ) )
             rows.append( ( 'number data: ', self._data_number ) )
             rows.append( ( 'encoding data: ', self._data_encoding ) )
+            rows.append( ( 'regex pattern: ', self._data_regex_pattern ) )
+            rows.append( ( 'regex replacement: ', self._data_regex_repl ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -2109,6 +2137,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_text.Disable()
             self._data_number.Disable()
             self._data_encoding.Disable()
+            self._data_regex_pattern.Disable()
+            self._data_regex_repl.Disable()
             
             transformation_type = self._transformation_type.GetChoice()
             
@@ -2123,6 +2153,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ):
                 
                 self._data_number.Enable()
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                self._data_regex_pattern.Enable()
+                self._data_regex_repl.Enable()
                 
             
         
@@ -2146,6 +2181,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ):
                 
                 data = self._data_number.GetValue()
+                
+            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
+                
+                pattern = self._data_regex_pattern.GetValue()
+                repl = self._data_regex_repl.GetValue()
+                
+                data = ( pattern, repl )
                 
             else:
                 

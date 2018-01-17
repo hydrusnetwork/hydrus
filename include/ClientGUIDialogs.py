@@ -2058,6 +2058,8 @@ class DialogSelectFromList( Dialog ):
             self._list.Append( label, value )
             
         
+        self._list.Select( 0 )
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )

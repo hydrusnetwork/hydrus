@@ -8,12 +8,23 @@ import HydrusImageHandling
 import HydrusGlobals as HG
 import HydrusThreading
 import HydrusVideoHandling
-import lz4.block
 import os
 import threading
 import time
 import wx
 
+LZ4_OK = False
+
+try:
+    
+    import lz4.block
+    
+    LZ4_OK = True
+    
+except ImportError:
+    
+    pass
+    
 def GenerateHydrusBitmap( path, mime, compressed = True ):
     
     numpy_image = ClientImageHandling.GenerateNumpyImage( path, mime )
@@ -585,6 +596,11 @@ class RasterContainerVideo( RasterContainer ):
 class HydrusBitmap( object ):
     
     def __init__( self, data, format, size, compressed = True ):
+        
+        if not LZ4_OK:
+            
+            compressed = False
+            
         
         self._compressed = compressed
         

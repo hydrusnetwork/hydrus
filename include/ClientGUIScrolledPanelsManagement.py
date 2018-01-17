@@ -1313,14 +1313,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = HG.client_controller.new_options
             
-            self._current_colourset = ClientGUICommon.BetterChoice( self )
+            coloursets_panel = ClientGUICommon.StaticBox( self, 'coloursets' )
+            
+            self._current_colourset = ClientGUICommon.BetterChoice( coloursets_panel )
             
             self._current_colourset.Append( 'default', 'default' )
             self._current_colourset.Append( 'darkmode', 'darkmode' )
             
             self._current_colourset.SelectClientData( self._new_options.GetString( 'current_colourset' ) )
             
-            self._notebook = wx.Notebook( self )
+            self._notebook = wx.Notebook( coloursets_panel )
             
             self._gui_colours = {}
             
@@ -1394,23 +1396,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._notebook.AddPage( colour_panel, colourset, select = select )
                 
             
-            self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( self, HC.options[ 'namespace_colours' ] )
+            #
             
-            self._edit_namespace_colour = wx.Button( self, label = 'edit selected' )
+            namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
+            
+            self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( namespace_colours_panel, HC.options[ 'namespace_colours' ] )
+            
+            self._edit_namespace_colour = wx.Button( namespace_colours_panel, label = 'edit selected' )
             self._edit_namespace_colour.Bind( wx.EVT_BUTTON, self.EventEditNamespaceColour )
             
-            self._new_namespace_colour = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+            self._new_namespace_colour = wx.TextCtrl( namespace_colours_panel, style = wx.TE_PROCESS_ENTER )
             self._new_namespace_colour.Bind( wx.EVT_KEY_DOWN, self.EventKeyDownNamespace )
             
             #
             
+            coloursets_panel.Add( ClientGUICommon.WrapInText( self._current_colourset, coloursets_panel, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            coloursets_panel.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            namespace_colours_panel.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
+            namespace_colours_panel.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            namespace_colours_panel.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( ClientGUICommon.WrapInText( self._current_colourset, self, 'current colourset: ' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._namespace_colours, CC.FLAGS_EXPAND_BOTH_WAYS )
-            vbox.Add( self._new_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._edit_namespace_colour, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( coloursets_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -6241,27 +6251,20 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventPasteTags( self, event ):
             
-            if wx.TheClipboard.Open():
+            text = HG.client_controller.GetClipboardText()
+            
+            try:
                 
-                data = wx.TextDataObject()
+                tags = HydrusText.DeserialiseNewlinedTexts( text )
                 
-                wx.TheClipboard.GetData( data )
+                tags = HydrusTags.CleanTags( tags )
                 
-                wx.TheClipboard.Close()
+                self.EnterTags( tags, only_add = True )
                 
-                text = data.GetText()
+            except:
                 
-                try:
-                    
-                    tags = HydrusText.DeserialiseNewlinedTexts( text )
-                    
-                    tags = HydrusTags.CleanTags( tags )
-                    
-                    self.EnterTags( tags, only_add = True )
-                    
-                except: wx.MessageBox( 'I could not understand what was in the clipboard' )
+                wx.MessageBox( 'I could not understand what was in the clipboard' )
                 
-            else: wx.MessageBox( 'I could not get permission to access the clipboard.' )
             
         
         def EventRemoveTags( self, event ):

@@ -426,6 +426,8 @@ class Controller( HydrusController.HydrusController ):
             
             text = data.GetText()
             
+            text = HydrusData.ToUnicode( text )
+            
             return text
             
         else:
@@ -1008,7 +1010,10 @@ class Controller( HydrusController.HydrusController ):
         
         import locale
         
-        locale.setlocale( locale.LC_ALL, '' )
+        if locale.getlocale() == ( None, None ):
+            
+            locale.setlocale( locale.LC_ALL, '' )
+            
         
         HydrusData.Print( u'booting controller\u2026' )
         

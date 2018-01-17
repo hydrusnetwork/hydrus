@@ -23,6 +23,210 @@ ID_TIMER_ANIMATED = wx.NewId()
 ID_TIMER_SLIDESHOW = wx.NewId()
 ID_TIMER_MEDIA_INFO_DISPLAY = wx.NewId()
 
+def ApplyContentApplicationCommandToMedia( parent, command, media ):
+    
+    data = command.GetData()
+    
+    ( service_key, content_type, action, value ) = data
+    
+    try:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+    except HydrusExceptions.DataMissing:
+        
+        command_processed = False
+        
+        return command_processed
+        
+    
+    service_type = service.GetServiceType()
+    
+    hashes = set()
+    
+    for m in media:
+        
+        hashes.update( m.GetHashes() )
+        
+    
+    if service_type in HC.TAG_SERVICES:
+        
+        tag = value
+        
+        can_add = False
+        can_pend = False
+        can_delete = False
+        can_petition = True
+        can_rescind_pend = False
+        can_rescind_petition = False
+        
+        for m in media:
+            
+            tags_manager = m.GetTagsManager()
+            
+            current = tags_manager.GetCurrent( service_key )
+            pending = tags_manager.GetPending( service_key )
+            petitioned = tags_manager.GetPetitioned( service_key )
+            
+            if tag not in current:
+                
+                can_add = True
+                
+            
+            if tag not in current and tag not in pending:
+                
+                can_pend = True
+                
+            
+            if tag in current and action == HC.CONTENT_UPDATE_FLIP:
+                
+                can_delete = True
+                
+            
+            if tag in current and tag not in petitioned and action == HC.CONTENT_UPDATE_FLIP:
+                
+                can_petition = True
+                
+            
+            if tag in pending and action == HC.CONTENT_UPDATE_FLIP:
+                
+                can_rescind_pend = True
+                
+            
+            if tag in petitioned:
+                
+                can_rescind_petition = True
+                
+            
+        
+        if service_type == HC.LOCAL_TAG:
+            
+            tags = [ tag ]
+            
+            if can_add:
+                
+                content_update_action = HC.CONTENT_UPDATE_ADD
+                
+                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                
+                parents = tag_parents_manager.GetParents( service_key, tag )
+                
+                tags.extend( parents )
+                
+            elif can_delete:
+                
+                content_update_action = HC.CONTENT_UPDATE_DELETE
+                
+            else:
+                
+                return True
+                
+            
+            rows = [ ( tag, hashes ) for tag in tags ]
+            
+        else:
+            
+            if can_rescind_petition:
+                
+                content_update_action = HC.CONTENT_UPDATE_RESCIND_PETITION
+                
+                rows = [ ( tag, hashes ) ]
+                
+            elif can_pend:
+                
+                tags = [ tag ]
+                
+                content_update_action = HC.CONTENT_UPDATE_PEND
+                
+                tag_parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+                
+                parents = tag_parents_manager.GetParents( service_key, tag )
+                
+                tags.extend( parents )
+                
+                rows = [ ( tag, hashes ) for tag in tags ]
+                
+            elif can_rescind_pend:
+                
+                content_update_action = HC.CONTENT_UPDATE_RESCIND_PEND
+                
+                rows = [ ( tag, hashes ) ]
+                
+            elif can_petition:
+                
+                message = 'Enter a reason for this tag to be removed. A janitor will review your petition.'
+                
+                import ClientGUIDialogs
+                
+                with ClientGUIDialogs.DialogTextEntry( parent, message ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        content_update_action = HC.CONTENT_UPDATE_PETITION
+                        
+                        rows = [ ( dlg.GetValue(), tag, hashes ) ]
+                        
+                    else:
+                        
+                        return True
+                        
+                    
+                
+            else:
+                
+                return True
+                
+            
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row ) for row in rows ]
+        
+    elif service_type in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ):
+        
+        rating = value
+        
+        can_set = False
+        can_unset = False
+        
+        for m in media:
+            
+            ratings_manager = m.GetRatingsManager()
+            
+            current_rating = ratings_manager.GetRating( service_key )
+            
+            if current_rating == rating and action == HC.CONTENT_UPDATE_FLIP:
+                
+                can_unset = True
+                
+            else:
+                
+                can_set = True
+                
+            
+        
+        if can_set:
+            
+            row = ( rating, hashes )
+            
+        elif can_unset:
+            
+            row = ( None, hashes )
+            
+        else:
+            
+            return True
+            
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
+        
+    else:
+        
+        return False
+        
+    
+    HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
+    
+    return True
+    
 def GetFocusTLP():
     
     focus = wx.Window.FindFocus()

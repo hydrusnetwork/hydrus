@@ -402,7 +402,7 @@ def ParseImageboardThreadURL( thread_url ):
         raise Exception ( 'Could not understand that url!' )
         
     
-    is_4chan = '4chan.org' in host
+    is_4chan = '4chan.org' in host or 'a.4cdn.org' in host
     is_8chan = '8ch.net' in host
     
     if not ( is_4chan or is_8chan ):

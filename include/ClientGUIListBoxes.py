@@ -1718,7 +1718,18 @@ class ListBoxTagsColourOptions( ListBoxTags ):
         
         namespaces = [ namespace for ( namespace, colour ) in self._selected_terms ]
         
-        self._RemoveNamespaces( namespaces )
+        if len( namespaces ) > 0:
+            
+            import ClientGUIDialogs
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected colours?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    self._RemoveNamespaces( namespaces )
+                    
+                
+            
         
     
     def _DeleteActivate( self ):
@@ -2149,7 +2160,26 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         def lexicographic_key( term ):
             
-            return self._terms_to_texts[ term ]
+            tag = self._terms_to_texts[ term ]
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            comparable_subtag = HydrusTags.ConvertTagToSortable( subtag )
+            
+            # 'cat' < 'character:rei'
+            # 'page:3' < 'page:20'
+            # '1' < 'series:eva'
+            
+            # note that 'test' < ( 1, '' ) but u'test' > ( 1, '' ) wew
+            
+            if namespace == '':
+                
+                return ( comparable_subtag, comparable_subtag )
+                
+            else:
+                
+                return ( namespace, comparable_subtag )
+                
             
         
         def incidence_key( term ):
@@ -2181,11 +2211,11 @@ class ListBoxTagsSelection( ListBoxTags ):
             
             if namespace == '':
                 
-                return ( '{', subtag )
+                return ( '{', HydrusTags.ConvertTagToSortable( subtag ) )
                 
             else:
                 
-                return ( namespace, subtag )
+                return ( namespace, HydrusTags.ConvertTagToSortable( subtag ) )
                 
             
         

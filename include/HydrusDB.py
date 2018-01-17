@@ -226,6 +226,8 @@ class HydrusDB( object ):
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
             
         
+        self._RepairDB()
+        
         self._CloseDBCursor()
         
         self._controller.CallToThreadLongRunning( self.MainLoop )
@@ -580,6 +582,11 @@ class HydrusDB( object ):
     def _Read( self, action, *args, **kwargs ):
         
         raise NotImplementedError()
+        
+    
+    def _RepairDB( self ):
+        
+        pass
         
     
     def _ReportStatus( self, text ):

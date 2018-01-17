@@ -1187,17 +1187,23 @@ def ToUnicode( text_producing_object ):
             
             text = text.decode( 'utf-8' )
             
-        except:
+        except UnicodeDecodeError:
             
             try:
                 
-                text = text.decode( locale.getpreferredencoding() )
+                text = text.decode( 'utf-16' )
                 
             except:
                 
-                text = unicode( repr( text ) )
+                try:
+                    
+                    text = text.decode( locale.getpreferredencoding() )
+                    
+                except:
+                    
+                    text = unicode( repr( text ) )
+                    
                 
-            
             
         
     

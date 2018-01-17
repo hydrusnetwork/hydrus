@@ -939,6 +939,10 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         
         self.Bind( wx.EVT_TIMER, self.TIMEREvent )
         
+        self._windows_minimised = []
+        
+        self._MinimiseOtherWindows()
+        
         self._timer = wx.Timer( self )
         
         self._timer.Start( 500, wx.TIMER_CONTINUOUS )
@@ -956,6 +960,38 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
         
     
+    def _MinimiseOtherWindows( self ):
+        
+        for tlw in wx.GetTopLevelWindows():
+            
+            if tlw == self:
+                
+                continue
+                
+            
+            if not isinstance( tlw, ( ClientGUITopLevelWindows.Frame, ClientGUITopLevelWindows.NewDialog ) ):
+                
+                continue
+                
+            
+            import ClientGUI
+            
+            if isinstance( tlw, ClientGUI.FrameGUI ):
+                
+                continue
+                
+            
+            if not tlw.IsShown() or tlw.IsIconized():
+                
+                continue
+                
+            
+            tlw.Iconize()
+            
+            self._windows_minimised.append( tlw )
+            
+        
+    
     def _ReleaseMessage( self ):
         
         if not self._message_pubbed:
@@ -964,6 +1000,18 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
             self._message_pubbed = True
             
+            self._RestoreOtherWindows()
+            
+        
+    
+    def _RestoreOtherWindows( self ):
+        
+        for tlw in self._windows_minimised:
+            
+            tlw.Restore()
+            
+        
+        self._windows_minimised = []
         
     
     def _Update( self ):

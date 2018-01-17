@@ -1,6 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
 import ClientData
+import ClientGUIMenus
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -342,19 +343,23 @@ class NewDialog( wx.Dialog ):
             
             menu = self._menu_stack[-1]
             
-            if not menu:
+            while ClientGUIMenus.MenuIsDead( menu ):
                 
-                return
+                if len( self._menu_stack ) == 0:
+                    
+                    return
+                    
+                
+                del self._menu_stack[-1]
+                
+                menu = self._menu_stack[-1]
                 
             
-            if menu is not None:
+            menu_item = menu.FindItemById( event.GetMenuId() )
+            
+            if menu_item is not None:
                 
-                menu_item = menu.FindItemById( event.GetMenuId() )
-                
-                if menu_item is not None:
-                    
-                    text = menu_item.GetHelp()
-                    
+                text = menu_item.GetHelp()
                 
             
             status_bar = HG.client_controller.GetGUI().GetStatusBar()
@@ -717,19 +722,23 @@ class Frame( wx.Frame ):
             
             menu = self._menu_stack[-1]
             
-            if not menu:
+            while ClientGUIMenus.MenuIsDead( menu ):
                 
-                return
+                del self._menu_stack[-1]
+                
+                if len( self._menu_stack ) == 0:
+                    
+                    return
+                    
+                
+                menu = self._menu_stack[-1]
                 
             
-            if bool( menu ) and menu is not None:
+            menu_item = menu.FindItemById( event.GetMenuId() )
+            
+            if menu_item is not None:
                 
-                menu_item = menu.FindItemById( event.GetMenuId() )
-                
-                if menu_item is not None:
-                    
-                    text = menu_item.GetHelp()
-                    
+                text = menu_item.GetHelp()
                 
             
             status_bar = HG.client_controller.GetGUI().GetStatusBar()

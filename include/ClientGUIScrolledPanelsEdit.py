@@ -11,6 +11,7 @@ import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIMenus
+import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
 import ClientGUITime
@@ -1965,6 +1966,15 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 query = panel.GetValue()
                 
+                query_text = query.GetQueryText()
+                
+                if query_text in self._GetCurrentQueryTexts():
+                    
+                    wx.MessageBox( 'You already have a query for "' + query_text + '"! This duplicate entry you just created will not be added.' )
+                    
+                    return
+                    
+                
                 self._queries.AddDatas( ( query, ) )
                 
             
@@ -2126,9 +2136,18 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    self._queries.DeleteDatas( ( old_query, ) )
-                    
                     edited_query = panel.GetValue()
+                    
+                    edited_query_text = edited_query.GetQueryText()
+                    
+                    if edited_query_text != old_query.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
+                        
+                        wx.MessageBox( 'You already have a query for "' + edited_query_text + '"! The edit you just made will not be saved.' )
+                        
+                        break
+                        
+                    
+                    self._queries.DeleteDatas( ( old_query, ) )
                     
                     self._queries.AddDatas( ( edited_query, ) )
                     
@@ -2142,6 +2161,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._queries.Sort()
         
     
+    def _GetCurrentQueryTexts( self ):
+        
+        query_strings = set()
+        
+        for query in self._queries.GetData():
+            
+            query_strings.add( query.GetQueryText() )
+            
+        
+        return query_strings
+        
     
     def _GetGalleryIdentifier( self ):
         
@@ -2228,7 +2258,36 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             query_texts = HydrusText.DeserialiseNewlinedTexts( text )
             
-            queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in query_texts ]
+            current_query_texts = self._GetCurrentQueryTexts()
+            
+            already_existing_query_texts = list( current_query_texts.intersection( query_texts ) )
+            new_query_texts = list( set( query_texts ).difference( current_query_texts ) )
+            
+            already_existing_query_texts.sort()
+            new_query_texts.sort()
+            
+            if len( already_existing_query_texts ) > 0:
+                
+                message = 'The queries:'
+                message += os.linesep * 2
+                message += os.linesep.join( already_existing_query_texts )
+                message += os.linesep * 2
+                message += 'Were already in the subscription. They will not be added.'
+                
+                if len( new_query_texts ) > 0:
+                    
+                    message += os.linesep * 2
+                    message += 'The queries:'
+                    message += os.linesep * 2
+                    message += os.linesep.join( new_query_texts )
+                    message += os.linesep * 2
+                    message += 'Were new and will be added.'
+                    
+                
+                wx.MessageBox( message )
+                
+            
+            queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
             
             self._queries.AddDatas( queries )
             
@@ -2919,6 +2978,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        self._original_url_match = url_match
+        
         self._name = wx.TextCtrl( self )
         
         self._url_type = ClientGUICommon.BetterChoice( self )
@@ -2964,16 +3025,19 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url_matches = ClientGUICommon.BetterStaticText( self )
         
-        self._normalised_url = wx.TextCtrl( self )
-        self._normalised_url.Disable()
+        self._normalised_url = wx.TextCtrl( self, style = wx.TE_READONLY )
+        
+        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, api_lookup_converter, example_url ) = url_match.ToTuple()
+        
+        self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
+        
+        self._api_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
         #
         
         name = url_match.GetName()
         
         self._name.SetValue( name )
-        
-        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, example_url ) = url_match.ToTuple()
         
         self._url_type.SelectClientData( url_type )
         
@@ -3023,6 +3087,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'example url: ', self._example_url ) )
         rows.append( ( 'normalised url: ', self._normalised_url ) )
+        rows.append( ( 'optional api url converter: ', self._api_lookup_converter ) )
+        rows.append( ( 'api url: ', self._api_url ) )
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -3043,6 +3109,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
+        self._url_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._api_lookup_converter.Bind( ClientGUIParsing.EVT_STRING_CONVERTER, self.EventUpdate )
         
     
     def _AddParameters( self ):
@@ -3234,6 +3302,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetValue( self ):
         
+        url_match_key = self._original_url_match.GetMatchKey()
         name = self._name.GetValue()
         url_type = self._url_type.GetChoice()
         preferred_scheme = self._preferred_scheme.GetChoice()
@@ -3242,35 +3311,71 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         keep_subdomains = self._keep_subdomains.GetValue()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
+        api_lookup_converter = self._api_lookup_converter.GetValue()
         example_url = self._example_url.GetValue()
         
-        url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
+        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
         
         return url_match
         
     
     def _UpdateControls( self ):
         
-        if self._allow_subdomains.GetValue():
+        url_match = self._GetValue()
+        
+        url_type = url_match.GetURLType()
+        
+        typically_saved_to_db = url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST )
+        
+        if typically_saved_to_db:
             
-            self._keep_subdomains.Enable()
+            if self._allow_subdomains.GetValue():
+                
+                self._keep_subdomains.Enable()
+                
+            else:
+                
+                self._keep_subdomains.SetValue( False )
+                self._keep_subdomains.Disable()
+                
             
         else:
             
-            self._keep_subdomains.SetValue( False )
             self._keep_subdomains.Disable()
             
         
-        url_match = self._GetValue()
-        
         try:
             
-            url_match.Test( self._example_url.GetValue() )
+            example_url = self._example_url.GetValue()
+            
+            self._api_lookup_converter.SetExampleString( example_url )
+            
+            url_match.Test( example_url )
             
             self._example_url_matches.SetLabelText( 'Example matches ok!' )
             self._example_url_matches.SetForegroundColour( ( 0, 128, 0 ) )
             
-            self._normalised_url.SetValue( url_match.Normalise( self._example_url.GetValue() ) )
+            normalised = url_match.Normalise( example_url )
+            
+            self._normalised_url.SetValue( normalised )
+            
+            try:
+                
+                api_lookup_url = url_match.GetAPIURL( normalised )
+                
+                if api_lookup_url == normalised:
+                    
+                    api_lookup_url = 'none set'
+                    
+                
+                self._api_url.SetValue( api_lookup_url )
+                
+            except HydrusExceptions.StringConvertException as e:
+                
+                reason = unicode( e )
+                
+                self._api_url.SetValue( 'Could not convert - ' + reason )
+                
             
         except HydrusExceptions.URLMatchException as e:
             
@@ -3280,6 +3385,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )
             
             self._normalised_url.SetValue( '' )
+            self._api_url.SetValue( '' )
             
         
     
@@ -3322,7 +3428,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ClientNetworkingDomain.URLMatch, self._AddURLMatch )
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddButton( 'add the examples', self._AddExamples )
+        self._list_ctrl_panel.AddButton( 'add the defaults', self._AddDefaults )
         
         #
         
@@ -3358,7 +3464,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _AddExamples( self ):
+    def _AddDefaults( self ):
         
         for url_match in ClientDefaults.GetDefaultURLMatches():
             
@@ -3369,6 +3475,8 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
     def _AddURLMatch( self, url_match ):
         
         ClientGUIListCtrl.SetNonDupeName( url_match, self._GetExistingNames() )
+        
+        url_match.RegenMatchKey()
         
         self._list_ctrl.AddDatas( ( url_match, ) )
         
@@ -3446,64 +3554,99 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_engine, url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys ):
+    def __init__( self, parent, network_engine, url_matches, url_match_keys_to_display, url_match_keys_to_parser_keys ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._url_matches = url_matches
+        self._url_match_keys_to_url_matches = { url_match.GetMatchKey() : url_match for url_match in self._url_matches }
         
         self._network_engine = network_engine
         
         self._display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_names_to_display', 15, 36, [ ( 'url class', -1 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
+        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_keys_to_display', 15, 36, [ ( 'url class', -1 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
         
         self._display_list_ctrl_panel.SetListCtrl( self._display_list_ctrl )
         
         self._display_list_ctrl_panel.AddButton( 'edit', self._EditDisplay, enabled_only_on_selection = True )
         
-        self._page_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._page_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._page_list_ctrl_panel, 'url_match_names_to_page_parsing_keys', 15, 36, [ ( 'url class', -1 ), ( 'page parser', 36 ) ], self._ConvertPageDataToListCtrlTuples, activation_callback = self._EditPage )
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'page parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
         
-        self._page_list_ctrl_panel.SetListCtrl( self._page_list_ctrl )
+        self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
-        self._page_list_ctrl_panel.AddButton( 'edit', self._EditPage, enabled_only_on_selection = True )
-        
-        self._gallery_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
-        
-        self._gallery_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_list_ctrl_panel, 'url_match_names_to_gallery_parsing_keys', 15, 36, [ ( 'url class', -1 ), ( 'gallery parser', 36 ) ], self._ConvertGalleryDataToListCtrlTuples, activation_callback = self._EditGallery )
-        
-        self._gallery_list_ctrl_panel.SetListCtrl( self._gallery_list_ctrl )
-        
-        self._gallery_list_ctrl_panel.AddButton( 'edit', self._EditGallery, enabled_only_on_selection = True )
+        self._parser_list_ctrl_panel.AddButton( 'edit', self._EditParser, enabled_only_on_selection = True )
         
         #
         
-        self._display_list_ctrl.AddDatas( url_match_names_to_display.items() )
+        listctrl_data = []
+        
+        for url_match in url_matches:
+            
+            if not url_match.IsPostURL():
+                
+                continue
+                
+            
+            url_match_key = url_match.GetMatchKey()
+            
+            display = url_match_key in url_match_keys_to_display
+            
+            listctrl_data.append( ( url_match_key, display ) )
+            
+        
+        self._display_list_ctrl.AddDatas( listctrl_data )
         
         self._display_list_ctrl.Sort( 0 )
         
-        self._page_list_ctrl.AddDatas( url_match_names_to_page_parsing_keys.items() )
+        #
         
-        self._page_list_ctrl.Sort( 0 )
         
-        self._gallery_list_ctrl.AddDatas( url_match_names_to_gallery_parsing_keys.items() )
+        listctrl_data = []
         
-        self._gallery_list_ctrl.Sort( 0 )
+        for url_match in url_matches:
+            
+            if not url_match.IsParsable():
+                
+                continue
+                
+            
+            url_match_key = url_match.GetMatchKey()
+            
+            if url_match_key in url_match_keys_to_parser_keys:
+                
+                parser_key = url_match_keys_to_parser_keys[ url_match_key ]
+                
+            else:
+                
+                parser_key = None
+                
+            
+            listctrl_data.append( ( url_match_key, parser_key ) )
+            
+        
+        self._parser_list_ctrl.AddDatas( listctrl_data )
+        
+        self._parser_list_ctrl.Sort( 1 )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._page_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._gallery_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( ClientGUICommon.BetterStaticText( self, 'a listctrl here to show current api links as understood by the domain manager' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._parser_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
     def _ConvertDisplayDataToListCtrlTuples( self, data ):
         
-        ( url_match_name, display ) = data
+        ( url_match_key, display ) = data
+        
+        url_match_name = self._url_match_keys_to_url_matches[ url_match_key ].GetName()
         
         pretty_name = url_match_name
         
@@ -3522,45 +3665,31 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _ConvertGalleryDataToListCtrlTuples( self, data ):
+    def _ConvertParserDataToListCtrlTuples( self, data ):
         
-        ( url_match_name, gallery_script_key ) = data
+        ( url_match_key, parser_key ) = data
         
-        pretty_name = url_match_name
+        url_match = url_match_name = self._url_match_keys_to_url_matches[ url_match_key ]
         
-        if gallery_script_key is None:
-            
-            pretty_script_key = ''
-            
-        else:
-            
-            # fetch this from network engine
-            pretty_script_key = 'fetch this from network engine'
-            
+        url_match_name = url_match.GetName()
         
-        display_tuple = ( pretty_name, pretty_script_key )
-        sort_tuple = ( url_match_name, pretty_script_key )
-        
-        return ( display_tuple, sort_tuple )
-        
-    
-    def _ConvertPageDataToListCtrlTuples( self, data ):
-        
-        ( url_match_name, page_script_key ) = data
+        url_type = url_match.GetURLType()
         
         pretty_name = url_match_name
         
-        if page_script_key is None:
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
+        
+        if parser_key is None:
             
-            pretty_script_key = ''
+            pretty_parser_key = ''
             
         else:
             
-            pretty_script_key = 'fetch this from network engine'
+            pretty_parser_key = 'fetch this from network engine like with the url matches'
             
         
-        display_tuple = ( pretty_name, pretty_script_key )
-        sort_tuple = ( url_match_name, pretty_script_key )
+        display_tuple = ( pretty_name, pretty_url_type, pretty_parser_key )
+        sort_tuple = ( url_match_name, url_type, pretty_parser_key )
         
         return ( display_tuple, sort_tuple )
         
@@ -3569,7 +3698,9 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for data in self._display_list_ctrl.GetData( only_selected = True ):
             
-            ( url_match_name, display ) = data
+            ( url_match_key, display ) = data
+            
+            url_match_name = self._url_match_keys_to_url_matches[ url_match_key ].GetName()
             
             message = 'Show ' + url_match_name + ' in the media viewer?'
             
@@ -3583,7 +3714,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._display_list_ctrl.DeleteDatas( ( data, ) )
                     
-                    new_data = ( url_match_name, display )
+                    new_data = ( url_match_key, display )
                     
                     self._display_list_ctrl.AddDatas( ( new_data, ) )
                     
@@ -3597,25 +3728,11 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         self._display_list_ctrl.Sort()
         
     
-    def _EditGallery( self ):
+    def _EditParser( self ):
         
-        for data in self._gallery_list_ctrl.GetData( only_selected = True ):
+        for data in self._parser_list_ctrl.GetData( only_selected = True ):
             
-            ( url_match_name, gallery_script_key ) = data
-            
-            # present the user with a dialog to choose gallery script key, or none
-            
-            wx.MessageBox( 'This does not work yet!' )
-            
-            break
-            
-        
-    
-    def _EditPage( self ):
-        
-        for data in self._page_list_ctrl.GetData( only_selected = True ):
-            
-            ( url_match_name, page_script_key ) = data
+            ( url_match_key, page_script_key ) = data
             
             # present the user with a dialog to choose page script key, or none
             
@@ -3627,10 +3744,9 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        url_match_names_to_display = dict( self._display_list_ctrl.GetData() )
-        url_match_names_to_page_parsing_keys = dict( self._page_list_ctrl.GetData() )
-        url_match_names_to_gallery_parsing_keys = dict( self._gallery_list_ctrl.GetData() )
+        url_match_keys_to_display = { url_match_key for ( url_match_key, display ) in self._display_list_ctrl.GetData() if display }
+        url_match_keys_to_parser_keys = { url_match_key : parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() if parser_key is not None }
         
-        return ( url_match_names_to_display, url_match_names_to_page_parsing_keys, url_match_names_to_gallery_parsing_keys )
+        return ( url_match_keys_to_display, url_match_keys_to_parser_keys )
         
     
