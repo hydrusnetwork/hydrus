@@ -80,7 +80,14 @@ def GetChildrenContent( job_key, children, data, referral_url ):
         
         try:
             
-            child_content = child.Parse( job_key, data, referral_url )
+            if isinstance( child, ParseNodeContentLink ):
+                
+                child_content = child.Parse( job_key, data, referral_url )
+                
+            elif isinstance( child, ContentParser ):
+                
+                child_content = child.Parse( data )
+                
             
         except HydrusExceptions.VetoException:
             
@@ -141,35 +148,6 @@ def GetURLsFromContentResults( results ):
     
     return url_results
     
-def GetVetoes( parsed_texts, additional_info ):
-    
-    ( veto_if_matches_found, match_if_text_present, search_text ) = additional_info
-    
-    if match_if_text_present:
-        
-        matches = [ 'veto' for parsed_text in parsed_texts if search_text in parsed_text ]
-        
-    else:
-        
-        matches = [ 'veto' for parsed_text in parsed_texts if search_text not in parsed_text ]
-        
-    
-    if veto_if_matches_found:
-        
-        return matches
-        
-    else:
-        
-        if len( matches ) == 0:
-            
-            return [ 'veto through absence' ]
-            
-        else:
-            
-            return []
-            
-        
-    
 def RenderTagRule( ( name, attrs, index ) ):
     
     if index is None:
@@ -203,6 +181,16 @@ class ParseFormulaHTML( HydrusSerialisable.SerialisableBase ):
         if tag_rules is None:
             
             tag_rules = [ ( 'a', {}, None ) ]
+            
+        
+        if content_to_fetch is None:
+            
+            content_to_fetch = HTML_CONTENT_ATTRIBUTE
+            
+        
+        if attribute_to_fetch is None:
+            
+            attribute_to_fetch = 'href'
             
         
         if string_match is None:
@@ -553,32 +541,55 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
         
     
+    def GetName( self ):
+        
+        return self._name
+        
+    
     def GetParsableContent( self ):
         
         return { ( self._name, self._content_type, self._additional_info ) }
         
     
-    def Parse( self, job_key, data, referral_url ):
-        
-        content_description = ( self._name, self._content_type, self._additional_info )
+    def Parse( self, data ):
         
         parsed_texts = self._formula.Parse( data )
         
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
-            vetoes = GetVetoes( parsed_texts, self._additional_info )
+            ( veto_if_matches_found, match_if_text_present, search_text ) = self._additional_info
             
-            for veto in vetoes:
+            if match_if_text_present:
+                
+                match_found = True in [ search_text in parsed_text for parsed_text in parsed_texts ]
+                
+            else:
+                
+                match_found = True not in [ search_text in parsed_text for parsed_text in parsed_texts ]
+                
+            
+            do_veto = ( veto_if_matches_found and match_found ) or ( not veto_if_matches_found and not match_found )
+            
+            if do_veto:
                 
                 raise HydrusExceptions.VetoException( self._name )
                 
-            
-            return []
+            else:
+                
+                return []
+                
             
         else:
             
+            content_description = ( self._name, self._content_type, self._additional_info )
+            
             return [ ( content_description, parsed_text ) for parsed_text in parsed_texts ]
             
+        
+    
+    def SetName( self, name ):
+        
+        self._name = name
         
     
     def ToPrettyStrings( self ):
@@ -593,20 +604,32 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER ] = ContentParser
 
-PARSER_FILE_PAGE = 0
-PARSER_FILES_PAGE = 1
-
 class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
     SERIALISABLE_NAME = 'Page Parser'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, name, parser_type = None, content_parsers = None ):
+    def __init__( self, name, parser_key = None, string_converter = None, can_produce_separated_content = False, separation_formula = None, separated_content_parsers = None, content_parsers = None, example_urls = None ):
         
-        if parser_type is None:
+        if parser_key is None:
             
-            parser_type = PARSER_FILE_PAGE
+            parser_key = HydrusData.GenerateKey()
+            
+        
+        if string_converter is None:
+            
+            string_converter = StringConverter()
+            
+        
+        if separation_formula is None:
+            
+            separation_formula = ParseFormulaHTML( tag_rules = [ ( 'div', { 'class' : 'thumb' }, None ) ], content_to_fetch = HTML_CONTENT_HTML )
+            
+        
+        if separated_content_parsers is None:
+            
+            separated_content_parsers = []
             
         
         if content_parsers is None:
@@ -614,21 +637,85 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             content_parsers = []
             
         
+        if example_urls is None:
+            
+            example_urls = []
+            
+        
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
+        self._parser_key = parser_key
+        self._string_converter = string_converter
+        self._can_produce_separated_content = can_produce_separated_content
+        self._separation_formula = separation_formula
+        self._separated_content_parsers = separated_content_parsers
         self._content_parsers = content_parsers
+        self._example_urls = example_urls
+        
+    
+    def GetContentParsers( self ):
+        
+        return ( self._can_produce_separated_content, self._separation_formula, self._separated_content_parsers, self._content_parsers )
+        
+    
+    def GetExampleURLs( self ):
+        
+        return self._example_urls
+        
+    
+    def GetParserKey( self ):
+        
+        return self._parser_key
+        
+    
+    def GetStringConverter( self ):
+        
+        return self._string_converter
         
     
     def Parse( self, page_data ):
+        
+        try:
+            
+            converted_page_data = self._string_converter.Convert( page_data )
+            
+        except HydrusExceptions.StringConvertException as e:
+            
+            raise HydrusExceptions.ParseException( unicode( e ) )
+            
+        
+        separated_content_results = []
+        
+        if self._can_produce_separated_content:
+            
+            separated_data = self._separation_formula.Parse( converted_page_data )
+            
+            for sub_page_data in separated_data:
+                
+                sub_content_results = []
+                
+                for content_parser in self._separated_content_parsers:
+                    
+                    sub_content_results.extend( content_parser.Parse( sub_page_data ) )
+                    
+                
+                separated_content_results.append( sub_content_results )
+                
+            
         
         content_results = []
         
         for content_parser in self._content_parsers:
             
-            content_results.extend( content_parser.Parse( page_data ) )
+            content_results.extend( content_parser.Parse( converted_page_data ) )
             
         
-        return content_results
+        return ( separated_content_results, content_results )
+        
+    
+    def RegenerateParserKey( self ):
+        
+        self._parser_key = HydrusData.GenerateKey()
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER ] = PageParser

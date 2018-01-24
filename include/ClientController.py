@@ -50,8 +50,6 @@ if wx_first_num < 4:
     
 class Controller( HydrusController.HydrusController ):
     
-    pubsub_binding_errors_to_ignore = [ RuntimeError ] # wxPython now gives this instead of PyDeadObjectError
-    
     def __init__( self, db_dir, no_daemons, no_wal ):
         
         self._last_shutdown_was_bad = False
@@ -1008,12 +1006,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._app.locale = wx.Locale( wx.LANGUAGE_DEFAULT ) # Very important to init this here and keep it non garbage collected
         
-        import locale
-        
-        if locale.getlocale() == ( None, None ):
-            
-            locale.setlocale( locale.LC_ALL, '' )
-            
+        # do not import locale here and try anything clever--assume that bad locale formatting is due to OS-level mess-up, not mine
+        # wx locale is supposed to set it all up nice, so if someone's doesn't, explore that and find the external solution
         
         HydrusData.Print( u'booting controller\u2026' )
         

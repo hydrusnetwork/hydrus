@@ -3426,7 +3426,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddImportExportButtons( ClientNetworkingDomain.URLMatch, self._AddURLMatch )
+        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.URLMatch, ), self._AddURLMatch )
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddButton( 'add the defaults', self._AddDefaults )
         

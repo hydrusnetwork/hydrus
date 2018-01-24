@@ -334,7 +334,7 @@ class EditStringToStringDictControl( wx.Panel ):
             
             new_data = ( key, value )
             
-            self._listctrl.AddDatas( ( data, ) )
+            self._listctrl.AddDatas( ( new_data, ) )
             
         
         self._listctrl.Sort()

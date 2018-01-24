@@ -1603,6 +1603,20 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_import.Start( self._page_key )
         
     
+    def TestAbleToClose( self ):
+        
+        if self._gallery_import.CurrentlyWorking():
+            
+            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.PermissionException()
+                    
+                
+            
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImporterGallery
 
 class ManagementPanelImporterHDD( ManagementPanelImporter ):

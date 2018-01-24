@@ -3,6 +3,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
 import ClientGUIControls
+import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIScrolledPanels
 import ClientGUISerialisable
@@ -512,9 +513,18 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
             
             results = formula.Parse( html )
             
+            if self._content_to_fetch.GetChoice() == ClientParsing.HTML_CONTENT_HTML:
+                
+                separator = os.linesep * 2
+                
+            else:
+                
+                separator = os.linesep
+                
+            
             results = [ '*** RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
             
-            results_text = os.linesep.join( results )
+            results_text = separator.join( results )
             
             self._results.SetValue( results_text )
             
@@ -741,7 +751,7 @@ class EditNodes( wx.Panel ):
                 referral_url = self._referral_url_callable()
                 example_data = self._example_data_callable()
                 
-                panel = panel_class( dlg, node, referral_url, example_data )
+                panel = panel_class( dlg, node, example_data )
                 
                 dlg.SetPanel( panel )
                 
@@ -781,16 +791,9 @@ class EditNodes( wx.Panel ):
     
 class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, node, referral_url = None, example_data = None ):
+    def __init__( self, parent, node, example_data = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        
-        if referral_url is None:
-            
-            referral_url = 'test-url.com/test_query'
-            
-        
-        self._referral_url = referral_url
         
         if example_data is None:
             
@@ -927,7 +930,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         rows = []
         
-        rows.append( ( 'veto if matches found: ', self._veto_if_matches_found ) )
+        rows.append( ( 'veto if match found: ', self._veto_if_matches_found ) )
         rows.append( ( 'match if text present: ', self._match_if_text_present ) )
         rows.append( ( 'search text: ', self._search_text ) )
         
@@ -1077,27 +1080,24 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         formula = self._current_formula
         
-        node = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
+        content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
-        return node
+        return content_parser
         
     
     def TestParse( self ):
         
-        node = self.GetValue()
+        content_parser = self.GetValue()
         
         try:
             
-            stop_time = HydrusData.GetNow() + 30
-            
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
-            
             data = self._example_data.GetValue()
-            referral_url = self._referral_url
             
             try:
                 
-                results = node.Parse( job_key, data, referral_url )
+                content_results = content_parser.Parse( data )
+                
+                results = [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in content_results ]
                 
             except HydrusExceptions.VetoException as e:
                 
@@ -1106,7 +1106,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             result_lines = [ '*** RESULTS BEGIN ***' ]
             
-            result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
+            result_lines.extend( results )
             
             result_lines.append( '*** RESULTS END ***' )
             
@@ -1122,6 +1122,147 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             wx.MessageBox( message )
             
+        
+    
+class EditContentParsersPanel( wx.Panel ):
+    
+    def __init__( self, parent, example_data_callable ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._example_data_callable = example_data_callable
+        
+        content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._content_parsers = ClientGUIListCtrl.BetterListCtrl( content_parsers_panel, 'content_parsers', 10, 24, [ ( 'name', -1 ), ( 'produces', 40 ) ], self._ConvertContentParserToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        content_parsers_panel.SetListCtrl( self._content_parsers )
+        
+        content_parsers_panel.AddButton( 'add', self._Add )
+        content_parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        content_parsers_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        content_parsers_panel.AddSeparator()
+        content_parsers_panel.AddImportExportButtons( ( ClientParsing.ContentParser, ), self._AddContentParser )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        dlg_title = 'edit content node'
+        
+        content_parser = ClientParsing.ContentParser( 'new content parser' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit content parser' ) as dlg_edit:
+            
+            example_data = self._example_data_callable()
+            
+            panel = EditContentParserPanel( dlg_edit, content_parser, example_data )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_content_parser = panel.GetValue()
+                
+                self._AddContentParser( new_content_parser )
+                
+            
+        
+    
+    def _AddContentParser( self, content_parser ):
+        
+        ClientGUIListCtrl.SetNonDupeName( content_parser, self._GetExistingNames() )
+        
+        self._content_parsers.AddDatas( ( content_parser, ) )
+        
+        self._content_parsers.Sort()
+        
+    
+    def _ConvertContentParserToListCtrlTuples( self, content_parser ):
+        
+        name = content_parser.GetName()
+        
+        produces = 'blah' # get a nice string of what it produces
+        
+        pretty_name = name
+        
+        pretty_produces = 'blah'
+        
+        display_tuple = ( pretty_name, pretty_produces )
+        sort_tuple = ( name, produces )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._content_parsers.RemoveAllSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        content_parsers = self._content_parsers.GetData( only_selected = True )
+        
+        for content_parser in content_parsers:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit content parser' ) as dlg:
+                
+                example_data = self._example_data_callable()
+                
+                panel = EditContentParserPanel( dlg, content_parser, example_data )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_content_parser = panel.GetValue()
+                    
+                    self._content_parsers.DeleteDatas( ( content_parser, ) )
+                    
+                    ClientGUIListCtrl.SetNonDupeName( edited_content_parser, self._GetExistingNames() )
+                    
+                    self._content_parsers.AddDatas( ( edited_content_parser, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._content_parsers.Sort()
+        
+    
+    def _GetExistingNames( self ):
+        
+        names = { content_parser.GetName() for content_parser in self._content_parsers.GetData() }
+        
+        return names
+        
+    
+    def GetData( self ):
+        
+        return self._content_parsers.GetData()
+        
+    
+    def AddDatas( self, content_parsers ):
+        
+        self._content_parsers.AddDatas( content_parsers )
+        
+        self._content_parsers.Sort()
         
     
 class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1401,6 +1542,600 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         node = ClientParsing.ParseNodeContentLink( name = name, formula = formula, children = children )
         
         return node
+        
+    
+class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, parser ):
+        
+        self._original_parser = parser
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        notebook = wx.Notebook( self )
+        
+        #
+        
+        edit_notebook = wx.Notebook( notebook )
+        
+        #
+        
+        edit_panel_1 = wx.Panel( edit_notebook )
+        
+        edit_panel_1.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._name = wx.TextCtrl( edit_panel_1 )
+        
+        #
+        
+        conversion_panel = ClientGUICommon.StaticBox( edit_panel_1, 'pre-parsing conversion' )
+        
+        string_converter = parser.GetStringConverter()
+        
+        self._string_converter = EditStringConverterPanel( conversion_panel, string_converter )
+        
+        #
+        
+        example_urls_panel = ClientGUICommon.StaticBox( edit_panel_1, 'example urls' )
+        
+        self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, HydrusData.ToUnicode, self._AddExampleURL, self._EditExampleURL )
+        
+        #
+        
+        edit_panel_2 = wx.Panel( edit_notebook )
+        
+        edit_panel_2.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        #
+        
+        self._can_produce_separated_content = wx.CheckBox( edit_panel_2 )
+        
+        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( edit_panel_2 )
+        
+        self._formula_description.SetMinSize( ( -1, 200 ) )
+        
+        self._formula_description.Disable()
+        
+        self._separation_formula_button = ClientGUICommon.BetterButton( edit_panel_2, 'edit separation formula', self._EditSeparationFormula )
+        self._separated_content_parsers = EditContentParsersPanel( edit_panel_2, self.GetExampleData )
+        
+        #
+        
+        
+        edit_panel_3 = wx.Panel( edit_notebook )
+        
+        edit_panel_3.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        #
+        
+        self._content_parsers = EditContentParsersPanel( edit_panel_3, self.GetExampleSeparatedData )
+        
+        #
+        
+        test_panel = wx.Panel( notebook )
+        
+        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._test_url = wx.TextCtrl( test_panel )
+        self._test_referral_url = wx.TextCtrl( test_panel )
+        self._fetch_example_data = ClientGUICommon.BetterButton( test_panel, 'fetch test data from url', self._FetchExampleData )
+        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_panel )
+        
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._example_data.SetMinSize( ( -1, 200 ) )
+        
+        self._test_parse = wx.Button( test_panel, label = 'test parse' )
+        self._test_parse.Bind( wx.EVT_BUTTON, self.EventTestParse )
+        
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''***A help button will be added here that will link to some good html help. This small help here will be rewritten or replaced entirely by that.***
+
+This parser parses a single type of html or json page. For our purposes, this typically means a file post page--which often has a list of tags and one or more links to the actual file--or a gallery page--which has a list or grid of thumbnails that link to raw files or file post pages. Many sites use the same booru or imageboard engine, so they can share the same parser. Each parser can fetch multiple instances of multiple types of content.
+
+It can also detect certain 'veto' conditions that will abandon all other parsing for the page, which is useful if the page represents a "no more results found" state or a filetype that hydrus does not support. This allows you to deliver richer failure messages than what the system will otherwise automatically deliver.
+
+Talk about separated content for galleries and so on.
+
+The pre-parsing conversion is useful if your URL provides HTML or JSON wrapped in some other language layer--just strip off the head and tail you don't need, do any necessary decoding, and then only the valid markup will be delivered to the content parsers.
+
+Setting example URLs is not needed, but it helps populate the test page now and in future and makes it easier for the client to automatically link it to url classes.
+
+Whatever is in the example data in this panel's test page will be passed up to the content parsing panels test pages when you open them.'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
+        
+        #
+        
+        name = parser.GetName()
+        ( can_produce_separated_content, self._separation_formula, separated_content_parsers, content_parsers ) = parser.GetContentParsers()
+        example_urls = parser.GetExampleURLs()
+        
+        self._formula_description.SetValue( self._separation_formula.ToPrettyMultilineString() )
+        
+        self._name.SetValue( name )
+        
+        self._can_produce_separated_content.SetValue( can_produce_separated_content )
+        self._separated_content_parsers.AddDatas( separated_content_parsers )
+        
+        self._content_parsers.AddDatas( content_parsers )
+        
+        self._example_urls.AddDatas( example_urls )
+        
+        #
+        
+        conversion_panel.Add( self._string_converter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        example_urls_panel.Add( self._example_urls, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'name or description (optional): ', self._name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel_1, rows )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( conversion_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        edit_panel_1.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'can produce separated content: ', self._can_produce_separated_content ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel_2, rows )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._formula_description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._separation_formula_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._separated_content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        edit_panel_2.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        edit_panel_3.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'url: ', self._test_url ) )
+        rows.append( ( 'referral url (optional): ', self._test_referral_url ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( test_panel, rows )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        test_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
+        edit_notebook.AddPage( edit_panel_1, 'main', select = True )
+        edit_notebook.AddPage( edit_panel_2, 'separated content', select = False )
+        edit_notebook.AddPage( edit_panel_3, 'whole-page content', select = False )
+        
+        notebook.AddPage( edit_notebook, 'edit', select = True )
+        notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._can_produce_separated_content.Bind( wx.EVT_CHECKBOX, self.EventCanSeparateCheck )
+        
+        self._UpdateCanProduce()
+        
+    
+    def _AddExampleURL( self ):
+        
+        message = 'Enter example URL.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                return ( True, dlg.GetValue() )
+                
+            else:
+                
+                return ( False, '' )
+                
+            
+        
+    
+    def _EditExampleURL( self, example_url ):
+        
+        message = 'Enter example URL.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, default = example_url ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                return ( True, dlg.GetValue() )
+                
+            else:
+                
+                return ( False, '' )
+                
+            
+        
+    
+    def _EditSeparationFormula( self ):
+        
+        dlg_title = 'edit formula'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+            
+            example_data = self._example_data.GetValue()
+            
+            panel = EditHTMLFormulaPanel( dlg, self._separation_formula, example_data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._separation_formula = panel.GetValue()
+                
+                self._formula_description.SetValue( self._separation_formula.ToPrettyMultilineString() )
+                
+            
+        
+    
+    def _FetchExampleData( self ):
+        
+        def wait_and_do_it( network_job ):
+            
+            def wx_tidy_up( example_data ):
+                
+                try:
+                    
+                    self._example_data.SetValue( example_data )
+                    
+                except UnicodeDecodeError:
+                    
+                    self._example_data.SetValue( 'The fetched data, which had length ' + HydrusData.ConvertIntToBytes( len( example_data ) ) + ', did not appear to be displayable text.' )
+                    
+                
+                self._test_network_job_control.ClearNetworkJob()
+                
+            
+            try:
+                
+                network_job.WaitUntilDone()
+                
+                example_data = network_job.GetContent()
+                
+            except HydrusExceptions.CancelledException:
+                
+                example_data = 'fetch cancelled'
+                
+            except Exception as e:
+                
+                example_data = 'fetch failed:' + os.linesep * 2 + unicode( e )
+                
+                HydrusData.ShowException( e )
+                
+            
+            wx.CallAfter( wx_tidy_up, example_data )
+            
+        
+        url = self._test_url.GetValue()
+        referral_url = self._test_referral_url.GetValue()
+        
+        if referral_url == '':
+            
+            referral_url = None
+            
+        
+        network_job = ClientNetworking.NetworkJob( 'GET', url, referral_url = referral_url )
+        
+        self._test_network_job_control.SetNetworkJob( network_job )
+        
+        network_job.OverrideBandwidth()
+        
+        HG.client_controller.network_engine.AddJob( network_job )
+        
+        HG.client_controller.CallToThread( wait_and_do_it, network_job )
+        
+    
+    def _UpdateCanProduce( self ):
+        
+        if self._can_produce_separated_content.GetValue():
+            
+            self._separation_formula_button.Enable()
+            self._separated_content_parsers.Enable()
+            
+        else:
+            
+            self._separation_formula_button.Disable()
+            self._separated_content_parsers.Disable()
+            
+        
+    
+    def EventCanSeparateCheck( self, event ):
+        
+        self._UpdateCanProduce()
+        
+    
+    def EventTestParse( self, event ):
+        
+        parser = self.GetValue()
+        
+        try:
+            
+            data = self._example_data.GetValue()
+            
+            try:
+                
+                ( separated_content_results, content_results ) = parser.Parse( data )
+                
+            except HydrusExceptions.VetoException as e:
+                
+                pretty_results = [ unicode( e ) ]
+                
+            
+            pretty_separated_content_results = [ [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in sub_content_results ] for sub_content_results in separated_content_results ]
+            
+            result_lines = []
+            
+            if self._can_produce_separated_content.GetValue():
+                
+                result_lines.append( '*** SEPARATED RESULTS BEGIN ***' )
+                
+                sub_lines = []
+                
+                for pretty_lines in pretty_separated_content_results:
+                    
+                    sub_lines.extend( pretty_lines )
+                    
+                    sub_lines.append( '*** SEPARATED RESULTS BREAK ***' )
+                    
+                
+                if len( sub_lines ) > 0:
+                    
+                    sub_lines = sub_lines[:-1]
+                    
+                
+                result_lines.extend( sub_lines )
+                
+                result_lines.append( '*** SEPARATED RESULTS END ***' )
+                
+            
+            result_lines.append( '*** WHOLE-PAGE RESULTS BEGIN ***' )
+            
+            pretty_results = [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in content_results ]
+            
+            result_lines.extend( pretty_results )
+            
+            result_lines.append( '*** WHOLE-PAGE RESULTS END ***' )
+            
+            results_text = os.linesep.join( result_lines )
+            
+            self._results.SetValue( results_text )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'Could not parse!'
+            
+            wx.MessageBox( message )
+            
+        
+    
+    def GetExampleData( self ):
+        
+        return self._example_data.GetValue()
+        
+    
+    def GetExampleSeparatedData( self ):
+        
+        return self._separation_formula.Parse( self._example_data.GetValue() )[0]
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        
+        parser_key = self._original_parser.GetParserKey()
+        
+        string_converter = self._string_converter.GetValue()
+        
+        can_produce_separated_content = self._can_produce_separated_content.GetValue()
+        
+        separated_content_parsers = self._separated_content_parsers.GetData()
+        
+        content_parsers = self._content_parsers.GetData()
+        
+        example_urls = self._example_urls.GetData()
+        
+        parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, can_produce_separated_content = can_produce_separated_content, separation_formula = self._separation_formula, separated_content_parsers = separated_content_parsers, content_parsers = content_parsers, example_urls = example_urls )
+        
+        return parser
+        
+    
+class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, parsers ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._parsers = ClientGUIListCtrl.BetterListCtrl( parsers_panel, 'parsers', 20, 24, [ ( 'name', -1 ), ( 'example urls', 40 ), ( 'produces', 40 ) ], self._ConvertParserToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        parsers_panel.SetListCtrl( self._parsers )
+        
+        parsers_panel.AddButton( 'add', self._Add )
+        parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        parsers_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        parsers_panel.AddSeparator()
+        parsers_panel.AddImportExportButtons( ( ClientParsing.PageParser, ), self._AddParser )
+        parsers_panel.AddSeparator()
+        parsers_panel.AddButton( 'add the defaults', self._AddDefaults )
+        
+        #
+        
+        self._parsers.AddDatas( parsers )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        new_parser = ClientParsing.PageParser( 'new page parser' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit parser' ) as dlg_edit:
+            
+            panel = EditPageParserPanel( dlg_edit, new_parser )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_parser = panel.GetValue()
+                
+                self._AddParser( new_parser )
+                
+            
+        
+    
+    def _AddDefaults( self ):
+        
+        wx.MessageBox( 'no defaults yet!' )
+        
+    
+    def _AddParser( self, parser ):
+        
+        ClientGUIListCtrl.SetNonDupeName( parser, self._GetExistingNames() )
+        
+        parser.RegenerateParserKey()
+        
+        self._parsers.AddDatas( ( parser, ) )
+        
+    
+    def _ConvertParserToListCtrlTuple( self, parser ):
+        
+        name = parser.GetName()
+        
+        example_urls = list( parser.GetExampleURLs() )
+        example_urls.sort()
+        
+        produces = 'blah' # get a nice set of strings from the pageparser
+        
+        pretty_name = name
+        pretty_example_urls = ', '.join( example_urls )
+        
+        pretty_produces = 'blah'
+        
+        display_tuple = ( pretty_name, pretty_example_urls, pretty_produces )
+        sort_tuple = ( name, example_urls, produces )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._parsers.RemoveAllSelected()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        parsers = self._parsers.GetData( only_selected = True )
+        
+        for parser in parsers:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit parser' ) as dlg:
+                
+                panel = EditPageParserPanel( dlg, parser )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    edited_parser = panel.GetValue()
+                    
+                    self._parsers.DeleteDatas( ( parser, ) )
+                    
+                    ClientGUIListCtrl.SetNonDupeName( edited_parser, self._GetExistingNames() )
+                    
+                    self._content_parsers.AddDatas( ( edited_parser, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._content_parsers.Sort()
+        
+    
+    def _GetExistingNames( self ):
+        
+        names = { parser.GetName() for parser in self._parsers.GetData() }
+        
+        return names
+        
+    
+    def GetValue( self ):
+        
+        return self._parsers.GetData()
         
     
 class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):

@@ -18,8 +18,6 @@ import traceback
 
 class HydrusController( object ):
     
-    pubsub_binding_errors_to_ignore = []
-    
     def __init__( self, db_dir, no_daemons, no_wal ):
         
         HG.controller = self
@@ -42,8 +40,7 @@ class HydrusController( object ):
         self._model_shutdown = False
         self._view_shutdown = False
         
-        self._pubsub = HydrusPubSub.HydrusPubSub( self, self.pubsub_binding_errors_to_ignore )
-        
+        self._pubsub = HydrusPubSub.HydrusPubSub( self )
         self._daemons = []
         self._caches = {}
         self._managers = {}
@@ -335,6 +332,8 @@ class HydrusController( object ):
         sys.stderr.flush()
         
         gc.collect()
+        
+        HydrusPaths.CleanUpOldTempPaths()
         
     
     def ModelIsShutdown( self ):

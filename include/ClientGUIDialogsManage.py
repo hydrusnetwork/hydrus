@@ -3693,7 +3693,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             #
             
-            HG.client_controller.CallToThread( self.THREADInitialise, tags )
+            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
         def _AddPairs( self, children, parent ):
@@ -4085,14 +4085,17 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             else: self._parent_input.SetFocus()
             
         
-        def THREADInitialise( self, tags ):
+        def THREADInitialise( self, tags, service_key ):
             
-            def wx_code():
+            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
                 
                 if not self:
                     
                     return
                     
+                
+                self._original_statuses_to_pairs = original_statuses_to_pairs
+                self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' )
                 
@@ -4121,13 +4124,13 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                 
             
-            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', self._service_key )
+            original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
             
-            self._current_statuses_to_pairs = collections.defaultdict( set )
+            current_statuses_to_pairs = collections.defaultdict( set )
             
-            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
             
-            wx.CallAfter( wx_code )
+            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
         
     
@@ -4321,7 +4324,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             #
             
-            HG.client_controller.CallToThread( self.THREADInitialise, tags )
+            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
         def _AddPairs( self, olds, new ):
@@ -4790,14 +4793,17 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
             
         
-        def THREADInitialise( self, tags ):
+        def THREADInitialise( self, tags, service_key ):
             
-            def wx_code():
+            def wx_code( original_statuses_to_pairs, current_statuses_to_pairs ):
                 
                 if not self:
                     
                     return
                     
+                
+                self._original_statuses_to_pairs = original_statuses_to_pairs
+                self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
                 
@@ -4826,13 +4832,13 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 
             
-            self._original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', self._service_key )
+            original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
             
-            self._current_statuses_to_pairs = collections.defaultdict( set )
+            current_statuses_to_pairs = collections.defaultdict( set )
             
-            self._current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in self._original_statuses_to_pairs.items() } )
+            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
             
-            wx.CallAfter( wx_code )
+            wx.CallAfter( wx_code, original_statuses_to_pairs, current_statuses_to_pairs )
             
         
     

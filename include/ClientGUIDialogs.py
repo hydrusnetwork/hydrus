@@ -868,19 +868,19 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self._lock = threading.Lock()
         
-        self._processing_queue = []
-        self._currently_parsing = False
-        
         self._current_paths = []
         self._current_paths_set = set()
         
         self._job_key = ClientThreading.JobKey()
         
+        self._unparsed_paths_queue = Queue.Queue()
+        self._currently_parsing = threading.Event()
+        self._work_to_do = threading.Event()
         self._parsed_path_queue = Queue.Queue()
+        self._pause_event = threading.Event()
+        self._cancel_event = threading.Event()
         
-        self._add_path_updater = ClientGUICommon.ThreadToGUIUpdater( self._paths_list, self.AddParsedPaths )
         self._progress_updater = ClientGUICommon.ThreadToGUIUpdater( self._progress, self._progress.SetValue )
-        self._done_parsing_updater = ClientGUICommon.ThreadToGUIUpdater( self._progress_cancel, self.DoneParsing )
         
         if len( paths ) > 0:
             
@@ -889,50 +889,30 @@ class FrameInputLocalFiles( wx.Frame ):
         
         self.Show()
         
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
+        HG.client_controller.CallToThreadLongRunning( self.THREADParseImportablePaths, self._unparsed_paths_queue, self._currently_parsing, self._work_to_do, self._parsed_path_queue, self._progress_updater, self._pause_event, self._cancel_event )
+        
     
     def _AddPathsToList( self, paths ):
         
+        if self._cancel_event.is_set():
+            
+            message = 'Please wait for the cancel to clear.'
+            
+            wx.MessageBox( message )
+            
+            return
+            
+        
         paths = [ HydrusData.ToUnicode( path ) for path in paths ]
         
-        self._processing_queue.append( paths )
-        
-        self._ProcessQueue()
-        
-    
-    def _ProcessQueue( self ):
-        
-        if not self._currently_parsing:
-            
-            if len( self._processing_queue ) == 0:
-                
-                self._progress_pause.Disable()
-                self._progress_cancel.Disable()
-                
-                self._add_button.Enable()
-                self._tag_button.Enable()
-                
-            else:
-                
-                self._currently_parsing = True
-                
-                paths = self._processing_queue.pop( 0 )
-                
-                self._progress_pause.Enable()
-                self._progress_cancel.Enable()
-                
-                self._add_button.Disable()
-                self._tag_button.Disable()
-                
-                self._job_key = ClientThreading.JobKey()
-                
-                HG.client_controller.CallToThread( self.THREADParseImportablePaths, paths, self._job_key, self._progress_updater )
-                
-            
+        self._unparsed_paths_queue.put( paths )
         
     
     def _TidyUp( self ):
         
-        self._job_key.Cancel()
+        self._pause_event.set()
         
     
     def AddFolder( self ):
@@ -948,25 +928,6 @@ class FrameInputLocalFiles( wx.Frame ):
             
         
     
-    def AddParsedPaths( self ):
-        
-        while not self._parsed_path_queue.empty():
-            
-            ( path, mime, size ) = self._parsed_path_queue.get()
-            
-            pretty_mime = HC.mime_string_lookup[ mime ]
-            pretty_size = HydrusData.ConvertIntToBytes( size )
-            
-            if path not in self._current_paths_set:
-                
-                self._current_paths_set.add( path )
-                self._current_paths.append( path )
-                
-                self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
-                
-            
-        
-    
     def AddPaths( self ):
         
         with wx.FileDialog( self, 'Select the files to add.', style = wx.FD_MULTIPLE ) as dlg:
@@ -978,18 +939,6 @@ class FrameInputLocalFiles( wx.Frame ):
                 self._AddPathsToList( paths )
                 
             
-        
-    
-    def DoneParsing( self ):
-        
-        if not self:
-            
-            return
-            
-        
-        self._currently_parsing = False
-        
-        self._ProcessQueue()
         
     
     def EventCancel( self, event ):
@@ -1057,22 +1006,19 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def PauseProgress( self ):
         
-        self._job_key.PausePlay()
-        
-        if self._job_key.IsPaused():
+        if self._pause_event.is_set():
             
-            self._add_button.Enable()
-            self._tag_button.Enable()
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
+            self._pause_event.clear()
             
         else:
             
-            self._add_button.Disable()
-            self._tag_button.Disable()
+            self._pause_event.set()
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
-            
+        
+    
+    def StopProgress( self ):
+        
+        self._cancel_event.set()
         
     
     def RemovePaths( self ):
@@ -1089,49 +1035,181 @@ class FrameInputLocalFiles( wx.Frame ):
             
         
     
-    def StopProgress( self ):
+    def THREADParseImportablePaths( self, unparsed_paths_queue, currently_parsing, work_to_do, parsed_path_queue, progress_updater, pause_event, cancel_event ):
         
-        self._job_key.Cancel()
+        unparsed_paths = []
         
-        self._progress_pause.Disable()
-        self._progress_cancel.Disable()
-        
-        self._add_button.Enable()
-        self._tag_button.Enable()
-        
-    
-    def THREADParseImportablePaths( self, raw_paths, job_key, progress_updater ):
-        
-        progress_updater.Update( 'Finding all files', None, None )
-        
-        file_paths = ClientFiles.GetAllPaths( raw_paths )
-        
-        free_paths = HydrusPaths.FilterFreePaths( file_paths )
-        
-        num_file_paths = len( file_paths )
+        num_files_done = 0
         num_good_files = 0
+        
         num_empty_files = 0
         num_uninteresting_mime_files = 0
-        num_occupied_files = num_file_paths - len( free_paths )
+        num_occupied_files = 0
         
-        for ( i, path ) in enumerate( free_paths ):
+        while not HG.view_shutdown:
             
-            if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
+            if not self:
+                
+                return
+                
+            
+            if len( unparsed_paths ) > 0:
+                
+                work_to_do.set()
+                
+            else:
+                
+                work_to_do.clear()
+                
+            
+            currently_parsing.clear()
+            
+            # ready to start, let's update ui on status
+            
+            total_paths = num_files_done + len( unparsed_paths )
+            
+            if num_good_files == 0:
+                
+                if num_files_done == 0:
+                    
+                    message = 'waiting for paths to parse'
+                    
+                else:
+                    
+                    message = 'none of the ' + HydrusData.ConvertIntToPrettyString( total_paths ) + ' files parsed successfully'
+                    
+                
+            else:
+                
+                message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
+                
+            
+            if num_empty_files > 0 or num_uninteresting_mime_files > 0 or num_occupied_files > 0:
+                
+                if num_good_files == 0:
+                    
+                    message += ': '
+                    
+                else:
+                    
+                    message += ', but '
+                    
+                
+                bad_comments = []
+                
+                if num_empty_files > 0:
+                    
+                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_empty_files ) + ' were empty' )
+                    
+                
+                if num_uninteresting_mime_files > 0:
+                    
+                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_uninteresting_mime_files ) + ' had unsupported mimes' )
+                    
+                
+                if num_occupied_files > 0:
+                    
+                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_occupied_files ) + ' were probably already in use by another process' )
+                    
+                
+                message += ' and '.join( bad_comments )
+                
+            
+            message += '.'
+            
+            progress_updater.Update( message, num_files_done, total_paths )
+            
+            # status updated, lets see what work there is to do
+            
+            if cancel_event.is_set():
+                
+                while not unparsed_paths_queue.empty():
+                    
+                    try:
+                        
+                        unparsed_paths_queue.get( block = False )
+                        
+                    except Queue.Empty:
+                        
+                        pass
+                        
+                    
+                
+                unparsed_paths = []
+                
+                cancel_event.clear()
+                pause_event.clear()
                 
                 continue
                 
             
-            if i % 500 == 0: gc.collect()
-            
-            message = 'Parsed ' + HydrusData.ConvertValueRangeToPrettyString( i, num_file_paths )
-            
-            progress_updater.Update( message, i, num_file_paths )
-            
-            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-            
-            if should_quit:
+            if pause_event.is_set():
                 
-                break
+                time.sleep( 1 )
+                
+                continue
+                
+            
+            # let's see if there is anything to parse
+            
+            # first we'll flesh out unparsed_paths with anything new to look at
+            
+            while not unparsed_paths_queue.empty():
+                
+                try:
+                    
+                    raw_paths = unparsed_paths_queue.get( block = False )
+                    
+                    paths = ClientFiles.GetAllPaths( raw_paths ) # convert any dirs to subpaths
+                    
+                    unparsed_paths.extend( paths )
+                    
+                except Queue.Empty:
+                    
+                    pass
+                    
+                
+            
+            # if unparsed_paths still has nothing, we'll nonetheless sleep on new paths
+            
+            if len( unparsed_paths ) == 0:
+                
+                try:
+                    
+                    raw_paths = unparsed_paths_queue.get( timeout = 5 )
+                    
+                    paths = ClientFiles.GetAllPaths( raw_paths ) # convert any dirs to subpaths
+                    
+                    unparsed_paths.extend( paths )
+                    
+                except Queue.Empty:
+                    
+                    pass
+                    
+                
+                continue # either we added some or didn't--in any case, restart the cycle
+                
+            
+            path = unparsed_paths.pop( 0 )
+            
+            currently_parsing.set()
+            
+            # we are now dealing with a file. let's clear out quick no-gos
+            
+            num_files_done += 1
+            
+            if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
+                
+                num_uninteresting_mime_files += 1
+                
+                continue
+                
+            
+            if not HydrusPaths.PathIsFree( path ):
+                
+                num_occupied_files += 1
+                
+                continue
                 
             
             size = os.path.getsize( path )
@@ -1145,15 +1223,15 @@ class FrameInputLocalFiles( wx.Frame ):
                 continue
                 
             
+            # looks good, let's burn some CPU
+            
             mime = HydrusFileHandling.GetMime( path )
             
             if mime in HC.ALLOWED_MIMES:
                 
                 num_good_files += 1
                 
-                self._parsed_path_queue.put( ( path, mime, size ) )
-                
-                self._add_path_updater.Update()
+                parsed_path_queue.put( ( path, mime, size ) )
                 
             else:
                 
@@ -1161,61 +1239,65 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 num_uninteresting_mime_files += 1
                 
-                continue
+            
+        
+    
+    def TIMERUIUpdate( self ):
+        
+        while not self._parsed_path_queue.empty():
+            
+            ( path, mime, size ) = self._parsed_path_queue.get()
+            
+            pretty_mime = HC.mime_string_lookup[ mime ]
+            pretty_size = HydrusData.ConvertIntToBytes( size )
+            
+            if path not in self._current_paths_set:
+                
+                self._current_paths_set.add( path )
+                self._current_paths.append( path )
+                
+                self._paths_list.Append( ( path, pretty_mime, pretty_size ), ( path, mime, size ) )
                 
             
         
-        if num_good_files == 0:
+        #
+        
+        paused = self._pause_event.is_set()
+        no_work_in_queue = not self._work_to_do.is_set()
+        working_on_a_file_now = self._currently_parsing.is_set()
+        
+        can_import = ( no_work_in_queue or paused ) and not working_on_a_file_now
+        
+        if no_work_in_queue:
             
-            message = 'none of the files parsed successfully'
-            
-        elif num_good_files == 1:
-            
-            message = '1 file was parsed successfully'
+            self._progress_pause.Disable()
+            self._progress_cancel.Disable()
             
         else:
             
-            message = HydrusData.ConvertIntToPrettyString( num_good_files ) + ' files were parsed successfully'
+            self._progress_pause.Enable()
+            self._progress_cancel.Enable()
             
         
-        if num_empty_files > 0 or num_uninteresting_mime_files > 0 or num_occupied_files > 0:
+        if can_import:
             
-            if num_good_files == 0:
-                
-                message += ': '
-                
-            else:
-                
-                message += ', but '
-                
+            self._add_button.Enable()
+            self._tag_button.Enable()
             
-            bad_comments = []
+        else:
             
-            if num_empty_files > 0:
-                
-                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_empty_files ) + ' were empty' )
-                
-            
-            if num_uninteresting_mime_files > 0:
-                
-                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_uninteresting_mime_files ) + ' had unsupported mimes' )
-                
-            
-            if num_occupied_files > 0:
-                
-                bad_comments.append( HydrusData.ConvertIntToPrettyString( num_occupied_files ) + ' were probably already in use by another process' )
-                
-            
-            message += ' and '.join( bad_comments )
+            self._add_button.Disable()
+            self._tag_button.Disable()
             
         
-        message += '.'
-        
-        HydrusData.Print( message )
-        
-        progress_updater.Update( message, num_file_paths, num_file_paths )
-        
-        self._done_parsing_updater.Update()
+        if paused:
+            
+            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.play )
+            
+        else:
+            
+            ClientGUICommon.SetBitmapButtonBitmap( self._progress_pause, CC.GlobalBMPs.pause )
+            
         
     
 class DialogInputNamespaceRegex( Dialog ):

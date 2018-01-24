@@ -900,7 +900,9 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) or not self._seed_cache.WorkToDo():
+            no_work_to_do = self._files_paused or not self._seed_cache.WorkToDo()
+            
+            if no_work_to_do or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -981,6 +983,16 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
+            
+        
+    
+    def CurrentlyWorking( self ):
+        
+        with self._lock:
+            
+            finished = not self._seed_cache.WorkToDo()
+            
+            return not finished and not self._files_paused
             
         
     
@@ -1821,7 +1833,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) or not self._paths_cache.WorkToDo():
+            no_work_to_do = self._paused or not self._paths_cache.WorkToDo()
+            
+            if no_work_to_do or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -2810,7 +2824,9 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) or not self._urls_cache.WorkToDo():
+            no_work_to_do = self._files_paused or not self._urls_cache.WorkToDo()
+            
+            if no_work_to_do or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -5784,7 +5800,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._files_paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) or self._thread_url == '' or not self._urls_cache.WorkToDo():
+            no_work_to_do = self._files_paused or self._thread_url == '' or not self._urls_cache.WorkToDo()
+            
+            if no_work_to_do or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_files_event.wait( 5 )
                 
@@ -6262,7 +6280,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         while not ( HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key ) ):
             
-            if self._paused or HG.client_controller.PageClosedButNotDestroyed( page_key ) or not self._urls_cache.WorkToDo():
+            no_work_to_do = self._paused or not self._urls_cache.WorkToDo()
+            
+            if no_work_to_do or HG.client_controller.PageClosedButNotDestroyed( page_key ):
                 
                 self._new_urls_event.wait( 5 )
                 

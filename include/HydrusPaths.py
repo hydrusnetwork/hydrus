@@ -16,6 +16,9 @@ import tempfile
 import threading
 import traceback
 
+TEMP_PATH_LOCK = threading.Lock()
+IN_USE_TEMP_PATHS = set()
+
 def AppendPathUntilNoConflicts( path ):
     
     ( path_absent_ext, ext ) = os.path.splitext( path )
@@ -61,20 +64,41 @@ def CleanUpTempPath( os_file_handle, temp_path ):
         
     except OSError:
         
-        gc.collect()
-        
-        try:
+        with TEMP_PATH_LOCK:
             
-            os.remove( temp_path )
-            
-        except OSError as e:
-            
-            HydrusData.Print( 'Could not delete the temporary file ' + temp_path )
-            
-            HydrusData.PrintException( e )
+            IN_USE_TEMP_PATHS.add( ( HydrusData.GetNow(), temp_path ) )
             
         
     
+def CleanUpOldTempPaths():
+    
+    with TEMP_PATH_LOCK:
+        
+        data = list( IN_USE_TEMP_PATHS )
+        
+        for row in data:
+            
+            ( time_failed, temp_path ) = row
+            
+            if HydrusData.TimeHasPassed( time_failed + 60 ):
+                
+                try:
+                    
+                    os.remove( temp_path )
+                    
+                    IN_USE_TEMP_PATHS.discard( row )
+                    
+                except OSError:
+                    
+                    if HydrusData.TimeHasPassed( time_failed + 600 ):
+                        
+                        IN_USE_TEMP_PATHS.discard( row )
+                        
+                    
+                
+            
+        
+
 def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
     
     try:
@@ -229,15 +253,9 @@ def FilterFreePaths( paths ):
             raise HydrusExceptions.ShutdownException()
             
         
-        try:
-            
-            os.rename( path, path ) # rename a path to itself
+        if PathIsFree( path ):
             
             free_paths.append( path )
-            
-        except OSError as e: # 'already in use by another process'
-            
-            HydrusData.Print( 'Already in use: ' + path )
             
         
     
@@ -710,6 +728,21 @@ def PathsHaveSameSizeAndDate( path1, path2 ):
             
             return True
             
+        
+    
+    return False
+    
+def PathIsFree( path ):
+    
+    try:
+        
+        os.rename( path, path ) # rename a path to itself
+        
+        return True
+        
+    except OSError as e: # 'already in use by another process'
+        
+        HydrusData.Print( 'Already in use: ' + path )
         
     
     return False

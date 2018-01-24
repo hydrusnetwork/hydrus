@@ -287,7 +287,7 @@ class ReviewServicePanel( wx.Panel ):
                 return
                 
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def ServiceUpdated( self, service ):
@@ -300,7 +300,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( text ):
                 
@@ -312,14 +312,14 @@ class ReviewServicePanel( wx.Panel ):
                 self._file_info_st.SetLabelText( text )
                 
             
-            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
             
             text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size )
             
-            if self._service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+            if service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                 
                 num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                 
@@ -757,7 +757,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._metadata_st.SetLabelText( self._service.GetNextUpdateDueString() )
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def _Reset( self ):
@@ -819,7 +819,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( download_text, download_value, processing_text, processing_value, range ):
                 
@@ -870,7 +870,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                 
             
-            ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', self._service.GetServiceKey() )
+            ( download_value, processing_value, range ) = HG.client_controller.Read( 'repository_progress', service.GetServiceKey() )
             
             download_text = 'downloaded ' + HydrusData.ConvertValueRangeToPrettyString( download_value, range )
             
@@ -994,7 +994,7 @@ class ReviewServicePanel( wx.Panel ):
                 return
                 
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def _SetNotes( self ):
@@ -1093,7 +1093,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( ipfs_shares ):
                 
@@ -1114,7 +1114,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                 
             
-            ipfs_shares = HG.client_controller.Read( 'service_directories', self._service.GetServiceKey() )
+            ipfs_shares = HG.client_controller.Read( 'service_directories', service.GetServiceKey() )
             
             wx.CallAfter( wx_code, ipfs_shares )
             
@@ -1342,7 +1342,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service_status.SetLabelText( status )
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def ServiceUpdated( self, service ):
@@ -1355,7 +1355,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( booru_shares ):
                 
@@ -1402,7 +1402,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def ServiceUpdated( self, service ):
@@ -1415,17 +1415,19 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( text ):
                 
-                if self:
+                if not self:
                     
-                    self._rating_info_st.SetLabelText( text )
+                    return
                     
                 
+                self._rating_info_st.SetLabelText( text )
+                
             
-            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
@@ -1484,7 +1486,7 @@ class ReviewServicePanel( wx.Panel ):
         
         def _Refresh( self ):
             
-            HG.client_controller.CallToThread( self.THREADFetchInfo )
+            HG.client_controller.CallToThread( self.THREADFetchInfo, self._service )
             
         
         def ServiceUpdated( self, service ):
@@ -1497,17 +1499,19 @@ class ReviewServicePanel( wx.Panel ):
                 
             
         
-        def THREADFetchInfo( self ):
+        def THREADFetchInfo( self, service ):
             
             def wx_code( text ):
                 
-                if self:
+                if not self:
                     
-                    self._tag_info_st.SetLabelText( text )
+                    return
                     
                 
+                self._tag_info_st.SetLabelText( text )
+                
             
-            service_info = HG.client_controller.Read( 'service_info', self._service.GetServiceKey() )
+            service_info = HG.client_controller.Read( 'service_info', service.GetServiceKey() )
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
@@ -1515,7 +1519,7 @@ class ReviewServicePanel( wx.Panel ):
             
             text = HydrusData.ConvertIntToPrettyString( num_mappings ) + ' total mappings involving ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' different tags on ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' different files'
             
-            if self._service.GetServiceType() == HC.TAG_REPOSITORY:
+            if service.GetServiceType() == HC.TAG_REPOSITORY:
                 
                 num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
                 

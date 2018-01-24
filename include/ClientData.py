@@ -212,14 +212,39 @@ def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_
     
 def ConvertShortcutToPrettyShortcut( modifier, key ):
     
-    if modifier == wx.ACCEL_NORMAL: modifier = ''
-    elif modifier == wx.ACCEL_ALT: modifier = 'alt'
-    elif modifier == wx.ACCEL_CTRL: modifier = 'ctrl'
-    elif modifier == wx.ACCEL_SHIFT: modifier = 'shift'
+    if modifier == wx.ACCEL_NORMAL:
+        
+        modifier = ''
+        
+    elif modifier == wx.ACCEL_ALT:
+        
+        modifier = 'alt'
+        
+    elif modifier == wx.ACCEL_CTRL:
+        
+        modifier = 'ctrl'
+        
+    elif modifier == wx.ACCEL_SHIFT:
+        
+        modifier = 'shift'
+        
     
-    if OrdIsAlphaUpper( key ): key = chr( key + 32 ) # + 32 for converting ascii A -> a
-    elif OrdIsAlphaLower( key ) or OrdIsNumber( key ): key = chr( key )
-    else: key = CC.wxk_code_string_lookup[ key ]
+    if key in CC.wxk_code_string_lookup:
+        
+        key = CC.wxk_code_string_lookup[ key ]
+        
+    elif OrdIsAlphaUpper( key ):
+        
+        key = chr( key + 32 ) # + 32 for converting ascii A -> a
+        
+    elif OrdIsSensibleASCII( key ):
+        
+        key = chr( key )
+        
+    else:
+        
+        key = 'unknown key'
+        
     
     return ( modifier, key )
     
@@ -487,6 +512,10 @@ def MergePredicates( predicates, add_namespaceless = False ):
         
     
     return master_predicate_dict.values()
+    
+def OrdIsSensibleASCII( o ):
+    
+    return 32 <= o and o <= 127
     
 def OrdIsAlphaLower( o ):
     
@@ -2323,17 +2352,21 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         if self._shortcut_type == CC.SHORTCUT_TYPE_KEYBOARD:
             
-            if OrdIsAlphaUpper( self._shortcut_key ):
+            if self._shortcut_key in CC.wxk_code_string_lookup:
+                
+                components.append( CC.wxk_code_string_lookup[ self._shortcut_key ] )
+                
+            elif OrdIsAlphaUpper( self._shortcut_key ):
                 
                 components.append( chr( self._shortcut_key + 32 ) ) # + 32 for converting ascii A -> a
                 
-            elif OrdIsAlphaLower( self._shortcut_key ) or OrdIsNumber( self._shortcut_key ):
+            elif OrdIsSensibleASCII( self._shortcut_key ):
                 
                 components.append( chr( self._shortcut_key ) )
                 
             else:
                 
-                components.append( CC.wxk_code_string_lookup[ self._shortcut_key ] )
+                components.append( 'unknown key' )
                 
             
         elif self._shortcut_type == CC.SHORTCUT_TYPE_MOUSE:
@@ -2482,7 +2515,7 @@ def ConvertKeyEventToShortcut( event ):
     
     key = event.KeyCode
     
-    if OrdIsAlpha( key ) or OrdIsNumber( key ) or key in CC.wxk_code_string_lookup.keys():
+    if OrdIsSensibleASCII( key ) or key in CC.wxk_code_string_lookup.keys():
         
         modifiers = []
         

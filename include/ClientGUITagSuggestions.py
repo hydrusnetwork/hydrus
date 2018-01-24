@@ -357,11 +357,21 @@ class FileLookupScriptTagsPanel( wx.Panel ):
     
     def THREADFetchTags( self, script, job_key, file_identifier ):
         
+        def wx_code( tags ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._SetTags( tags )
+            
+        
         content_results = script.DoQuery( job_key, file_identifier )
         
         tags = ClientParsing.GetTagsFromContentResults( content_results )
         
-        wx.CallAfter( self._SetTags, tags )
+        wx.CallAfter( wx_code, tags )
         
     
 class SuggestedTagsPanel( wx.Panel ):

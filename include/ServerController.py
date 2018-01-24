@@ -161,6 +161,8 @@ class Controller( HydrusController.HydrusController ):
         
         self._name = 'server'
         
+        self._shutdown = False
+        
         HG.server_controller = self
         
     
@@ -378,24 +380,19 @@ class Controller( HydrusController.HydrusController ):
         
         try:
             
-            while not self._model_shutdown:
+            while not self._model_shutdown and not self._shutdown:
             
                 time.sleep( 1 )
                 
             
         except KeyboardInterrupt:
             
-            def do_it():
-                
-                HydrusData.Print( u'Received a keyboard interrupt\u2026' )
-                
-                self.Exit()
-                
-            
-            self.CallToThread( do_it )
+            HydrusData.Print( u'Received a keyboard interrupt\u2026' )
             
         
         HydrusData.Print( u'Shutting down controller\u2026' )
+        
+        self.Exit()
         
     
     def SaveDirtyObjects( self ):
@@ -466,14 +463,7 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( u'Received a server shut down request\u2026' )
         
-        def do_it():
-            
-            time.sleep( 1 )
-            
-            self.Exit()
-            
-        
-        self.CallToThread( do_it )
+        self._shutdown = True
         
     
     def SyncRepositories( self ):

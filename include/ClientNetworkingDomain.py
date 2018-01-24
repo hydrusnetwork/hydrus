@@ -439,6 +439,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetParsers( self ):
+        
+        with self._lock:
+            
+            return list( self._parsers )
+            
+        
+    
     def GetURLMatches( self ):
         
         with self._lock:
@@ -567,6 +575,41 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._network_contexts_to_custom_header_dicts = network_contexts_to_custom_header_dicts
+            
+            self._SetDirty()
+            
+        
+    
+    def SetParsers( self, parsers ):
+        
+        with self._lock:
+            
+            self._parsers = HydrusSerialisable.SerialisableList()
+            
+            self._parsers.extend( parsers )
+            
+            # delete orphans
+            
+            parser_keys = { parser.GetParseKey() for parser in parsers }
+            
+            deletee_url_match_keys = set()
+            
+            for ( url_match_key, parser_key ) in self._url_match_keys_to_parser_keys.items():
+                
+                if parser_key not in parser_keys:
+                    
+                    deletee_url_match_keys.add( url_match_key )
+                    
+                
+            
+            for deletee_url_match_key in deletee_url_match_keys:
+                
+                del self._url_match_keys_to_parser_keys[ deletee_url_match_key ]
+                
+            
+            #
+            
+            self._RecalcCache()
             
             self._SetDirty()
             

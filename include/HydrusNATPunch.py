@@ -179,7 +179,10 @@ def GetUPnPMappings():
             
         except Exception as e:
             
+            HydrusData.Print( 'UPnP problem:' )
             HydrusData.Print( traceback.format_exc() )
+            HydrusData.Print( 'Full response follows:' )
+            HydrusData.Print( output )
             
             raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + HydrusData.ToUnicode( e ) )
             

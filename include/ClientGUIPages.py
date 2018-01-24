@@ -693,7 +693,7 @@ class Page( wx.SplitterWindow ):
         
         if self._initial_hashes is not None and len( self._initial_hashes ) > 0:
             
-            self._controller.CallToThread( self.THREADLoadInitialMediaResults )
+            self._controller.CallToThread( self.THREADLoadInitialMediaResults, self._controller, self._initial_hashes )
             
         else:
             
@@ -718,26 +718,46 @@ class Page( wx.SplitterWindow ):
         self._management_panel.TestAbleToClose()
         
     
-    def THREADLoadInitialMediaResults( self ):
+    def THREADLoadInitialMediaResults( self, controller, initial_hashes ):
         
-        initial_media_results = []
-        
-        for group_of_initial_hashes in HydrusData.SplitListIntoChunks( self._initial_hashes, 256 ):
+        def wx_code_status( status ):
             
-            more_media_results = self._controller.Read( 'media_results', group_of_initial_hashes )
-            
-            initial_media_results.extend( more_media_results )
-            
-            status = u'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( self._initial_hashes ) )
+            if not self:
+                
+                return
+                
             
             self._SetPrettyStatus( status )
             
         
+        def wx_code_publish( media_results ):
+            
+            if not self:
+                
+                return
+                
+            
+            self.SetMediaResults( media_results )
+            
+        
+        initial_media_results = []
+        
+        for group_of_initial_hashes in HydrusData.SplitListIntoChunks( initial_hashes, 256 ):
+            
+            more_media_results = controller.Read( 'media_results', group_of_initial_hashes )
+            
+            initial_media_results.extend( more_media_results )
+            
+            status = u'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
+            
+            wx.CallAfter( wx_code_status, status )
+            
+        
         hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
         
-        sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in self._initial_hashes ]
+        sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in initial_hashes ]
         
-        wx.CallAfter( self.SetMediaResults, sorted_initial_media_results )
+        wx.CallAfter( wx_code_publish, sorted_initial_media_results )
         
     
     def TIMERPageUpdate( self ):

@@ -91,6 +91,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
         
         self._closed_pages = []
+        self._closed_page_keys = set()
         self._deleted_page_keys = set()
         self._lock = threading.Lock()
         
@@ -868,8 +869,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             page.Destroy()
             
         
-        gc.collect()
-        
     
     def _DestroyTimers( self ):
         
@@ -1380,8 +1379,25 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            
+            # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
+            # need a name for this that isn't 'downloader', or maybe it should be, and I should rename downloaders below to 'gallery query generator' or whatever.
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'review and import/export download capability', 'Review where you can download from and import or export that data in order to share with other users.' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            
+            # maybe put this in a submenu, or hide it all behind advanced mode
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
+            ClientGUIMenus.AppendMenuLabel( menu, 'manage downloaders', 'Manage the client\' downloaders, which convert search terms into URLs.' )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1912,6 +1928,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'wake_daemons' )
         self._controller.gui.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
+        
+    
+    def _ManageParsers( self ):
+        
+        title = 'manage parsers'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            parsers = domain_manager.GetParsers()
+            
+            panel = ClientGUIParsing.EditParsersPanel( dlg, parsers )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                wx.MessageBox( 'Sorry, this dialog doesn\'t save anything yet!' )
+                
+                return
+                
+                parsers = panel.GetValue()
+                
+                domain_manager.SetParsers( parsers )
+                
+            
         
     
     def _ManageParsingScripts( self ):
@@ -2734,6 +2777,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( time_closed, page ) = self._closed_pages.pop( closed_page_index )
             
+            self._closed_page_keys.discard( page.GetPageKey() )
+            
         
         self._controller.pub( 'notify_page_unclosed', page )
         
@@ -3081,6 +3126,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
             
             self._closed_pages = []
+            self._closed_page_keys = set()
             
         
         if len( deletee_pages ) > 0:
@@ -3108,6 +3154,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             old_closed_pages = self._closed_pages
             
             self._closed_pages = []
+            self._closed_page_keys = set()
             
             for ( time_closed, page ) in old_closed_pages:
                 
@@ -3118,6 +3165,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 else:
                     
                     self._closed_pages.append( ( time_closed, page ) )
+                    self._closed_page_keys.add( page.GetPageKey() )
                     
                 
             
@@ -3598,7 +3646,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         close_time = HydrusData.GetNow()
         
-        self._closed_pages.append( ( close_time, page ) )
+        with self._lock:
+            
+            self._closed_pages.append( ( close_time, page ) )
+            self._closed_page_keys.add( page.GetPageKey() )
+            
         
         if self._notebook.GetNumPages() == 0:
             
@@ -3683,19 +3735,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         with self._lock:
             
-            for ( time_closed, page ) in self._closed_pages:
-                
-                if page and page.GetPageKey() == page_key:
-                    
-                    return True
-                    
-                
+            return page_key in self._closed_page_keys
             
         
         return False
         
     
     def RefreshMenu( self ):
+        
+        if not self:
+            
+            return
+            
         
         db_going_to_hang_if_we_hit_it = HG.client_controller.DBCurrentlyDoingJob()
         

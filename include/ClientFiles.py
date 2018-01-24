@@ -35,7 +35,5 @@ def GetAllPaths( raw_paths ):
         paths_to_process = next_paths_to_process
         
     
-    gc.collect()
-    
     return file_paths
     

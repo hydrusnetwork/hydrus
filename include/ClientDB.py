@@ -6138,7 +6138,31 @@ class DB( HydrusDB.HydrusDB ):
         
         select_statement = 'SELECT tag_id, namespace, subtag FROM tags NATURAL JOIN namespaces NATURAL JOIN subtags WHERE tag_id IN %s;'
         
-        return { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, tag_ids ) }
+        tag_ids_to_tags = { tag_id : HydrusTags.CombineTag( namespace, subtag ) for ( tag_id, namespace, subtag ) in self._SelectFromList( select_statement, tag_ids ) }
+        
+        if len( tag_ids_to_tags ) < tag_ids:
+            
+            for tag_id in tag_ids:
+                
+                if tag_id not in tag_ids_to_tags:
+                    
+                    tag = 'unknown tag:' + HydrusData.GenerateKey().encode( 'hex' )
+                    
+                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    namespace_id = self._GetNamespaceId( namespace )
+                    subtag_id = self._GetSubtagId( subtag )
+                    
+                    self._c.execute( 'INSERT INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
+                    
+                    tag_id = self._c.lastrowid
+                    
+                    tag_ids_to_tags[ tag_id ] = tag
+                    
+                
+            
+        
+        return tag_ids_to_tags
         
     
     def _GetTagParents( self, service_key = None ):

@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 291</h3></li>
+				<ul>
+					<li>expanded the permissable shortcut keys to all reasonable ASCII characters, such as comma and ampersand and the types of brackets</li>
+					<li>fixed a delayed crash sometimes caused by the file import frame (the one launched by dropping some files on the client or going file->import files)</li>
+					<li>the file import frame does its file parsing job in a generally more sensible way, particularly when new drops occur while parsing is ongoing</li>
+					<li>fixed a crash that could be initiated by the manage tags dialog setting the favourite tags late</li>
+					<li>fixed a crash that could be initiated by manage parents closing before results came in</li>
+					<li>fixed a rare possible crash that could be initiated by a review service panel delivering results late</li>
+					<li>when media pages load, they will be more thread-crash-polite to wx</li>
+					<li>wrote a new 'PageParser' object that will be the primary parser in the new downloader engine. this can deal with a variety of complicated parsing situations. it is still a work in progress, not yet ready for proper use</li>
+					<li>started new 'manage parsers' dialog for the new parsing system and arranged a bunch of things around that to make the eventual transition easier</li>
+					<li>edited some more old 'parsing scripts' ui to again make the transition easier. file lookup scripts will be converted to something new as we move to the new parsing system</li>
+					<li>fixed some bugs in contentparser instantiation</li>
+					<li>fixed a bug in the html tag rule edit dialog that wouldn't allow attribute pair editing</li>
+					<li>the names in the manage tags file lookup script dropdown are now sorted</li>
+					<li>removed some old redundant error-hiding code from the pubsub system</li>
+					<li>a common 'is my page closed' check is now a lot simpler and faster</li>
+					<li>fixed an edge shutdown bug where log messages were not able to be written to the log file</li>
+					<li>some media viewer objects delete themselves more safely</li>
+					<li>maybe fixed a rare menu refresh bug in linux</li>
+					<li>improved how hydrus deletes temp paths--if they are 'in use by another process', it will now put them aside and try again later. this error typically occurs when file mimetype parsing fails, and due to the error context hanging around, an open file handle is still in scope.</li>
+					<li>the client is better about recovering from missing tags in the db--in certain circumstances, it will now generate a 'unknown tag:random hex' as a simple placeholder that can be better used to investigate the error, rather than dumping out</li>
+					<li>downgraded os x opencv to 3.1.0 to hoyefully increase compatibility</li>
+					<li>putting out a separate os x build with opencv 2.4 as a test for users with problems booting the main build</li>
+					<li>the server closes a little more neatly</li>
+					<li>upnp errors are more verbose</li>
+					<li>misc code cleanup</li>
+				</ul>
 				<li><h3>version 290</h3></li>
 				<ul>
 					<li>content (tag and rating) shortcuts in the 'media' shortcut set now work on the thumbnail view!</li>

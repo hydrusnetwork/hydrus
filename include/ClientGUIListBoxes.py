@@ -16,6 +16,178 @@ import wx
 
 ( ListBoxEvent, EVT_LIST_BOX ) = wx.lib.newevent.NewCommandEvent()
 
+class AddEditDeleteListBox( wx.Panel ):
+    
+    def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable, edit_callable ):
+        
+        self._data_to_pretty_callable = data_to_pretty_callable
+        self._add_callable = add_callable
+        self._edit_callable = edit_callable
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._listbox = wx.ListBox( self, style = wx.LB_EXTENDED )
+        
+        self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
+        self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
+        self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        buttons_hbox.Add( self._delete_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox.Add( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        ( width, height ) = ClientData.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        
+        self._listbox.SetInitialSize( ( width, height ) )
+        
+        #
+        
+        self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
+        self._listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventEdit )
+        
+    
+    def _Add( self ):
+        
+        ( result, data ) = self._add_callable()
+        
+        if result:
+            
+            self._AddData( data )
+            
+        
+    
+    def _AddData( self, data ):
+        
+        pretty_data = self._data_to_pretty_callable( data )
+        
+        self._listbox.Append( pretty_data, data )
+        
+    
+    def _Delete( self ):
+        
+        indices = list( self._listbox.GetSelections() )
+        
+        if len( indices ) == 0:
+            
+            return
+            
+        
+        indices.sort( reverse = True )
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg_yn:
+            
+            if dlg_yn.ShowModal() == wx.ID_YES:
+                
+                for i in indices:
+                    
+                    self._listbox.Delete( i )
+                    
+                
+            
+        
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
+    
+    def _Edit( self ):
+        
+        for i in range( self._listbox.GetCount() ):
+            
+            if not self._listbox.IsSelected( i ):
+                
+                continue
+                
+            
+            data = self._listbox.GetClientData( i )
+            
+            ( result, new_data ) = self._edit_callable( data )
+            
+            if result:
+                
+                self._listbox.Delete( i )
+                
+                pretty_new_data = self._data_to_pretty_callable( new_data )
+                
+                self._listbox.Insert( pretty_new_data, i, new_data )
+                
+            else:
+                
+                break
+                
+            
+        
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
+    
+    def AddDatas( self, datas ):
+        
+        for data in datas:
+            
+            self._AddData( data )
+            
+        
+        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
+    
+    def Bind( self, event, handler ):
+        
+        self._listbox.Bind( event, handler )
+        
+    
+    def EventEdit( self, event ):
+        
+        self._Edit()
+        
+    
+    def EventSelection( self, event ):
+        
+        if len( self._listbox.GetSelections() ) == 0:
+            
+            self._edit_button.Disable()
+            self._delete_button.Disable()
+            
+        else:
+            
+            self._edit_button.Enable()
+            self._delete_button.Enable()
+            
+        
+        event.Skip()
+        
+    
+    def GetCount( self ):
+        
+        return self._listbox.GetCount()
+        
+    
+    def GetData( self, only_selected = False ):
+        
+        datas = []
+        
+        for i in range( self._listbox.GetCount() ):
+            
+            data = self._listbox.GetClientData( i )
+            
+            datas.append( data )
+            
+        
+        return datas
+        
+    
 class QueueListBox( wx.Panel ):
     
     def __init__( self, parent, data_to_pretty_callable, add_callable = None, edit_callable = None ):

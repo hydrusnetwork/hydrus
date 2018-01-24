@@ -285,19 +285,17 @@ class Animation( wx.Window ):
         
         if self._frame_bmp is not None:
             
-            self._frame_bmp.Destroy()
+            wx.CallAfter( self._frame_bmp.Destroy )
             
             self._frame_bmp = None
             
         
         if self._canvas_bmp is not None:
             
-            self._canvas_bmp.Destroy()
+            wx.CallAfter( self._canvas_bmp.Destroy )
             
             self._canvas_bmp = None
             
-        
-        wx.CallAfter( gc.collect )
         
     
     def _DrawFrame( self, dc ):
@@ -310,7 +308,7 @@ class Animation( wx.Window ):
         
         if self._frame_bmp is not None and self._frame_bmp.GetSize() != current_frame.GetSize():
             
-            self._frame_bmp.Destroy()
+            wx.CallAfter( self._frame_bmp.Destroy )
             
             self._frame_bmp = None
             
@@ -2114,7 +2112,7 @@ class Canvas( wx.Window ):
             
             ( my_width, my_height ) = self.GetClientSize()
             
-            self._canvas_bmp.Destroy()
+            wx.CallAfter( self._canvas_bmp.Destroy )
             
             self._canvas_bmp = wx.Bitmap( my_width, my_height, 24 )
             
@@ -3371,7 +3369,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._currently_fetching_pairs = True
             
-            HG.client_controller.CallToThread( self.THREADFetchPairs )
+            HG.client_controller.CallToThread( self.THREADFetchPairs, self._file_service_key )
             
             self._SetDirty()
             
@@ -3627,7 +3625,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def THREADFetchPairs( self ):
+    def THREADFetchPairs( self, file_service_key ):
         
         def wx_close():
             
@@ -3636,7 +3634,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 return
                 
             
-            wx.CallAfter( wx.MessageBox, 'All pairs have been filtered!' )
+            wx.MessageBox( 'All pairs have been filtered!' )
             
             self._Close()
             
@@ -3655,7 +3653,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             self._ShowNewPair()
             
         
-        result = HG.client_controller.Read( 'unique_duplicate_pairs', self._file_service_key, HC.DUPLICATE_UNKNOWN )
+        result = HG.client_controller.Read( 'unique_duplicate_pairs', file_service_key, HC.DUPLICATE_UNKNOWN )
         
         if len( result ) == 0:
             
@@ -4750,7 +4748,7 @@ class MediaContainer( wx.Window ):
             
             media_window.Hide()
             
-            media_window.Destroy()
+            wx.CallAfter( media_window.Destroy )
             
         
     
@@ -5377,7 +5375,7 @@ class StaticImage( wx.Window ):
             
             dc.DrawBitmap( wx_bitmap, 0, 0 )
             
-            wx_bitmap.Destroy()
+            wx.CallAfter( wx_bitmap.Destroy )
             
             self._is_rendered = True
             
