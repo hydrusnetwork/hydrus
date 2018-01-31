@@ -470,7 +470,8 @@ class DialogInputFileSystemPredicates( Dialog ):
         
         if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
             
-            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAge )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAgeDelta )
+            pred_classes.append( ClientGUIPredicates.PanelPredicateSystemAgeDate )
             
         elif predicate_type == HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS:
             
@@ -2131,6 +2132,8 @@ class DialogSelectFromList( Dialog ):
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.SetDefault()
         
+        self._hidden_cancel = wx.Button( self, id = wx.ID_CANCEL, size = ( 0, 0 ) ) # to handle esc key events properly
+        
         #
         
         list_of_tuples.sort()
@@ -2455,13 +2458,33 @@ class DialogSetupExport( Dialog ):
         
         num_to_do = len( to_do )
         
-        def do_it():
+        def wx_update_label( text ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._export.SetLabel( text )
+            
+        
+        def wx_done():
+            
+            if not self:
+                
+                return
+                
+            
+            self._export.Enable()
+            
+        
+        def do_it( neighbouring_txt_tag_service_keys ):
             
             for ( index, ( ( ordering_index, media ), mime, path ) ) in enumerate( to_do ):
                 
                 try:
                     
-                    wx.CallAfter( self._export.SetLabel, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
+                    wx.CallAfter( wx_update_label, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
                     
                     hash = media.GetHash()
                     
@@ -2475,7 +2498,7 @@ class DialogSetupExport( Dialog ):
                         
                         tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
                         
-                        for service_key in self._neighbouring_txt_tag_service_keys:
+                        for service_key in neighbouring_txt_tag_service_keys:
                             
                             current_tags = tags_manager.GetCurrent( service_key )
                             
@@ -2513,16 +2536,16 @@ class DialogSetupExport( Dialog ):
                     
                 
             
-            wx.CallAfter( self._export.SetLabel, 'done!' )
+            wx.CallAfter( wx_update_label, 'done!' )
             
             time.sleep( 1 )
             
-            wx.CallAfter( self._export.SetLabel, 'export' )
+            wx.CallAfter( wx_update_label, 'export' )
             
-            wx.CallAfter( self._export.Enable )
+            wx.CallAfter( wx_done )
             
         
-        HG.client_controller.CallToThread( do_it )
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys )
         
     
     def EventExportTagTxtsChanged( self, event ):

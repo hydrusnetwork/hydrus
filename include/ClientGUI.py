@@ -167,6 +167,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._animation_update_windows = set()
         
+        wx.CallAfter( self.Layout ) # some i3 thing--doesn't layout main gui on init for some reason
+        
     
     def _AboutWindow( self ):
         
@@ -303,7 +305,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             file_repo.SetCredentials( credentials )
             
-            all_services = self._controller.services_manager.GetServices()
+            all_services = list( self._controller.services_manager.GetServices() )
             
             all_services.append( tag_repo )
             all_services.append( file_repo )
@@ -889,6 +891,23 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             self._animation_update_timer.Stop()
             
             self._animation_update_timer = None
+            
+        
+    
+    def _DirtyMenu( self, name ):
+        
+        if name not in self._dirty_menus:
+            
+            ( menu, label, show ) = self._menus[ name ]
+            
+            if show:
+                
+                menu_index = self._menubar.FindMenu( label )
+                
+                self._menubar.EnableTop( menu_index, False )
+                
+            
+            self._dirty_menus.add( name )
             
         
     
@@ -1946,10 +1965,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                wx.MessageBox( 'Sorry, this dialog doesn\'t save anything yet!' )
-                
-                return
-                
                 parsers = panel.GetValue()
                 
                 domain_manager.SetParsers( parsers )
@@ -2276,6 +2291,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             elif action == 'unclose_page':
                 
                 self._UnclosePage()
+                
+            elif action == 'check_all_import_folders':
+                
+                self._CheckImportFolder()
                 
             elif action == 'flip_darkmode':
                 
@@ -3657,68 +3676,68 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._focus_holder.SetFocus()
             
         
-        self._dirty_menus.add( 'pages' )
+        self._DirtyMenu( 'pages' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewImportFolders( self ):
         
-        self._dirty_menus.add( 'file' )
+        self._DirtyMenu( 'file' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewOptions( self ):
         
-        self._dirty_menus.add( 'services' )
-        self._dirty_menus.add( 'help' )
+        self._DirtyMenu( 'services' )
+        self._DirtyMenu( 'help' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewPages( self ):
         
-        self._dirty_menus.add( 'pages' )
+        self._DirtyMenu( 'pages' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewPending( self ):
         
-        self._dirty_menus.add( 'pending' )
+        self._DirtyMenu( 'pending' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewPermissions( self ):
         
-        self._dirty_menus.add( 'pages' )
-        self._dirty_menus.add( 'services' )
-        self._dirty_menus.add( 'network' )
+        self._DirtyMenu( 'pages' )
+        self._DirtyMenu( 'services' )
+        self._DirtyMenu( 'network' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewServices( self ):
         
-        self._dirty_menus.add( 'pages' )
-        self._dirty_menus.add( 'services' )
-        self._dirty_menus.add( 'network' )
+        self._DirtyMenu( 'pages' )
+        self._DirtyMenu( 'services' )
+        self._DirtyMenu( 'network' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewSessions( self ):
         
-        self._dirty_menus.add( 'pages' )
+        self._DirtyMenu( 'pages' )
         
         self._menu_updater.Update()
         
     
     def NotifyNewUndo( self ):
         
-        self._dirty_menus.add( 'undo' )
+        self._DirtyMenu( 'undo' )
         
         self._menu_updater.Update()
         

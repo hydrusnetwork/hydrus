@@ -1189,6 +1189,30 @@ class Canvas( wx.Window ):
             
         
     
+    def _CanDisplayMedia( self, media ):
+        
+        if media is None:
+            
+            return True
+            
+        
+        media = media.GetDisplayMedia()
+        
+        locations_manager = media.GetLocationsManager()
+        
+        if not locations_manager.IsLocal():
+            
+            return False
+            
+        
+        if self._GetShowAction( media ) in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            
+            return False
+            
+        
+        return True
+        
+    
     def _CanProcessInput( self ):
         
         if HG.client_controller.MenuIsOpen():
@@ -2206,13 +2230,7 @@ class Canvas( wx.Window ):
             
             media = media.GetDisplayMedia()
             
-            locations_manager = media.GetLocationsManager()
-            
-            if not locations_manager.IsLocal():
-                
-                media = None
-                
-            elif self._GetShowAction( media ) in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+            if not self._CanDisplayMedia( media ):
                 
                 media = None
                 
@@ -3375,11 +3393,31 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         else:
             
+            def pair_is_good( pair ):
+                
+                ( first_hash, second_hash ) = pair
+                
+                if first_hash in self._batch_skip_hashes or second_hash in self._batch_skip_hashes:
+                    
+                    return False
+                    
+                
+                ( first_media_result, second_media_result ) = HG.client_controller.Read( 'media_results', pair )
+                
+                first_media = ClientMedia.MediaSingleton( first_media_result )
+                second_media = ClientMedia.MediaSingleton( second_media_result )
+                
+                if not self._CanDisplayMedia( first_media ) or not self._CanDisplayMedia( second_media ):
+                    
+                    return False
+                    
+                
+                return True
+                
+            
             potential_pair = self._unprocessed_pairs.pop()
             
-            ( first_hash, second_hash ) = potential_pair
-            
-            while first_hash in self._batch_skip_hashes or second_hash in self._batch_skip_hashes:
+            while not pair_is_good( potential_pair ):
                 
                 was_auto_skipped = True
                 
@@ -3387,14 +3425,23 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 if len( self._unprocessed_pairs ) == 0:
                     
-                    self._ShowNewPair() # there are no useful decisions left in the queue, so let's reset
-                    
-                    return
+                    if len( self._processed_pairs ) == 0:
+                        
+                        wx.MessageBox( 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close. Please inform hydrus dev of this.' )
+                        
+                        self._Close()
+                        
+                        return
+                        
+                    else:
+                        
+                        self._ShowNewPair() # there are no useful decisions left in the queue, so let's reset
+                        
+                        return
+                        
                     
                 
                 potential_pair = self._unprocessed_pairs.pop()
-                
-                ( first_hash, second_hash ) = potential_pair
                 
             
             self._current_pair = potential_pair
@@ -4483,7 +4530,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
             elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
-            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): wx.CallAfter( self._PausePlaySlideshow )
+            elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_SPACE, wx.WXK_NUMPAD_SPACE ): self._PausePlaySlideshow()
             elif modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
             else:
                 
@@ -4744,11 +4791,21 @@ class MediaContainer( wx.Window ):
     
     def _DestroyThisMediaWindow( self, media_window ):
         
+        def wx_destroy( media_window ):
+            
+            if not media_window:
+                
+                return
+                
+            
+            media_window.Destroy()
+            
+        
         if media_window is not None:
             
             media_window.Hide()
             
-            wx.CallAfter( media_window.Destroy )
+            wx.CallAfter( wx_destroy, media_window )
             
         
     

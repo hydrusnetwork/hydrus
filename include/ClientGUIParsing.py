@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientData
 import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIMenus
@@ -138,6 +139,460 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
         self._UpdateLabel()
         
     
+class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, formula, example_data ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        notebook = wx.Notebook( self )
+        
+        #
+        
+        edit_panel = wx.Panel( notebook )
+        
+        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._formulae = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
+        self._formulae.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        
+        self._add_formula = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
+        
+        self._edit_formula = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
+        
+        self._move_formula_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
+        
+        self._delete_formula = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
+        
+        self._move_formula_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
+        
+        self._sub_phrase = wx.TextCtrl( edit_panel )
+        
+        ( formulae, sub_phrase, string_match, string_converter ) = formula.ToTuple()
+        
+        self._string_match_button = StringMatchButton( edit_panel, string_match )
+        
+        self._string_converter_button = StringConverterButton( edit_panel, string_converter )
+        
+        #
+        
+        test_panel = wx.Panel( notebook )
+        
+        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._example_data.SetMinSize( ( -1, 200 ) )
+        
+        self._example_data.SetValue( example_data )
+        
+        self._run_test = ClientGUICommon.BetterButton( test_panel, 'test parse', self.TestParse )
+        
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This combines the results of several formulae into a single result
+
+The substitution phrase works like in regexes. If you have two formulae that produce _filename_ and _ext_, you could set this:
+
+\1.\2'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
+        
+        #
+        
+        for formula in formulae:
+            
+            pretty_formula = formula.ToPrettyString()
+            
+            self._formulae.Append( pretty_formula, formula )
+            
+        
+        self._sub_phrase.SetValue( sub_phrase )
+        
+        self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        
+        #
+        
+        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.Add( self._move_formula_up, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._delete_formula, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._move_formula_down, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        formulae_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        formulae_hbox.Add( self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
+        formulae_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
+        
+        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ae_button_hbox.Add( self._add_formula, CC.FLAGS_VCENTER )
+        ae_button_hbox.Add( self._edit_formula, CC.FLAGS_VCENTER )
+        
+        rows = []
+        
+        rows.append( ( 'substitution phrase:', self._sub_phrase ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        edit_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        test_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
+        notebook.AddPage( edit_panel, 'edit', select = True )
+        notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def Add( self ):
+        
+        existing_formula = ClientParsing.ParseFormulaHTML()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula' ) as dlg:
+            
+            panel = EditFormulaPanel( dlg, existing_formula, self._example_data.GetValue )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_formula = panel.GetValue()
+                
+                pretty_formula = new_formula.ToPrettyString()
+                
+                self._formulae.Append( pretty_formula, new_formula )
+                
+            
+        
+    
+    def Delete( self ):
+        
+        selection = self._formulae.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if self._formulae.GetCount() == 1:
+                
+                wx.MessageBox( 'A compound formula needs at least one sub-formula!' )
+                
+            else:
+                
+                self._formulae.Delete( selection )
+                
+            
+        
+    
+    def Edit( self ):
+        
+        selection = self._formulae.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            old_formula = self._formulae.GetClientData( selection )
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit formula' ) as dlg:
+                
+                panel = EditFormulaPanel( dlg, old_formula, self._example_data.GetValue )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    new_formula = panel.GetValue()
+                    
+                    pretty_formula = new_formula.ToPrettyString()
+                    
+                    self._formulae.SetString( selection, pretty_formula )
+                    self._formulae.SetClientData( selection, new_formula )
+                    
+                
+            
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        formulae = [ self._formulae.GetClientData( i ) for i in range( self._formulae.GetCount() ) ]
+        
+        sub_phrase = self._sub_phrase.GetValue()
+        
+        string_match = self._string_match_button.GetValue()
+        
+        string_converter = self._string_converter_button.GetValue()
+        
+        formula = ClientParsing.ParseFormulaCompound( formulae, sub_phrase, string_match, string_converter )
+        
+        return formula
+        
+    
+    def MoveDown( self ):
+        
+        selection = self._formulae.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection + 1 < self._formulae.GetCount():
+            
+            pretty_rule = self._formulae.GetString( selection )
+            rule = self._formulae.GetClientData( selection )
+            
+            self._formulae.Delete( selection )
+            
+            self._formulae.Insert( pretty_rule, selection + 1, rule )
+            
+        
+    
+    def MoveUp( self ):
+        
+        selection = self._formulae.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection > 0:
+            
+            pretty_rule = self._formulae.GetString( selection )
+            rule = self._formulae.GetClientData( selection )
+            
+            self._formulae.Delete( selection )
+            
+            self._formulae.Insert( pretty_rule, selection - 1, rule )
+            
+        
+    
+    def TestParse( self ):
+        
+        formula = self.GetValue()
+        
+        data = self._example_data.GetValue()
+        
+        try:
+            
+            results = formula.Parse( data )
+            
+            separator = os.linesep
+            
+            results = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
+            
+            results_text = separator.join( results )
+            
+            self._results.SetValue( results_text )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'Could not parse!'
+            
+            wx.MessageBox( message )
+            
+        
+    
+class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, formula, example_data_callable ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._current_formula = formula
+        self._example_data_callable = example_data_callable
+        
+        #
+        
+        my_panel = ClientGUICommon.StaticBox( self, 'formula' )
+        
+        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( my_panel )
+        
+        ( width, height ) = ClientData.ConvertTextToPixels( self._formula_description, ( 60, 8 ) )
+        
+        self._formula_description.SetMinSize( ( -1, height ) )
+        
+        self._formula_description.Disable()
+        
+        self._edit_formula = ClientGUICommon.BetterButton( my_panel, 'edit formula', self._EditFormula )
+        
+        self._change_formula_type = ClientGUICommon.BetterButton( my_panel, 'change formula type', self._ChangeFormulaType )
+        
+        #
+        
+        self._UpdateControls()
+        
+        #
+        
+        button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        button_hbox.Add( self._edit_formula, CC.FLAGS_EXPAND_BOTH_WAYS )
+        button_hbox.Add( self._change_formula_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        my_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
+        my_panel.Add( button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ChangeFormulaType( self ):
+        
+        if self._current_formula.ParsesSeparatedContent():
+            
+            new_html = ClientParsing.ParseFormulaHTML( content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
+            new_json = ClientParsing.ParseFormulaJSON( content_to_fetch = ClientParsing.JSON_CONTENT_JSON )
+            
+        else:
+            
+            new_html = ClientParsing.ParseFormulaHTML()
+            new_json = ClientParsing.ParseFormulaJSON()
+            
+        
+        new_compound = ClientParsing.ParseFormulaCompound()
+        
+        if isinstance( self._current_formula, ClientParsing.ParseFormulaHTML ):
+            
+            order = ( 'json', 'compound' )
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaJSON ):
+            
+            order = ( 'html', 'compound' )
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaCompound ):
+            
+            order = ( 'html', 'json' )
+            
+        
+        choice_tuples = []
+        
+        for formula_type in order:
+            
+            if formula_type == 'html':
+                
+                choice_tuples.append( ( 'change to a new HTML formula', new_html ) )
+                
+            elif formula_type == 'json':
+                
+                choice_tuples.append( ( 'change to a new JSON formula', new_json ) )
+                
+            elif formula_type == 'compound':
+                
+                choice_tuples.append( ( 'change to a new COMPOUND formula', new_compound ) )
+                
+            
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select formula type', choice_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._current_formula = dlg.GetChoice()
+                
+            
+        
+        self._UpdateControls()
+        
+    
+    def _EditFormula( self ):
+        
+        if isinstance( self._current_formula, ClientParsing.ParseFormulaHTML ):
+            
+            panel_class = EditHTMLFormulaPanel
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaJSON ):
+            
+            panel_class = EditJSONFormulaPanel
+            
+        elif isinstance( self._current_formula, ClientParsing.ParseFormulaCompound ):
+            
+            panel_class = EditCompoundFormulaPanel
+            
+        
+        example_data = self._example_data_callable()
+        
+        dlg_title = 'edit formula'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+            
+            panel = panel_class( dlg, self._current_formula, example_data )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._current_formula = panel.GetValue()
+                
+                self._UpdateControls()
+                
+            
+        
+    
+    def _UpdateControls( self ):
+        
+        if self._current_formula is None:
+            
+            self._formula_description.SetValue( '' )
+            
+            self._edit_formula.Disable()
+            self._change_formula_type.Disable()
+            
+        else:
+            
+            self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
+            
+            self._edit_formula.Enable()
+            self._change_formula_type.Enable()
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._current_formula
+        
+    
 class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, rule ):
@@ -261,13 +716,7 @@ So, to find the 'src' of the first <img> tag beneath all <span> tags with the cl
 1st img tag'
 attribute: src'
 
-Leave the 'attribute' blank to fetch the string of the tag (i.e. <p>This part</p>).
-
-Note that you can set _negative_ numbers for the 'remove characters' parts, which will remove all but that many of the opposite end's characters. For instance:
-
-remove 2 from the beginning of 'abcdef' gives 'cdef'
-
-remove -2 from the beginning of 'abcdef' gives 'ef'.'''
+'''
         
         info_st = wx.StaticText( info_panel, label = message )
         
@@ -277,7 +726,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
         
         for rule in tag_rules:
             
-            pretty_rule = ClientParsing.RenderTagRule( rule )
+            pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
             
             self._tag_rules.Append( pretty_rule, rule )
             
@@ -388,7 +837,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
                 
                 rule = panel.GetValue()
                 
-                pretty_rule = ClientParsing.RenderTagRule( rule )
+                pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
                 
                 self._tag_rules.Append( pretty_rule, rule )
                 
@@ -432,7 +881,7 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
                     
                     rule = panel.GetValue()
                     
-                    pretty_rule = ClientParsing.RenderTagRule( rule )
+                    pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
                     
                     self._tag_rules.SetString( selection, pretty_rule )
                     self._tag_rules.SetClientData( selection, rule )
@@ -522,7 +971,415 @@ remove -2 from the beginning of 'abcdef' gives 'ef'.'''
                 separator = os.linesep
                 
             
-            results = [ '*** RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
+            results = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
+            
+            results_text = separator.join( results )
+            
+            self._results.SetValue( results_text )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'Could not parse!'
+            
+            wx.MessageBox( message )
+            
+        
+    
+class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    DICT_ENTRY = 0
+    ALL_LIST_ITEMS = 1
+    INDEXED_LIST_ITEM = 2
+    
+    def __init__( self, parent, rule ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._type = ClientGUICommon.BetterChoice( self )
+        
+        self._type.Append( 'dictionary entry', self.DICT_ENTRY )
+        self._type.Append( 'all list items', self.ALL_LIST_ITEMS )
+        self._type.Append( 'indexed list item', self.INDEXED_LIST_ITEM)
+        
+        self._key = wx.TextCtrl( self )
+        
+        self._index = wx.SpinCtrl( self, min = 0, max = 65535 )
+        
+        #
+        
+        if rule is None:
+            
+            self._type.SelectClientData( self.ALL_LIST_ITEMS )
+            
+        elif isinstance( rule, int ):
+            
+            self._type.SelectClientData( self.INDEXED_LIST_ITEM )
+            
+            self._index.SetValue( rule )
+            
+        else:
+            
+            self._type.SelectClientData( self.DICT_ENTRY )
+            
+            self._key.SetValue( rule )
+            
+        
+        self._UpdateHideShow()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'dict entry: ', self._key ) )
+        rows.append( ( 'list index: ', self._index ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._type.Bind( wx.EVT_CHOICE, self.EventChoice )
+        
+    
+    def _UpdateHideShow( self ):
+        
+        self._key.Disable()
+        self._index.Disable()
+        
+        choice = self._type.GetChoice()
+        
+        if choice == self.DICT_ENTRY:
+            
+            self._key.Enable()
+            
+        elif choice == self.INDEXED_LIST_ITEM:
+            
+            self._index.Enable()
+            
+        
+    
+    def EventChoice( self, event ):
+        
+        self._UpdateHideShow()
+        
+    
+    def GetValue( self ):
+        
+        choice = self._type.GetChoice()
+        
+        if choice == self.DICT_ENTRY:
+            
+            rule = self._key.GetValue()
+            
+        elif choice == self.INDEXED_LIST_ITEM:
+            
+            rule = self._index.GetValue()
+            
+        else:
+            
+            rule = None
+            
+        
+        return rule
+        
+    
+class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, formula, example_data ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        notebook = wx.Notebook( self )
+        
+        #
+        
+        edit_panel = wx.Panel( notebook )
+        
+        edit_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._parse_rules = wx.ListBox( edit_panel, style = wx.LB_SINGLE )
+        self._parse_rules.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+        
+        self._add_rule = ClientGUICommon.BetterButton( edit_panel, 'add', self.Add )
+        
+        self._edit_rule = ClientGUICommon.BetterButton( edit_panel, 'edit', self.Edit )
+        
+        self._move_rule_up = ClientGUICommon.BetterButton( edit_panel, u'\u2191', self.MoveUp )
+        
+        self._delete_rule = ClientGUICommon.BetterButton( edit_panel, 'X', self.Delete )
+        
+        self._move_rule_down = ClientGUICommon.BetterButton( edit_panel, u'\u2193', self.MoveDown )
+        
+        self._content_to_fetch = ClientGUICommon.BetterChoice( edit_panel )
+        
+        self._content_to_fetch.Append( 'string', ClientParsing.JSON_CONTENT_STRING )
+        self._content_to_fetch.Append( 'json', ClientParsing.JSON_CONTENT_JSON )
+        
+        ( parse_rules, content_to_fetch, string_match, string_converter ) = formula.ToTuple()
+        
+        self._string_match_button = StringMatchButton( edit_panel, string_match )
+        
+        self._string_converter_button = StringConverterButton( edit_panel, string_converter )
+        
+        #
+        
+        test_panel = wx.Panel( notebook )
+        
+        test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._example_data.SetMinSize( ( -1, 200 ) )
+        
+        self._example_data.SetValue( example_data )
+        
+        self._run_test = ClientGUICommon.BetterButton( test_panel, 'test parse', self.TestParse )
+        
+        self._results = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
+        
+        self._results.SetMinSize( ( -1, 200 ) )
+        
+        #
+        
+        info_panel = wx.Panel( notebook )
+        
+        message = '''This searches json for simple strings, which it returns to its parent.
+
+The json will be searched recursively by each parse rule in turn and then the given content of the final branches will be returned.'''
+        
+        info_st = wx.StaticText( info_panel, label = message )
+        
+        info_st.Wrap( 400 )
+        
+        #
+        
+        for rule in parse_rules:
+            
+            pretty_rule = ClientParsing.RenderJSONParseRule( rule )
+            
+            self._parse_rules.Append( pretty_rule, rule )
+            
+        
+        self._content_to_fetch.SelectClientData( content_to_fetch )
+        
+        self._results.SetValue( 'Successfully parsed results will be printed here.' )
+        
+        #
+        
+        udd_button_vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        udd_button_vbox.Add( self._move_rule_up, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._delete_rule, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( self._move_rule_down, CC.FLAGS_VCENTER )
+        udd_button_vbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        parse_rules_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        parse_rules_hbox.Add( self._parse_rules, CC.FLAGS_EXPAND_BOTH_WAYS )
+        parse_rules_hbox.Add( udd_button_vbox, CC.FLAGS_VCENTER )
+        
+        ae_button_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        ae_button_hbox.Add( self._add_rule, CC.FLAGS_VCENTER )
+        ae_button_hbox.Add( self._edit_rule, CC.FLAGS_VCENTER )
+        
+        rows = []
+        
+        rows.append( ( 'content to fetch:', self._content_to_fetch ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._string_match_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._string_converter_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        edit_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._run_test, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        test_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( info_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        info_panel.SetSizer( vbox )
+        
+        #
+        
+        notebook.AddPage( edit_panel, 'edit', select = True )
+        notebook.AddPage( test_panel, 'test', select = False )
+        notebook.AddPage( info_panel, 'info', select = False )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def Add( self ):
+        
+        dlg_title = 'edit parse rule'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+            
+            new_rule = 'post'
+            
+            panel = EditJSONParsingRulePanel( dlg, new_rule )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                rule = panel.GetValue()
+                
+                pretty_rule = ClientParsing.RenderJSONParseRule( rule )
+                
+                self._parse_rules.Append( pretty_rule, rule )
+                
+            
+        
+    
+    def Delete( self ):
+        
+        selection = self._parse_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            if self._parse_rules.GetCount() == 1:
+                
+                wx.MessageBox( 'A parsing formula needs at least one rule!' )
+                
+            else:
+                
+                self._parse_rules.Delete( selection )
+                
+            
+        
+    
+    def Edit( self ):
+        
+        selection = self._parse_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND:
+            
+            rule = self._parse_rules.GetClientData( selection )
+            
+            dlg_title = 'edit parse rule'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+                
+                panel = EditJSONParsingRulePanel( dlg, rule )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    rule = panel.GetValue()
+                    
+                    pretty_rule = ClientParsing.RenderJSONParseRule( rule )
+                    
+                    self._parse_rules.SetString( selection, pretty_rule )
+                    self._parse_rules.SetClientData( selection, rule )
+                    
+                
+            
+        
+    
+    def EventEdit( self, event ):
+        
+        self.Edit()
+        
+    
+    def GetValue( self ):
+        
+        parse_rules = [ self._parse_rules.GetClientData( i ) for i in range( self._parse_rules.GetCount() ) ]
+        
+        content_to_fetch = self._content_to_fetch.GetChoice()
+        
+        string_match = self._string_match_button.GetValue()
+        
+        string_converter = self._string_converter_button.GetValue()
+        
+        formula = ClientParsing.ParseFormulaJSON( parse_rules, content_to_fetch, string_match, string_converter )
+        
+        return formula
+        
+    
+    def MoveDown( self ):
+        
+        selection = self._parse_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection + 1 < self._parse_rules.GetCount():
+            
+            pretty_rule = self._parse_rules.GetString( selection )
+            rule = self._parse_rules.GetClientData( selection )
+            
+            self._parse_rules.Delete( selection )
+            
+            self._parse_rules.Insert( pretty_rule, selection + 1, rule )
+            
+        
+    
+    def MoveUp( self ):
+        
+        selection = self._parse_rules.GetSelection()
+        
+        if selection != wx.NOT_FOUND and selection > 0:
+            
+            pretty_rule = self._parse_rules.GetString( selection )
+            rule = self._parse_rules.GetClientData( selection )
+            
+            self._parse_rules.Delete( selection )
+            
+            self._parse_rules.Insert( pretty_rule, selection - 1, rule )
+            
+        
+    
+    def TestParse( self ):
+        
+        formula = self.GetValue()
+        
+        data = self._example_data.GetValue()
+        
+        try:
+            
+            results = formula.Parse( data )
+            
+            if self._content_to_fetch.GetChoice() == ClientParsing.JSON_CONTENT_JSON:
+                
+                separator = os.linesep * 2
+                
+            else:
+                
+                separator = os.linesep
+                
+            
+            results = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ] + results + [ '*** RESULTS END ***' ]
             
             results_text = separator.join( results )
             
@@ -816,6 +1673,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_type.Append( 'urls', HC.CONTENT_TYPE_URLS )
         self._content_type.Append( 'tags', HC.CONTENT_TYPE_MAPPINGS )
+        self._content_type.Append( 'file hash', HC.CONTENT_TYPE_HASH )
         self._content_type.Append( 'veto', HC.CONTENT_TYPE_VETO )
         
         self._content_type.Bind( wx.EVT_CHOICE, self.EventContentTypeChange )
@@ -828,21 +1686,24 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._namespace = wx.TextCtrl( self._mappings_panel )
         
+        self._hash_panel = wx.Panel( self._content_panel )
+        
+        self._hash_type = ClientGUICommon.BetterChoice( self._hash_panel )
+        
+        for hash_type in ( 'md5', 'sha1', 'sha256', 'sha512' ):
+            
+            self._hash_type.Append( hash_type, hash_type )
+            
+        
         self._veto_panel = wx.Panel( self._content_panel )
         
         self._veto_if_matches_found = wx.CheckBox( self._veto_panel )
         self._match_if_text_present = wx.CheckBox( self._veto_panel )
         self._search_text = wx.TextCtrl( self._veto_panel )
         
-        formula_panel = ClientGUICommon.StaticBox( self._edit_panel, 'formula' )
+        ( name, content_type, formula, additional_info ) = node.ToTuple()
         
-        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( formula_panel )
-        
-        self._formula_description.SetMinSize( ( -1, 200 ) )
-        
-        self._formula_description.Disable()
-        
-        self._edit_formula = ClientGUICommon.BetterButton( formula_panel, 'edit formula', self.EditFormula )
+        self._formula = EditFormulaPanel( self._edit_panel, formula, self.GetExampleData )
         
         #
         
@@ -876,8 +1737,6 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         #
         
-        ( name, content_type, self._current_formula, additional_info ) = node.ToTuple()
-        
         self._name.SetValue( name )
         
         self._content_type.SelectClientData( content_type )
@@ -894,6 +1753,12 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             self._namespace.SetValue( namespace )
             
+        elif content_type == HC.CONTENT_TYPE_HASH:
+            
+            hash_type = additional_info
+            
+            self._hash_type.SelectClientData( hash_type )
+            
         elif content_type == HC.CONTENT_TYPE_VETO:
             
             ( veto_if_matches_found, match_if_text_present, search_text ) = additional_info
@@ -902,8 +1767,6 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             self._match_if_text_present.SetValue( match_if_text_present )
             self._search_text.SetValue( search_text )
             
-        
-        self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
         
         self._example_data.SetValue( example_data )
         self._results.SetValue( 'Successfully parsed results will be printed here.' )
@@ -930,6 +1793,16 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         rows = []
         
+        rows.append( ( 'hash type: ', self._hash_type ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._hash_panel, rows )
+        
+        self._hash_panel.SetSizer( gridbox )
+        
+        #
+        
+        rows = []
+        
         rows.append( ( 'veto if match found: ', self._veto_if_matches_found ) )
         rows.append( ( 'match if text present: ', self._match_if_text_present ) )
         rows.append( ( 'search text: ', self._search_text ) )
@@ -949,12 +1822,8 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         self._content_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._urls_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._mappings_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._content_panel.Add( self._hash_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._content_panel.Add( self._veto_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
-        formula_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        formula_panel.Add( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -968,7 +1837,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._content_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._edit_panel.SetSizer( vbox )
         
@@ -1011,6 +1880,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         
         self._urls_panel.Hide()
         self._mappings_panel.Hide()
+        self._hash_panel.Hide()
         self._veto_panel.Hide()
         
         if choice == HC.CONTENT_TYPE_URLS:
@@ -1021,6 +1891,10 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             self._mappings_panel.Show()
             
+        elif choice == HC.CONTENT_TYPE_HASH:
+            
+            self._hash_panel.Show()
+            
         elif choice == HC.CONTENT_TYPE_VETO:
             
             self._veto_panel.Show()
@@ -1030,25 +1904,9 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         self._edit_panel.Layout()
         
     
-    def EditFormula( self ):
+    def GetExampleData( self ):
         
-        dlg_title = 'edit html formula'
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
-            
-            example_data = self._example_data.GetValue()
-            
-            panel = EditHTMLFormulaPanel( dlg, self._current_formula, example_data )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._current_formula = panel.GetValue()
-                
-                self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
-                
-            
+        return self._example_data.GetValue()
         
     
     def GetValue( self ):
@@ -1056,6 +1914,8 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
         name = self._name.GetValue()
         
         content_type = self._content_type.GetChoice()
+        
+        formula = self._formula.GetValue()
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
@@ -1069,7 +1929,13 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             additional_info = namespace
             
-        else:
+        elif content_type == HC.CONTENT_TYPE_HASH:
+            
+            hash_type = self._hash_type.GetChoice()
+            
+            additional_info = hash_type
+            
+        elif content_type == HC.CONTENT_TYPE_VETO:
             
             veto_if_matches_found = self._veto_if_matches_found.GetValue()
             match_if_text_present = self._match_if_text_present.GetValue()
@@ -1077,8 +1943,6 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
             additional_info = ( veto_if_matches_found, match_if_text_present, search_text )
             
-        
-        formula = self._current_formula
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
@@ -1104,7 +1968,7 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
                 results = [ 'veto: ' + unicode( e ) ]
                 
             
-            result_lines = [ '*** RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( results )
             
@@ -1124,11 +1988,11 @@ The 'veto' type will tell the parent panel that this page, while it returned 200
             
         
     
-class EditContentParsersPanel( wx.Panel ):
+class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, example_data_callable ):
         
-        wx.Panel.__init__( self, parent )
+        ClientGUICommon.StaticBox.__init__( self, parent, 'content parsers' )
         
         self._example_data_callable = example_data_callable
         
@@ -1146,11 +2010,7 @@ class EditContentParsersPanel( wx.Panel ):
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
+        self.Add( content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _Add( self ):
@@ -1189,11 +2049,11 @@ class EditContentParsersPanel( wx.Panel ):
         
         name = content_parser.GetName()
         
-        produces = 'blah' # get a nice string of what it produces
+        produces = list( content_parser.GetParsableContent() )
         
         pretty_name = name
         
-        pretty_produces = 'blah'
+        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
         display_tuple = ( pretty_name, pretty_produces )
         sort_tuple = ( name, produces )
@@ -1207,7 +2067,7 @@ class EditContentParsersPanel( wx.Panel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._content_parsers.RemoveAllSelected()
+                self._content_parsers.DeleteSelected()
                 
             
         
@@ -1287,7 +2147,7 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         notebook = wx.Notebook( self )
         
-        ( name, self._current_formula, children ) = node.ToTuple()
+        ( name, formula, children ) = node.ToTuple()
         
         #
         
@@ -1297,15 +2157,7 @@ class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = wx.TextCtrl( edit_panel )
         
-        formula_panel = ClientGUICommon.StaticBox( edit_panel, 'formula' )
-        
-        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( formula_panel )
-        
-        self._formula_description.SetMinSize( ( -1, 200 ) )
-        
-        self._formula_description.Disable()
-        
-        self._edit_formula = ClientGUICommon.BetterButton( formula_panel, 'edit formula', self.EditFormula )
+        self._formula = EditFormulaPanel( edit_panel, formula, self.GetExampleData )
         
         children_panel = ClientGUICommon.StaticBox( edit_panel, 'content parsing children' )
         
@@ -1354,12 +2206,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         self._name.SetValue( name )
         
-        self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
-        
         #
-        
-        formula_panel.Add( self._formula_description, CC.FLAGS_EXPAND_BOTH_WAYS )
-        formula_panel.Add( self._edit_formula, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         children_panel.Add( self._children, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1374,7 +2221,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( formula_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( children_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         edit_panel.SetSizer( vbox )
@@ -1411,27 +2258,6 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         self.SetSizer( vbox )
         
-        
-    
-    def EditFormula( self ):
-        
-        dlg_title = 'edit html formula'
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
-            
-            example_data = self._example_data.GetValue()
-            
-            panel = EditHTMLFormulaPanel( dlg, self._current_formula, example_data )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._current_formula = panel.GetValue()
-                
-                self._formula_description.SetValue( self._current_formula.ToPrettyMultilineString() )
-                
-            
         
     
     def EventTestFetchResult( self, event ):
@@ -1494,7 +2320,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 self._test_fetch_result.Enable()
                 
             
-            result_lines = [ '*** RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( parsed_urls )
             
@@ -1535,7 +2361,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         name = self._name.GetValue()
         
-        formula = self._current_formula
+        formula = self._formula.GetValue()
         
         children = self._children.GetValue()
         
@@ -1546,9 +2372,10 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
 class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, parser ):
+    def __init__( self, parent, parser, formula = None, example_data_callable = None ):
         
         self._original_parser = parser
+        self._example_data_callable = example_data_callable
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -1560,15 +2387,15 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        edit_panel_1 = wx.Panel( edit_notebook )
+        main_panel = wx.Panel( edit_notebook )
         
-        edit_panel_1.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        main_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._name = wx.TextCtrl( edit_panel_1 )
+        self._name = wx.TextCtrl( main_panel )
         
         #
         
-        conversion_panel = ClientGUICommon.StaticBox( edit_panel_1, 'pre-parsing conversion' )
+        conversion_panel = ClientGUICommon.StaticBox( main_panel, 'pre-parsing conversion' )
         
         string_converter = parser.GetStringConverter()
         
@@ -1576,39 +2403,44 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        example_urls_panel = ClientGUICommon.StaticBox( edit_panel_1, 'example urls' )
+        example_urls_panel = ClientGUICommon.StaticBox( main_panel, 'example urls' )
         
         self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, HydrusData.ToUnicode, self._AddExampleURL, self._EditExampleURL )
         
         #
         
-        edit_panel_2 = wx.Panel( edit_notebook )
+        formula_panel = wx.Panel( edit_notebook )
         
-        edit_panel_2.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
-        
-        #
-        
-        self._can_produce_separated_content = wx.CheckBox( edit_panel_2 )
-        
-        self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( edit_panel_2 )
-        
-        self._formula_description.SetMinSize( ( -1, 200 ) )
-        
-        self._formula_description.Disable()
-        
-        self._separation_formula_button = ClientGUICommon.BetterButton( edit_panel_2, 'edit separation formula', self._EditSeparationFormula )
-        self._separated_content_parsers = EditContentParsersPanel( edit_panel_2, self.GetExampleData )
+        self._formula = EditFormulaPanel( formula_panel, formula, self._example_data_callable )
         
         #
         
+        sub_page_parsers_notebook_panel = wx.Panel( edit_notebook )
         
-        edit_panel_3 = wx.Panel( edit_notebook )
-        
-        edit_panel_3.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        sub_page_parsers_notebook_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
         #
         
-        self._content_parsers = EditContentParsersPanel( edit_panel_3, self.GetExampleSeparatedData )
+        sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
+        
+        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrl( sub_page_parsers_panel, 'sub_page_parsers', 4, 36, [ ( 'name', 24 ), ( '\'post\' separation formula', 24 ), ( 'produces', -1 ) ], self._ConvertSubPageParserToListCtrlTuple, delete_key_callback = self._DeleteSubPageParser, activation_callback = self._EditSubPageParser )
+        
+        sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
+        
+        sub_page_parsers_panel.AddButton( 'add', self._AddSubPageParser )
+        sub_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_selection = True )
+        sub_page_parsers_panel.AddButton( 'add', self._DeleteSubPageParser, enabled_only_on_selection = True )
+        
+        #
+        
+        
+        content_parsers_panel = wx.Panel( edit_notebook )
+        
+        content_parsers_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
+        
+        #
+        
+        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self.GetExampleData )
         
         #
         
@@ -1616,10 +2448,17 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
-        self._test_url = wx.TextCtrl( test_panel )
-        self._test_referral_url = wx.TextCtrl( test_panel )
-        self._fetch_example_data = ClientGUICommon.BetterButton( test_panel, 'fetch test data from url', self._FetchExampleData )
-        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_panel )
+        test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
+        
+        self._test_url = wx.TextCtrl( test_url_fetch_panel )
+        self._test_referral_url = wx.TextCtrl( test_url_fetch_panel )
+        self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
+        self._test_network_job_control = ClientGUIControls.NetworkJobControl( test_url_fetch_panel )
+        
+        test_formula_panel = ClientGUICommon.StaticBox( test_panel, 'separate according to formula' )
+        
+        self._test_reset = ClientGUICommon.BetterButton( test_formula_panel, 'reset the example data back to what it initialised as', self._ResetExampleData )
+        self._test_separate = ClientGUICommon.BetterButton( test_formula_panel, 'separate the current example data based on the current formula and replace with the first \'post\'', self._SeparateExampleData )
         
         self._example_data = ClientGUICommon.SaneMultilineTextCtrl( test_panel )
         
@@ -1657,19 +2496,25 @@ Whatever is in the example data in this panel's test page will be passed up to t
         #
         
         name = parser.GetName()
-        ( can_produce_separated_content, self._separation_formula, separated_content_parsers, content_parsers ) = parser.GetContentParsers()
-        example_urls = parser.GetExampleURLs()
         
-        self._formula_description.SetValue( self._separation_formula.ToPrettyMultilineString() )
+        ( sub_page_parsers, content_parsers ) = parser.GetContentParsers()
+        
+        example_urls = parser.GetExampleURLs()
         
         self._name.SetValue( name )
         
-        self._can_produce_separated_content.SetValue( can_produce_separated_content )
-        self._separated_content_parsers.AddDatas( separated_content_parsers )
+        self._sub_page_parsers.AddDatas( sub_page_parsers )
+        
+        self._sub_page_parsers.Sort()
         
         self._content_parsers.AddDatas( content_parsers )
         
         self._example_urls.AddDatas( example_urls )
+        
+        if self._example_data_callable is not None:
+            
+            self._example_data.SetValue( self._example_data_callable() )
+            
         
         #
         
@@ -1685,30 +2530,29 @@ Whatever is in the example data in this panel's test page will be passed up to t
         
         rows.append( ( 'name or description (optional): ', self._name ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( edit_panel_1, rows )
+        gridbox = ClientGUICommon.WrapInGrid( main_panel, rows )
         
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( conversion_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        edit_panel_1.SetSizer( vbox )
+        main_panel.SetSizer( vbox )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        rows = []
+        vbox.Add( self._formula, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        rows.append( ( 'can produce separated content: ', self._can_produce_separated_content ) )
+        formula_panel.SetSizer( vbox )
         
-        gridbox = ClientGUICommon.WrapInGrid( edit_panel_2, rows )
+        #
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._formula_description, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._separation_formula_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._separated_content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox = wx.BoxSizer( wx.VERTICAL )
         
-        edit_panel_2.SetSizer( vbox )
+        vbox.Add( sub_page_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        sub_page_parsers_notebook_panel.SetSizer( vbox )
         
         #
         
@@ -1716,27 +2560,42 @@ Whatever is in the example data in this panel's test page will be passed up to t
         
         vbox.Add( self._content_parsers, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        edit_panel_3.SetSizer( vbox )
+        content_parsers_panel.SetSizer( vbox )
         
         #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
         
         rows = []
         
         rows.append( ( 'url: ', self._test_url ) )
         rows.append( ( 'referral url (optional): ', self._test_referral_url ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( test_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( test_url_fetch_panel, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_url_fetch_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_url_fetch_panel.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_url_fetch_panel.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        test_formula_panel.Add( self._test_reset, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_formula_panel.Add( self._test_separate, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( test_url_fetch_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( test_formula_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._example_data, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._test_parse, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._results, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         test_panel.SetSizer( vbox )
+        
+        if formula is None:
+            
+            test_formula_panel.Hide()
+            
+        else:
+            
+            test_url_fetch_panel.Hide()
+            
         
         #
         
@@ -1748,9 +2607,18 @@ Whatever is in the example data in this panel's test page will be passed up to t
         
         #
         
-        edit_notebook.AddPage( edit_panel_1, 'main', select = True )
-        edit_notebook.AddPage( edit_panel_2, 'separated content', select = False )
-        edit_notebook.AddPage( edit_panel_3, 'whole-page content', select = False )
+        if formula is None:
+            
+            formula_panel.Hide()
+            
+        else:
+            
+            edit_notebook.AddPage( formula_panel, 'separation formula', select = False )
+            
+        
+        edit_notebook.AddPage( main_panel, 'main', select = True )
+        edit_notebook.AddPage( sub_page_parsers_notebook_panel, 'subsidiary page parsers', select = False )
+        edit_notebook.AddPage( content_parsers_panel, 'content parsers', select = False )
         
         notebook.AddPage( edit_notebook, 'edit', select = True )
         notebook.AddPage( test_panel, 'test', select = False )
@@ -1761,12 +2629,6 @@ Whatever is in the example data in this panel's test page will be passed up to t
         vbox.Add( notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
-        
-        #
-        
-        self._can_produce_separated_content.Bind( wx.EVT_CHECKBOX, self.EventCanSeparateCheck )
-        
-        self._UpdateCanProduce()
         
     
     def _AddExampleURL( self ):
@@ -1782,6 +2644,65 @@ Whatever is in the example data in this panel's test page will be passed up to t
             else:
                 
                 return ( False, '' )
+                
+            
+        
+    
+    def _AddSubPageParser( self ):
+        
+        formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ( 'div', { 'class' : 'thumb' }, None ) ], content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
+        page_parser = ClientParsing.PageParser( 'new sub page parser' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser' ) as dlg:
+            
+            panel = EditPageParserPanel( dlg, page_parser, formula, self.GetExampleData )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                new_page_parser = panel.GetValue()
+                
+                new_formula = panel.GetFormula()
+                
+                new_sub_page_parser = ( new_formula, new_page_parser )
+                
+                self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
+                
+                self._sub_page_parsers.Sort()
+                
+            
+        
+    
+    def _ConvertSubPageParserToListCtrlTuple( self, sub_page_parser ):
+        
+        ( formula, page_parser ) = sub_page_parser
+        
+        name = page_parser.GetName()
+        
+        produces = page_parser.GetParsableContent()
+        
+        produces = list( produces )
+        
+        produces.sort()
+        
+        pretty_name = name
+        pretty_formula = formula.ToPrettyString()
+        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
+        
+        display_tuple = ( pretty_name, pretty_formula, pretty_produces )
+        sort_tuple = ( name, pretty_formula, produces )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DeleteSubPageParser( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._sub_page_parsers.DeleteSelected()
                 
             
         
@@ -1803,25 +2724,40 @@ Whatever is in the example data in this panel's test page will be passed up to t
             
         
     
-    def _EditSeparationFormula( self ):
+    def _EditSubPageParser( self ):
         
-        dlg_title = 'edit formula'
+        selected_data = self._sub_page_parsers.GetData( only_selected = True )
         
-        with ClientGUITopLevelWindows.DialogEdit( self, dlg_title ) as dlg:
+        for sub_page_parser in selected_data:
             
-            example_data = self._example_data.GetValue()
+            ( formula, page_parser ) = sub_page_parser
             
-            panel = EditHTMLFormulaPanel( dlg, self._separation_formula, example_data )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser' ) as dlg:
                 
-                self._separation_formula = panel.GetValue()
+                panel = EditPageParserPanel( dlg, page_parser, formula, self.GetExampleData )
                 
-                self._formula_description.SetValue( self._separation_formula.ToPrettyMultilineString() )
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    self._sub_page_parsers.DeleteDatas( ( sub_page_parser, ) )
+                    
+                    new_page_parser = panel.GetValue()
+                    
+                    new_formula = panel.GetFormula()
+                    
+                    new_sub_page_parser = ( new_formula, new_page_parser )
+                    
+                    self._sub_page_parsers.AddDatas( ( new_sub_page_parser, ) )
+                    
+                else:
+                    
+                    break
+                    
                 
             
+        
+        self._sub_page_parsers.Sort()
         
     
     def _FetchExampleData( self ):
@@ -1881,17 +2817,33 @@ Whatever is in the example data in this panel's test page will be passed up to t
         HG.client_controller.CallToThread( wait_and_do_it, network_job )
         
     
-    def _UpdateCanProduce( self ):
+    def _ResetExampleData( self ):
         
-        if self._can_produce_separated_content.GetValue():
+        self._example_data.SetValue( self._example_data_callable() )
+        
+    
+    def _SeparateExampleData( self ):
+        
+        example_data = self._example_data.GetValue()
+        
+        try:
             
-            self._separation_formula_button.Enable()
-            self._separated_content_parsers.Enable()
+            posts = self._formula.GetValue().Parse( example_data )
+            
+        except HydrusExceptions.ParseException as e:
+            
+            wx.MessageBox( e )
+            
+            return
+            
+        
+        if len( posts ) == 0:
+            
+            wx.MessageBox( 'It parsed ok, but no results were found.' )
             
         else:
             
-            self._separation_formula_button.Disable()
-            self._separated_content_parsers.Disable()
+            self._example_data.SetValue( posts[0] )
             
         
     
@@ -1910,47 +2862,28 @@ Whatever is in the example data in this panel's test page will be passed up to t
             
             try:
                 
-                ( separated_content_results, content_results ) = parser.Parse( data )
+                all_content_results = parser.Parse( data )
+                
+                content_result_lines = []
+                
+                pretty_groups_of_content_results = [ os.linesep.join( [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in content_results ] ) for content_results in all_content_results ]
+                
+                group_separator = os.linesep * 2 + '*** SEPARATE FILE RESULTS BREAK ***' + os.linesep * 2
+                
+                content_result_lines.append( group_separator.join( pretty_groups_of_content_results ) )
                 
             except HydrusExceptions.VetoException as e:
                 
-                pretty_results = [ unicode( e ) ]
+                content_result_lines = [ unicode( e ) ]
                 
-            
-            pretty_separated_content_results = [ [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in sub_content_results ] for sub_content_results in separated_content_results ]
             
             result_lines = []
             
-            if self._can_produce_separated_content.GetValue():
-                
-                result_lines.append( '*** SEPARATED RESULTS BEGIN ***' )
-                
-                sub_lines = []
-                
-                for pretty_lines in pretty_separated_content_results:
-                    
-                    sub_lines.extend( pretty_lines )
-                    
-                    sub_lines.append( '*** SEPARATED RESULTS BREAK ***' )
-                    
-                
-                if len( sub_lines ) > 0:
-                    
-                    sub_lines = sub_lines[:-1]
-                    
-                
-                result_lines.extend( sub_lines )
-                
-                result_lines.append( '*** SEPARATED RESULTS END ***' )
-                
+            result_lines.append( '*** ' + HydrusData.ConvertIntToPrettyString( len( all_content_results ) ) + ' RESULTS BEGIN ***' + os.linesep )
             
-            result_lines.append( '*** WHOLE-PAGE RESULTS BEGIN ***' )
+            result_lines.extend( content_result_lines )
             
-            pretty_results = [ ClientParsing.ConvertContentResultToPrettyString( content_result ) for content_result in content_results ]
-            
-            result_lines.extend( pretty_results )
-            
-            result_lines.append( '*** WHOLE-PAGE RESULTS END ***' )
+            result_lines.append( os.linesep + '*** RESULTS END ***' )
             
             results_text = os.linesep.join( result_lines )
             
@@ -1971,9 +2904,9 @@ Whatever is in the example data in this panel's test page will be passed up to t
         return self._example_data.GetValue()
         
     
-    def GetExampleSeparatedData( self ):
+    def GetFormula( self ):
         
-        return self._separation_formula.Parse( self._example_data.GetValue() )[0]
+        return self._formula.GetValue()
         
     
     def GetValue( self ):
@@ -1984,15 +2917,13 @@ Whatever is in the example data in this panel's test page will be passed up to t
         
         string_converter = self._string_converter.GetValue()
         
-        can_produce_separated_content = self._can_produce_separated_content.GetValue()
-        
-        separated_content_parsers = self._separated_content_parsers.GetData()
+        sub_page_parsers = self._sub_page_parsers.GetData()
         
         content_parsers = self._content_parsers.GetData()
         
         example_urls = self._example_urls.GetData()
         
-        parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, can_produce_separated_content = can_produce_separated_content, separation_formula = self._separation_formula, separated_content_parsers = separated_content_parsers, content_parsers = content_parsers, example_urls = example_urls )
+        parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, sub_page_parsers = sub_page_parsers, content_parsers = content_parsers, example_urls = example_urls )
         
         return parser
         
@@ -2070,12 +3001,14 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         example_urls = list( parser.GetExampleURLs() )
         example_urls.sort()
         
-        produces = 'blah' # get a nice set of strings from the pageparser
+        produces = list( parser.GetParsableContent() )
+        
+        produces.sort()
         
         pretty_name = name
         pretty_example_urls = ', '.join( example_urls )
         
-        pretty_produces = 'blah'
+        pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
         display_tuple = ( pretty_name, pretty_example_urls, pretty_produces )
         sort_tuple = ( name, example_urls, produces )
@@ -2089,7 +3022,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._parsers.RemoveAllSelected()
+                self._parsers.DeleteSelected()
                 
             
         
@@ -2114,7 +3047,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     ClientGUIListCtrl.SetNonDupeName( edited_parser, self._GetExistingNames() )
                     
-                    self._content_parsers.AddDatas( ( edited_parser, ) )
+                    self._parsers.AddDatas( ( edited_parser, ) )
                     
                 else:
                     
@@ -2123,7 +3056,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._content_parsers.Sort()
+        self._parsers.Sort()
         
     
     def _GetExistingNames( self ):
@@ -2396,7 +3329,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             results = script.Parse( job_key, data )
             
-            result_lines = [ '*** RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( ( ClientParsing.ConvertContentResultToPrettyString( result ) for result in results ) )
             
@@ -2579,7 +3512,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            pretty_result = string_converter.Convert( self._example_string.GetValue(), number )
+            # do a tounicode here to deal with hashes being converted to bytes
+            
+            pretty_result = HydrusData.ToUnicode( string_converter.Convert( self._example_string.GetValue(), number ) )
             
         except HydrusExceptions.StringConvertException as e:
             

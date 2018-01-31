@@ -2924,13 +2924,6 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
         wx.MessageBox( message )
         
     
-    def EventChecked( self, event ):
-        
-        wx.PostEvent( self, wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'tag_import_options_changed' ) ) )
-        
-        event.Skip()
-        
-    
     def EventExplicitTags( self, event ):
         
         button_id = event.GetId()

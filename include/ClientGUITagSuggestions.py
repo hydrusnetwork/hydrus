@@ -120,9 +120,24 @@ class RecentTagsPanel( wx.Panel ):
     
     def _RefreshRecentTags( self ):
         
-        recent_tags = HG.client_controller.Read( 'recent_tags', self._service_key )
+        def do_it( service_key ):
+            
+            def wx_code():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._recent_tags.SetTags( recent_tags )
+                
+            
+            recent_tags = HG.client_controller.Read( 'recent_tags', service_key )
+            
+            wx.CallAfter( wx_code )
+            
         
-        self._recent_tags.SetTags( recent_tags )
+        HG.client_controller.CallToThread( do_it, self._service_key )
         
     
     def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
@@ -135,7 +150,7 @@ class RecentTagsPanel( wx.Panel ):
     
     def EventClear( self, event ):
         
-        HG.client_controller.WriteSynchronous( 'push_recent_tags', self._service_key, None )
+        HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
         
         self._RefreshRecentTags()
         
@@ -184,6 +199,25 @@ class RelatedTagsPanel( wx.Panel ):
     
     def _FetchRelatedTags( self, max_time_to_take ):
         
+        def do_it( service_key ):
+            
+            def wx_code():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._related_tags.SetPredicates( predicates )
+                
+            
+            predicates = HG.client_controller.Read( 'related_tags', service_key, hash, search_tags, max_results, max_time_to_take )
+            
+            predicates = ClientSearch.SortPredicates( predicates )
+            
+            wx.CallAfter( wx_code )
+            
+        
         ( m, ) = self._media
         
         hash = m.GetHash()
@@ -199,11 +233,7 @@ class RelatedTagsPanel( wx.Panel ):
         
         max_results = 100
         
-        predicates = HG.client_controller.Read( 'related_tags', self._service_key, hash, search_tags, max_results, max_time_to_take )
-        
-        predicates = ClientSearch.SortPredicates( predicates )
-        
-        self._related_tags.SetPredicates( predicates )
+        HG.client_controller.CallToThread( do_it, self._service_key )
         
     
     def _QuickSuggestedRelatedTags( self ):
@@ -247,31 +277,13 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         self._media = media
         self._canvas_key = canvas_key
         
-        scripts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
-        
-        script_names_to_scripts = { script.GetName() : script for script in scripts }
-        
         self._script_choice = ClientGUICommon.BetterChoice( self )
         
-        for ( name, script ) in script_names_to_scripts.items():
-            
-            self._script_choice.Append( script.GetName(), script )
-            
+        self._script_choice.Disable()
         
-        new_options = HG.client_controller.new_options
+        self._fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
         
-        favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
-        
-        if favourite_file_lookup_script in script_names_to_scripts:
-            
-            self._script_choice.SelectClientData( script_names_to_scripts[ favourite_file_lookup_script ] )
-            
-        else:
-            
-            self._script_choice.Select( 0 )
-            
-        
-        fetch_button = ClientGUICommon.BetterButton( self, 'fetch tags', self.FetchTags )
+        self._fetch_button.Disable()
         
         self._script_management = ClientGUIParsing.ScriptManagementControl( self )
         
@@ -282,7 +294,7 @@ class FileLookupScriptTagsPanel( wx.Panel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._script_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._fetch_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._script_management, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._add_all, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -295,6 +307,51 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             
             HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
+        
+        self._FetchScripts()
+        
+    
+    def _FetchScripts( self ):
+        
+        def do_it():
+            
+            def wx_code():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                script_names_to_scripts = { script.GetName() : script for script in scripts }
+                
+                for ( name, script ) in script_names_to_scripts.items():
+                    
+                    self._script_choice.Append( script.GetName(), script )
+                    
+                
+                new_options = HG.client_controller.new_options
+                
+                favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
+                
+                if favourite_file_lookup_script in script_names_to_scripts:
+                    
+                    self._script_choice.SelectClientData( script_names_to_scripts[ favourite_file_lookup_script ] )
+                    
+                else:
+                    
+                    self._script_choice.Select( 0 )
+                    
+                
+                self._script_choice.Enable()
+                self._fetch_button.Enable()
+                
+            
+            scripts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+            
+            wx.CallAfter( wx_code )
+            
+        
+        HG.client_controller.CallToThread( do_it )
         
     
     def _SetTags( self, tags ):

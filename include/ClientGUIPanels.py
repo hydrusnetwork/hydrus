@@ -646,11 +646,22 @@ class ReviewServicePanel( wx.Panel ):
         
         def _ExportUpdates( self ):
             
-            def do_it( dest_dir ):
+            def wx_done():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._export_updates_button.SetLabelText( 'export updates' )
+                self._export_updates_button.Enable()
+                
+            
+            def do_it( dest_dir, service ):
                 
                 try:
                     
-                    update_hashes = self._service.GetUpdateHashes()
+                    update_hashes = service.GetUpdateHashes()
                     
                     num_to_do = len( update_hashes )
                     
@@ -664,7 +675,7 @@ class ReviewServicePanel( wx.Panel ):
                         
                         try:
                             
-                            job_key.SetVariable( 'popup_title', 'exporting updates for ' + self._service.GetName() )
+                            job_key.SetVariable( 'popup_title', 'exporting updates for ' + service.GetName() )
                             HG.client_controller.pub( 'message', job_key )
                             
                             client_files_manager = HG.client_controller.client_files_manager
@@ -711,8 +722,7 @@ class ReviewServicePanel( wx.Panel ):
                     
                 finally:
                     
-                    wx.CallAfter( self._export_updates_button.SetLabelText, 'export updates' )
-                    wx.CallAfter( self._export_updates_button.Enable )
+                    wx.CallAfter( wx_done )
                     
                 
             
@@ -725,7 +735,7 @@ class ReviewServicePanel( wx.Panel ):
                     self._export_updates_button.SetLabelText( u'exporting\u2026' )
                     self._export_updates_button.Disable()
                     
-                    HG.client_controller.CallToThread( do_it, path )
+                    HG.client_controller.CallToThread( do_it, path, self._service )
                     
                 
             

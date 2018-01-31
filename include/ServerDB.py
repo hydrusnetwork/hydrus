@@ -370,7 +370,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # inserts
         
-        current_time_struct = time.gmtime()
+        current_time_struct = time.localtime()
         
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
         

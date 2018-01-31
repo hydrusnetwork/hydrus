@@ -343,7 +343,7 @@ class HydrusController( object ):
     
     def PrintProfile( self, summary, profile_text ):
         
-        boot_pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._timestamps[ 'boot' ] ) )
+        boot_pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.gmtime( self._timestamps[ 'boot' ] ) )
         
         profile_log_filename = self._name + ' profile - ' + boot_pretty_timestamp + '.log'
         
@@ -351,7 +351,7 @@ class HydrusController( object ):
         
         with open( profile_log_path, 'a' ) as f:
             
-            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
+            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
             
             f.write( prefix + summary )
             f.write( os.linesep * 2 )

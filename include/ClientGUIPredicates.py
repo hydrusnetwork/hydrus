@@ -4,11 +4,13 @@ import ClientGUICommon
 import ClientGUIOptionsPanels
 import ClientRatings
 import ClientSearch
+import datetime
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
 import string
 import wx
+import wx.adv
 
 class PanelPredicateSystem( wx.Panel ):
     
@@ -28,7 +30,49 @@ class PanelPredicateSystem( wx.Panel ):
         return predicates
         
     
-class PanelPredicateSystemAge( PanelPredicateSystem ):
+class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
+        
+        self._date = wx.adv.CalendarCtrl( self )
+        
+        wx_dt = wx.DateTime.Today()
+        
+        wx_dt.Subtract( wx.TimeSpan( 24 * 7 ) )
+        
+        self._date.SetDate( wx_dt )
+        
+        self._sign.SetStringSelection( '>' )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:age' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._sign, CC.FLAGS_VCENTER )
+        hbox.Add( self._date, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        wx_dt = self._date.GetDate()
+        
+        year = wx_dt.year
+        month = wx_dt.month + 1 # month zero indexed, wew
+        day = wx_dt.day
+        
+        info = ( self._sign.GetStringSelection(), 'date', ( year, month, day ) )
+        
+        return info
+        
+    
+class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
     
     PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_AGE
     
@@ -74,7 +118,7 @@ class PanelPredicateSystemAge( PanelPredicateSystem ):
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() )
+        info = ( self._sign.GetStringSelection(), 'delta', ( self._years.GetValue(), self._months.GetValue(), self._days.GetValue(), self._hours.GetValue() ) )
         
         return info
         

@@ -312,7 +312,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             event = wx.NotifyEvent( CAPTCHA_FETCH_EVENT_TYPE )
             
-            self.ProcessEvent( event )
+            wx.PostEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -2799,20 +2799,40 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ( st, button ) = self._petition_types_to_controls[ ( content_type, status ) ]
         
+        def wx_setpet( petition ):
+            
+            if not self:
+                
+                return
+                
+            
+            self._current_petition = petition
+            
+            self._DrawCurrentPetition()
+            
+        
+        def wx_done():
+            
+            if not self:
+                
+                return
+                
+            
+            button.Enable()
+            button.SetLabelText( 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition' )
+            
+        
         def do_it():
             
             try:
                 
                 response = self._service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
                 
-                self._current_petition = response[ 'petition' ]
-                
-                wx.CallAfter( self._DrawCurrentPetition )
+                wx.CallAfter( wx_setpet, response[ 'petition' ] )
                 
             finally:
                 
-                wx.CallAfter( button.Enable )
-                wx.CallAfter( button.SetLabelText, 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition' )
+                wx.CallAfter( wx_done )
                 
             
         

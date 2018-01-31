@@ -331,12 +331,12 @@ class TestClientDB( unittest.TestCase ):
         
         tests = []
         
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 1, 1, 1, ), 1 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 0, 0, 0, 0, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 1, 1, 1, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 0, 0, 0, 0, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 1, 1, 1, ), 0 ) )
-        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 0, 0, 0, 0, ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 1, 1, 1, ) ), 1 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 0, 0, 0, 0, ) ), 1 ) )
         
         tests.append( ( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         

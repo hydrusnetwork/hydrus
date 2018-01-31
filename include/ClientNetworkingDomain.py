@@ -227,7 +227,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         for parser in self._parsers:
             
-            self._parser_keys_to_parsers[ parser.GetKey() ] = parser
+            self._parser_keys_to_parsers[ parser.GetParserKey() ] = parser
             
         
     
@@ -590,7 +590,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             # delete orphans
             
-            parser_keys = { parser.GetParseKey() for parser in parsers }
+            parser_keys = { parser.GetParserKey() for parser in parsers }
             
             deletee_url_match_keys = set()
             

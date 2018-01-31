@@ -1266,7 +1266,7 @@ class DB( HydrusDB.HydrusDB ):
         
         existing_node_counter = collections.Counter()
         
-        # note this doesn't use the table_join
+        # note this doesn't use the table_join so we can see results that may have caused one of the pair to be moved into trash domain or whatever
         result = self._c.execute( 'SELECT smaller_hash_id, larger_hash_id FROM duplicate_pairs WHERE duplicate_type IN ( ?, ?, ? ) ORDER BY RANDOM() LIMIT 10000;', ( HC.DUPLICATE_SMALLER_BETTER, HC.DUPLICATE_LARGER_BETTER, HC.DUPLICATE_SAME_QUALITY ) ).fetchall()
         
         for ( smaller_hash_id, larger_hash_id ) in result:
@@ -10237,6 +10237,47 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 self.pub_initial_message( 'The client was unable to update your url classes. Please check them under _networking->manage url classes_ and restore to defaults.' )
+                
+            
+        
+        if version == 292:
+            
+            if HC.SOFTWARE_VERSION == 293: # I don't need this info fifty weeks from now, so we'll just do it for the one week
+                
+                try:
+                    
+                    local_hash_ids = set()
+                    
+                    local_file_service_ids = self._GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) )
+                    
+                    local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id IN ' + HydrusData.SplayListForDB( local_file_service_ids ) + ';' ) )
+                    
+                    combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    
+                    combined_local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( combined_local_file_service_id, ) ) )
+                    
+                    num_in_local_not_in_combined = len( local_hash_ids.difference( combined_local_hash_ids ) )
+                    num_in_combined_not_in_local = len( combined_local_hash_ids.difference( local_hash_ids ) )
+                    
+                    del local_hash_ids
+                    del combined_local_hash_ids
+                    
+                    if num_in_local_not_in_combined > 0 or num_in_combined_not_in_local > 0:
+                        
+                        message = 'While updating, hydrus counted a mismatch in your files. This likely means an orphan that can be cleaned up in a future version.'
+                        message += os.linesep * 2
+                        message += 'You have ' + HydrusData.ConvertIntToPrettyString( num_in_local_not_in_combined ) + ' files in the local services but not in the combine service.'
+                        message += 'You have ' + HydrusData.ConvertIntToPrettyString( num_in_combined_not_in_local ) + ' files in the combined services but not in the local services.'
+                        message += os.linesep * 2
+                        message += 'Please let hydrus dev know these numbers.'
+                        
+                        self.pub_initial_message( message )
+                        
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
                 
             
         

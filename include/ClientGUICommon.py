@@ -1287,8 +1287,6 @@ class ListBook( wx.Panel ):
         
         self.SetSizer( hbox )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
-        
     
     def _ActivatePage( self, key ):
 
@@ -1367,14 +1365,14 @@ class ListBook( wx.Panel ):
         # this tells any parent scrolled panel to update its virtualsize and recalc its scrollbars
         event = wx.NotifyEvent( wx.wxEVT_SIZE, self.GetId() )
         
-        wx.CallAfter( self.ProcessEvent, event )
+        wx.PostEvent( self.GetEventHandler(), event )
         
         # now the virtualsize is updated, we now tell any parent resizing frame/dialog that is interested in resizing that now is the time
         ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
         event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
         
-        wx.CallAfter( self.ProcessEvent, event )
+        wx.PostEvent( self.GetEventHandler(), event )
         
     
     def AddPage( self, display_name, key, page, select = False ):
@@ -1515,36 +1513,13 @@ class ListBook( wx.Panel ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'select_down':
-                
-                self.SelectDown()
-                
-            elif command == 'select_up':
-                
-                self.SelectUp()
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-    
     def EventSelection( self, event ):
         
         if self._list_box.GetSelection() != self._GetIndex( self._current_key ):
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
-            self.GetEventHandler().ProcessEvent( event )
+            wx.PostEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -1624,7 +1599,7 @@ class ListBook( wx.Panel ):
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
-            self.GetEventHandler().ProcessEvent( event )
+            wx.PostEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -2904,7 +2879,10 @@ class StaticBox( wx.Panel ):
         self.SetSizer( self._sizer )
         
     
-    def Add( self, widget, flags ): self._sizer.Add( widget, flags )
+    def Add( self, widget, flags ):
+        
+        self._sizer.Add( widget, flags )
+        
     
 class StaticBoxSorterForListBoxTags( StaticBox ):
     

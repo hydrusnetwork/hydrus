@@ -9,6 +9,8 @@ import HydrusGlobals as HG
 import os
 import wx
 
+( OKEvent, EVT_OK ) = wx.lib.newevent.NewCommandEvent()
+
 CHILD_POSITION_PADDING = 50
 FUZZY_PADDING = 15
 
@@ -145,7 +147,7 @@ def PostSizeChangedEvent( window ):
     
     event = CC.SizeChangedEvent( -1 )
     
-    wx.CallAfter( window.ProcessEvent, event )
+    wx.PostEvent( window.GetEventHandler(), event )
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
@@ -418,7 +420,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         self._InitialiseButtons()
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( EVT_OK, self.EventOK )
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
     
@@ -458,25 +460,6 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
             if desired_delta_width > 0 or desired_delta_height > 0:
                 
                 ExpandTLWIfPossible( self, self._frame_key, ( desired_delta_width, desired_delta_height ) )
-                
-            
-        
-    
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'ok':
-                
-                self.DoOK()
-                
-            else:
-                
-                event.Skip()
                 
             
         
@@ -793,9 +776,9 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         FrameThatResizes.__init__( self, parent, title, frame_key, float_on_parent )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'close' )
-        self._ok.Bind( wx.EVT_BUTTON, self.EventCloseButton )
+        self._ok.Bind( wx.EVT_BUTTON, self.EventClose )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
+        self.Bind( EVT_OK, self.EventClose )
         self.Bind( CC.EVT_SIZE_CHANGED, self.EventChildSizeChanged )
         
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
@@ -815,26 +798,7 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
             
         
     
-    def EventMenu( self, event ):
-        
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
-        
-        if action is not None:
-            
-            ( command, data ) = action
-            
-            if command == 'ok':
-                
-                self.Close()
-                
-            else:
-                
-                event.Skip()
-                
-            
-        
-    
-    def EventCloseButton( self, event ):
+    def EventClose( self, event ):
         
         self.Close()
         

@@ -45,7 +45,7 @@ class HydrusLogger( object ):
     
     def _GetLogPath( self ):
         
-        current_time_struct = time.gmtime()
+        current_time_struct = time.localtime()
         
         ( current_year, current_month ) = ( current_time_struct.tm_year, current_time_struct.tm_mon )
         
@@ -110,7 +110,7 @@ class HydrusLogger( object ):
                 
             else:
                 
-                prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ', time.localtime() )
+                prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
                 
             
             message = prefix + value

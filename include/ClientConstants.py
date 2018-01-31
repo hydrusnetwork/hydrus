@@ -339,7 +339,7 @@ SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media
 SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'archive_file', 'inbox_file', 'delete_file', 'remove_file_from_view', 'open_file_in_external_program', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative' ]
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode' ]
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous' ]
-SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode' ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders' ]
 SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back' ]
 SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back' ]
 

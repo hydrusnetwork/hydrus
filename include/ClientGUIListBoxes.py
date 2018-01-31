@@ -648,6 +648,23 @@ class ListBox( wx.ScrolledWindow ):
         return ( 0, 111, 250 )
         
     
+    def _GetSafeHitIndex( self, hit_index, direction = None ):
+        
+        if hit_index is not None:
+            
+            if hit_index == -1 or hit_index > len( self._ordered_terms ):
+                
+                hit_index = len( self._ordered_terms ) - 1
+                
+            elif hit_index == len( self._ordered_terms ) or hit_index < -1:
+                
+                hit_index = 0
+                
+            
+        
+        return hit_index
+        
+    
     def _GetSimplifiedTextFromTerm( self, term ):
         
         return self._GetTextFromTerm( term )
@@ -670,17 +687,7 @@ class ListBox( wx.ScrolledWindow ):
     
     def _Hit( self, shift, ctrl, hit_index ):
         
-        if hit_index is not None:
-            
-            if hit_index == -1 or hit_index > len( self._ordered_terms ):
-                
-                hit_index = len( self._ordered_terms ) - 1
-                
-            elif hit_index == len( self._ordered_terms ) or hit_index < -1:
-                
-                hit_index = 0
-                
-            
+        hit_index = self._GetSafeHitIndex( hit_index )
         
         to_select = set()
         to_deselect = set()
@@ -765,17 +772,17 @@ class ListBox( wx.ScrolledWindow ):
                 
                 y_to_scroll_to = y / y_unit
                 
-                self.Scroll( -1, y_to_scroll_to )
+                #self.Scroll( -1, y_to_scroll_to )
                 
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
+                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
             elif y > ( start_y * y_unit ) + height - self._text_y:
                 
                 y_to_scroll_to = ( y - height ) / y_unit
                 
-                self.Scroll( -1, y_to_scroll_to + 2 )
+                #self.Scroll( -1, y_to_scroll_to + 2 )
                 
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE ) )
+                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
                 
             
         
@@ -955,6 +962,9 @@ class ListBox( wx.ScrolledWindow ):
                 
                 if len( self._ordered_terms ) > 1:
                     
+                    roll_up = False
+                    roll_down = False
+                    
                     if key_code in ( wx.WXK_HOME, wx.WXK_NUMPAD_HOME ):
                         
                         hit_index = 0
@@ -963,23 +973,33 @@ class ListBox( wx.ScrolledWindow ):
                         
                         hit_index = len( self._ordered_terms ) - 1
                         
+                        roll_up = True
+                        
                     elif self._last_hit_index is not None:
                         
                         if key_code in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
                             
                             hit_index = self._last_hit_index - 1
                             
+                            roll_up = True
+                            
                         elif key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
                             
                             hit_index = self._last_hit_index + 1
+                            
+                            roll_down = True
                             
                         elif key_code in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
                             
                             hit_index = max( 0, self._last_hit_index - self._num_rows_per_page )
                             
+                            roll_up = True
+                            
                         elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
                             
                             hit_index = min( len( self._ordered_terms ) - 1, self._last_hit_index + self._num_rows_per_page )
+                            
+                            roll_down = True
                             
                         
                     
@@ -989,6 +1009,16 @@ class ListBox( wx.ScrolledWindow ):
                     event.Skip()
                     
                 else:
+                    
+                    if roll_up:
+                        
+                        hit_index = self._GetSafeHitIndex( hit_index, -1 )
+                        
+                    
+                    if roll_down:
+                        
+                        hit_index = self._GetSafeHitIndex( hit_index, 1 )
+                        
                     
                     self._Hit( shift, ctrl, hit_index )
                     
@@ -1055,6 +1085,22 @@ class ListBox( wx.ScrolledWindow ):
     def GetIdealHeight( self ):
         
         return self._text_y * len( self._ordered_terms ) + 20
+        
+    
+    def MoveSelectionDown( self ):
+        
+        if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
+            
+            self._Hit( False, False, self._last_hit_index + 1 )
+            
+        
+    
+    def MoveSelectionUp( self ):
+        
+        if len( self._ordered_terms ) > 1 and self._last_hit_index is not None:
+            
+            self._Hit( False, False, self._last_hit_index - 1 )
+            
         
     
 class ListBoxTags( ListBox ):
@@ -1436,6 +1482,30 @@ class ListBoxTagsPredicates( ListBoxTags ):
         return namespace
         
     
+    def _GetSafeHitIndex( self, hit_index, direction = None ):
+        
+        hit_index = ListBox._GetSafeHitIndex( self, hit_index )
+        
+        if direction is not None and hit_index is not None:
+            
+            hit_term = self._GetTerm( hit_index )
+            
+            while hit_term.GetType() == HC.PREDICATE_TYPE_PARENT:
+                
+                hit_index += direction
+                
+                if hit_index >= len( self._ordered_terms ):
+                    
+                    hit_index = 0
+                    
+                
+                hit_term = self._GetTerm( hit_index )
+                
+            
+        
+        return hit_index
+        
+    
     def _GetSimplifiedTextFromTerm( self, term ):
         
         predicate = term
@@ -1457,18 +1527,11 @@ class ListBoxTagsPredicates( ListBoxTags ):
     
     def _Hit( self, shift, ctrl, hit_index ):
         
-        if hit_index is not None:
+        hit_index = self._GetSafeHitIndex( hit_index )
+        
+        if hit_index is not None and hit_index > 0:
             
-            if hit_index == -1 or hit_index > len( self._ordered_terms ):
-                
-                hit_index = len( self._ordered_terms ) - 1
-                
-            elif hit_index == len( self._ordered_terms ) or hit_index < -1:
-                
-                hit_index = 0
-                
-            
-            # this realigns the hit index in the up direction
+            # this realigns the hit index in the up direction, so if user clicks on parent, they get the upper child
             
             while self._GetTerm( hit_index ).GetType() == HC.PREDICATE_TYPE_PARENT:
                 
@@ -1486,65 +1549,6 @@ class ListBoxTagsPredicates( ListBoxTags ):
         for index in to_select:
             
             ListBoxTags._Select( self, index )
-            
-        
-    
-    def EventCharHook( self, event ):
-        
-        # this realigns the hit index in the down direction
-        
-        key_code = event.GetKeyCode()
-        
-        hit_index = None
-        
-        if len( self._ordered_terms ) > 1:
-            
-            if key_code in ( wx.WXK_END, wx.WXK_NUMPAD_END ):
-                
-                hit_index = len( self._ordered_terms ) - 1
-                
-            elif self._last_hit_index is not None:
-                
-                if key_code in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
-                    
-                    hit_index = self._last_hit_index + 1
-                    
-                elif key_code in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
-                    
-                    hit_index = min( len( self._ordered_terms ) - 1, self._last_hit_index + self._num_rows_per_page )
-                    
-                
-            
-        
-        if hit_index is None:
-            
-            ListBoxTags.EventCharHook( self, event )
-            
-        else:
-            
-            if hit_index >= len( self._ordered_terms ):
-                
-                hit_index = 0
-                
-            
-            hit_term = self._GetTerm( hit_index )
-            
-            while hit_term.GetType() == HC.PREDICATE_TYPE_PARENT:
-                
-                hit_index += 1
-                
-                if hit_index >= len( self._ordered_terms ):
-                    
-                    hit_index = 0
-                    
-                
-                hit_term = self._GetTerm( hit_index )
-                
-            
-            shift = event.ShiftDown()
-            ctrl = event.CmdDown()
-            
-            self._Hit( shift, ctrl, hit_index )
             
         
     

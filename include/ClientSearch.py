@@ -1,6 +1,8 @@
+import calendar
 import ClientConstants as CC
 import ClientData
 import ClientTags
+import datetime
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
@@ -455,20 +457,57 @@ class FileSystemPredicates( object ):
             
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
                 
-                ( operator, years, months, days, hours ) = value
+                ( operator, age_type, age_value ) = value
                 
-                age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
-                
-                now = HydrusData.GetNow()
-                
-                # this is backwards because we are talking about age, not timestamp
-                
-                if operator == '<': self._common_info[ 'min_timestamp' ] = now - age
-                elif operator == '>': self._common_info[ 'max_timestamp' ] = now - age
-                elif operator == u'\u2248':
+                if age_type == 'delta':
                     
-                    self._common_info[ 'min_timestamp' ] = now - int( age * 1.15 )
-                    self._common_info[ 'max_timestamp' ] = now - int( age * 0.85 )
+                    ( years, months, days, hours ) = age_value
+                    
+                    age = ( ( ( ( ( ( ( years * 12 ) + months ) * 30 ) + days ) * 24 ) + hours ) * 3600 )
+                    
+                    now = HydrusData.GetNow()
+                    
+                    # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
+                    
+                    if operator == '<':
+                        
+                        self._common_info[ 'min_timestamp' ] = now - age
+                        
+                    elif operator == '>':
+                        
+                        self._common_info[ 'max_timestamp' ] = now - age
+                        
+                    elif operator == u'\u2248':
+                        
+                        self._common_info[ 'min_timestamp' ] = now - int( age * 1.15 )
+                        self._common_info[ 'max_timestamp' ] = now - int( age * 0.85 )
+                        
+                    
+                elif age_type == 'date':
+                    
+                    ( year, month, day ) = age_value
+                    
+                    day_dt = datetime.datetime( year, month, day )
+                    timestamp = calendar.timegm( day_dt.timetuple() )
+                    
+                    if operator == '<':
+                        
+                        self._common_info[ 'max_timestamp' ] = timestamp
+                        
+                    elif operator == '>':
+                        
+                        self._common_info[ 'min_timestamp' ] = timestamp + 86400
+                        
+                    elif operator == '=':
+                        
+                        self._common_info[ 'min_timestamp' ] = timestamp
+                        self._common_info[ 'max_timestamp' ] = timestamp + 86400
+                        
+                    elif operator == u'\u2248':
+                        
+                        self._common_info[ 'min_timestamp' ] = timestamp - 86400 * 30
+                        self._common_info[ 'max_timestamp' ] = timestamp + 86400 * 30
+                        
                     
                 
             
@@ -709,7 +748,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, predicate_type = None, value = None, inclusive = True, min_current_count = 0, min_pending_count = 0, max_current_count = None, max_pending_count = None ):
         
@@ -799,6 +838,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             self._value = ( serialisable_hash.decode( 'hex' ), hash_type )
             
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+            
+            ( operator, age_type, age_value ) = serialisable_value
+            
+            self._value = ( operator, age_type, tuple( age_value ) )
+            
         else:
             
             self._value = serialisable_value
@@ -807,6 +852,25 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         if isinstance( self._value, list ):
             
             self._value = tuple( self._value )
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
+                
+                ( operator, years, months, days, hours ) = serialisable_value
+                
+                serialisable_value = ( operator, 'delta', ( years, months, days, hours ) )
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -1028,13 +1092,69 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
                 
-                base = u'age'
+                base = u'time imported'
                 
                 if self._value is not None:
                     
-                    ( operator, years, months, days, hours ) = self._value
+                    ( operator, age_type, age_value ) = self._value
                     
-                    base += u' ' + operator + u' ' + str( years ) + u'y' + str( months ) + u'm' + str( days ) + u'd' + str( hours ) + u'h'
+                    if age_type == 'delta':
+                        
+                        ( years, months, days, hours ) = age_value
+                        
+                        DAY = 86400
+                        MONTH = DAY * 30
+                        YEAR = MONTH * 12
+                        
+                        time_delta = 0
+                        
+                        time_delta += hours * 3600
+                        time_delta += days * DAY
+                        time_delta += months * MONTH
+                        time_delta += years * YEAR
+                        
+                        if operator == '<':
+                            
+                            pretty_operator = u'since '
+                            
+                        elif operator == '>':
+                            
+                            pretty_operator = u'before '
+                            
+                        elif operator == u'\u2248':
+                            
+                            pretty_operator = u'around '
+                            
+                        
+                        base += u': ' + pretty_operator + HydrusData.ConvertTimeDeltaToPrettyString( time_delta ) + u' ago'
+                        
+                    elif age_type == 'date':
+                        
+                        ( year, month, day ) = age_value
+                        
+                        dt = datetime.datetime( year, month, day )
+                        
+                        timestamp = calendar.timegm( dt.timetuple() )
+                        
+                        if operator == '<':
+                            
+                            pretty_operator = u'before '
+                            
+                        elif operator == '>':
+                            
+                            pretty_operator = u'since '
+                            
+                        elif operator == '=':
+                            
+                            pretty_operator = u'on the day of '
+                            
+                        elif operator == u'\u2248':
+                            
+                            pretty_operator = u'a month either side of '
+                            
+                        
+                        base += u': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = False )
+                        
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_NUM_PIXELS:

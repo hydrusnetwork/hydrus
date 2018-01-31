@@ -237,22 +237,75 @@ def ConvertTimeDeltaToPrettyString( seconds ):
         
         if seconds >= 86400:
             
-            days = seconds / 86400
-            hours = ( seconds % 86400 ) / 3600
+            DAY = 86400
+            MONTH = DAY * 30
+            YEAR = MONTH * 12
             
-            if days == 1:
+            years = seconds / YEAR
+            
+            seconds %= YEAR
+            
+            months = seconds / MONTH
+            
+            seconds %= MONTH
+            
+            days = seconds / DAY
+            
+            seconds %= DAY
+            
+            hours = seconds / 3600
+            
+            result_components = []
+            
+            if years > 0:
                 
-                result = '1 day'
+                if years == 1:
+                    
+                    result_components.append( '1 year' )
+                    
+                else:
+                    
+                    result_components.append( '%d' % years + ' years' )
+                    
                 
-            else:
+            
+            if months > 0:
                 
-                result = '%d' % days + ' days'
+                if months == 1:
+                    
+                    result_components.append( '1 month' )
+                    
+                else:
+                    
+                    result_components.append( '%d' % months + ' months' )
+                    
+                
+            
+            if days > 0:
+                
+                if days == 1:
+                    
+                    result_components.append( '1 day' )
+                    
+                else:
+                    
+                    result_components.append( '%d' % days + ' days' )
+                    
                 
             
             if hours > 0:
                 
-                result += ' %d' % hours + ' hours'
+                if hours == 1:
+                    
+                    result_components.append( '1 hour' )
+                    
+                else:
+                    
+                    result_components.append( ' %d' % hours + ' hours' )
+                    
                 
+            
+            result = ' '.join( result_components )
             
         elif seconds >= 3600:
             
@@ -560,9 +613,18 @@ def ConvertTimestampToPrettySync( timestamp ):
     elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
     else: return ' '.join( ( m, s ) ) + ' ago'
     
-def ConvertTimestampToPrettyTime( timestamp ):
+def ConvertTimestampToPrettyTime( timestamp, include_24h_time = True ):
     
-    return time.strftime( '%Y/%m/%d %H:%M:%S', time.localtime( timestamp ) )
+    if include_24h_time:
+        
+        phrase = '%Y/%m/%d %H:%M:%S'
+        
+    else:
+        
+        phrase = '%Y/%m/%d'
+        
+    
+    return time.strftime( phrase, time.gmtime( timestamp ) )
     
 def ConvertTimestampToHumanPrettyTime( timestamp ):
     
@@ -582,10 +644,6 @@ def ConvertTimestampToHumanPrettyTime( timestamp ):
         
         return ConvertTimestampToPrettyTime( timestamp )
         
-    
-def ConvertTimeToPrettyTime( secs ):
-    
-    return time.strftime( '%H:%M:%S', time.gmtime( secs ) )
     
 def ConvertUglyNamespaceToPrettyString( namespace ):
     

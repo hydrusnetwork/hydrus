@@ -16,6 +16,12 @@ import wx
 ID_TIMER_DROPDOWN_HIDE = wx.NewId()
 ID_TIMER_AC_LAG = wx.NewId()
 
+( SelectUpEvent, EVT_SELECT_UP ) = wx.lib.newevent.NewCommandEvent()
+( SelectDownEvent, EVT_SELECT_DOWN ) = wx.lib.newevent.NewCommandEvent()
+
+( ShowPreviousEvent, EVT_SHOW_PREVIOUS ) = wx.lib.newevent.NewCommandEvent()
+( ShowNextEvent, EVT_SHOW_NEXT ) = wx.lib.newevent.NewCommandEvent()
+
 # much of this is based on the excellent TexCtrlAutoComplete class by Edward Flick, Michele Petrazzo and Will Sadkin, just with plenty of simplification and integration into hydrus
 class AutoCompleteDropdown( wx.Panel ):
     
@@ -344,35 +350,31 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
                     
-                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
+                    new_event = SelectUpEvent( -1 )
                     
                 elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
                     
-                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+                    new_event = SelectDownEvent( -1 )
                     
                 
-                new_event = wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = id )
-                
-                self.ProcessEvent( new_event )
+                wx.PostEvent( self.GetEventHandler(), new_event )
                 
             elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
                 if key in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
                     
-                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_previous' )
+                    new_event = ShowPreviousEvent( -1 )
                     
                 elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
                     
-                    id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'canvas_show_next' )
+                    new_event = ShowNextEvent( -1 )
                     
                 
-                new_event = wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = id )
-                
-                self.ProcessEvent( new_event )
+                wx.PostEvent( self.GetEventHandler(), new_event )
                 
             else:
                 
-                # Don't say processevent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
+                # Don't say process/postevent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
                 self._dropdown_list.EventCharHook( event ) # this typically skips the event, letting the text ctrl take it
                 
             
@@ -401,29 +403,29 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
             
-            if event.GetWheelRotation() > 0: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_up' )
-            else: id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'select_down' )
+            if event.GetWheelRotation() > 0:
+                
+                new_event = SelectUpEvent( -1 )
+                
+            else:
+                
+                new_event = SelectDownEvent( -1 )
+                
             
-            new_event = wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = id )
-            
-            self.ProcessEvent( new_event )
+            wx.PostEvent( self.GetEventHandler(), new_event )
             
         else:
             
             if event.CmdDown():
                 
-                key_event = wx.KeyEvent( wx.EVT_CHAR_HOOK.typeId )
-                
                 if event.GetWheelRotation() > 0:
                     
-                    key_event.m_keyCode = wx.WXK_UP
+                    self._dropdown_list.MoveSelectionUp()
                     
                 else:
                     
-                    key_event.m_keyCode = wx.WXK_DOWN
+                    self._dropdown_list.MoveSelectionDown()
                     
-                
-                self._dropdown_list.ProcessEvent( key_event )
                 
             else:
                 
@@ -438,7 +440,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 if event.GetWheelRotation() > 0: command_type = wx.wxEVT_SCROLLWIN_LINEUP
                 else: command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
                 
-                wx.PostEvent( self, wx.ScrollWinEvent( command_type ) )
+                wx.PostEvent( self._dropdown_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
                 
             
         

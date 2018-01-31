@@ -406,15 +406,15 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 1, 2, 3, 4 ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age < 1y2m3d4h' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 1, 2, 3, 4 ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age ' + u'\u2248' + ' 1y2m3d4h' )
         
-        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 1, 2, 3, 4 ) )
+        p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.GetUnicode(), u'system:age > 1y2m3d4h' )
         

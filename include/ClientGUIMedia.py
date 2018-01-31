@@ -98,8 +98,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         wx.ScrolledWindow.__init__( self, parent, size = ( 0, 0 ), style = wx.BORDER_SUNKEN )
         ClientMedia.ListeningMediaList.__init__( self, file_service_key, media_results )
         
-        self.SetDoubleBuffered( True ) # This seems to stop some bad scroll draw logic, where top/bottom row is auto-drawn undrawn and then paint event called
-        
         self._UpdateBackgroundColour()
         
         self.SetScrollRate( 0, 50 )
@@ -2383,7 +2381,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self.Scroll( -1, y_to_scroll_to )
                 
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
+                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
             elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * percent_visible ):
                 
@@ -2391,7 +2389,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self.Scroll( -1, y_to_scroll_to + 2 )
                 
-                wx.PostEvent( self, wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
+                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
                 
             
         
@@ -2585,6 +2583,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                 
             
+        
+        event.Skip()
         
     
     def EventEraseBackground( self, event ):

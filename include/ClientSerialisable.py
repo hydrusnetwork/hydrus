@@ -123,6 +123,8 @@ def CreateTopImage( width, title, payload_description, text ):
     
     data = top_bmp.ConvertToImage().GetData()
     
+    data = buffer( data ) # wx phoenix thing--bmp now delivers a bytearray, but numpy wants a buffer, wew
+    
     top_image_rgb = numpy.fromstring( data, dtype = 'uint8' ).reshape( ( top_height, width, 3 ) )
     
     top_bmp.Destroy()

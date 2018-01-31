@@ -778,6 +778,27 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             def _GetAccessKeyFromRegistrationKey( self ):
                 
+                def wx_done():
+                    
+                    if not self:
+                        
+                        return
+                        
+                    
+                    self._register.Enable()
+                    self._register.SetLabel( 'fetch an access key with a registration key' )
+                    
+                
+                def wx_setkey( access_key_encoded ):
+                    
+                    if not self:
+                        
+                        return
+                        
+                    
+                    self._access_key.SetValue( access_key_encoded )
+                    
+                
                 def do_it( credentials, registration_key ):
                     
                     try:
@@ -804,7 +825,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             access_key_encoded = response[ 'access_key' ].encode( 'hex' )
                             
-                            wx.CallAfter( self._access_key.SetValue, access_key_encoded )
+                            wx.CallAfter( wx_setkey, access_key_encoded )
                             
                             wx.MessageBox( 'Looks good!' )
                             
@@ -817,8 +838,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     finally:
                         
-                        wx.CallAfter( self._register.Enable )
-                        wx.CallAfter( self._register.SetLabel, 'fetch an access key with a registration key' )
+                        wx.CallAfter( wx_done )
                         
                     
                 
@@ -1983,7 +2003,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._filter_inbox_and_archive_predicates.SetValue( self._new_options.GetBoolean( 'filter_inbox_and_archive_predicates' ) )
             
-            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAge( self )
+            self._file_system_predicate_age = ClientGUIPredicates.PanelPredicateSystemAgeDelta( self )
             self._file_system_predicate_duration = ClientGUIPredicates.PanelPredicateSystemDuration( self )
             self._file_system_predicate_height = ClientGUIPredicates.PanelPredicateSystemHeight( self )
             self._file_system_predicate_limit = ClientGUIPredicates.PanelPredicateSystemLimit( self )
@@ -5136,7 +5156,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                wx.MessageBox( 'That was not a script--it was a: ' + type( obj ).__name__ )
+                wx.MessageBox( 'That was not a subscription--it was a: ' + type( obj ).__name__ )
                 
             
         
@@ -5510,8 +5530,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
         
-        self._media_shortcuts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUTS, 'media' )
-        
         media = ClientMedia.FlattenMedia( media )
         
         self._current_media = [ m.Duplicate() for m in media ]
@@ -5552,8 +5570,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self.SetSizer( vbox )
         
-        self.Bind( wx.EVT_MENU, self.EventMenu )
         self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        
+        self.Bind( ClientGUIACDropdown.EVT_SELECT_UP, self.EventSelectUp )
+        self.Bind( ClientGUIACDropdown.EVT_SELECT_DOWN, self.EventSelectDown )
+        
+        self.Bind( ClientGUIACDropdown.EVT_SHOW_PREVIOUS, self.EventShowPrevious )
+        self.Bind( ClientGUIACDropdown.EVT_SHOW_NEXT, self.EventShowNext )
         
         if self._canvas_key is not None:
             
@@ -5580,7 +5603,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _OKParent( self ):
         
-        wx.PostEvent( self.GetParent(), wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+        wx.PostEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
         
     
     def _ProcessApplicationCommand( self, command ):
@@ -5597,6 +5620,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             if action == 'manage_file_tags':
                 
                 self._OKParent()
+                
+            elif action == 'set_search_focus':
+                
+                self._SetSearchFocus()
                 
             else:
                 
@@ -5615,7 +5642,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         shortcut_processed = False
         
-        command = self._media_shortcuts.GetCommand( shortcut )
+        command = HG.client_controller.GetCommandFromShortcut( [ 'media', 'main_gui' ], shortcut )
         
         if command is not None:
             
@@ -5700,40 +5727,29 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         event.Skip()
         
     
-    def EventMenu( self, event ):
+    def EventSelectDown( self, event ):
         
-        action = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetAction( event.GetId() )
+        self._tag_repositories.SelectDown()
         
-        if action is not None:
+    
+    def EventSelectUp( self, event ):
+        
+        self._tag_repositories.SelectUp()
+        
+    
+    def EventShowNext( self, event ):
+        
+        if self._canvas_key is not None:
             
-            ( command, data ) = action
+            HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
             
-            if command == 'manage_file_tags':
-                
-                self._OKParent()
-                
-            elif command == 'set_search_focus':
-                
-                self._SetSearchFocus()
-                
-            elif command == 'canvas_show_next':
-                
-                if self._canvas_key is not None:
-                    
-                    HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
-                    
-                
-            elif command == 'canvas_show_previous':
-                
-                if self._canvas_key is not None:
-                    
-                    HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
-                    
-                
-            else:
-                
-                event.Skip()
-                
+        
+    
+    def EventShowPrevious( self, event ):
+        
+        if self._canvas_key is not None:
+            
+            HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
             
         
     
@@ -6298,7 +6314,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def OK( self ):
             
-            wx.PostEvent( self, wx.CommandEvent( commandEventType = wx.wxEVT_COMMAND_MENU_SELECTED, id = ClientCaches.MENU_EVENT_ID_TO_ACTION_CACHE.GetTemporaryId( 'ok' ) ) )
+            wx.PostEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
             
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):
