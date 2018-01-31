@@ -8,9 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 292</h3></li>
+				<ul>
+					<li>extended system:age to support searching by fixed calendar date, e.g. "system:age > 2018/01/24"</li>
+					<li>'system:age' is also renamed to 'system:time imported' and presents nicer strings</li>
+					<li>I believe I have fixed the manage tags dialog crash</li>
+					<li>the manage tags dialog now loads related tags, file lookup script info, and recent tags off the main ui thread, meaning the dialog itself should launch much faster in almost all situations</li>
+					<li>cleaned up how a bunch of autocomplete<->manage tags events occur</li>
+					<li>'set_search_focus' works in the manage tags dialog again, drawing from the new shortcut system</li>
+					<li>fixed ctrl+scrollwheel on autocomplete entry, which now correctly scrolls the selection over the results again</li>
+					<li>cleaned up a bunch of the taglist scroll and selection code, particularly for tag children/parent selection events</li>
+					<li>fixed a potential crash bug initiated by en early exit from the export files dialog</li>
+					<li>fixed a potential crash bug initiated by an early petition processing page delete</li>
+					<li>fixed a potential crash bug initiated by an edit repository close during access key fetching</li>
+					<li>the thumbnail view should be a bit less jittery--the scrollbar should fade neater on mouseover, and maybe the thumbs are smoother as well (I turned off a now-superfluous double-buffering mode, please report any visual bugs)</li>
+					<li>added 'check_all_import_folders' to main_gui shortcut actions</li>
+					<li>menus off the main menubar that are out of date (this often happens to 'pages' after a session addition/delete) will now be disabled (greyed out) until they are back in sync</li>
+					<li>the duplicate filter now detects media it cannot display more carefully. if it runs across undisplayable media due to file orphan status, it will skip over it. if there is nothing else to display, it will ask the user to inform hydrus dev</li>
+					<li>added json support to the parsing engine!</li>
+					<li>wrote a new json parsing formula object</li>
+					<li>wrote a new 'compound' parsing formula object that combines multiple formulae together</li>
+					<li>wrote new panel for editing formulae with some cleaner button workflow</li>
+					<li>added multiple 'separated' content parsing solutions to page parsers and wrote all new gui to reflect that</li>
+					<li>expanded the new separated content parsing solutions to be full-blown nested sub-page-parsers, wew</li>
+					<li>put some more general work into the new parsing engine--the new page parser object now saves and serialises, so it can be imported and exported. I don't expect to change it much more, but don't rely on that! this is all still under construction</li>
+					<li>added 'file hash' content type to content parsers and improved ui support for when string conversion rules generate bytes data etc...</li>
+					<li>new parsing objects now render their parsable content correctly in the 'produces' column</li>
+					<li>misc cleanup of new and existing parsing dialogs</li>
+					<li>fixed the handling of escape/cancel events on the 'select from a list of strings' dialog</li>
+					<li>on update, users with a certain kind of orphaned file will be informed of the numbers and a request to inform hydrus dev</li>
+					<li>fixed exporting serialisable object to png, which was failing due to a bmp data change in the new wx</li>
+					<li>fixed a couple of places where I was switching GMT and local time around</li>
+					<li>deleted some old useless tag editing and commandevent code</li>
+				</ul>
 				<li><h3>version 291</h3></li>
 				<ul>
-					<li>expanded the permissable shortcut keys to all reasonable ASCII characters, such as comma and ampersand and the types of brackets</li>
+					<li>expanded the permissible shortcut keys to all reasonable ASCII characters, such as comma and ampersand and the types of brackets</li>
 					<li>fixed a delayed crash sometimes caused by the file import frame (the one launched by dropping some files on the client or going file->import files)</li>
 					<li>the file import frame does its file parsing job in a generally more sensible way, particularly when new drops occur while parsing is ongoing</li>
 					<li>fixed a crash that could be initiated by the manage tags dialog setting the favourite tags late</li>
@@ -31,7 +64,6 @@
 					<li>improved how hydrus deletes temp paths--if they are 'in use by another process', it will now put them aside and try again later. this error typically occurs when file mimetype parsing fails, and due to the error context hanging around, an open file handle is still in scope.</li>
 					<li>the client is better about recovering from missing tags in the db--in certain circumstances, it will now generate a 'unknown tag:random hex' as a simple placeholder that can be better used to investigate the error, rather than dumping out</li>
 					<li>downgraded os x opencv to 3.1.0 to hoyefully increase compatibility</li>
-					<li>putting out a separate os x build with opencv 2.4 as a test for users with problems booting the main build</li>
 					<li>the server closes a little more neatly</li>
 					<li>upnp errors are more verbose</li>
 					<li>misc code cleanup</li>
