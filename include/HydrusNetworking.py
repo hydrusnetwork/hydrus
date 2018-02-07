@@ -10,6 +10,9 @@ import ssl
 import threading
 import time
 
+# The calendar portion of this works in GMT. A new 'day' or 'month' is calculated based on GMT time, so it won't tick over at midnight for most people.
+# But this means a server can pass a bandwidth object to a lad and everyone can agree on when a new day is.
+
 def ConvertBandwidthRuleToString( rule ):
     
     ( bandwidth_type, time_delta, max_allowed ) = rule
@@ -347,6 +350,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
     
     def _GetCurrentDateTime( self ):
         
+        # keep getnow in here for the moment to aid in testing, which patches it to do time shifting
         return datetime.datetime.utcfromtimestamp( HydrusData.GetNow() )
         
     
@@ -408,7 +412,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         
         month_dt = datetime.datetime( year, month, 1 )
         
-        month_time = calendar.timegm( month_dt.timetuple() )
+        month_time = int( calendar.timegm( month_dt.timetuple() ) )
         
         return month_time
         
@@ -475,12 +479,12 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         hour_dt = datetime.datetime( year, month, day, hour )
         minute_dt = datetime.datetime( year, month, day, hour, minute )
         
-        month_time = calendar.timegm( month_dt.timetuple() )
-        day_time = calendar.timegm( day_dt.timetuple() )
-        hour_time = calendar.timegm( hour_dt.timetuple() )
-        minute_time = calendar.timegm( minute_dt.timetuple() )
+        month_time = int( calendar.timegm( month_dt.timetuple() ) )
+        day_time = int( calendar.timegm( day_dt.timetuple() ) )
+        hour_time = int( calendar.timegm( hour_dt.timetuple() ) )
+        minute_time = int( calendar.timegm( minute_dt.timetuple() ) )
         
-        second_time = calendar.timegm( dt.timetuple() )
+        second_time = int( calendar.timegm( dt.timetuple() ) )
         
         return ( month_time, day_time, hour_time, minute_time, second_time )
         
@@ -633,7 +637,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 next_month_dt = datetime.datetime( next_month_year, next_month, 1 )
                 
-                next_month_time = calendar.timegm( next_month_dt.timetuple() )
+                next_month_time = int( calendar.timegm( next_month_dt.timetuple() ) )
                 
                 return next_month_time - HydrusData.GetNow()
                 

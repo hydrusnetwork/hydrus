@@ -874,6 +874,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'process_subs_in_random_order' ] = True
         
+        self._dictionary[ 'booleans' ][ 'ac_select_first_with_count' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -1864,7 +1866,10 @@ class Credentials( HydrusData.HydrusYAMLBase ):
         
         HydrusData.HydrusYAMLBase.__init__( self )
         
-        if host == 'localhost': host = '127.0.0.1'
+        if host == 'localhost':
+            
+            host = '127.0.0.1'
+            
         
         self._host = host
         self._port = port

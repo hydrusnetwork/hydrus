@@ -7,6 +7,7 @@ test_controller = None
 view_shutdown = False
 model_shutdown = False
 
+import_folders_running = False
 subscriptions_running = False
 
 callto_report_mode = False

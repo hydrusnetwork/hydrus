@@ -9,6 +9,7 @@ import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
 import re
+import time
 import wx
 
 IGNORED_TAG_SEARCH_CHARACTERS = u'[](){}"\''
@@ -487,8 +488,10 @@ class FileSystemPredicates( object ):
                     
                     ( year, month, day ) = age_value
                     
+                    # convert this dt, which is in local time, to a gmt timestamp
+                    
                     day_dt = datetime.datetime( year, month, day )
-                    timestamp = calendar.timegm( day_dt.timetuple() )
+                    timestamp = int( time.mktime( day_dt.timetuple() ) )
                     
                     if operator == '<':
                         
@@ -1134,7 +1137,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         dt = datetime.datetime( year, month, day )
                         
-                        timestamp = calendar.timegm( dt.timetuple() )
+                        # make a timestamp (IN GMT SECS SINCE 1970) from the local meaning of 2018/02/01
+                        timestamp = int( time.mktime( dt.timetuple() ) )
                         
                         if operator == '<':
                             
@@ -1153,6 +1157,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             pretty_operator = u'a month either side of '
                             
                         
+                        # convert this GMT TIMESTAMP to a pretty local string
                         base += u': ' + pretty_operator + HydrusData.ConvertTimestampToPrettyTime( timestamp, include_24h_time = False )
                         
                     

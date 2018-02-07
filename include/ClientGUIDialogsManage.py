@@ -2771,7 +2771,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         if not os.path.exists( path ):
             
-            wx.MessageBox( 'The path you have entered--"' + path + '"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+            wx.MessageBox( 'The path you have entered--"' + path + '"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
             
         
         if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):

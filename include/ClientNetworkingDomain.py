@@ -16,7 +16,12 @@ import urlparse
 def ConvertDomainIntoAllApplicableDomains( domain ):
     
     # is an ip address, possibly with a port
-    if re.search( '^[\d\.):]+$', domain ) is not None:
+    if re.search( r'^[\d\.):]+$', domain ) is not None:
+        
+        return [ domain ]
+        
+    
+    if domain == 'localhost':
         
         return [ domain ]
         
@@ -41,6 +46,35 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
 def ConvertDomainIntoSecondLevelDomain( domain ):
     
     return ConvertDomainIntoAllApplicableDomains( domain )[-1]
+
+def ConvertURLMatchesIntoAPIPairs( url_matches ):
+    
+    pairs = []
+    
+    for url_match in url_matches:
+        
+        if not url_match.UsesAPIURL():
+            
+            continue
+            
+        
+        api_url = url_match.GetAPIURL( url_match.GetExampleURL() )
+        
+        for other_url_match in url_matches:
+            
+            if other_url_match == url_match:
+                
+                continue
+                
+            
+            if other_url_match.Matches( api_url ):
+                
+                pairs.append( ( url_match, other_url_match ) )
+                
+            
+        
+    
+    return pairs
     
 def ConvertURLIntoDomain( url ):
     
@@ -439,6 +473,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetParser( self, url ):
+        
+        with self._lock:
+            
+            url_match = self._GetURLMatch( url )
+            
+            if url_match is None:
+                
+                return None
+                
+            
+            parser = self._GetParser( url_match )
+            
+            return parser
+            
+        
+    
     def GetParsers( self ):
         
         with self._lock:
@@ -465,28 +516,93 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def GetURLParseCapability( self, url ):
         
-        url_match = self._GetURLMatch( url )
-        
-        if url_match is None:
+        with self._lock:
             
-            return ( HC.URL_TYPE_UNKNOWN, 'unknown url', False )
+            url_match = self._GetURLMatch( url )
             
-        
-        url_type = url_match.GetURLType()
-        match_name = url_match.GetName()
-        
-        parser = self._GetParser( url_match )
-        
-        if parser is None:
+            if url_match is None:
+                
+                return ( HC.URL_TYPE_UNKNOWN, 'unknown url', False )
+                
             
-            can_parse = False
+            url_type = url_match.GetURLType()
+            match_name = url_match.GetName()
             
-        else:
+            parser_url_match = url_match
             
-            can_parse = True
+            while parser_url_match.UsesAPIURL():
+                
+                api_url = parser_url_match.GetAPIURL( url )
+                
+                parser_url_match = self._GetURLMatch( api_url )
+                
+                if parser_url_match is None:
+                    
+                    break
+                    
+                
+            
+            if parser_url_match is None:
+                
+                can_parse = False
+                
+            else:
+                
+                parser = self._GetParser( parser_url_match )
+                
+                if parser is None:
+                    
+                    can_parse = False
+                    
+                else:
+                    
+                    can_parse = True
+                    
+                
             
         
         return ( url_type, match_name, can_parse )
+        
+    
+    def GetURLToFetchAndParser( self, url ):
+        
+        with self._lock:
+            
+            url_match = self._GetURLMatch( url )
+            
+            url = url_match.Normalise( url )
+            
+            if url_match is None:
+                
+                return ( url, None )
+                
+            
+            fetch_url = url
+            parser_url_match = url_match
+            
+            while parser_url_match.UsesAPIURL():
+                
+                fetch_url = parser_url_match.GetAPIURL( url )
+                
+                parser_url_match = self._GetURLMatch( fetch_url )
+                
+                if parser_url_match is None:
+                    
+                    break
+                    
+                
+            
+            if parser_url_match is None:
+                
+                parser = None
+                
+            else:
+                
+                parser = self._GetParser( parser_url_match )
+                
+            
+        
+        return ( fetch_url, parser )
         
     
     def Initialise( self ):
@@ -647,6 +763,20 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 del self._url_match_keys_to_parser_keys[ deletee_key ]
                 
             
+            # any url matches that link to another via the API conversion will not be using parsers
+            
+            url_match_api_pairs = ConvertURLMatchesIntoAPIPairs( self._url_matches )
+            
+            for ( url_match_original, url_match_api ) in url_match_api_pairs:
+                
+                url_match_key = url_match_original.GetMatchKey()
+                
+                if url_match_key in self._url_match_keys_to_parser_keys:
+                    
+                    del self._url_match_keys_to_parser_keys[ url_match_key ]
+                    
+                
+            
             self._RecalcCache()
             
             self._SetDirty()
@@ -665,6 +795,75 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             self._SetDirty()
             
+        
+    
+    def TryToLinkURLMatchesAndParsers( self ):
+        
+        with self._lock:
+            
+            new_url_match_keys_to_parser_keys = NetworkDomainManager.STATICLinkURLMatchesAndParsers( self._url_matches, self._parsers, self._url_match_keys_to_parser_keys )
+            
+            self._url_match_keys_to_parser_keys.update( new_url_match_keys_to_parser_keys )
+            
+            self._SetDirty()
+            
+        
+    
+    @staticmethod
+    def STATICLinkURLMatchesAndParsers( url_matches, parsers, existing_url_match_keys_to_parser_keys ):
+        
+        new_url_match_keys_to_parser_keys = {}
+        
+        for url_match in url_matches:
+            
+            api_pairs = ConvertURLMatchesIntoAPIPairs( url_matches )
+            
+            # anything that goes to an api url will be parsed by that api's parser--it can't have its own
+            api_pair_unparsable_url_matches = set()
+            
+            for ( a, b ) in api_pairs:
+                
+                api_pair_unparsable_url_matches.add( a )
+                
+            
+            #
+            
+            listctrl_data = []
+            
+            for url_match in url_matches:
+                
+                if not url_match.IsParsable() or url_match in api_pair_unparsable_url_matches:
+                    
+                    continue
+                    
+                
+                if not url_match.IsWatchableURL(): # only starting with the thread watcher atm
+                    
+                    continue
+                    
+                
+                url_match_key = url_match.GetMatchKey()
+                
+                if url_match_key in existing_url_match_keys_to_parser_keys:
+                    
+                    continue
+                    
+                
+                for parser in parsers:
+                    
+                    example_urls = parser.GetExampleURLs()
+                    
+                    if True in ( url_match.Matches( example_url ) for example_url in example_urls ):
+                        
+                        new_url_match_keys_to_parser_keys[ url_match_key ] = parser.GetParserKey()
+                        
+                        break
+                        
+                    
+                
+            
+        
+        return new_url_match_keys_to_parser_keys
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
@@ -1071,6 +1270,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     def ToTuple( self ):
         
         return ( self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._example_url )
+        
+    
+    def UsesAPIURL( self ):
+        
+        return self._api_lookup_converter.MakesChanges()
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH ] = URLMatch

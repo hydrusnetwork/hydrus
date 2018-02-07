@@ -3354,9 +3354,11 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                api_lookup_url = url_match.GetAPIURL( normalised )
-                
-                if api_lookup_url == normalised:
+                if url_match.UsesAPIURL():
+                    
+                    api_lookup_url = url_match.GetAPIURL( normalised )
+                    
+                else:
                     
                     api_lookup_url = 'none set'
                     
@@ -3547,12 +3549,15 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_engine, url_matches, url_match_keys_to_display, url_match_keys_to_parser_keys ):
+    def __init__( self, parent, network_engine, url_matches, parsers, url_match_keys_to_display, url_match_keys_to_parser_keys ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._url_matches = url_matches
         self._url_match_keys_to_url_matches = { url_match.GetMatchKey() : url_match for url_match in self._url_matches }
+        
+        self._parsers = parsers
+        self._parser_keys_to_parsers = { parser.GetParserKey() : parser for parser in self._parsers }
         
         self._network_engine = network_engine
         
@@ -3564,13 +3569,16 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._display_list_ctrl_panel.AddButton( 'edit', self._EditDisplay, enabled_only_on_selection = True )
         
+        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'url_match_api_pairs', 10, 36, [ ( 'url class', -1 ), ( 'api url class', 36 ) ], self._ConvertAPIPairDataToListCtrlTuples )
+        
         self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'page parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
         self._parser_list_ctrl_panel.AddButton( 'edit', self._EditParser, enabled_only_on_selection = True )
+        self._parser_list_ctrl_panel.AddButton( 'try to fill in gaps based on example urls', self._TryToLinkUrlMatchesAndParsers, enabled_check_func = self._GapsExist )
         
         #
         
@@ -3596,12 +3604,30 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        api_pairs = ClientNetworkingDomain.ConvertURLMatchesIntoAPIPairs( url_matches )
+        
+        self._api_pairs_list_ctrl.AddDatas( api_pairs )
+        
+        # anything that goes to an api url will be parsed by that api's parser--it can't have its own
+        api_pair_unparsable_url_matches = set()
+        
+        for ( a, b ) in api_pairs:
+            
+            api_pair_unparsable_url_matches.add( a )
+            
+        
+        #
         
         listctrl_data = []
         
         for url_match in url_matches:
             
-            if not url_match.IsParsable():
+            if not url_match.IsParsable() or url_match in api_pair_unparsable_url_matches:
+                
+                continue
+                
+            
+            if not url_match.IsWatchableURL(): # only starting with the thread watcher atm
                 
                 continue
                 
@@ -3629,10 +3655,26 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( ClientGUICommon.BetterStaticText( self, 'a listctrl here to show current api links as understood by the domain manager' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._api_pairs_list_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._parser_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    def _ConvertAPIPairDataToListCtrlTuples( self, data ):
+        
+        ( a, b ) = data
+        
+        a_name = a.GetName()
+        b_name = b.GetName()
+        
+        pretty_a_name = a_name
+        pretty_b_name = b_name
+        
+        display_tuple = ( pretty_a_name, pretty_b_name )
+        sort_tuple = ( a_name, b_name )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _ConvertDisplayDataToListCtrlTuples( self, data ):
@@ -3662,27 +3704,31 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( url_match_key, parser_key ) = data
         
-        url_match = url_match_name = self._url_match_keys_to_url_matches[ url_match_key ]
+        url_match = self._url_match_keys_to_url_matches[ url_match_key ]
         
         url_match_name = url_match.GetName()
         
         url_type = url_match.GetURLType()
         
-        pretty_name = url_match_name
-        
-        pretty_url_type = HC.url_type_string_lookup[ url_type ]
-        
         if parser_key is None:
             
-            pretty_parser_key = ''
+            parser_name = ''
             
         else:
             
-            pretty_parser_key = 'fetch this from network engine like with the url matches'
+            parser = self._parser_keys_to_parsers[ parser_key ]
+            
+            parser_name = parser.GetName()
             
         
-        display_tuple = ( pretty_name, pretty_url_type, pretty_parser_key )
-        sort_tuple = ( url_match_name, url_type, pretty_parser_key )
+        pretty_url_match_name = url_match_name
+        
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
+        
+        pretty_parser_name = parser_name
+        
+        display_tuple = ( pretty_url_match_name, pretty_url_type, pretty_parser_name )
+        sort_tuple = ( url_match_name, url_type, parser_name )
         
         return ( display_tuple, sort_tuple )
         
@@ -3723,15 +3769,75 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditParser( self ):
         
+        if len( self._parsers ) == 0:
+            
+            wx.MessageBox( 'Unfortunately, you do not have any parsers, so none can be linked to your url classes. Please create some!' )
+            
+            return
+            
+        
         for data in self._parser_list_ctrl.GetData( only_selected = True ):
             
-            ( url_match_key, page_script_key ) = data
+            ( url_match_key, parser_key ) = data
             
-            # present the user with a dialog to choose page script key, or none
+            url_match = self._url_match_keys_to_url_matches[ url_match_key ]
             
-            wx.MessageBox( 'This does not work yet!' )
+            choice_tuples = [ ( parser.GetName(), parser ) for parser in self._parsers ]
             
-            break
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select parser for ' + url_match.GetName(), choice_tuples ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    parser = dlg.GetChoice()
+                    
+                    self._parser_list_ctrl.DeleteDatas( ( data, ) )
+                    
+                    new_data = ( url_match_key, parser.GetParserKey() )
+                    
+                    self._parser_list_ctrl.AddDatas( ( new_data, ) )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+            self._parser_list_ctrl.Sort()
+            
+        
+    
+    def _GapsExist( self ):
+        
+        parser_keys = [ parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() ]
+        
+        return None in parser_keys
+        
+    
+    def _TryToLinkUrlMatchesAndParsers( self ):
+        
+        existing_url_match_keys_to_parser_keys = { url_match_key : parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() if parser_key is not None }
+        
+        new_url_match_keys_to_parser_keys = ClientNetworkingDomain.NetworkDomainManager.STATICLinkURLMatchesAndParsers( self._url_matches, self._parsers, existing_url_match_keys_to_parser_keys )
+        
+        if len( new_url_match_keys_to_parser_keys ) > 0:
+            
+            removees = []
+            
+            for row in self._parser_list_ctrl.GetData():
+                
+                ( url_match_key, parser_key ) = row
+                
+                if url_match_key in new_url_match_keys_to_parser_keys:
+                    
+                    removees.append( row )
+                    
+                
+            
+            self._parser_list_ctrl.DeleteDatas( removees )
+            
+            self._parser_list_ctrl.AddDatas( new_url_match_keys_to_parser_keys.items() )
+            
+            self._parser_list_ctrl.Sort()
             
         
     

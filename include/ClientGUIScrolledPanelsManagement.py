@@ -266,9 +266,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices()
+        self._original_services = HG.client_controller.services_manager.GetServices()
         
-        self._listctrl.AddDatas( services )
+        self._listctrl.AddDatas( self._original_services )
         
         self._listctrl.Sort( 0 )
         
@@ -401,6 +401,28 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     def CommitChanges( self ):
         
         services = self._listctrl.GetData()
+        
+        new_service_keys = { service.GetServiceKey() for service in services }
+        
+        deletee_service_names = [ service.GetName() for service in self._original_services if service.GetServiceKey() not in new_service_keys ]
+        
+        if len( deletee_service_names ) > 0:
+            
+            message = 'You are about to delete the following services:'
+            message += os.linesep * 2
+            message += os.linesep.join( deletee_service_names )
+            message += os.linesep * 2
+            message += 'Are you absolutely sure this is correct?'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    raise HydrusExceptions.VetoException( 'Commit cancelled by user! If you do not believe you meant to delete any services (i.e the code accidentally intended to delete them all by itself), please inform hydrus dev immediately.' )
+                    
+                
+            
+            
         
         HG.client_controller.SetServices( services )
         
@@ -3372,6 +3394,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_all_tags_in_autocomplete = wx.CheckBox( general_panel )
             
+            self._ac_select_first_with_count = wx.CheckBox( general_panel )
+            
             self._apply_all_parents_to_all_services = wx.CheckBox( general_panel )
             self._apply_all_siblings_to_all_services = wx.CheckBox( general_panel )
             
@@ -3487,6 +3511,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._default_tag_service_search_page.SelectClientData( new_options.GetKey( 'default_tag_service_search_page' ) )
             
             self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
+            self._ac_select_first_with_count.SetValue( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
             
             self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
             self._apply_all_siblings_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_siblings_to_all_services' ) )
@@ -3526,6 +3551,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
             rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
             rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
+            rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
             rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
             rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
             
@@ -3664,6 +3690,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
             HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
             HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
+            
+            self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.GetValue() )
             
             self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetChoice() )
             

@@ -222,7 +222,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanDoWork( self, network_contexts, expected_requests = 3, expected_bytes = 1048576 ):
+    def CanDoWork( self, network_contexts, expected_requests = 3, expected_bytes = 1048576, threshold = 30 ):
         
         with self._lock:
             
@@ -232,7 +232,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 bandwidth_tracker = self._network_contexts_to_bandwidth_trackers[ network_context ]
                 
-                if not bandwidth_rules.CanDoWork( bandwidth_tracker, expected_requests, expected_bytes ):
+                if not bandwidth_rules.CanDoWork( bandwidth_tracker, expected_requests = expected_requests, expected_bytes = expected_bytes, threshold = threshold ):
                     
                     return False
                     

@@ -853,9 +853,12 @@ class PopupMessageManager( wx.Frame ):
                 
             
         
-        self._timer.Stop()
-        
-        self._timer = None
+        if self._timer is not None:
+            
+            self._timer.Stop()
+            
+            self._timer = None
+            
         
         sys.excepthook = self._old_excepthook
         

@@ -147,7 +147,13 @@ class Dialog( wx.Dialog ):
         HG.client_controller.ResetIdleTimer()
         
     
-    def EventDialogButton( self, event ): self.EndModal( event.GetId() )
+    def EventDialogButton( self, event ):
+        
+        if self.IsModal():
+            
+            self.EndModal( event.GetId() )
+            
+        
     
     def SetInitialSize( self, ( width, height ) ):
         

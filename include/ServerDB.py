@@ -1536,7 +1536,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( name, ) = self._c.execute( 'SELECT name FROM services WHERE service_id = ?;', ( service_id, ) ).fetchone()
         
-        HydrusData.Print( 'Creating update for ' + repr( name ) + ' from ' + HydrusData.ConvertTimestampToPrettyTime( begin ) + ' to ' + HydrusData.ConvertTimestampToPrettyTime( end ) )
+        HydrusData.Print( 'Creating update for ' + repr( name ) + ' from ' + HydrusData.ConvertTimestampToPrettyTime( begin, in_gmt = True ) + ' to ' + HydrusData.ConvertTimestampToPrettyTime( end, in_gmt = True ) )
         
         updates = self._RepositoryGenerateUpdates( service_id, begin, end )
         

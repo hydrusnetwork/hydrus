@@ -118,27 +118,18 @@ def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_ta
     
 def CreateManagementControllerImportThreadWatcher( thread_url = None ):
     
+    if thread_url is None:
+        
+        thread_url = ''
+        
+    
     management_controller = CreateManagementController( 'thread watcher', MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER )
     
     thread_watcher_import = ClientImporting.ThreadWatcherImport()
     
-    management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
+    thread_watcher_import.SetThreadURL( thread_url )
     
-    if thread_url is not None:
-        
-        try:
-            
-            ( thread_url, host, board, thread_id ) = ClientDownloading.ParseImageboardThreadURL( thread_url )
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
-            
-            return
-            
-        
-        thread_watcher_import.SetThreadURL( thread_url )
-        
+    management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
     
     return management_controller
     
@@ -2286,17 +2277,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             thread_url = self._thread_input.GetValue()
             
             if thread_url == '':
-                
-                return
-                
-            
-            try:
-                
-                ( thread_url, host, board, thread_id ) = ClientDownloading.ParseImageboardThreadURL( thread_url )
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
                 
                 return
                 

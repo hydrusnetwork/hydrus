@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 292
+SOFTWARE_VERSION = 293
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -108,6 +108,8 @@ CONTENT_TYPE_UNKNOWN = 12
 CONTENT_TYPE_ACCOUNT_TYPES = 13
 CONTENT_TYPE_VARIABLE = 14
 CONTENT_TYPE_HASH = 15
+CONTENT_TYPE_TIMESTAMP = 16
+CONTENT_TYPE_TITLE = 17
 
 content_type_string_lookup = {}
 
@@ -125,6 +127,10 @@ content_type_string_lookup[ CONTENT_TYPE_OPTIONS ] = 'options'
 content_type_string_lookup[ CONTENT_TYPE_SERVICES ] = 'services'
 content_type_string_lookup[ CONTENT_TYPE_UNKNOWN ] = 'unknown'
 content_type_string_lookup[ CONTENT_TYPE_ACCOUNT_TYPES ] = 'account types'
+content_type_string_lookup[ CONTENT_TYPE_VARIABLE ] = 'variable'
+content_type_string_lookup[ CONTENT_TYPE_HASH ] = 'hash'
+content_type_string_lookup[ CONTENT_TYPE_TIMESTAMP ] = 'timestamp'
+content_type_string_lookup[ CONTENT_TYPE_TITLE ] = 'title'
 
 REPOSITORY_CONTENT_TYPES = [ CONTENT_TYPE_FILES, CONTENT_TYPE_MAPPINGS, CONTENT_TYPE_TAG_PARENTS, CONTENT_TYPE_TAG_SIBLINGS ]
 
@@ -652,12 +658,19 @@ site_type_string_lookup[ SITE_TYPE_PIXIV_TAG ] = 'pixiv tag'
 site_type_string_lookup[ SITE_TYPE_TUMBLR ] = 'tumblr'
 site_type_string_lookup[ SITE_TYPE_THREAD_WATCHER ] = 'thread watcher'
 
+TIMESTAMP_TYPE_SOURCE = 0
+
+TIMEZONE_GMT = 0
+TIMEZONE_LOCAL = 1
+TIMEZONE_OFFSET = 2
+
 URL_TYPE_POST = 0
 URL_TYPE_API = 1
 URL_TYPE_FILE = 2
 URL_TYPE_GALLERY = 3
 URL_TYPE_WATCHABLE = 4
 URL_TYPE_UNKNOWN = 5
+URL_TYPE_NEXT = 5
 
 url_type_string_lookup = {}
 

@@ -4983,13 +4983,47 @@ class DB( HydrusDB.HydrusDB ):
         return ( CC.STATUS_NEW, None, '' )
         
     
-    def _GetHashStatus( self, hash ):
+    def _GetHashStatus( self, hash_type, hash ):
         
-        hash_id = self._GetHashId( hash )
-        
-        ( status, hash, note ) = self._GetHashIdStatus( hash_id )
-        
-        return status
+        if hash_type == 'sha256':
+            
+            if not self._HashExists( hash ):
+                
+                return ( CC.STATUS_NEW, hash, '' )
+                
+            else:
+                
+                hash_id = self._GetHashId( hash )
+                
+                return self._GetHashIdStatus( hash_id )
+                
+            
+        else:
+            
+            if hash_type == 'md5':
+                
+                result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+                
+            elif hash_type == 'sha1':
+                
+                result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE sha1 = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+                
+            elif hash_type == 'sha512':
+                
+                result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE sha512 = ?;', ( sqlite3.Binary( hash ), ) ).fetchone()
+                
+            
+            if result is None:
+                
+                return ( CC.STATUS_NEW, None, '' )
+                
+            else:
+                
+                ( hash_id, ) = result
+                
+                return self._GetHashIdStatus( hash_id )
+                
+            
         
     
     def _GetHydrusSessions( self ):
@@ -5089,22 +5123,6 @@ class DB( HydrusDB.HydrusDB ):
         value = json.loads( json_dump )
         
         return value
-        
-    
-    def _GetMD5Status( self, md5 ):
-        
-        result = self._c.execute( 'SELECT hash_id FROM local_hashes WHERE md5 = ?;', ( sqlite3.Binary( md5 ), ) ).fetchone()
-        
-        if result is None:
-            
-            return ( CC.STATUS_NEW, None, '' )
-            
-        else:
-            
-            ( hash_id, ) = result
-            
-            return self._GetHashIdStatus( hash_id )
-            
         
     
     def _GetMediaResults( self, hash_ids ):
@@ -8048,7 +8066,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'local_booru_share': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'local_booru_shares': result = self._GetYAMLDump( YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'maintenance_due': result = self._MaintenanceDue( *args, **kwargs )
-        elif action == 'md5_status': result = self._GetMD5Status( *args, **kwargs )
         elif action == 'media_results': result = self._GetMediaResultsFromHashes( *args, **kwargs )
         elif action == 'media_results_from_ids': result = self._GetMediaResults( *args, **kwargs )
         elif action == 'missing_repository_update_hashes': result = self._GetRepositoryUpdateHashesIDoNotHave( *args, **kwargs )
@@ -10242,7 +10259,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 292:
             
-            if HC.SOFTWARE_VERSION == 293: # I don't need this info fifty weeks from now, so we'll just do it for the one week
+            if HC.SOFTWARE_VERSION < 296: # I don't need this info fifty weeks from now, so we'll just do it for a bit
                 
                 try:
                     
@@ -10278,6 +10295,108 @@ class DB( HydrusDB.HydrusDB ):
                     
                     HydrusData.PrintException( e )
                     
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                #
+                
+                url_matches = ClientDefaults.GetDefaultURLMatches()
+                
+                url_matches = [ url_match for url_match in url_matches if '420chan' in url_match.GetName() or url_match.GetName() == '4chan thread' ]
+                
+                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if url_match.GetName() != '4chan thread' ]
+                
+                url_matches.extend( existing_url_matches )
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+                #
+                
+                parsers = ClientDefaults.GetDefaultParsers()
+                
+                domain_manager.SetParsers( parsers )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
+                
+                #
+                
+                # sank changed again, wew
+                
+                sank_network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+                
+                if sank_network_context in network_contexts_to_custom_header_dicts:
+                    
+                    custom_header_dict = network_contexts_to_custom_header_dicts[ sank_network_context ]
+                    
+                    if 'User-Agent' in custom_header_dict:
+                        
+                        ( value, approved, reason ) = custom_header_dict[ 'User-Agent' ]
+                        
+                        if value.startswith( 'SCChannelApp' ):
+                            
+                            value = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0'
+                            
+                            custom_header_dict[ 'User-Agent' ] = ( value, approved, reason )
+                            
+                        
+                    
+                
+                if ClientNetworking.GLOBAL_NETWORK_CONTEXT in network_contexts_to_custom_header_dicts:
+                    
+                    custom_header_dict = network_contexts_to_custom_header_dicts[ ClientNetworking.GLOBAL_NETWORK_CONTEXT ]
+                    
+                    if 'User-Agent' in custom_header_dict:
+                        
+                        ( value, approved, reason ) = custom_header_dict[ 'User-Agent' ]
+                        
+                        if value == 'hydrus client':
+                            
+                            value = 'Mozilla/5.0 (compatible; Hydrus Client)'
+                            
+                            custom_header_dict[ 'User-Agent' ] = ( value, approved, reason )
+                            
+                        
+                    
+                
+                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                self.pub_initial_message( 'The client was unable to add some new domain and parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
+                
+            
+            #
+            
+            try:
+                
+                options = self._GetOptions()
+                
+                options[ 'file_system_predicates' ][ 'age' ] = ( '<', 'delta', ( 0, 0, 7, 0 ) )
+                
+                self._SaveOptions( options )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                self.pub_initial_message( 'The client was unable to fix a predicate issue. The error has been written to the log--hydrus_dev would be interested in this information.' )
                 
             
         

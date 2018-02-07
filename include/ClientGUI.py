@@ -880,13 +880,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._bandwidth_timer = None
             
+        
+        if self._page_update_timer is not None:
+            
             self._page_update_timer.Stop()
             
             self._page_update_timer = None
             
+        
+        if self._ui_update_timer is not None:
+            
             self._ui_update_timer.Stop()
             
             self._ui_update_timer = None
+            
+        
+        if self._animation_update_timer is not None:
             
             self._animation_update_timer.Stop()
             
@@ -926,11 +935,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 ip = response[ 'ip' ]
                 timestamp = response[ 'timestamp' ]
                 
-                text = 'File Hash: ' + hash.encode( 'hex' ) + os.linesep + 'Uploader\'s IP: ' + ip + os.linesep + 'Upload Time (GMT): ' + time.asctime( time.gmtime( int( timestamp ) ) )
+                gmt_time = HydrusData.ConvertTimestampToPrettyTime( timestamp, in_gmt = True )
+                local_time = HydrusData.ConvertTimestampToPrettyTime( timestamp )
+                
+                text = 'File Hash: ' + hash.encode( 'hex' )
+                text += os.linesep
+                text += 'Uploader\'s IP: ' + ip
+                text += 'Upload Time (GMT): ' + gmt_time
+                text += 'Upload Time (Your time): ' + local_time
                 
                 HydrusData.Print( text )
                 
-                wx.MessageBox( text + os.linesep + 'This has been written to the log.' )
+                wx.MessageBox( text + os.linesep * 2 + 'This has been written to the log.' )
                 
             
         
@@ -1890,21 +1906,64 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageImportFolders( self ):
         
-        original_pause_status = HC.options[ 'pause_import_folders_sync' ]
-        
-        HC.options[ 'pause_import_folders_sync' ] = True
-        
-        try:
+        def wx_do_it():
+            
+            if not self:
+                
+                return
+                
             
             with ClientGUIDialogsManage.DialogManageImportFolders( self ) as dlg:
                 
                 dlg.ShowModal()
                 
             
-        finally:
+        
+        def THREAD_do_it( controller ):
             
-            HC.options[ 'pause_import_folders_sync' ] = original_pause_status
+            original_pause_status = controller.options[ 'pause_import_folders_sync' ]
             
+            controller.options[ 'pause_import_folders_sync' ] = True
+            
+            try:
+                
+                if HG.import_folders_running:
+                    
+                    job_key = ClientThreading.JobKey()
+                    
+                    try:
+                        
+                        job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
+                        
+                        controller.pub( 'message', job_key )
+                        
+                        while HG.import_folders_running:
+                            
+                            time.sleep( 0.1 )
+                            
+                            if HG.view_shutdown:
+                                
+                                return
+                                
+                            
+                        
+                    finally:
+                        
+                        job_key.Delete()
+                        
+                    
+                
+                controller.CallBlockingToWx( wx_do_it )
+                
+            finally:
+                
+                controller.options[ 'pause_import_folders_sync' ] = original_pause_status
+                
+                controller.pub( 'notify_new_import_folders' )
+                
+            
+        
+        self._controller.CallToThread( THREAD_do_it, self._controller )
         
     
     def _ManageNetworkHeaders( self ):
@@ -2046,6 +2105,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def wx_do_it():
             
+            if not self:
+                
+                return
+                
+            
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
             
@@ -2059,11 +2123,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
         
-        def THREAD_do_it():
+        def THREAD_do_it( controller ):
             
-            original_pause_status = self._controller.options[ 'pause_subs_sync' ]
+            original_pause_status = controller.options[ 'pause_subs_sync' ]
             
-            self._controller.options[ 'pause_subs_sync' ] = True
+            controller.options[ 'pause_subs_sync' ] = True
             
             try:
                 
@@ -2075,7 +2139,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                         job_key.SetVariable( 'popup_text_1', 'Waiting for subs to finish.' )
                         
-                        self._controller.pub( 'message', job_key )
+                        controller.pub( 'message', job_key )
                         
                         while HG.subscriptions_running:
                             
@@ -2093,17 +2157,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     
                 
-                self._controller.CallBlockingToWx( wx_do_it )
+                controller.CallBlockingToWx( wx_do_it )
                 
             finally:
                 
-                self._controller.options[ 'pause_subs_sync' ] = original_pause_status
+                controller.options[ 'pause_subs_sync' ] = original_pause_status
                 
-                HG.client_controller.pub( 'notify_new_subscriptions' )
+                controller.pub( 'notify_new_subscriptions' )
                 
             
         
-        self._controller.CallToThread( THREAD_do_it )
+        self._controller.CallToThread( THREAD_do_it, self._controller )
         
     
     def _ManageTagCensorship( self ):
@@ -2150,15 +2214,14 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
             
-            # eventually make this a proper management panel with several notebook pages or something
-            
             domain_manager = self._controller.network_engine.domain_manager
             
             url_matches = domain_manager.GetURLMatches()
+            parsers = domain_manager.GetParsers()
             
             ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = domain_manager.GetURLMatchLinks()
             
-            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, url_match_keys_to_display, url_match_keys_to_parser_keys )
+            panel = ClientGUIScrolledPanelsEdit.EditURLMatchLinksPanel( dlg, self._controller.network_engine, url_matches, parsers, url_match_keys_to_display, url_match_keys_to_parser_keys )
             
             dlg.SetPanel( panel )
             
@@ -3581,7 +3644,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportURL( self, url ):
         
-        ( url_type, match_name, can_parse ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
+        domain_manager = self._controller.network_engine.domain_manager
+        
+        ( url_type, match_name, can_parse ) = domain_manager.GetURLParseCapability( url )
         
         if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE ):
             
@@ -3598,18 +3663,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            # this is temporary until I can get the parser link going and actually do this dynamically
-            
-            if url_type == HC.URL_TYPE_WATCHABLE:
-                
-                self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
-                
-                return
-                
+            # url was recognised as a gallery, page, or watchable url
             
             if not can_parse:
                 
-                message = 'This URL was recognised as a ' + match_name + ' but this URL class does not yet have a parsing script linked to it!'
+                message = 'This URL was recognised as a "' + match_name + '" but this URL class does not yet have a parsing script linked to it!'
                 message += os.linesep * 2
                 message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
                 
@@ -3622,6 +3680,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 # at some point, append it to existing multiple-thread-supporting-page
             # gallery url -> open gallery page for the respective parser for import options, but no query input stuff, queue up gallery page to be parsed for page urls
             # page url -> open gallery page for the respective parser for import options, but no query input stuff (maybe no gallery stuff, but this is prob overkill), queue up file page to be parsed for tags and file
+            
+            if url_type == HC.URL_TYPE_WATCHABLE:
+                
+                self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
+                
+                return
+                
             
         
     

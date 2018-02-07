@@ -1011,6 +1011,36 @@ class BetterListCtrlPanel( wx.Panel ):
             
         
     
+    def _ExportToPngs( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is None:
+            
+            return
+            
+        
+        if not isinstance( export_object, HydrusSerialisable.SerialisableList ):
+            
+            self._ExportToPng()
+            
+            return
+            
+        
+        import ClientGUITopLevelWindows
+        import ClientGUISerialisable
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            
+            panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+        
+    
     def _GetExportObject( self ):
         
         to_export = HydrusSerialisable.SerialisableList()
@@ -1057,32 +1087,37 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportFromPng( self ):
         
-        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+        with wx.FileDialog( self, 'select the png or pngs with the encoded data', style = wx.FD_OPEN | wx.FD_MULTIPLE, wildcard = 'PNG (*.png)|*.png' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                try:
+                for path in dlg.GetPaths():
                     
-                    payload = ClientSerialisable.LoadFromPng( path )
+                    path = HydrusData.ToUnicode( path )
                     
-                except Exception as e:
+                    try:
+                        
+                        payload = ClientSerialisable.LoadFromPng( path )
+                        
+                    except Exception as e:
+                        
+                        wx.MessageBox( HydrusData.ToUnicode( e ) )
+                        
+                        return
+                        
                     
-                    wx.MessageBox( HydrusData.ToUnicode( e ) )
-                    
-                    return
-                    
-                
-                try:
-                    
-                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
-                    
-                    self._ImportObject( obj )
-                    
-                except:
-                    
-                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    try:
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                        
+                        self._ImportObject( obj )
+                        
+                    except:
+                        
+                        wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                        
+                        return
+                        
                     
                 
             
@@ -1159,10 +1194,17 @@ class BetterListCtrlPanel( wx.Panel ):
         export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
         export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
         
+        all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
+        
+        if all_objs_are_named:
+            
+            export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+            
+        
         import_menu_items = []
         
         import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
-        import_menu_items.append( ( 'normal', 'from png', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPng ) )
         
         self.AddMenuButton( 'export', export_menu_items, enabled_only_on_selection = True )
         self.AddMenuButton( 'import', import_menu_items )

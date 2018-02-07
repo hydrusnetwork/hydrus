@@ -1144,6 +1144,8 @@ class PagesNotebook( wx.Notebook ):
         
         page_name = page.GetDisplayName()
         
+        page_name = page_name.replace( os.linesep, '' )
+        
         if len( page_name ) > max_page_name_chars:
             
             page_name = page_name[ : max_page_name_chars ] + u'\u2026'
@@ -1156,9 +1158,13 @@ class PagesNotebook( wx.Notebook ):
             page_name += ' (' + HydrusData.ConvertIntToPrettyString( num_files ) + ')'
             
         
-        if self.GetPageText( index ) != page_name:
+        safe_page_name = self.EscapeMnemonics( page_name )
+        
+        existing_page_name = self.GetPageText( index )
+        
+        if existing_page_name not in ( safe_page_name, page_name ):
             
-            self.SetPageText( index, page_name )
+            self.SetPageText( index, safe_page_name )
             
         
     
@@ -1178,8 +1184,6 @@ class PagesNotebook( wx.Notebook ):
             if dlg.ShowModal() == wx.ID_OK:
                 
                 new_name = dlg.GetValue()
-                
-                new_name = self.EscapeMnemonics( new_name )
                 
                 page.SetName( new_name, from_user = True )
                 

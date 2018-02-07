@@ -424,9 +424,9 @@ class FileLookupScriptTagsPanel( wx.Panel ):
             self._SetTags( tags )
             
         
-        content_results = script.DoQuery( job_key, file_identifier )
+        parse_results = script.DoQuery( job_key, file_identifier )
         
-        tags = ClientParsing.GetTagsFromContentResults( content_results )
+        tags = ClientParsing.GetTagsFromParseResults( parse_results )
         
         wx.CallAfter( wx_code, tags )
         

@@ -70,7 +70,7 @@ class TestClientDB( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestConstants.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', CC.STATUS_NEW )
+        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_NEW, None, '' ) )
         
     
     @classmethod
@@ -887,7 +887,7 @@ class TestClientDB( unittest.TestCase ):
             
         
     
-    def test_md5_status( self ):
+    def test_hash_status( self ):
         
         TestClientDB._clear_db()
         
@@ -899,7 +899,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        result = self._read( 'md5_status', md5 )
+        result = self._read( 'hash_status', 'md5', md5 )
         
         self.assertEqual( result, ( CC.STATUS_NEW, None, '' ) )
         
@@ -915,7 +915,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, hash, note ) = self._read( 'md5_status', md5 )
+        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
         
         self.assertEqual( ( status, hash ), ( CC.STATUS_REDUNDANT, hash ) )
         
@@ -929,7 +929,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        ( status, hash, note ) = self._read( 'md5_status', md5 )
+        ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
         
         self.assertEqual( ( status, hash ), ( CC.STATUS_DELETED, hash ) )
         

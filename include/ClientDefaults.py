@@ -3,6 +3,7 @@ import ClientData
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusNetworking
+import HydrusSerialisable
 import os
 import wx
 
@@ -102,7 +103,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     custom_header_dict = {}
     
-    custom_header_dict[ 'User-Agent' ] = ( 'hydrus client', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
+    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (compatible; Hydrus Client)', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
     
     network_contexts_to_custom_header_dicts[ ClientNetworking.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
     
@@ -110,7 +111,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     custom_header_dict = {}
     
-    custom_header_dict[ 'User-Agent' ] = ( 'SCChannelApp/2.0.1 (Android; black)', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku seem to currently have a User-Agent whitelist on file requests. Setting this User-Agent allows the sankaku downloader to work.' )
+    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku have unusual User-Agent rules on certain requests. Setting this User-Agent allows the sankaku downloader to work.' )
     
     network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
     
@@ -123,6 +124,14 @@ def SetDefaultDomainManagerData( domain_manager ):
     #
     
     domain_manager.SetURLMatches( GetDefaultURLMatches() )
+    
+    #
+    
+    domain_manager.SetParsers( GetDefaultParsers() )
+    
+    #
+    
+    domain_manager.TryToLinkURLMatchesAndParsers()
     
 def GetClientDefaultOptions():
     
@@ -172,7 +181,7 @@ def GetClientDefaultOptions():
     
     system_predicates = {}
     
-    system_predicates[ 'age' ] = ( '<', 0, 0, 7, 0 )
+    system_predicates[ 'age' ] = ( '<', 'delta', ( 0, 0, 7, 0 ) )
     system_predicates[ 'duration' ] = ( '>', 0 )
     system_predicates[ 'height' ] = ( '=', 1080 )
     system_predicates[ 'limit' ] = 600
@@ -620,6 +629,55 @@ def GetDefaultImageboards():
     
     return imageboards
     
+def GetDefaultParsers():
+    
+    parser_dir = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
+    
+    if not os.path.exists( parser_dir ):
+        
+        return []
+        
+    
+    parsers = []
+    
+    import ClientSerialisable
+    import ClientParsing
+    
+    for filename in os.listdir( parser_dir ):
+        
+        path = os.path.join( parser_dir, filename )
+        
+        try:
+            
+            payload = ClientSerialisable.LoadFromPng( path )
+            
+            obj = HydrusSerialisable.CreateFromNetworkString( payload )
+            
+            if isinstance( obj, HydrusSerialisable.SerialisableList ):
+                
+                objs = obj
+                
+            else:
+                
+                objs = [ obj ]
+                
+            
+            for obj in objs:
+                
+                if isinstance( obj, ClientParsing.PageParser ):
+                    
+                    parsers.append( obj )
+                    
+                
+            
+        except:
+            
+            pass
+            
+        
+    
+    return parsers
+    
 def GetDefaultScriptRows():
     
     script_info = []
@@ -751,1146 +809,50 @@ def GetDefaultShortcuts():
     
 def GetDefaultURLMatches():
     
-    import ClientNetworkingDomain
-    import ClientParsing
+    url_match_dir = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
+    
+    if not os.path.exists( url_match_dir ):
+        
+        return []
+        
     
     url_matches = []
     
-    #
-    
-    name = '4chan thread'
-    url_type = HC.URL_TYPE_WATCHABLE
-    preferred_scheme = 'https'
-    netloc = 'boards.4chan.org'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'm' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'thread', example_string = 'thread' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '16086187' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651'
-    
-    # convert
-    # https://boards.4chan.org/m/thread/16086187/ssg-super-sentai-general-651
-    # to
-    # https://a.4cdn.org/m/thread/16086187.json
-    api_lookup_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( r'.*?([^/]+/thread/\d+).+', r'https://a.4cdn.org/\1.json' ) ) ] )
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = '4chan thread json api'
-    url_type = HC.URL_TYPE_WATCHABLE
-    preferred_scheme = 'https'
-    netloc = 'a.4cdn.org'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'm' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'thread', example_string = 'thread' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\.json', example_string = '16086187.json' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://a.4cdn.org/m/thread/16086187.json'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = '4chan file'
-    url_type = HC.URL_TYPE_FILE
-    preferred_scheme = 'https'
-    netloc = 'i.4cdn.org'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'm' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\..+', example_string = '1512858563140.jpg' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://i.4cdn.org/m/1512858563140.jpg'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = '8chan thread'
-    url_type = HC.URL_TYPE_WATCHABLE
-    preferred_scheme = 'https'
-    netloc = '8ch.net'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'tv' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'res', example_string = 'res' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\.html', example_string = '1002432.html' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://8ch.net/tv/res/1002432.html'
-    
-    # convert
-    # https://8ch.net/tv/res/1002432.html
-    # to
-    # https://8ch.net/tv/res/1002432.json
-    api_lookup_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_REGEX_SUB, ( r'(.+)html', r'\1json' ) ) ] )
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = '8chan thread json api'
-    url_type = HC.URL_TYPE_WATCHABLE
-    preferred_scheme = 'https'
-    netloc = '8ch.net'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'tv' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'res', example_string = 'res' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'\d+\.json', example_string = '1002432.json' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://8ch.net/tv/res/1002432.json'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = '8chan file'
-    url_type = HC.URL_TYPE_FILE
-    preferred_scheme = 'https'
-    netloc = '8ch.net'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'file_store', example_string = 'file_store' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = r'[\dabcdef]+\..+', example_string = '91b6d00f8f274d4505cabe690fbcf0b896a846e35a7faa8d2ddde5214d5bdc71.jpg' ) )
-    
-    parameters = {}
-    example_url = 'https://media.8ch.net/file_store/91b6d00f8f274d4505cabe690fbcf0b896a846e35a7faa8d2ddde5214d5bdc71.jpg'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'hentai foundry artist pictures gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'www.hentai-foundry.com'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'daruak' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://www.hentai-foundry.com/pictures/user/daruak/page/2'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'hentai foundry artist scraps gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'www.hentai-foundry.com'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Sparrow' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'scraps', example_string = 'scraps' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://www.hentai-foundry.com/pictures/user/Sparrow/scraps/page/3'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'hentai foundry tag search gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'www.hentai-foundry.com'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'search', example_string = 'search' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index', example_string = 'index' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://www.hentai-foundry.com/search/index?query=thick_thighs&page=5'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'hentai foundry file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'www.hentai-foundry.com'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'pictures', example_string = 'pictures' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'user', example_string = 'user' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'LittlePaw' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '554706' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://www.hentai-foundry.com/pictures/user/LittlePaw/554706/Serpent-Girl'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'gelbooru gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'gelbooru.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'https://www.gelbooru.com/index.php?page=post&s=list&tags=bar_censor'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'gelbooru file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'gelbooru.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '4009146' )
-    
-    example_url = 'https://gelbooru.com/index.php?page=post&s=view&id=4009146'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'safebooru gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'safebooru.org'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'https://safebooru.org/index.php?page=post&s=list&tags=black_footwear'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'safebooru file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'safebooru.org'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '2406024' )
-    
-    example_url = 'https://safebooru.org/index.php?page=post&s=view&id=2406024'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34.xxx gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'rule34.xxx'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'https://rule34.xxx/index.php?page=post&s=list&tags=ahe_gao'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34.xxx file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'rule34.xxx'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '2592511' )
-    
-    example_url = 'https://rule34.xxx/index.php?page=post&s=view&id=2592511'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'furry.booru.org gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'http'
-    netloc = 'furry.booru.org'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'http://furry.booru.org/index.php?page=post&s=list&tags=blue_background'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'furry.booru.org file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'http'
-    netloc = 'furry.booru.org'
-    allow_subdomains = False
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1199885' )
-    
-    example_url = 'http://furry.booru.org/index.php?page=post&s=view&id=1199885'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'xbooru gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'http'
-    netloc = 'xbooru.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'http://xbooru.com/index.php?page=post&s=list&tags=dickgirl'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'xbooru file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'http'
-    netloc = 'xbooru.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '708517' )
-    
-    example_url = 'http://xbooru.com/index.php?page=post&s=view&id=708517'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'tbib gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'tbib.org'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' )
-    
-    example_url = 'https://tbib.org/index.php?page=post&s=list&tags=alternate_hairstyle'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'tbib file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'tbib.org'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' )
-    parameters[ 's' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' )
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '6391256' )
-    
-    example_url = 'https://tbib.org/index.php?page=post&s=view&id=6391256'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'e621 gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'e621.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'index', example_string = 'index' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://e621.net/post/index/1/smile'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'e621 file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'e621.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'show', example_string = 'show' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1421754' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://e621.net/post/show/1421754/abstract_background-animal_humanoid-blush-brown_ey'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34.paheal gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'rule34.paheal.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Pyra' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ) )
-    
-    parameters = {}
-    
-    example_url = 'http://rule34.paheal.net/post/list/Pyra/1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34.paheal file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'rule34.paheal.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '2442974' ) )
-    
-    parameters = {}
-    
-    example_url = 'http://rule34.paheal.net/post/view/2442974'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34hentai gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'rule34hentai.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Triss_Merigold' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://rule34hentai.net/post/list/Triss_Merigold/1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'rule34hentai file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'rule34hentai.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '289558' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://rule34hentai.net/post/view/289558'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'mishimmie gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'shimmie.katawa-shoujo.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'list', example_string = 'list' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'hanako' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' ) )
-    
-    parameters = {}
-    
-    example_url = 'http://shimmie.katawa-shoujo.com/post/list/hanako/1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'mishimmie file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'shimmie.katawa-shoujo.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '4565' ) )
-    
-    parameters = {}
-    
-    example_url = 'http://shimmie.katawa-shoujo.com/post/view/4565'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'danbooru gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'danbooru.donmai.us'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://danbooru.donmai.us/posts?page=1&tags=mikasa_ackerman'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'danbooru file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'danbooru.donmai.us'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '2982422' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://danbooru.donmai.us/posts/2982422'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'konachan gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'konachan.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://konachan.com/post?page=1&tags=landscape'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'konachan file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'konachan.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'show', example_string = 'show' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '258390' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://konachan.com/post/show/258390/black_hair-dress-flowers-landscape-long_hair-neckl'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'yande.re gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'yande.re'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    
-    parameters = {}
-    
-    parameters[ 'page' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '1' )
-    
-    example_url = 'https://yande.re/post?page=1&tags=atago_%28azur_lane%29'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'yande.re file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'yande.re'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'show', example_string = 'show' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '428714' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://yande.re/post/show/428714'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'sankaku chan gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'chan.sankakucomplex.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    parameters = {}
-    
-    example_url = 'https://chan.sankakucomplex.com/?tags=tomboy&page=1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'sankaku chan file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'chan.sankakucomplex.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'show', example_string = 'show' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '6586014' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://chan.sankakucomplex.com/post/show/6586014'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'sankaku idol gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'idol.sankakucomplex.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    parameters = {}
-    
-    example_url = 'https://idol.sankakucomplex.com/?tags=akagi_kuro&page=1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'sankaku idol file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'idol.sankakucomplex.com'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'show', example_string = 'show' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '695512' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://idol.sankakucomplex.com/post/show/695512'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'deviant art artist gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'deviantart.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'gallery', example_string = 'gallery' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://starca.deviantart.com/gallery/?catpath=/&offset=0'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'deviant art file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'deviantart.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'art', example_string = 'art' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_ANY, example_string = 'Commission-animation-Elsa-and-Anna-541820782' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://starca.deviantart.com/art/Commission-animation-Elsa-and-Anna-541820782'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'newgrounds games gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'newgrounds.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'games', example_string = 'games' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://matt-likes-swords.newgrounds.com/games/'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'newgrounds movies gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'newgrounds.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'movies', example_string = 'movies' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://sambakza.newgrounds.com/movies/'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'newgrounds file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'newgrounds.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'portal', example_string = 'portal' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '161181' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://www.newgrounds.com/portal/view/161181'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'pixiv artist gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'pixiv.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'member_illust.php', example_string = 'member_illust.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '115625' )
-    
-    example_url = 'https://www.pixiv.net/member_illust.php?id=115625&type=illust&p=1'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'pixiv file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'https'
-    netloc = 'pixiv.net'
-    allow_subdomains = True
-    keep_subdomains = False
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'member_illust.php', example_string = 'member_illust.php' ) )
-    
-    parameters = {}
-    
-    parameters[ 'illust_id' ] = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '66476204' )
-    
-    example_url = 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=66476204'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'tumblr api gallery page'
-    url_type = HC.URL_TYPE_GALLERY
-    preferred_scheme = 'https'
-    netloc = 'tumblr.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'api', example_string = 'api' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'read', example_string = 'read' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'json', example_string = 'json' ) )
-    
-    parameters = {}
-    
-    example_url = 'https://sautte-fashion.tumblr.com/api/read/json?start=0&num=50'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
-    
-    #
-    
-    name = 'tumblr file page'
-    url_type = HC.URL_TYPE_POST
-    preferred_scheme = 'http' # wew
-    netloc = 'tumblr.com'
-    allow_subdomains = True
-    keep_subdomains = True
-    
-    path_components = []
-    
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
-    path_components.append( ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_FLEXIBLE, match_value = ClientParsing.NUMERIC, example_string = '169381609093' ) )
-    
-    parameters = {}
-    
-    example_url = 'http://sautte-fashion.tumblr.com/post/169381609093/favorite-looks-from-alexander-mcqueen-resort-2012'
-    
-    url_match = ClientNetworkingDomain.URLMatch( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, example_url = example_url )
-    
-    url_matches.append( url_match )
+    import ClientNetworkingDomain
+    import ClientSerialisable
+    
+    for filename in os.listdir( url_match_dir ):
+        
+        path = os.path.join( url_match_dir, filename )
+        
+        try:
+            
+            payload = ClientSerialisable.LoadFromPng( path )
+            
+            obj = HydrusSerialisable.CreateFromNetworkString( payload )
+            
+            if isinstance( obj, HydrusSerialisable.SerialisableList ):
+                
+                objs = obj
+                
+            else:
+                
+                objs = [ obj ]
+                
+            
+            for obj in objs:
+                
+                if isinstance( obj, ClientNetworkingDomain.URLMatch ):
+                    
+                    url_matches.append( obj )
+                    
+                
+            
+        except:
+            
+            pass
+            
+        
     
     return url_matches
     

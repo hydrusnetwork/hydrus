@@ -1,4 +1,5 @@
 import bs4
+import calendar
 import ClientNetworking
 import collections
 import HydrusConstants as HC
@@ -13,13 +14,26 @@ import re
 import time
 import urlparse
 
-def ConvertContentResultToPrettyString( result ):
+def ConvertParseResultToPrettyString( result ):
     
     ( ( name, content_type, additional_info ), parsed_text ) = result
     
     if content_type == HC.CONTENT_TYPE_URLS:
         
-        return 'url: ' + parsed_text
+        ( url_type, priority ) = additional_info
+        
+        if url_type == HC.URL_TYPE_FILE:
+            
+            return 'file url: ' + parsed_text
+            
+        elif url_type == HC.URL_TYPE_POST:
+            
+            return 'post url: ' + parsed_text
+            
+        elif url_type == HC.URL_TYPE_NEXT:
+            
+            return 'next page url: ' + parsed_text
+            
         
     elif content_type == HC.CONTENT_TYPE_MAPPINGS:
         
@@ -28,6 +42,32 @@ def ConvertContentResultToPrettyString( result ):
     elif content_type == HC.CONTENT_TYPE_HASH:
         
         return additional_info + ' hash: ' + parsed_text.encode( 'hex' )
+        
+    elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
+        
+        timestamp_type = additional_info
+        
+        try:
+            
+            timestamp = int( parsed_text )
+            
+            timestamp_string = HydrusData.ConvertTimestampToPrettyTime( timestamp )
+            
+        except:
+            
+            timestamp_string = 'could not convert to integer'
+            
+        
+        if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+            
+            return 'source time: ' + timestamp_string
+            
+        
+    elif content_type == HC.CONTENT_TYPE_TITLE:
+        
+        priority = additional_info
+        
+        return 'thread watcher page title (priority ' + str( priority ) + '): ' + parsed_text
         
     elif content_type == HC.CONTENT_TYPE_VETO:
         
@@ -50,7 +90,21 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
-            pretty_strings.append( 'urls' )
+            for ( url_type, priority ) in additional_infos:
+                
+                if url_type == HC.URL_TYPE_FILE:
+                    
+                    pretty_strings.append( 'file url' )
+                    
+                elif url_type == HC.URL_TYPE_POST:
+                    
+                    pretty_strings.append( 'post url' )
+                    
+                elif url_type == HC.URL_TYPE_NEXT:
+                    
+                    pretty_strings.append( 'gallery next page url' )
+                    
+                
             
         elif content_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -79,6 +133,20 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
                 
                 pretty_strings.append( 'hashes: ' + ', '.join( hash_types ) )
                 
+            
+        elif content_type == HC.CONTENT_TYPE_TIMESTAMP:
+            
+            for timestamp_type in additional_infos:
+                
+                if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+                    
+                    pretty_strings.append( 'source time' )
+                    
+                
+            
+        elif content_type == HC.CONTENT_TYPE_TITLE:
+            
+            pretty_strings.append( 'thread watcher page title' )
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             
@@ -112,7 +180,7 @@ def GetChildrenContent( job_key, children, data, referral_url ):
                 
             elif isinstance( child, ContentParser ):
                 
-                child_content = child.Parse( data )
+                child_content = child.Parse( {}, data )
                 
             
         except HydrusExceptions.VetoException:
@@ -125,7 +193,7 @@ def GetChildrenContent( job_key, children, data, referral_url ):
     
     return content
     
-def GetHashesFromContentResults( results ):
+def GetHashesFromParseResults( results ):
     
     hash_results = []
     
@@ -139,7 +207,7 @@ def GetHashesFromContentResults( results ):
     
     return hash_results
     
-def GetTagsFromContentResults( results ):
+def GetTagsFromParseResults( results ):
     
     tag_results = []
     
@@ -155,7 +223,72 @@ def GetTagsFromContentResults( results ):
     
     return tag_results
     
-def GetURLsFromContentResults( results ):
+def GetTimestampFromParseResults( results, desired_timestamp_type ):
+    
+    timestamp_results = []
+    
+    for ( ( name, content_type, additional_info ), parsed_text ) in results:
+        
+        if content_type == HC.CONTENT_TYPE_TIMESTAMP:
+            
+            timestamp_type = additional_info
+            
+            if timestamp_type == desired_timestamp_type:
+                
+                try:
+                    
+                    timestamp = int( parsed_text )
+                    
+                except:
+                    
+                    continue
+                    
+                
+                timestamp_results.append( timestamp )
+                
+            
+        
+    
+    if len( timestamp_results ) == 0:
+        
+        return None
+        
+    else:
+        
+        return min( timestamp_results )
+        
+    
+def GetTitleFromAllParseResults( all_parse_results ):
+    
+    titles = []
+    
+    for results in all_parse_results:
+        
+        for ( ( name, content_type, additional_info ), parsed_text ) in results:
+            
+            if content_type == HC.CONTENT_TYPE_TITLE:
+                
+                priority = additional_info
+                
+                titles.append( ( priority, parsed_text ) )
+                
+            
+        
+    
+    if len( titles ) > 0:
+        
+        titles.sort( reverse = True ) # highest priority first
+        
+        ( priority, title ) = titles[0]
+        
+        return title
+        
+    else:
+        
+        return None
+        
+    
+def GetURLsFromParseResults( results, desired_url_types ):
     
     url_results = collections.defaultdict( list )
     
@@ -163,14 +296,12 @@ def GetURLsFromContentResults( results ):
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
-            priority = additional_info
+            ( url_type, priority ) = additional_info
             
-            if priority is None:
+            if url_type in desired_url_types:
                 
-                priority = -1
+                url_results[ priority ].append( parsed_text )
                 
-            
-            url_results[ priority ].append( parsed_text )
             
         
     
@@ -184,9 +315,16 @@ def GetURLsFromContentResults( results ):
     
     # url_lists of descending priority
     
-    url_results = [ url_list for ( priority, url_list ) in url_results ]
+    if len( url_results ) > 0:
+        
+        ( priority, url_list ) = url_results[0]
+        
+    else:
+        
+        url_list = []
+        
     
-    return url_results
+    return url_list
     
 def RenderJSONParseRule( parse_rule ):
     
@@ -251,14 +389,14 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         self._string_converter = string_converter
         
     
-    def _ParseRawContents( self, data ):
+    def _ParseRawContents( self, parse_context, data ):
         
         raise NotImplementedError()
         
     
-    def Parse( self, data ):
+    def Parse( self, parse_context, data ):
         
-        raw_contents = self._ParseRawContents( data )
+        raw_contents = self._ParseRawContents( parse_context, data )
         
         contents = []
         
@@ -341,7 +479,7 @@ class ParseFormulaCompound( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, data ):
+    def _ParseRawContents( self, parse_context, data ):
         
         def get_stream_data( index, s ):
             
@@ -363,7 +501,14 @@ class ParseFormulaCompound( ParseFormula ):
         
         for formula in self._formulae:
             
-            streams.append( formula.Parse( data ) )
+            stream = formula.Parse( parse_context, data )
+            
+            if len( stream ) == 0: # no contents were found for one of the /1 replace components, so no valid strings can be made.
+                
+                return []
+                
+            
+            streams.append( stream )
             
         
         num_raw_contents_to_make = max( ( len( stream ) for stream in streams ) )
@@ -418,6 +563,77 @@ class ParseFormulaCompound( ParseFormula ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND ] = ParseFormulaCompound
+
+class ParseFormulaContextVariable( ParseFormula ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE
+    SERIALISABLE_NAME = 'Context Variable Formula'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, variable_name = None, string_match = None, string_converter = None ):
+        
+        ParseFormula.__init__( self, string_match, string_converter )
+        
+        if variable_name is None:
+            
+            variable_name = 'url'
+            
+        
+        self._variable_name = variable_name
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_string_match = self._string_match.GetSerialisableTuple()
+        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        
+        return ( self._variable_name, serialisable_string_match, serialisable_string_converter )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._variable_name, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        
+        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
+        
+    
+    def _ParseRawContents( self, parse_context, data ):
+        
+        raw_contents = []
+        
+        if self._variable_name in parse_context:
+            
+            raw_contents.append( parse_context[ self._variable_name ] )
+            
+        
+        return raw_contents
+        
+    
+    def ToPrettyString( self ):
+        
+        return 'CONTEXT VARIABLE: ' + self._variable_name
+        
+    
+    def ToPrettyMultilineString( self ):
+        
+        s = []
+        
+        s.append( 'fetch the "' + self._variable_name + '" variable from the parsing context' )
+        
+        separator = os.linesep * 2
+        
+        text = '--CONTEXT VARIABLE--' + os.linesep * 2 + separator.join( s )
+        
+        return text
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._variable_name, self._string_match, self._string_converter )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE ] = ParseFormulaContextVariable
 
 HTML_CONTENT_ATTRIBUTE = 0
 HTML_CONTENT_STRING = 1
@@ -520,7 +736,16 @@ class ParseFormulaHTML( ParseFormula ):
             
         elif self._content_to_fetch == HTML_CONTENT_STRING:
             
-            result = tag.string
+            all_strings = [ s for s in tag.strings if len( s ) > 0 ]
+            
+            if len( all_strings ) == 0:
+                
+                result = ''
+                
+            else:
+                
+                result = all_strings[0]
+                
             
         elif self._content_to_fetch == HTML_CONTENT_HTML:
             
@@ -572,7 +797,7 @@ class ParseFormulaHTML( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, data ):
+    def _ParseRawContents( self, parse_context, data ):
         
         root = bs4.BeautifulSoup( data, 'lxml' )
         
@@ -841,7 +1066,7 @@ class ParseFormulaJSON( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, data ):
+    def _ParseRawContents( self, parse_context, data ):
         
         j = json.loads( data )
         
@@ -893,7 +1118,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
         
@@ -930,19 +1155,73 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         serialisable_formula = self._formula.GetSerialisableTuple()
         
-        return ( self._name, self._content_type, serialisable_formula, self._additional_info )
+        if self._content_type == HC.CONTENT_TYPE_VETO:
+            
+            ( veto_if_matches_found, string_match ) = self._additional_info
+            
+            serialisable_additional_info = ( veto_if_matches_found, string_match.GetSerialisableTuple() )
+            
+        else:
+            
+            serialisable_additional_info = self._additional_info
+            
+        
+        return ( self._name, self._content_type, serialisable_formula, serialisable_additional_info )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, self._content_type, serialisable_formula, self._additional_info ) = serialisable_info
+        ( self._name, self._content_type, serialisable_formula, serialisable_additional_info ) = serialisable_info
         
-        if isinstance( self._additional_info, list ):
+        if self._content_type == HC.CONTENT_TYPE_VETO:
             
-            self._additional_info = tuple( self._additional_info )
+            ( veto_if_matches_found, serialisable_string_match ) = serialisable_additional_info
+            
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
+            
+            self._additional_info = ( veto_if_matches_found, string_match )
+            
+        else:
+            
+            self._additional_info = serialisable_additional_info
+            
+            if isinstance( self._additional_info, list ):
+                
+                self._additional_info = tuple( self._additional_info )
+                
             
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( name, content_type, serialisable_formula, additional_info ) = old_serialisable_info
+            
+            if content_type == HC.CONTENT_TYPE_VETO:
+                
+                ( veto_if_matches_found, match_if_text_present, search_text ) = additional_info
+                
+                if match_if_text_present:
+                    
+                    string_match = StringMatch( match_type = STRING_MATCH_REGEX, match_value = search_text, example_string = search_text )
+                    
+                else:
+                    
+                    string_match = StringMatch()
+                    
+                
+                serialisable_string_match = string_match.GetSerialisableTuple()
+                
+                additional_info = ( veto_if_matches_found, serialisable_string_match )
+                
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetName( self ):
@@ -955,24 +1234,19 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         return { ( self._name, self._content_type, self._additional_info ) }
         
     
-    def Parse( self, data ):
+    def Parse( self, parse_context, data ):
         
-        parsed_texts = self._formula.Parse( data )
+        parsed_texts = self._formula.Parse( parse_context, data )
         
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
-            ( veto_if_matches_found, match_if_text_present, search_text ) = self._additional_info
+            ( veto_if_matches_found, string_match ) = self._additional_info
             
-            if match_if_text_present:
-                
-                match_found = True in [ search_text in parsed_text for parsed_text in parsed_texts ]
-                
-            else:
-                
-                match_found = True not in [ search_text in parsed_text for parsed_text in parsed_texts ]
-                
+            match_found = True in ( string_match.Matches( parsed_text ) for parsed_text in parsed_texts )
             
-            do_veto = ( veto_if_matches_found and match_found ) or ( not veto_if_matches_found and not match_found )
+            veto_if_missing = not veto_if_matches_found
+            
+            do_veto = ( veto_if_matches_found and match_found ) or ( veto_if_missing and not match_found )
             
             if do_veto:
                 
@@ -1012,9 +1286,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
     SERIALISABLE_NAME = 'Page Parser'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, name, parser_key = None, string_converter = None, sub_page_parsers = None, content_parsers = None, example_urls = None ):
+    def __init__( self, name, parser_key = None, string_converter = None, sub_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None ):
         
         if parser_key is None:
             
@@ -1041,6 +1315,13 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             example_urls = []
             
         
+        if example_parsing_context is None:
+            
+            example_parsing_context = {}
+            
+            example_parsing_context[ 'url' ] = 'http://example.com/posts/index.php?id=123456'
+            
+        
         HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
         
         self._parser_key = parser_key
@@ -1048,6 +1329,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         self._sub_page_parsers = sub_page_parsers
         self._content_parsers = content_parsers
         self._example_urls = example_urls
+        self._example_parsing_context = example_parsing_context
         
     
     def _GetSerialisableInfo( self ):
@@ -1059,12 +1341,12 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         serialisable_content_parsers = HydrusSerialisable.SerialisableList( self._content_parsers ).GetSerialisableTuple()
         
-        return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls )
+        return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls ) = serialisable_info
+        ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
         
         self._parser_key = serialisable_parser_key.decode( 'hex' )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
@@ -1072,9 +1354,29 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls ) = old_serialisable_info
+            
+            example_parsing_context = {}
+            
+            example_parsing_context[ 'url' ] = 'http://example.com/posts/index.php?id=123456'
+            
+            new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def GetContentParsers( self ):
         
         return ( self._sub_page_parsers, self._content_parsers )
+        
+    
+    def GetExampleParsingContext( self ):
+        
+        return self._example_parsing_context
         
     
     def GetExampleURLs( self ):
@@ -1109,7 +1411,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return self._string_converter
         
     
-    def Parse( self, page_data ):
+    def Parse( self, parse_context, page_data ):
         
         try:
             
@@ -1122,20 +1424,29 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         #
         
-        whole_page_content_results = []
+        whole_page_parse_results = []
         
         for content_parser in self._content_parsers:
             
-            whole_page_content_results.extend( content_parser.Parse( converted_page_data ) )
+            try:
+                
+                whole_page_parse_results.extend( content_parser.Parse( parse_context, converted_page_data ) )
+                
+            except HydrusExceptions.VetoException:
+                
+                return []
+                
             
         
         #
         
+        all_parse_results = []
+        
         if len( self._sub_page_parsers ) == 0:
             
-            if len( whole_page_content_results ) > 0:
+            if len( whole_page_parse_results ) > 0:
                 
-                all_content_results = [ whole_page_content_results ]
+                all_parse_results = [ whole_page_parse_results ]
                 
             
         else:
@@ -1151,27 +1462,25 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             sub_page_parsers.sort( key = sort_key )
             
-            all_content_results = []
-            
             for ( formula, page_parser ) in self._sub_page_parsers:
                 
-                posts = formula.Parse( converted_page_data )
+                posts = formula.Parse( parse_context, converted_page_data )
                 
                 for post in posts:
                     
-                    page_parser_all_content_results = page_parser.Parse( post )
+                    page_parser_all_parse_results = page_parser.Parse( parse_context, post )
                     
-                    for page_parser_content_results in page_parser_all_content_results:
+                    for page_parser_parse_results in page_parser_all_parse_results:
                         
-                        page_parser_content_results.extend( whole_page_content_results )
+                        page_parser_parse_results.extend( whole_page_parse_results )
                         
-                        all_content_results.append( page_parser_content_results )
+                        all_parse_results.append( page_parser_parse_results )
                         
                     
                 
             
         
-        return all_content_results
+        return all_parse_results
         
     
     def RegenerateParserKey( self ):
@@ -1305,7 +1614,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
     
     def ParseURLs( self, job_key, data, referral_url ):
         
-        basic_urls = self._formula.Parse( data )
+        basic_urls = self._formula.Parse( {}, data )
         
         absolute_urls = [ urlparse.urljoin( referral_url, basic_url ) for basic_url in basic_urls ]
         
@@ -1413,6 +1722,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 2, new_serialisable_info )
             
         
+    
     def ConvertMediaToFileIdentifier( self, media ):
         
         if self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT:
@@ -1579,9 +1889,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 return []
                 
             
-            content_results = self.Parse( job_key, data )
+            parse_results = self.Parse( job_key, data )
             
-            return content_results
+            return parse_results
             
         except HydrusExceptions.CancelledException:
             
@@ -1602,18 +1912,18 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Parse( self, job_key, data ):
         
-        content_results = GetChildrenContent( job_key, self._children, data, self._url )
+        parse_results = GetChildrenContent( job_key, self._children, data, self._url )
         
-        if len( content_results ) == 0:
+        if len( parse_results ) == 0:
             
             job_key.SetVariable( 'script_status', 'Did not find anything.' )
             
         else:
             
-            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( content_results ) ) + ' rows.' )
+            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( parse_results ) ) + ' rows.' )
             
         
-        return content_results
+        return parse_results
         
     
     def SetChildren( self, children ):
@@ -1643,6 +1953,7 @@ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING = 6
 STRING_TRANSFORMATION_CLIP_TEXT_FROM_END = 7
 STRING_TRANSFORMATION_REVERSE = 8
 STRING_TRANSFORMATION_REGEX_SUB = 9
+STRING_TRANSFORMATION_DATE_DECODE = 10
 
 transformation_type_str_lookup = {}
 
@@ -1656,6 +1967,7 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING ]
 transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REGEX_SUB ] = 'regex substitution'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'date decode'
 
 class StringConverter( HydrusSerialisable.SerialisableBase ):
     
@@ -1695,7 +2007,7 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         
         for ( transformation_type, data ) in serialisable_transformations:
             
-            if transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
+            if isinstance( data, list ):
                 
                 data = tuple( data ) # convert from list to tuple thing
                 
@@ -1770,6 +2082,34 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                     
                     s = re.sub( pattern, repl, s, flags = re.UNICODE )
                     
+                elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
+                    
+                    ( phrase, timezone, timezone_offset ) = data
+                    
+                    struct_time = time.strptime( s, phrase )
+                    
+                    if timezone == HC.TIMEZONE_GMT:
+                        
+                        # the given struct is in GMT, so calendar.timegm is appropriate here
+                        
+                        timestamp = int( calendar.timegm( struct_time ) )
+                        
+                    elif timezone == HC.TIMEZONE_LOCAL:
+                        
+                        # the given struct is in local time, so time.mktime is correct
+                        
+                        timestamp = int( time.mktime( struct_time ) )
+                        
+                    elif timezone == HC.TIMEZONE_OFFSET:
+                        
+                        # the given struct is in server time, which is the same as GMT minus an offset
+                        # if we are 7200 seconds ahead, the correct GMT timestamp needs to be 7200 smaller
+                        
+                        timestamp = int( calendar.timegm( struct_time ) ) - timezone_offset
+                        
+                    
+                    s = str( timestamp )
+                    
                 
             except:
                 
@@ -1788,6 +2128,11 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
     def GetTransformationStrings( self ):
         
         return [ self.TransformationToUnicode( transformation ) for transformation in self.transformations ]
+        
+    
+    def MakesChanges( self ):
+        
+        return len( self.transformations ) > 0
         
     
     @staticmethod
@@ -1887,6 +2232,20 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
     def SetMinChars( self, min_chars ):
         
         self._min_chars = min_chars
+        
+    
+    def Matches( self, text ):
+        
+        try:
+            
+            self.Test( text )
+            
+            return True
+            
+        except HydrusExceptions.StringMatchException:
+            
+            return False
+            
         
     
     def Test( self, text ):

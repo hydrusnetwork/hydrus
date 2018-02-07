@@ -6,6 +6,7 @@ import ClientDownloading
 import ClientFiles
 import ClientImageHandling
 import ClientNetworking
+import ClientParsing
 import ClientTags
 import ClientThreading
 import collections
@@ -36,6 +37,36 @@ CHECKER_STATUS_DEAD = 1
 CHECKER_STATUS_404 = 2
 
 DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
+
+def GetInitialSeedStatus( seed ):
+    
+    ( status, hash, note ) = ( CC.STATUS_NEW, None, '' )
+    
+    url_not_known_beforehand = True
+    
+    if seed.seed_type == SEED_TYPE_URL:
+        
+        url = seed.seed_data
+        
+        ( status, hash, note ) = HG.client_controller.Read( 'url_status', url )
+        
+        url_not_known_beforehand = status == CC.STATUS_NEW
+        
+    
+    if status == CC.STATUS_NEW:
+        
+        for ( hash_type, found_hash ) in seed.GetHashes().items():
+            
+            ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash )
+            
+            if status != CC.STATUS_NEW:
+                
+                break
+                
+            
+        
+    
+    return ( url_not_known_beforehand, ( status, hash, note ) )
 
 def THREADDownloadURL( job_key, url, url_string ):
     
@@ -249,6 +280,57 @@ def THREADDownloadURLs( job_key, urls, title ):
     
     job_key.Finish()
     
+def UpdateSeedCacheWithAllParseResults( seed_cache, all_parse_results ):
+    
+    # need a limit param here for 'stop at 40 total new because of file limit'
+    
+    new_seeds = []
+    
+    num_new = 0
+    num_already_in = 0
+    
+    for parse_results in all_parse_results:
+        
+        parsed_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ) )
+        
+        urls_to_add = filter( lambda u: not seed_cache.HasURL( u ), parsed_urls )
+        
+        num_new += len( urls_to_add )
+        num_already_in += len( parsed_urls ) - len( urls_to_add )
+        
+        if len( urls_to_add ) == 0:
+            
+            continue
+            
+        
+        tags = ClientParsing.GetTagsFromParseResults( parse_results )
+        hashes = ClientParsing.GetHashesFromParseResults( parse_results )
+        source_timestamp = ClientParsing.GetTimestampFromParseResults( parse_results, HC.TIMESTAMP_TYPE_SOURCE )
+        
+        for url in urls_to_add:
+            
+            seed = Seed( SEED_TYPE_URL, url )
+            
+            seed.AddTags( tags )
+            
+            for ( hash_type, hash ) in hashes:
+                
+                seed.SetHash( hash_type, hash )
+                
+            
+            if source_timestamp is not None:
+                
+                seed.source_time = source_timestamp
+                
+            
+            new_seeds.append( seed )
+            
+        
+    
+    seed_cache.AddSeeds( new_seeds )
+    
+    return ( num_new, num_already_in )
+    
 class FileImportJob( object ):
     
     def __init__( self, temp_path, file_import_options = None ):
@@ -379,7 +461,7 @@ class FileImportJob( object ):
         
         self._hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
         
-        self._pre_import_status = HG.client_controller.Read( 'hash_status', self._hash )
+        ( self._pre_import_status, hash, note ) = HG.client_controller.Read( 'hash_status', 'sha256', self._hash )
         
     
     def GenerateInfo( self ):
@@ -2040,9 +2122,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     try:
                         
-                        if os.path.exists( path ):
+                        dest_dir = self._action_locations[ status ]
+                        
+                        if not os.path.exists( dest_dir ):
                             
-                            dest_dir = self._action_locations[ status ]
+                            raise HydrusExceptions.DataMissing( 'The move location "' + dest_dir + '" does not exist!' )
+                            
+                        
+                        if os.path.exists( path ):
                             
                             filename = os.path.basename( path )
                             
@@ -2056,8 +2143,6 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         txt_path = path + '.txt'
                         
                         if os.path.exists( txt_path ):
-                            
-                            dest_dir = self._action_locations[ status ]
                             
                             txt_filename = os.path.basename( txt_path )
                             
@@ -2199,6 +2284,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return
             
         
+        time_to_stop = HydrusData.GetNow() + 600
+        was_interrupted = False
         due_by_check_now = self._check_now
         due_by_period = not self._paused and HydrusData.TimeHasPassed( self._last_checked + self._period )
         
@@ -2241,10 +2328,19 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     seed = self._path_cache.GetNextSeed( CC.STATUS_UNKNOWN )
                     
-                    p1 = HC.options[ 'pause_import_folders_sync' ]
+                    p1 = HC.options[ 'pause_import_folders_sync' ] or self._paused
                     p2 = HG.view_shutdown
                     
                     if seed is None or p1 or p2:
+                        
+                        was_interrupted = True
+                        
+                        break
+                        
+                    
+                    if HydrusData.TimeHasPassed( time_to_stop ):
+                        
+                        was_interrupted = True
                         
                         break
                         
@@ -2380,8 +2476,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 self._ActionPaths()
                 
             
-            self._last_checked = HydrusData.GetNow()
-            self._check_now = False
+            if not was_interrupted:
+                
+                self._last_checked = HydrusData.GetNow()
+                self._check_now = False
+                
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
@@ -3081,17 +3180,17 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         self.note = ''
         
         self._urls = set()
-        self._service_keys_to_tags = collections.defaultdict( set )
+        self._tags = set()
         self._hashes = {}
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_urls = list( self._urls )
-        serialisable_service_keys_to_tags = [ ( service_key.encode( 'hex' ), list( tags ) ) for ( service_key, tags ) in self._service_keys_to_tags.items() ]
+        serialisable_tags = list( self._tags )
         serialisable_hashes = [ ( hash_type, hash.encode( 'hex' ) ) for ( hash_type, hash ) in self._hashes.items() ]
         
-        return ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, serialisable_urls, serialisable_service_keys_to_tags, serialisable_hashes )
+        return ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, serialisable_urls, serialisable_tags, serialisable_hashes )
         
     
     def __eq__( self, other ):
@@ -3111,10 +3210,10 @@ class Seed( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, serialisable_urls, serialisable_service_keys_to_tags, serialisable_hashes ) = serialisable_info
+        ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
         
         self._urls = set( serialisable_urls )
-        self._service_keys_to_tags = { encoded_service_key.decode( 'hex' ) : set( tags ) for ( encoded_service_key, tags ) in serialisable_service_keys_to_tags }
+        self._service_keys_to_tags = set( serialisable_tags )
         self._hashes = { hash_type : encoded_hash.decode( 'hex' ) for ( hash_type, encoded_hash ) in serialisable_hashes }
         
     
@@ -3123,14 +3222,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         self.modified = HydrusData.GetNow()
         
     
-    def AddTags( self, service_key, tags ):
+    def AddTags( self, tags ):
         
-        if service_key not in self._service_keys_to_tags:
-            
-            self._service_keys_to_tags[ service_key ] = set()
-            
-        
-        self._service_keys_to_tags[ service_key ].update( tags )
+        self._tags.update( tags )
         
         self._UpdateModified()
         
@@ -3168,6 +3262,11 @@ class Seed( HydrusSerialisable.SerialisableBase ):
             
         
         return search_seeds
+        
+    
+    def GetTags( self ):
+        
+        return set( self._tags )
         
     
     def SetHash( self, hash_type, hash ):
@@ -4117,8 +4216,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 # just a little padding, to make sure we don't accidentally get into a long wait because we need to fetch file and tags independantly etc...
                 expected_requests = 3
                 expected_bytes = 1048576
+                threshold = 600
                 
-                p4 = not HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests, expected_bytes )
+                p4 = not HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests = expected_requests, expected_bytes = expected_bytes, threshold = threshold )
                 
                 if p1 or p3 or p4:
                     
@@ -4340,8 +4440,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 # just a little padding here
                 expected_requests = 3
                 expected_bytes = 1048576
+                threshold = 30
                 
-                if HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests, expected_bytes ):
+                if HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), expected_requests = expected_requests, expected_bytes = expected_bytes, threshold = threshold ):
                     
                     return True
                     
@@ -5262,6 +5363,40 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         error_occurred = False
         watcher_status_should_stick = True
         
+        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._thread_url )
+        
+        if url_type != HC.URL_TYPE_WATCHABLE:
+            
+            error_occurred = True
+            
+            watcher_status = 'Did not understand the given URL as watchable!'
+            
+        elif not can_parse:
+            
+            error_occurred = True
+            
+            watcher_status = 'Could not parse the given URL!'
+            
+        
+        # convert to API url as appropriate
+        ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._thread_url )
+        
+        if parser is None:
+            
+            error_occurred = True
+            
+            watcher_status = 'Could not find a parser for the given URL!'
+            
+        
+        if error_occurred:
+            
+            self._FinishCheck( page_key, watcher_status, error_occurred, watcher_status_should_stick )
+            
+            return
+            
+        
+        #
+        
         with self._lock:
             
             self._watcher_status = 'checking thread'
@@ -5269,9 +5404,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            json_url = ClientDownloading.GetImageboardThreadJSONURL( self._thread_url )
-            
-            network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', json_url )
+            network_job = ClientNetworking.NetworkJobThreadWatcher( self._thread_key, 'GET', url_to_check )
             
             network_job.OverrideBandwidth()
             
@@ -5297,55 +5430,30 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            raw_json = network_job.GetContent()
+            data = network_job.GetContent()
+            
+            parser = HG.client_controller.network_engine.domain_manager.GetParser( url_to_check )
+            
+            parse_context = {}
+            
+            parse_context[ 'thread_url' ] = self._thread_url
+            parse_context[ 'url' ] = url_to_check
+            
+            all_parse_results = parser.Parse( parse_context, data )
+            
+            subject = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
+            
+            if subject is None:
+                
+                subject = ''
+                
             
             with self._lock:
                 
-                self._thread_subject = ClientDownloading.ParseImageboardThreadSubject( raw_json )
+                self._thread_subject = subject
                 
             
-            file_infos = ClientDownloading.ParseImageboardFileURLsFromJSON( self._thread_url, raw_json )
-            
-            new_urls = []
-            new_urls_set = set()
-            
-            file_urls_to_source_timestamps = {}
-            
-            for ( file_url, file_md5_base64, file_original_filename, source_timestamp ) in file_infos:
-                
-                if not self._urls_cache.HasURL( file_url ) and not file_url in new_urls_set:
-                    
-                    new_urls.append( file_url )
-                    new_urls_set.add( file_url )
-                    
-                    self._urls_to_filenames[ file_url ] = file_original_filename
-                    
-                    if file_md5_base64 is not None:
-                        
-                        self._urls_to_md5_base64[ file_url ] = file_md5_base64
-                        
-                    
-                    file_urls_to_source_timestamps[ file_url ] = source_timestamp
-                    
-                
-            
-            seeds = []
-            
-            for url in new_urls:
-                
-                seed = Seed( SEED_TYPE_URL, url )
-                
-                if url in file_urls_to_source_timestamps:
-                    
-                    seed.source_time = file_urls_to_source_timestamps[ url ]
-                    
-                
-                seeds.append( seed )
-                
-            
-            self._urls_cache.AddSeeds( seeds )
-            
-            num_new = len( new_urls )
+            ( num_new, num_already_in ) = UpdateSeedCacheWithAllParseResults( self._urls_cache, all_parse_results )
             
             watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
             watcher_status_should_stick = False
@@ -5358,6 +5466,14 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         except HydrusExceptions.ShutdownException:
             
             return
+            
+        except HydrusExceptions.ParseException as e:
+            
+            error_occurred = True
+            
+            watcher_status = 'Was unable to parse the returned data! Full error written to log!'
+            
+            HydrusData.PrintException( e )
             
         except HydrusExceptions.NotFoundException:
             
@@ -5387,6 +5503,31 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             HydrusData.PrintException( e )
             
         
+        self._FinishCheck( page_key, watcher_status, error_occurred, watcher_status_should_stick )
+        
+    
+    def _DelayWork( self, time_delta, reason ):
+        
+        self._no_work_until = HydrusData.GetNow() + time_delta
+        self._no_work_until_reason = reason
+        
+    
+    def _FinishCheck( self, page_key, watcher_status, error_occurred, watcher_status_should_stick ):
+        
+        if error_occurred:
+            
+            # the [DEAD] stuff can override watcher status, so let's give a brief time for this to display the error
+            
+            with self._lock:
+                
+                self._thread_paused = True
+                
+                self._watcher_status = watcher_status
+                
+            
+            time.sleep( 5 )
+            
+        
         with self._lock:
             
             if self._check_now:
@@ -5402,17 +5543,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._UpdateNextCheckTime()
             
-            if error_occurred:
-                
-                self._thread_paused = True
-                
-            
             self._PublishPageName( page_key )
-            
-        
-        if error_occurred:
-            
-            time.sleep( 5 )
             
         
         if not watcher_status_should_stick:
@@ -5424,12 +5555,6 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._watcher_status = ''
                 
             
-        
-    
-    def _DelayWork( self, time_delta, reason ):
-        
-        self._no_work_until = HydrusData.GetNow() + time_delta
-        self._no_work_until_reason = reason
         
     
     def _GetSerialisableInfo( self ):
@@ -5610,28 +5735,10 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._current_action = 'reviewing file'
                 
             
-            file_original_filename = self._urls_to_filenames[ file_url ]
-            
-            downloaded_tags = [ 'filename:' + file_original_filename ]
-            
             # we now do both url and md5 tests here because cloudflare was sometimes giving optimised versions of images, meaning the api's md5 was unreliable
             # if someone set up a thread watcher of a thread they had previously watched, any optimised images would be redownloaded
             
-            ( status, hash, note ) = HG.client_controller.Read( 'url_status', file_url )
-            
-            url_not_known_beforehand = status == CC.STATUS_NEW
-            
-            if status == CC.STATUS_NEW:
-                
-                if file_url in self._urls_to_md5_base64:
-                    
-                    file_md5_base64 = self._urls_to_md5_base64[ file_url ]
-                    
-                    file_md5 = file_md5_base64.decode( 'base64' )
-                    
-                    ( status, hash, note ) = HG.client_controller.Read( 'md5_status', file_md5 )
-                    
-                
+            ( url_not_known_beforehand, ( status, hash, note ) ) = GetInitialSeedStatus( seed )
             
             if status == CC.STATUS_DELETED:
                 
@@ -5735,7 +5842,9 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 with self._lock:
                     
-                    service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, downloaded_tags )
+                    tags = seed.GetTags()
+                    
+                    service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, tags )
                     
                 
                 if len( service_keys_to_content_updates ) > 0:
@@ -6015,6 +6124,16 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
         
     
     def SetThreadURL( self, thread_url ):
+        
+        if thread_url is None:
+            
+            thread_url = ''
+            
+        
+        if thread_url != '':
+            
+            thread_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( thread_url )
+            
         
         with self._lock:
             

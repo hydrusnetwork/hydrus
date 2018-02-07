@@ -659,11 +659,21 @@ class VideoRendererFFMPEG( object ):
         
         if self._mime in ( HC.IMAGE_APNG, HC.IMAGE_GIF ):
             
+            do_ss = False
             ss = 0
             self.pos = 0
             skip_frames = start_index
             
         else:
+            
+            if start_index == 0:
+                
+                do_ss = True
+                
+            else:
+                
+                do_ss = False
+                
             
             ss = float( start_index ) / self.fps
             self.pos = start_index
@@ -672,15 +682,20 @@ class VideoRendererFFMPEG( object ):
         
         ( w, h ) = self._target_resolution
         
-        cmd = [ FFMPEG_PATH,
-            '-ss', "%.03f" % ss,
-            '-i', self._path,
+        cmd = [ FFMPEG_PATH ]
+        
+        if do_ss:
+            
+            cmd.extend( [ '-ss', "%.03f" % ss ] )
+            
+        
+        cmd.extend( [ '-i', self._path,
             '-loglevel', 'quiet',
             '-f', 'image2pipe',
             "-pix_fmt", self.pix_fmt,
             "-s", str( w ) + 'x' + str( h ),
             '-vsync', '0',
-            '-vcodec', 'rawvideo', '-' ]
+            '-vcodec', 'rawvideo', '-' ] )
             
         
         try:

@@ -1756,7 +1756,25 @@ class ListBoxTagsAC( ListBoxTagsPredicates ):
             
             if len( predicates ) > 0:
                 
-                self._Hit( False, False, 0 )
+                hit_index = 0
+                
+                if len( predicates ) > 1:
+                    
+                    if HG.client_controller.new_options.GetBoolean( 'ac_select_first_with_count' ):
+                        
+                        for ( index, predicate ) in enumerate( predicates ):
+                            
+                            if predicate.GetCount() != 0:
+                                
+                                hit_index = index
+                                
+                                break
+                                
+                            
+                        
+                    
+                
+                self._Hit( False, False, hit_index )
                 
             
         

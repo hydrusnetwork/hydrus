@@ -108,7 +108,10 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._dropdown_list = self._InitDropDownList()
         
-        if not self._float_mode: vbox.Add( self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+        if not self._float_mode:
+            
+            vbox.Add( self._dropdown_window, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         self.SetSizer( vbox )
         
@@ -313,6 +316,9 @@ class AutoCompleteDropdown( wx.Panel ):
             self._move_hide_timer.Stop()
             self._move_hide_timer = None
             
+        
+        if self._lag_timer is not None:
+            
             self._lag_timer.Stop()
             self._lag_timer = None
             
@@ -482,8 +488,14 @@ class AutoCompleteDropdown( wx.Panel ):
             self._next_updatelist_is_probably_fast = self._next_updatelist_is_probably_fast and num_chars > len( self._last_search_text )
             
             if self._next_updatelist_is_probably_fast: self._UpdateList()
-            elif num_chars < char_limit: self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
-            else: self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
+            elif num_chars < char_limit:
+                
+                self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
+                
+            else:
+                
+                self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
+                
             
         
     

@@ -301,7 +301,7 @@ def ConvertTimeDeltaToPrettyString( seconds ):
                     
                 else:
                     
-                    result_components.append( ' %d' % hours + ' hours' )
+                    result_components.append( '%d' % hours + ' hours' )
                     
                 
             
@@ -613,7 +613,7 @@ def ConvertTimestampToPrettySync( timestamp ):
     elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
     else: return ' '.join( ( m, s ) ) + ' ago'
     
-def ConvertTimestampToPrettyTime( timestamp, include_24h_time = True ):
+def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = True ):
     
     if include_24h_time:
         
@@ -624,7 +624,18 @@ def ConvertTimestampToPrettyTime( timestamp, include_24h_time = True ):
         phrase = '%Y/%m/%d'
         
     
-    return time.strftime( phrase, time.gmtime( timestamp ) )
+    if in_gmt:
+        
+        struct_time = time.gmtime( timestamp )
+        
+        phrase = phrase + ' GMT'
+        
+    else:
+        
+        struct_time = time.localtime( timestamp )
+        
+    
+    return time.strftime( phrase, struct_time )
     
 def ConvertTimestampToHumanPrettyTime( timestamp ):
     

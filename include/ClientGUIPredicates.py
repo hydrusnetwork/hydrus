@@ -52,7 +52,7 @@ class PanelPredicateSystemAgeDate( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:age' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:time imported' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
         hbox.Add( self._date, CC.FLAGS_VCENTER )
         
@@ -89,7 +89,20 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
-        ( sign, years, months, days, hours ) = system_predicates[ 'age' ]
+        try:
+            
+            ( sign, age_type, ( years, months, days, hours ) ) = system_predicates[ 'age' ]
+            
+        except:
+            
+            # wew lad. replace this all with proper system pred saving on new_options in future
+            sign = '<'
+            
+            years = 0
+            months = 0
+            days = 7
+            hours = 0
+            
         
         self._sign.SetStringSelection( sign )
         
@@ -100,7 +113,7 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystem ):
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:age' ), CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:time imported' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
         hbox.Add( self._years, CC.FLAGS_VCENTER )
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'years' ), CC.FLAGS_VCENTER )

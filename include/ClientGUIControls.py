@@ -578,3 +578,42 @@ class NetworkJobControl( wx.Panel ):
             self._Update()
             
         
+    
+class StringToStringDictButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, label ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
+        
+        self._value = {}
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit string dictionary' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = EditStringToStringDictControl( panel, self._value )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._value = control.GetValue()
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._value
+        
+    
+    def SetValue( self, value ):
+        
+        self._value = value
+        
+    
