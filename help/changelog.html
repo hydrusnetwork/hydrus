@@ -8,6 +8,52 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 293</h3></li>
+				<ul>
+					<li>fixed the issue with options dialog not opening again after a save--I apologise for the inconvenience</li>
+					<li>the default system:time imported predicate (as set in options) is reset to the default '< 7 days'</li>
+					<li>fixed another potential crash with the manage tags dialog (in fact with any dialog that has an embedded autocomplete or any other autocomplete with a non-floating dropdown list, such as the import file path tagging dialog)</li>
+					<li>the sankaku user-agent has been updated to be a generic Firefox string "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0", which seems to work with their new rules. if your sank has been broken and you haven't touched the settings that do this stuff, your sank should be magically fixed on update</li>
+					<li>the default global hydrus user-agent has been updated to the more polite and compatible "Mozilla/5.0 (compatible; Hydrus Client)". if your previous global user-agent is currently 'hydrus client' (the old default), you'll be updated</li>
+					<li>import folders now deal with interruptions more skillfully and take a break and save their progress every ten minutes</li>
+					<li>the manage import folders dialog now waits properly for any currently running import folders to quit and save themselves before opening itself (like how the manage subs dialog does it)</li>
+					<li>import folders deal with some error states in a better way and are able to cancel out of their loops more reliably when an error occurs</li>
+					<li>added a new checkbox option to options->tags that lets your 'write' autocomplete inputs (ones where you can submit new tags, like in manage tags) select the first result with non-zero count by default. this means it will skip over the first result if it is just nonsense like 'boyp' that you typed to get the results</li>
+					<li>linked all the final behind the scenes stuff in the thread watcher together with the new parsing system. this stuff remains complicated and non-user-friendly, so please feel free to completely ignore it and the following batch of points:</li>
+					<li>-</li>
+					<li>wrote new url classes and parsers for 4chan and 8chan--they should all be automatically linked up on update</li>
+					<li>the new thread parsers will use the first part of the first post's comment if no subject is set</li>
+					<li>the domain manager can now cope with URL->API URL links</li>
+					<li>manage url class links now displays the current expected api pairs of URL class links and filters out what cannot be currently parsed as a result</li>
+					<li>manage url class links now only displays watchable urls in the bottom listctrl and permits parsers to be linked!</li>
+					<li>the domain manager can now try to link url classes with parsers based on example urls!</li>
+					<li>a button to fill in missing links is now available on the manage url class links panel</li>
+					<li>content parsers that produce urls now define different url types--file, post, and 'next gallery page'</li>
+					<li>content parsers can now parse a 'source timestamp' type</li>
+					<li>veto content parsers now use a StringMatch object to do their matching. existing veto content parsers will be updated and _should_ work about the same as before (unless the previous string was crazy in regex rules) using a regex match</li>
+					<li>html formulas now pick up the 'string' value more reliably in complicated or mangled html</li>
+					<li>html and json parsing formulas can now work without any rules, in which case they action the top level node (this is useful to replicate the json/html for subsidiary page parsing)</li>
+					<li>activated some of the new file import objects' features for the new parsing system--now, they store tags and known hashes as informed by what is parsed. this information is tested and used in import</li>
+					<li>the db can now test all the hash types--md5, sha1, sha256, sha512--during pre-import checking</li>
+					<li>the new parsing system now takes a temporary 'parsing context' that will eventually be able to receive and serve temporary variables but at the moment just holds a 'url' entry if the parser would like to use the url used to fetch the data anywhere</li>
+					<li>all the new parsing ui now has a button to edit the parsing context, and the example parsing context is saved to the topmost page parser object</li>
+					<li>wrote some url classes for 420chan.org--they will be added on update</li>
+					<li>fixed an issue with the 4chan thread url class</li>
+					<li>-</li>
+					<li>the standard new listctrl panel wrapper can now now provide a special 'export to pngs' for certain named objects that will quickly export one object per png</li>
+					<li>the 'import from png' dialog as launched from the standard new listctrl panel wrapper now allows multiple png selection</li>
+					<li>the default parsers (and now the url classes as well) are stored in install_dir/static/defaults. they are read from here when you create a db or ask to load from defaults, so feel free to play around with this</li>
+					<li>the manage services dialog now has an additional Yes/No warning/confirmation dialog if it expects to delete any services on dialog ok</li>
+					<li>page tabs escape mnemonic characters (typically '&', which in ui labelling rules makes the following character an underlined shortcut) more reliably</li>
+					<li>in an attempt to stop subs making so many separate small file popups, the subscription daemon will now only naturally check every four hours (previously one hour) and will wait up to ten minutes for bandwidth to free up before dumping out (previously 30 seconds). these values will be user-configurable in a future update</li>
+					<li>fixed import for some unusual apngs</li>
+					<li>corrected some more GMT/local time stuff with the new system:time imported 'date' mode</li>
+					<li>misc GMT/local time fixes (profile logs names themselves correctly, etc..)</li>
+					<li>improved how the thread watcher reports thread-check errors in unusual situations</li>
+					<li>fixed an issue generating network contexts when the initial domain is 'localhost'</li>
+					<li>improved some misc program stability</li>
+					<li>started a new job scheduler object to reduce idle thread count and CPU usage--will play around with it a bit more and see about integrating it in the coming weeks</li>
+				</ul>
 				<li><h3>version 292</h3></li>
 				<ul>
 					<li>extended system:age to support searching by fixed calendar date, e.g. "system:age > 2018/01/24"</li>
