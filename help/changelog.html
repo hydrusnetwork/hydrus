@@ -8,6 +8,30 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 294</h3></li>
+				<ul>
+					<li>fixed video scan</li>
+					<li>fixed up some import folder logic--they now run 'look for new files' checks separate from 'import anything still in the queue', so they can now catch up on outstanding files more easily</li>
+					<li>the ten minute file-processing break is reverted--import folders now just 'save' every ten minutes, to forestall lost work on a crash</li>
+					<li>import folders now have an explicit 'check regularly' checkbox to control whether you want it to check regularly or only when you tell it to. the paused status now means 'do not ever work'</li>
+					<li>import folders now make a 'working' popup, like subscriptions do, that shows new file discovery progress and found file import progress. it has a cancel button that will stop the current job and can be hidden in the import folder's options. existing import folders will default to ON for this, so you'll likely see one of these right after you update</li>
+					<li>import folders can now publish their files to a new page! this effectively cuts out the button step. furthermore, if a page already exists with the import folder's name (e.g. a previous page the import folder created is still around), the import folder will publish the new files to _that_ page, updating it</li>
+					<li>file popup buttons with the same name will now 'merge'! multiple work cycles of a subscription or import folder will now just update the first button rather than spamming several</li>
+					<li>running import folders will respond faster to a client shutdown event</li>
+					<li>wrote some better controller-level thread management, including surplus thread deletion--idle CPU should be reduced on import-busy clients</li>
+					<li>wrote some code to deal with sub-second times a bit better in certain places</li>
+					<li>finished off a new scheduled job queue that collapses an old multiple-thread-when-idle system down into just one</li>
+					<li>many things are moved to the new job scheduling system--all the old calllater calls, and the popup message timers as well</li>
+					<li>completely removed the old wx timers the autocomplete input was using, as they were just too much of a hassle. any crashing these were causing is now gone--it all works on the simpler scheduled job queue now</li>
+					<li>the autocomplete dropdowns are better at judging when to engage their timers and so now use far less idle CPU</li>
+					<li>fixed a crash that could occur sometime after starting a duplicate filter maintenance task from the dupe filter page</li>
+					<li>fixed several unlikely but plausible crashes on the admin-side of petition processing</li>
+					<li>wrote a bunch of help for the url classes and new parsing system--it isn't finished yet, but then neither is the new system!</li>
+					<li>if the client fails to initialise the db, it will now try to present the error in a bit of screenshottable-gui before the program quits</li>
+					<li>improved thread watcher error handling when the given url is unwatchable</li>
+					<li>lots of timer related cleanup and tiny fixes</li>
+					<li>mix fixes</li>
+				</ul>
 				<li><h3>version 293</h3></li>
 				<ul>
 					<li>fixed the issue with options dialog not opening again after a save--I apologise for the inconvenience</li>
