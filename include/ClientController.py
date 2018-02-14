@@ -167,6 +167,28 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
+    def CallLaterWXSafe( self, window, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, call, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
+    def CallRepeatingWXSafe( self, window, period, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, call, period, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
     def CheckAlreadyRunning( self ):
     
         while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
@@ -370,14 +392,19 @@ class Controller( HydrusController.HydrusController ):
                             
                             with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
-                                call_later = ClientThreading.CallLater( dlg_yn, 15, dlg_yn.EndModal, wx.ID_NO )
+                                job = self.CallLaterWXSafe( dlg_yn, 15, dlg_yn.EndModal, wx.ID_NO )
                                 
-                                if dlg_yn.ShowModal() == wx.ID_YES:
+                                try:
                                     
-                                    HG.do_idle_shutdown_work = True
+                                    if dlg_yn.ShowModal() == wx.ID_YES:
+                                        
+                                        HG.do_idle_shutdown_work = True
+                                        
                                     
-                                
-                                call_later.Stop()
+                                finally:
+                                    
+                                    job.Cancel()
+                                    
                                 
                             
                         else:

@@ -591,7 +591,7 @@ class SeedCacheStatusControl( wx.Panel ):
         
         #
         
-        self._update_timer = ClientThreading.WXAwareTimer( self, self.TIMERUpdate )
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _GetSeedCache( self ):
@@ -638,29 +638,17 @@ class SeedCacheStatusControl( wx.Panel ):
             
         
     
-    def ClearSeedCache( self ):
-        
-        if self:
-            
-            self._Update()
-            
-            self._seed_cache = None
-            
-            self._update_timer.Stop()
-            
-        
-    
     def SetSeedCache( self, seed_cache ):
         
-        if self:
+        if not self:
             
-            self._seed_cache = seed_cache
-            
-            self._update_timer.CallLater( 0.25, repeating = True )
+            return
             
         
+        self._seed_cache = seed_cache
+        
     
-    def TIMERUpdate( self ):
+    def TIMERUIUpdate( self ):
         
         if self._controller.gui.IShouldRegularlyUpdate( self ):
             

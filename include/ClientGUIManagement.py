@@ -1207,7 +1207,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             time.sleep( 0.25 )
             
         
-        self._RefreshAndUpdateStatus()
+        wx.CallAfter( self._RefreshAndUpdateStatus )
         
     
     def EventSearchDistanceChanged( self, event ):
@@ -2597,36 +2597,6 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         
     
-    def _BreakApprovedContentsIntoChunks( self, approved_contents ):
-        
-        chunks_of_approved_contents = []
-        chunk_of_approved_contents = []
-        weight = 0
-        
-        for content in approved_contents:
-            
-            chunk_of_approved_contents.append( content )
-            
-            weight += content.GetVirtualWeight()
-            
-            if weight > 50:
-                
-                chunks_of_approved_contents.append( chunk_of_approved_contents )
-                
-                chunk_of_approved_contents = []
-                
-                weight = 0
-                
-            
-        
-        if len( chunk_of_approved_contents ) > 0:
-            
-            chunks_of_approved_contents.append( chunk_of_approved_contents )
-            
-        
-        return chunks_of_approved_contents
-        
-    
     def _CheckAll( self ):
         
         for i in range( self._contents.GetCount() ):
@@ -2754,25 +2724,47 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _FetchNumPetitions( self ):
         
-        def do_it():
+        def do_it( service ):
+            
+            def wx_draw( n_p_i ):
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._num_petition_info = n_p_i
+                
+                self._DrawNumPetitions()
+                
+            
+            def wx_reset():
+                
+                if not self:
+                    
+                    return
+                    
+                
+                self._refresh_num_petitions_button.SetLabelText( 'refresh counts' )
+                
             
             try:
                 
-                response = self._service.Request( HC.GET, 'num_petitions' )
+                response = service.Request( HC.GET, 'num_petitions' )
                 
-                self._num_petition_info = response[ 'num_petitions' ]
+                num_petition_info = response[ 'num_petitions' ]
                 
-                wx.CallAfter( self._DrawNumPetitions )
+                wx.CallAfter( wx_draw, num_petition_info )
                 
             finally:
                 
-                self._refresh_num_petitions_button.SetLabelText( 'refresh counts' )
+                wx.CallAfter( wx_reset )
                 
             
         
         self._refresh_num_petitions_button.SetLabelText( u'Fetching\u2026' )
         
-        self._controller.CallToThread( do_it )
+        self._controller.CallToThread( do_it, self._service )
         
     
     def _FetchPetition( self, content_type, status ):
@@ -2802,11 +2794,11 @@ class ManagementPanelPetitions( ManagementPanel ):
             button.SetLabelText( 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition' )
             
         
-        def do_it():
+        def do_it( service ):
             
             try:
                 
-                response = self._service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
+                response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
                 
                 wx.CallAfter( wx_setpet, response[ 'petition' ] )
                 
@@ -2826,7 +2818,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         button.Disable()
         button.SetLabelText( u'Fetching\u2026' )
         
-        self._controller.CallToThread( do_it )
+        self._controller.CallToThread( do_it, self._service )
         
     
     def _FlipSelected( self ):
@@ -2876,7 +2868,37 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def EventProcess( self, event ):
         
-        def do_it( approved_contents, denied_contents, petition ):
+        def break_approved_contents_into_chunks( approved_contents ):
+            
+            chunks_of_approved_contents = []
+            chunk_of_approved_contents = []
+            weight = 0
+            
+            for content in approved_contents:
+                
+                chunk_of_approved_contents.append( content )
+                
+                weight += content.GetVirtualWeight()
+                
+                if weight > 50:
+                    
+                    chunks_of_approved_contents.append( chunk_of_approved_contents )
+                    
+                    chunk_of_approved_contents = []
+                    
+                    weight = 0
+                    
+                
+            
+            if len( chunk_of_approved_contents ) > 0:
+                
+                chunks_of_approved_contents.append( chunk_of_approved_contents )
+                
+            
+            return chunks_of_approved_contents
+            
+        
+        def do_it( controller, service, petition_service_key, approved_contents, denied_contents, petition ):
             
             try:
                 
@@ -2901,7 +2923,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     job_key = None
                     
                 
-                chunks_of_approved_contents = self._BreakApprovedContentsIntoChunks( approved_contents )
+                chunks_of_approved_contents = break_approved_contents_into_chunks( approved_contents )
                 
                 for chunk_of_approved_contents in chunks_of_approved_contents:
                     
@@ -2919,9 +2941,9 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     ( update, content_updates ) = petition.GetApproval( chunk_of_approved_contents )
                     
-                    self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                    service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
                     
-                    self._controller.WriteSynchronous( 'content_updates', { self._petition_service_key : content_updates } )
+                    controller.WriteSynchronous( 'content_updates', { petition_service_key : content_updates } )
                     
                     num_done += len( chunk_of_approved_contents )
                     
@@ -2940,7 +2962,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     update = petition.GetDenial( denied_contents )
                     
-                    self._service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                    service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
                     
                 
             finally:
@@ -2950,7 +2972,17 @@ class ManagementPanelPetitions( ManagementPanel ):
                     job_key.Delete()
                     
                 
-                wx.CallAfter( self._FetchNumPetitions )
+                def wx_fetch():
+                    
+                    if not self:
+                        
+                        return
+                        
+                    
+                    self._FetchNumPetitions()
+                    
+                
+                wx.CallAfter( wx_fetch )
                 
             
         
@@ -2971,7 +3003,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        HG.client_controller.CallToThread( do_it, approved_contents, denied_contents, self._current_petition )
+        HG.client_controller.CallToThread( do_it, self._controller, self._service, self._petition_service_key, approved_contents, denied_contents, self._current_petition )
         
         self._current_petition = None
         
@@ -3132,11 +3164,6 @@ class ManagementPanelQuery( ManagementPanel ):
         ManagementPanel.CleanBeforeDestroy( self )
         
         self._query_job_key.Cancel()
-        
-        if self._search_enabled:
-            
-            self._searchbox.CleanBeforeDestroy()
-            
         
     
     def GetPredicates( self ):

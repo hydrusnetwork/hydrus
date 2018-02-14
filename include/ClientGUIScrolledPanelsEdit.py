@@ -29,6 +29,7 @@ import HydrusNetwork
 import HydrusSerialisable
 import HydrusText
 import os
+import webbrowser
 import wx
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -3411,6 +3412,14 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        menu_items = []
+        
+        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_url_classes.html' )
+        
+        menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browesr.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
@@ -3433,8 +3442,18 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
+        
+        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
+        
+        help_hbox.Add( st, CC.FLAGS_VCENTER )
+        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )

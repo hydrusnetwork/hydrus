@@ -455,7 +455,7 @@ class Page( wx.SplitterWindow ):
         self._media_panel.Hide()
         
         # If this is a CallAfter, OS X segfaults on refresh jej
-        ClientThreading.CallLater( self, 0.5, self._media_panel.Destroy )
+        self._controller.CallLaterWXSafe( self._media_panel, 0.5, self._media_panel.Destroy )
         
         self._media_panel = new_panel
         
@@ -1055,6 +1055,29 @@ class PagesNotebook( wx.Notebook ):
                 if page.HasPageKey( page_key ):
                     
                     return page._GetPageFromPageKey( page_key )
+                    
+                
+            
+        
+        return None
+        
+    
+    def _GetPageFromName( self, page_name ):
+        
+        for page in self._GetPages():
+            
+            if page.GetDisplayName() == page_name:
+                
+                return page
+                
+            
+            if isinstance( page, PagesNotebook ):
+                
+                result = page._GetPageFromName( page_name )
+                
+                if result is not None:
+                    
+                    return result
                     
                 
             
@@ -1934,7 +1957,7 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False ):
+    def NewPage( self, management_controller, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
         
         current_page = self.GetCurrentPage()
         
@@ -2013,7 +2036,7 @@ class PagesNotebook( wx.Notebook ):
         # in some unusual circumstances, this gets out of whack
         insertion_index = min( insertion_index, self.GetPageCount() )
         
-        self.InsertPage( insertion_index, page, page_name, select = True )
+        self.InsertPage( insertion_index, page, page_name, select = select_page )
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
         self._controller.pub( 'notify_new_pages' )
@@ -2079,7 +2102,7 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False ):
+    def NewPageQuery( self, file_service_key, initial_hashes = None, initial_predicates = None, page_name = None, on_deepest_notebook = False, do_sort = False, select_page = True ):
         
         if initial_hashes is None:
             
@@ -2111,7 +2134,7 @@ class PagesNotebook( wx.Notebook ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerQuery( page_name, file_service_key, file_search_context, search_enabled )
         
-        page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook )
+        page = self.NewPage( management_controller, initial_hashes = initial_hashes, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
         if do_sort:
             
@@ -2336,6 +2359,28 @@ class PagesNotebook( wx.Notebook ):
             
             page.PrepareToHide()
             
+        
+    
+    def PresentImportedFilesToPage( self, hashes, page_name ):
+        
+        page = self._GetPageFromName( page_name )
+        
+        if page is None:
+            
+            page = self.NewPageQuery( CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
+            
+        else:
+            
+            unsorted_media_results = self._controller.Read( 'media_results', hashes )
+            
+            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in unsorted_media_results }
+            
+            sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+            
+            page.GetMediaPanel().AddMediaResults( page.GetPageKey(), sorted_media_results )
+            
+        
+        return page
         
     
     def RefreshAllPages( self ):

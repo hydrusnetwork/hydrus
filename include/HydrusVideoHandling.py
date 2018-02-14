@@ -668,11 +668,11 @@ class VideoRendererFFMPEG( object ):
             
             if start_index == 0:
                 
-                do_ss = True
+                do_ss = False
                 
             else:
                 
-                do_ss = False
+                do_ss = True
                 
             
             ss = float( start_index ) / self.fps

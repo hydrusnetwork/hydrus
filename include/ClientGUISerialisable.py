@@ -6,6 +6,7 @@ import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
+import HydrusGlobals as HG
 import HydrusSerialisable
 import os
 import wx
@@ -119,7 +120,7 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.SetLabelText( 'done!' )
         
-        ClientThreading.CallLater( self, 2, self._export.SetLabelText, 'export' )
+        HG.client_controller.CallLaterWXSafe( self._export, 2.0, self._export.SetLabelText, 'export' )
         
     
 class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -210,6 +211,6 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.SetLabelText( 'done!' )
         
-        ClientThreading.CallLater( self, 2, self._export.SetLabelText, 'export' )
+        HG.client_controller.CallLaterWXSafe( self._export, 2.0, self._export.SetLabelText, 'export' )
         
     

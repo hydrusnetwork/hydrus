@@ -2411,7 +2411,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._import_folder = import_folder
         
-        ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now ) = self._import_folder.ToTuple()
+        ( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = self._import_folder.ToTuple()
         
         self._panel = wx.ScrolledWindow( self )
         
@@ -2421,13 +2421,17 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._path = wx.DirPickerCtrl( self._folder_box, style = wx.DIRP_USE_TEXTCTRL )
         
-        self._open_popup = wx.CheckBox( self._folder_box )
+        self._check_regularly = wx.CheckBox( self._folder_box )
         
         self._period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 3 * 60, days = True, hours = True, minutes = True )
         
         self._paused = wx.CheckBox( self._folder_box )
         
         self._check_now = wx.CheckBox( self._folder_box )
+        
+        self._show_working_popup = wx.CheckBox( self._folder_box )
+        self._publish_files_to_popup_button = wx.CheckBox( self._folder_box )
+        self._publish_files_to_page = wx.CheckBox( self._folder_box )
         
         self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetSeedCache, seed_cache_set_callable = self._import_folder.SetSeedCache )
         
@@ -2496,10 +2500,15 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._name.SetValue( name )
         self._path.SetPath( path )
-        self._open_popup.SetValue( open_popup )
+        
+        self._check_regularly.SetValue( check_regularly )
         
         self._period.SetValue( period )
         self._paused.SetValue( paused )
+        
+        self._show_working_popup.SetValue( show_working_popup )
+        self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
+        self._publish_files_to_page.SetValue( publish_files_to_page )
         
         self._mimes.SetValue( mimes )
         
@@ -2539,10 +2548,13 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'folder path: ', self._path ) )
+        rows.append( ( 'currently paused (if set, will not ever do any work): ', self._paused ) )
+        rows.append( ( 'check regularly?: ', self._check_regularly ) )
         rows.append( ( 'check period: ', self._period ) )
-        rows.append( ( 'periodic checks currently paused: ', self._paused ) )
         rows.append( ( 'check on manage dialog ok: ', self._check_now ) )
-        rows.append( ( 'open a popup if new files imported: ', self._open_popup ) )
+        rows.append( ( 'show a popup while working: ', self._show_working_popup ) )
+        rows.append( ( 'if new files imported, publish them to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'if new files imported, publish them to a page: ', self._publish_files_to_page ) )
         rows.append( ( 'review currently cached import paths: ', self._seed_cache_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
@@ -2620,6 +2632,10 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self.SetInitialSize( ( x, y ) )
         
         self._CheckLocations()
+        
+        self._check_regularly.Bind( wx.EVT_CHECKBOX, self.EventCheckRegularly )
+        
+        self._UpdateCheckRegularly()
         
         wx.CallAfter( self._ok.SetFocus )
         
@@ -2751,6 +2767,23 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
                     
                 
             
+        
+    
+    def _UpdateCheckRegularly( self ):
+        
+        if self._check_regularly.GetValue():
+            
+            self._period.Enable()
+            
+        else:
+            
+            self._period.Disable()
+            
+        
+    
+    def EventCheckRegularly( self, event ):
+        
+        self._UpdateCheckRegularly()
         
     
     def EventCheckLocations( self, event ):
@@ -2888,15 +2921,19 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             
         
         period = self._period.GetValue()
-        open_popup = self._open_popup.GetValue()
+        check_regularly = self._check_regularly.GetValue()
         
         paused = self._paused.GetValue()
         
         check_now = self._check_now.GetValue()
         
+        show_working_popup = self._show_working_popup.GetValue()
+        publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
+        publish_files_to_page = self._publish_files_to_page.GetValue()
+        
         tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
         
-        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now )
+        self._import_folder.SetTuple( name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
         
         return self._import_folder
         
@@ -3006,7 +3043,7 @@ class DialogManagePixivAccount( ClientGUIDialogs.Dialog ):
                 
                 self._status.SetLabelText( 'OK!' )
                 
-                ClientThreading.CallLater( self, 5, self._status.SetLabel, '' )
+                HG.client_controller.CallLaterWXSafe( self._status, 5, self._status.SetLabel, '' )
                 
             else:
                 

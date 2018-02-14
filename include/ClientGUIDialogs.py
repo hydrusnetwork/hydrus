@@ -664,7 +664,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
         else:
             
-            time_left = max( 0, timeout - HydrusData.GetNow() )
+            time_left = HydrusData.GetTimeDeltaUntilTime( timeout )
             
             if time_left < 60 * 60 * 12: time_value = 60
             elif time_left < 60 * 60 * 24 * 7: time_value = 60 * 60 

@@ -127,6 +127,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NotifyNewServices', 'notify_new_services_gui' )
         self._controller.sub( self, 'NotifyNewSessions', 'notify_new_sessions' )
         self._controller.sub( self, 'NotifyNewUndo', 'notify_new_undo' )
+        self._controller.sub( self, 'PresentImportedFilesToPage', 'imported_files_to_page' )
         self._controller.sub( self, 'RenamePage', 'rename_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
@@ -141,7 +142,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetSizer( vbox )
         
-        ClientGUITopLevelWindows.SetTLWSizeAndPosition( self, self._frame_key )
+        ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
         self.Show( True )
         
@@ -555,7 +556,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 self._notebook.SaveGUISession( 'last session' )
                 
                 # session save causes a db read in the menu refresh, so let's put this off just a bit
-                ClientThreading.CallLater( self, 1.5, self._controller.Write, 'backup', path )
+                self._controller.CallLater( 1.5, self._controller.Write, 'backup', path )
                 
             
         
@@ -760,8 +761,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._controller.pub( 'message', job_key )
         
-        ClientThreading.CallLater( self, 2, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
-        ClientThreading.CallLater( self, 2, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
+        self._controller.CallLater( 2.0, job_key.SetVariable, 'popup_text_2', 'Pulsing subjob' )
+        
+        self._controller.CallLater( 2.0, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
         
         #
         
@@ -773,7 +775,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         for i in range( 1, 4 ):
             
-            ClientThreading.CallLater( self, 0.5 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
+            self._controller.CallLater( 0.5 * i, HydrusData.ShowText, 'This is a delayed popup message -- ' + str( i ) )
             
         
     
@@ -1636,7 +1638,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', ClientThreading.CallLater, self, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
@@ -1863,7 +1865,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
         
-        ClientThreading.CallLater( self, last_session_save_period_minutes * 60, self.SaveLastSession )
+        self._controller.CallLaterWXSafe( self, last_session_save_period_minutes * 60, self.SaveLastSession )
         
     
     def _ManageAccountTypes( self, service_key ):
@@ -3174,7 +3176,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self.IsIconized():
             
-            ClientThreading.CallLater( self, 10, self.AddModalMessage, job_key )
+            self._controller.CallLaterWXSafe( self, 10, self.AddModalMessage, job_key )
             
         else:
             
@@ -3460,16 +3462,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
-                    timer = ClientThreading.CallLater( self, 15, dlg.EndModal, wx.ID_YES )
+                    job = self._controller.CallLaterWXSafe( dlg, 15, dlg.EndModal, wx.ID_YES )
                     
-                    if dlg.ShowModal() == wx.ID_NO:
+                    try:
                         
-                        timer.Stop()
+                        if dlg.ShowModal() == wx.ID_NO:
+                            
+                            return False
+                            
                         
-                        return False
+                    finally:
                         
-                    
-                    timer.Stop()
+                        job.Cancel()
+                        
                     
                 
             
@@ -3533,7 +3538,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            ClientThreading.CallLater( self, 2, self.Destroy )
+            self._controller.CallLaterWXSafe( self, 2, self.Destroy )
             
             self._controller.CreateSplash()
             
@@ -3825,6 +3830,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return False
         
     
+    def PresentImportedFilesToPage( self, hashes, page_name ):
+        
+        dest_page = self._notebook.PresentImportedFilesToPage( hashes, page_name )
+        
+    
     def RefreshMenu( self ):
         
         if not self:
@@ -3836,7 +3846,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if db_going_to_hang_if_we_hit_it:
             
-            ClientThreading.CallLater( self, 2.5, self.RefreshMenu )
+            self._controller.CallLaterWXSafe( self, 0.5, self.RefreshMenu )
             
             return
             
@@ -3934,7 +3944,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
         
-        ClientThreading.CallLater( self, last_session_save_period_minutes * 60, self.SaveLastSession )
+        self._controller.CallLaterWXSafe( self, last_session_save_period_minutes * 60, self.SaveLastSession )
         
     
     def SetMediaFocus( self ):

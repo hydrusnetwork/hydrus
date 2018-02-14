@@ -1109,7 +1109,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self.SetSizer( vbox )
         
-        ClientGUITopLevelWindows.SetTLWSizeAndPosition( self, self._frame_key )
+        ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
         self.Show( True )
         
@@ -2757,7 +2757,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         #
         
-        self._timer_cursor_hide = ClientThreading.WXAwareTimer( self, self.TIMERCursorHide )
+        self._timer_cursor_hide_job = None
         
         self.Bind( wx.EVT_MOTION, self.EventDrag )
         
@@ -2863,7 +2863,7 @@ class CanvasWithHovers( CanvasWithDetails ):
             
             self.SetCursor( wx.Cursor( wx.CURSOR_ARROW ) )
             
-            self._timer_cursor_hide.CallLater( 0.8 )
+            self._PutOffCursorHide()
             
         else:
             
@@ -2871,29 +2871,30 @@ class CanvasWithHovers( CanvasWithDetails ):
             
         
     
-    def TIMERCursorHide( self ):
+    def _PutOffCursorHide( self ):
         
-        try:
+        if self._timer_cursor_hide_job is not None:
             
-            if not CC.CAN_HIDE_MOUSE:
-                
-                return
-                
+            self._timer_cursor_hide_job.Cancel()
             
-            if HG.client_controller.MenuIsOpen():
-                
-                self._timer_cursor_hide.CallLater( 0.8 )
-                
-            else:
-                
-                self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
-                
+        
+        self._timer_cursor_hide_job = HG.client_controller.CallLaterWXSafe( self, 0.8, self._HideCursor )
+        
+    
+    def _HideCursor( self ):
+        
+        if not CC.CAN_HIDE_MOUSE:
             
-        except:
+            return
             
-            self._timer_cursor_hide.Stop()
+        
+        if HG.client_controller.MenuIsOpen():
             
-            raise
+            self._PutOffCursorHide()
+            
+        else:
+            
+            self.SetCursor( wx.Cursor( wx.CURSOR_BLANK ) )
             
         
     
@@ -3624,20 +3625,17 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             # ugly, but it will do for now
             
-            if self:
+            if len( self._media_list ) < 2:
                 
-                if len( self._media_list ) < 2:
-                    
-                    self._ShowNewPair()
-                    
-                else:
-                    
-                    self._SetDirty()
-                    
+                self._ShowNewPair()
+                
+            else:
+                
+                self._SetDirty()
                 
             
         
-        ClientThreading.CallLater( self, 0.1, catch_up )
+        HG.client_controller.CallLaterWXSafe( self, 0.1, catch_up )
         
     
     def SetMedia( self, media ):
@@ -3829,7 +3827,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
-                    ClientThreading.CallLater( self, delay, image_cache.GetImageRenderer, media )
+                    HG.client_controller.CallLaterWXSafe( self, delay, image_cache.GetImageRenderer, media )
                     
                 
             
@@ -3925,7 +3923,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def KeepCursorAlive( self ):
         
-        self._timer_cursor_hide.CallLater( 0.8 )
+        self._PutOffCursorHide()
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -4451,7 +4449,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         CanvasMediaListNavigable.__init__( self, parent, page_key, media_results )
         
-        self._timer_slideshow = ClientThreading.WXAwareTimer( self, self.TIMERSlideshow )
+        self._timer_slideshow_job = None
         self._timer_slideshow_interval = 0
         
         self.Bind( wx.EVT_LEFT_DCLICK, self.EventClose )
@@ -4482,19 +4480,19 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def _PausePlaySlideshow( self ):
         
-        if self._timer_slideshow.IsRunning():
+        if self._timer_slideshow_job is not None:
             
-            self._timer_slideshow.Stop()
+            self._StopSlideshow()
             
         elif self._timer_slideshow_interval > 0:
             
-            self._timer_slideshow.CallLater( self._timer_slideshow_interval, repeating = True )
+            self._StartSlideshow( self._timer_slideshow_interval )
             
         
     
     def _StartSlideshow( self, interval = None ):
         
-        self._timer_slideshow.Stop()
+        self._StopSlideshow()
         
         if interval is None:
             
@@ -4518,7 +4516,43 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._timer_slideshow_interval = interval
             
-            self._timer_slideshow.CallLater( self._timer_slideshow_interval, repeating = True )
+            self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+            
+        
+    
+    def _StopSlideshow( self ):
+        
+        if self._timer_slideshow_job is not None:
+            
+            self._timer_slideshow_job.Cancel()
+            
+            self._timer_slideshow_job = None
+            
+        
+    
+    def DoSlideshow( self ):
+        
+        try:
+            
+            if self._current_media is not None and self._timer_slideshow_job is not None:
+                
+                if self._media_container.ReadyToSlideshow() and not HG.client_controller.MenuIsOpen():
+                    
+                    self._ShowNext()
+                    
+                    self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, self._timer_slideshow_interval, self.DoSlideshow )
+                    
+                else:
+                    
+                    self._timer_slideshow_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.DoSlideshow )
+                    
+                
+            
+        except:
+            
+            self._timer_slideshow_job = None
+            
+            raise
             
         
     
@@ -4720,7 +4754,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             
-            if self._timer_slideshow.IsRunning():
+            if self._timer_slideshow_job is not None:
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
                 
@@ -4740,30 +4774,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
         event.Skip()
-        
-    
-    def TIMERSlideshow( self ):
-        
-        try:
-            
-            if self._current_media is not None:
-                
-                if self._media_container.ReadyToSlideshow() and not HG.client_controller.MenuIsOpen():
-                    
-                    self._ShowNext()
-                    
-                else:
-                    
-                    self._timer_slideshow.Delay( 0.5 )
-                    
-                
-            
-        except:
-            
-            self._timer_slideshow.Stop()
-            
-            raise
-            
         
     
 class MediaContainer( wx.Window ):

@@ -171,7 +171,7 @@ def SaveTLWSizeAndPosition( tlw, frame_key ):
     
     new_options.SetFrameLocation( frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
     
-def SetTLWSizeAndPosition( tlw, frame_key ):
+def SetInitialTLWSizeAndPosition( tlw, frame_key ):
     
     new_options = HG.client_controller.new_options
     
@@ -482,7 +482,7 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         self.SetSizer( vbox )
         
-        SetTLWSizeAndPosition( self, self._frame_key )
+        SetInitialTLWSizeAndPosition( self, self._frame_key )
         
         self._panel.SetupScrolling() # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
         
@@ -834,10 +834,12 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         self.SetSizer( vbox )
         
-        SetTLWSizeAndPosition( self, self._frame_key )
+        SetInitialTLWSizeAndPosition( self, self._frame_key )
         
         self.Show( True )
         
         self._panel.SetupScrolling()
+        
+        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherant virtual size
         
     

@@ -834,8 +834,8 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = TestConstants.DB_DIR, mimes = HC.VIDEO, open_popup = False )
-        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = TestConstants.DB_DIR, mimes = HC.IMAGES, period = 1200, open_popup = False )
+        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = TestConstants.DB_DIR, mimes = HC.VIDEO, publish_files_to_popup_button = False )
+        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = TestConstants.DB_DIR, mimes = HC.IMAGES, period = 1200, publish_files_to_popup_button = False )
         
         #
         

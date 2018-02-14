@@ -528,10 +528,12 @@ def ConvertTimestampToPrettyPending( timestamp, prefix = 'in' ):
     if timestamp is None: return ''
     if timestamp == 0: return 'imminent'
     
-    pending = GetNow() - timestamp
+    pending = GetTimeDeltaUntilTime( timestamp )
     
-    if pending >= 0: return 'imminent'
-    else: pending *= -1
+    if pending <= 0:
+        
+        return 'imminent'
+        
     
     seconds = pending % 60
     if seconds == 1: s = '1 second'
@@ -772,6 +774,10 @@ def GetNow():
     
     return int( time.time() )
     
+def GetNowFloat():
+    
+    return time.time()
+    
 def GetNowPrecise():
     
     if HC.PLATFORM_WINDOWS:
@@ -832,6 +838,24 @@ def GetSiblingProcessPorts( db_path, instance ):
         
     
     return None
+    
+def GetTimeDeltaUntilTime( timestamp ):
+    
+    time_remaining = timestamp - GetNow()
+    
+    return max( time_remaining, 0 )
+    
+def GetTimeDeltaUntilTimeFloat( timestamp ):
+    
+    time_remaining = timestamp - GetNowFloat()
+    
+    return max( time_remaining, 0.0 )
+    
+def GetTimeDeltaUntilTimePrecise( t ):
+    
+    time_remaining = t - GetNowPrecise()
+    
+    return max( time_remaining, 0.0 )
     
 def IntelligentMassIntersect( sets_to_reduce ):
     
@@ -1194,6 +1218,10 @@ def TimeHasPassed( timestamp ):
         
     
     return GetNow() > timestamp
+    
+def TimeHasPassedFloat( timestamp ):
+    
+    return GetNowFloat() > timestamp
     
 def TimeHasPassedPrecise( precise_timestamp ):
     
@@ -1634,6 +1662,11 @@ class Call( object ):
     def __call__( self ):
         
         self._func( *self._args, **self._kwargs )
+        
+    
+    def __repr__( self ):
+        
+        return 'Call: ' + repr( ( self._func, self._args, self._kwargs ) )
         
     
 class ContentUpdate( object ):

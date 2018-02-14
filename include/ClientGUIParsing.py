@@ -218,7 +218,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
 
 The substitution phrase works like in regexes. If you have two formulae that produce _filename_ and _ext_, you could set this:
 
-\1.\2'''
+\\1.\\2'''
         
         info_st = wx.StaticText( info_panel, label = message )
         
@@ -903,9 +903,9 @@ The html's branches will be searched recursively by each tag rule in turn and th
 
 So, to find the 'src' of the first <img> tag beneath all <span> tags with the class 'content', use:
 
-'all span tags with class=content'
-1st img tag'
-attribute: src'
+all span tags with class=content
+1st img tag
+attribute: src
 
 '''
         

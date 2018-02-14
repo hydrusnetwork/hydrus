@@ -249,7 +249,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         def key( u_m ):
             
-            return u_m.GetExampleURL().count( '/' )
+            u_e = u_m.GetExampleURL()
+            
+            return ( u_e.count( '/' ), u_e.count( '=' ) )
             
         
         for url_matches in self._domains_to_url_matches.values():

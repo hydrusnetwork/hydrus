@@ -639,7 +639,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
                 
                 next_month_time = int( calendar.timegm( next_month_dt.timetuple() ) )
                 
-                return next_month_time - HydrusData.GetNow()
+                return HydrusData.GetTimeDeltaUntilTime( next_month_time )
                 
             else:
                 

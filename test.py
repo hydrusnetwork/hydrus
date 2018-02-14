@@ -165,7 +165,7 @@ class Controller( object ):
             raise Exception( 'Too many call to threads!' )
             
         
-        call_to_thread = HydrusThreading.THREADCallToThread( self )
+        call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThread' )
         
         self._call_to_threads.append( call_to_thread )
         

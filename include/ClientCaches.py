@@ -11,6 +11,7 @@ import HydrusFileHandling
 import HydrusPaths
 import HydrusSerialisable
 import HydrusSessions
+import HydrusThreading
 import itertools
 import json
 import os
@@ -2017,7 +2018,7 @@ class ThumbnailCache( object ):
         
         last_paused = HydrusData.GetNowPrecise()
         
-        while not HG.view_shutdown:
+        while not HydrusThreading.IsThreadShuttingDown():
             
             with self._lock:
                 

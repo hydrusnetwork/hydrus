@@ -1,3 +1,4 @@
+import bisect
 import collections
 import HydrusExceptions
 import Queue
@@ -51,7 +52,7 @@ def ShutdownThread( thread ):
     
 class DAEMON( threading.Thread ):
     
-    def __init__( self, controller, name, period = 1200 ):
+    def __init__( self, controller, name ):
         
         threading.Thread.__init__( self, name = name )
         
@@ -193,266 +194,11 @@ class DAEMONForegroundWorker( DAEMONWorker ):
         return self._controller.GoodTimeToDoForegroundWork()
         
     
-class JobScheduler( DAEMON ):
-    
-    def __init__( self, controller ):
-        
-        DAEMON.__init__( self, controller, 'JobScheduler' )
-        
-        self._currently_working = []
-        
-        self._waiting = []
-        
-        self._waiting_lock = threading.Lock()
-        
-        self._new_action = threading.Event()
-        
-        self._sort_needed = threading.Event()
-        
-    
-    def _InsertJob( self, job ):
-        
-        # write __lt__, __gt__, stuff and do a bisect insort_left here
-        
-        with self._waiting_lock:
-            
-            self._waiting.append( job )
-            
-        
-        self._sort_needed.set()
-        
-    
-    def _NoWorkToStart( self ):
-        
-        with self._waiting_lock:
-            
-            if len( self._waiting ) == 0:
-                
-                return True
-                
-            
-            next_job = self._waiting[0]
-            
-        
-        if HydrusData.TimeHasPassed( next_job.GetNextWorkTime() ):
-            
-            return False
-            
-        else:
-            
-            return True
-            
-        
-    
-    def _RescheduleFinishedJobs( self ):
-        
-        def reschedule_finished_job( job ):
-            
-            if job.CurrentlyWorking():
-                
-                return True
-                
-            else:
-                
-                self._InsertJob( job )
-                
-                return False
-                
-            
-        
-        self._currently_working = filter( reschedule_finished_job, self._currently_working )
-        
-    
-    def _SortWaiting( self ):
-        
-        # sort the waiting jobs in ascending order of expected work time
-        
-        def key( job ):
-            
-            return job.GetNextWorkTime()
-            
-        
-        with self._waiting_lock:
-            
-            self._waiting.sort( key = key )
-            
-        
-    
-    def _StartWork( self ):
-        
-        while True:
-            
-            with self._waiting_lock:
-                
-                if len( self._waiting ) == 0:
-                    
-                    break
-                    
-                
-                next_job = self._waiting[0]
-                
-                if HydrusData.TimeHasPassed( next_job.GetNextWorkTime() ):
-                    
-                    next_job = self._waiting.pop( 0 )
-                    
-                    if not next_job.IsDead():
-                        
-                        next_job.StartWork()
-                        
-                        self._currently_working.append( next_job )
-                        
-                    
-                else:
-                    
-                    break # all the rest in the queue are not due
-                    
-                
-            
-        
-    
-    def RegisterJob( self, job ):
-        
-        job.SetScheduler( self )
-        
-        self._InsertJob( job )
-        
-    
-    def WorkTimesHaveChanged( self ):
-        
-        self._sort_needed.set()
-        
-    
-    def run( self ):
-        
-        while True:
-            
-            try:
-                
-                while self._NoWorkToStart():
-                    
-                    if self._controller.ModelIsShutdown():
-                        
-                        return
-                        
-                    
-                    #
-                    
-                    self._RescheduleFinishedJobs()
-                    
-                    #
-                    
-                    self._sort_needed.wait( 0.2 )
-                    
-                    if self._sort_needed.is_set():
-                        
-                        self._SortWaiting()
-                        
-                        self._sort_needed.clear()
-                        
-                    
-                
-                self._StartWork()
-                
-            except HydrusExceptions.ShutdownException:
-                
-                return
-                
-            except Exception as e:
-                
-                HydrusData.Print( traceback.format_exc() )
-                
-                HydrusData.ShowException( e )
-                
-            
-            time.sleep( 0.00001 )
-            
-        
-    
-class RepeatingJob( object ):
-    
-    def __init__( self, controller, work_callable, period, initial_delay = 0 ):
-        
-        self._controller = controller
-        self._work_callable = work_callable
-        self._period = period
-        
-        self._is_dead = threading.Event()
-        
-        self._work_lock = threading.Lock()
-        
-        self._currently_working = threading.Event()
-        
-        self._next_work_time = HydrusData.GetNow() + initial_delay
-        
-        self._scheduler = None
-        
-        # registers itself with controller here
-        
-    
-    def CurrentlyWorking( self ):
-        
-        return self._currently_working.is_set()
-        
-    
-    def GetNextWorkTime( self ):
-        
-        return self._next_work_time
-        
-    
-    def IsDead( self ):
-        
-        return self._is_dead.is_set()
-        
-    
-    def Kill( self ):
-        
-        self._is_dead.set()
-        
-    
-    def SetScheduler( self, scheduler ):
-        
-        self._scheduler = scheduler
-        
-    
-    def StartWork( self ):
-        
-        self._currently_working.set()
-        
-        self._controller.CallToThread( self.Work )
-        
-    
-    def WakeAndWork( self ):
-        
-        self._next_work_time = HydrusData.GetNow()
-        
-        if self._scheduler is not None:
-            
-            self._scheduler.WorkTimesHaveChanged()
-            
-        
-    
-    def Work( self ):
-        
-        with self._work_lock:
-            
-            try:
-                
-                self._work_callable()
-                
-            finally:
-                
-                self._next_work_time = HydrusData.GetNow() + self._period
-                
-                self._currently_working.clear()
-                
-            
-        
-    
 class THREADCallToThread( DAEMON ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller, name ):
         
-        DAEMON.__init__( self, controller, 'CallToThread' )
+        DAEMON.__init__( self, controller, name )
         
         self._queue = Queue.Queue()
         
@@ -515,6 +261,341 @@ class THREADCallToThread( DAEMON ):
                 
             
             time.sleep( 0.00001 )
+            
+        
+    
+class JobScheduler( threading.Thread ):
+    
+    def __init__( self, controller ):
+        
+        threading.Thread.__init__( self, name = 'Job Scheduler' )
+        
+        self._controller = controller
+        
+        self._waiting = []
+        
+        self._waiting_lock = threading.Lock()
+        
+        self._new_job_arrived = threading.Event()
+        
+        self._cancel_filter_needed = threading.Event()
+        self._sort_needed = threading.Event()
+        
+        self._controller.sub( self, 'shutdown', 'shutdown' )
+        
+    
+    def _FilterCancelled( self ):
+        
+        with self._waiting_lock:
+            
+            self._waiting = [ job for job in self._waiting if not job.IsCancelled() ]
+            
+        
+    
+    def _GetLoopWaitTime( self ):
+        
+        with self._waiting_lock:
+            
+            if len( self._waiting ) == 0:
+                
+                return 0.2
+                
+            
+            next_job = self._waiting[0]
+            
+        
+        time_delta_until_due = next_job.GetTimeDeltaUntilDue()
+        
+        return min( 1.0, time_delta_until_due )
+        
+    
+    def _NoWorkToStart( self ):
+        
+        with self._waiting_lock:
+            
+            if len( self._waiting ) == 0:
+                
+                return True
+                
+            
+            next_job = self._waiting[0]
+            
+        
+        if next_job.IsDue():
+            
+            return False
+            
+        else:
+            
+            return True
+            
+        
+    
+    def _SortWaiting( self ):
+        
+        # sort the waiting jobs in ascending order of expected work time
+        
+        with self._waiting_lock: # this uses __lt__ to sort
+            
+            self._waiting.sort()
+            
+        
+    
+    def _StartWork( self ):
+        
+        while True:
+            
+            with self._waiting_lock:
+                
+                if len( self._waiting ) == 0:
+                    
+                    break
+                    
+                
+                next_job = self._waiting[0]
+                
+                if next_job.IsDue():
+                    
+                    next_job = self._waiting.pop( 0 )
+                    
+                    next_job.StartWork()
+                    
+                else:
+                    
+                    break # all the rest in the queue are not due
+                    
+                
+            
+        
+    
+    def AddJob( self, job ):
+        
+        with self._waiting_lock:
+            
+            bisect.insort( self._waiting, job )
+            
+        
+        self._new_job_arrived.set()
+        
+    
+    def JobCancelled( self ):
+        
+        self._cancel_filter_needed.set()
+        
+    
+    def shutdown( self ):
+        
+        ShutdownThread( self )
+        
+    
+    def WorkTimesHaveChanged( self ):
+        
+        self._sort_needed.set()
+        
+    
+    def run( self ):
+        
+        while True:
+            
+            try:
+                
+                while self._NoWorkToStart():
+                    
+                    if self._controller.ModelIsShutdown():
+                        
+                        return
+                        
+                    
+                    #
+                    
+                    if self._cancel_filter_needed.is_set():
+                        
+                        self._FilterCancelled()
+                        
+                        self._cancel_filter_needed.clear()
+                        
+                    
+                    if self._sort_needed.is_set():
+                        
+                        self._SortWaiting()
+                        
+                        self._sort_needed.clear()
+                        
+                        continue # if some work is now due, let's do it!
+                        
+                    
+                    #
+                    
+                    wait_time = self._GetLoopWaitTime()
+                    
+                    self._new_job_arrived.wait( wait_time )
+                    
+                    self._new_job_arrived.clear()
+                    
+                
+                self._StartWork()
+                
+            except HydrusExceptions.ShutdownException:
+                
+                return
+                
+            except Exception as e:
+                
+                HydrusData.Print( traceback.format_exc() )
+                
+                HydrusData.ShowException( e )
+                
+            
+            time.sleep( 0.00001 )
+            
+        
+    
+class SchedulableJob( object ):
+    
+    def __init__( self, controller, scheduler, work_callable, initial_delay = 0.0 ):
+        
+        self._controller = controller
+        self._scheduler = scheduler
+        self._work_callable = work_callable
+        
+        self._next_work_time = HydrusData.GetNowFloat() + initial_delay
+        
+        self._work_lock = threading.Lock()
+        
+        self._currently_working = threading.Event()
+        self._is_cancelled = threading.Event()
+        
+    
+    def __lt__( self, other ): # for the scheduler to do bisect.insort noice
+        
+        return self._next_work_time < other._next_work_time
+        
+    
+    def __repr__( self ):
+        
+        return 'Schedulable Job: ' + repr( self._work_callable )
+        
+    
+    def _BootWorker( self ):
+        
+        self._controller.CallToThread( self.Work )
+        
+    
+    def Cancel( self ):
+        
+        self._is_cancelled.set()
+        
+        self._scheduler.JobCancelled()
+        
+    
+    def CurrentlyWorking( self ):
+        
+        return self._currently_working.is_set()
+        
+    
+    def GetTimeDeltaUntilDue( self ):
+        
+        return HydrusData.GetTimeDeltaUntilTimeFloat( self._next_work_time )
+        
+    
+    def IsCancelled( self ):
+        
+        return self._is_cancelled.is_set()
+        
+    
+    def IsDue( self ):
+        
+        return HydrusData.TimeHasPassedFloat( self._next_work_time )
+        
+    
+    def MoveNextWorkTimeToNow( self ):
+        
+        self._next_work_time = HydrusData.GetNowFloat()
+        
+        self._scheduler.WorkTimesHaveChanged()
+        
+    
+    def StartWork( self ):
+        
+        if self._is_cancelled.is_set():
+            
+            return
+            
+        
+        self._currently_working.set()
+        
+        self._BootWorker()
+        
+    
+    def Work( self ):
+        
+        try:
+            
+            with self._work_lock:
+                
+                self._work_callable()
+                
+            
+        finally:
+            
+            self._currently_working.clear()
+            
+        
+    
+class RepeatingJob( SchedulableJob ):
+    
+    def __init__( self, controller, scheduler, work_callable, period, initial_delay = 0.0 ):
+        
+        SchedulableJob.__init__( self, controller, scheduler, work_callable, initial_delay = initial_delay )
+        
+        self._period = period
+        
+        self._stop_repeating = threading.Event()
+        
+    
+    def Cancel( self ):
+        
+        SchedulableJob.Cancel( self )
+        
+        self._stop_repeating.set()
+        
+    
+    def Delay( self, delay ):
+        
+        self._next_work_time = HydrusData.GetNowFloat() + delay
+        
+        self._scheduler.WorkTimesHaveChanged()
+        
+    
+    def IsFinishedWorking( self ):
+        
+        return self._stop_repeating.is_set()
+        
+    
+    def SetPeriod( self, period ):
+        
+        self._period = period
+        
+    
+    def StartWork( self ):
+        
+        if self._stop_repeating.is_set():
+            
+            return
+            
+        
+        SchedulableJob.StartWork( self )
+        
+    
+    def Work( self ):
+        
+        SchedulableJob.Work( self )
+        
+        if not self._stop_repeating.is_set():
+            
+            self._next_work_time = HydrusData.GetNowFloat() + self._period
+            
+            self._scheduler.AddJob( self )
             
         
     

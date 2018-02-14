@@ -344,6 +344,15 @@ class HydrusDB( object ):
         self._c.execute( statement )
         
     
+    def _DisplayCatastrophicError( self, text ):
+        
+        message = 'The db encountered a serious error! This is going to be written to the log as well, but here it is for a screenshot:'
+        message += os.linesep * 2
+        message += text
+        
+        HydrusData.DebugPrint( message )
+        
+    
     def _GetRowCount( self ):
         
         row_count = self._c.rowcount
@@ -753,7 +762,7 @@ class HydrusDB( object ):
             
         except:
             
-            HydrusData.Print( traceback.format_exc() )
+            self._DisplayCatastrophicError( traceback.format_exc() )
             
             self._could_not_initialise = True
             

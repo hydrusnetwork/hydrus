@@ -332,9 +332,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths.Sort( 0 )
         
-        self._update_timer = ClientThreading.WXAwareTimer( self, self._Update )
-        
-        self._Update()
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 5.0, 0.0, self._Update )
         
         #
         
@@ -422,7 +420,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._controller.network_engine.bandwidth_manager.DeleteHistory( selected_network_contexts )
                     
-                    self._Update()
+                    self._update_job.MoveNextWorkTimeToNow()
                     
                 
         
@@ -479,8 +477,9 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         help += os.linesep * 2
         help += 'There are two special \'instance\' contexts, for downloaders and threads. These represent individual queries, either a single gallery search or a single watched thread. It is useful to set rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
         help += os.linesep * 2
-        help += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. The simplest way of throttling your client is by editing the rules for the global context.'
-        
+        help += 'Please note that this system bases its calendar dates on UTC/GMT time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
+        help += os.linesep * 2
+        help += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. If you want to throttle your client, the simplest way is to add a simple rule like \'500MB per day\' to the global context.'
         wx.MessageBox( help )
         
     
@@ -501,8 +500,6 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         timer_duration_s = max( len( network_contexts ), 20 )
         
-        self._update_timer.CallLater( timer_duration_s )
-        
     
     def EventTimeDeltaChanged( self, event ):
         
@@ -515,7 +512,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._history_time_delta_threshold.Enable()
             
         
-        self._Update()
+        self._update_job.MoveNextWorkTimeToNow()
         
     
     def ShowNetworkContext( self ):
@@ -645,12 +642,9 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._rules_timer = ClientThreading.WXAwareTimer( self, self._UpdateRules )
+        self._rules_job = HG.client_controller.CallRepeatingWXSafe( self, 5.0, 0.0, self._UpdateRules )
         
-        self._update_timer = ClientThreading.WXAwareTimer( self, self._Update )
-        
-        self._UpdateRules()
-        self._Update()
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 1.0, 0.0, self._Update )
         
     
     def _EditRules( self ):
@@ -699,8 +693,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_time_delta_usage = ': ' + converter( time_delta_usage )
         
         self._time_delta_usage_st.SetLabelText( pretty_time_delta_usage )
-        
-        self._update_timer.CallLater( 1.0 )
         
     
     def _UpdateRules( self ):
@@ -778,8 +770,6 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             ClientGUITopLevelWindows.PostSizeChangedEvent( self )
             
         
-        self._rules_timer.CallLater( 5.0 )
-        
     
     def _UseDefaultRules( self ):
         
@@ -789,7 +779,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._controller.network_engine.bandwidth_manager.DeleteRules( self._network_context )
                 
-                self._UpdateRules()
+                self._rules_job.MoveNextWorkTimeToNow()
                 
             
         
@@ -1718,7 +1708,7 @@ def THREADMigrateDatabase( controller, source, portable_locations, dest ):
     
     def wx_code( job_key ):
         
-        ClientThreading.CallLater( controller.gui, 3, controller.gui.Exit )
+        HG.client_controller.CallLaterWXSafe( controller.gui, 3.0, controller.gui.Exit )
         
         # no parent because this has to outlive the gui, obvs
         

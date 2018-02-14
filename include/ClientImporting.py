@@ -2001,9 +2001,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER
     SERIALISABLE_NAME = 'Import Folder'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
-    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, mimes = None, actions = None, action_locations = None, period = 3600, open_popup = True ):
+    def __init__( self, name, path = '', file_import_options = None, tag_import_options = None, tag_service_keys_to_filename_tagging_options = None, mimes = None, actions = None, action_locations = None, period = 3600, check_regularly = True, show_working_popup = True, publish_files_to_popup_button = True, publish_files_to_page = False ):
         
         if mimes is None:
             
@@ -2050,12 +2050,16 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
-        self._open_popup = open_popup
+        self._check_regularly = check_regularly
         
         self._path_cache = SeedCache()
         self._last_checked = 0
         self._paused = False
         self._check_now = False
+        
+        self._show_working_popup = show_working_popup
+        self._publish_files_to_popup_button = publish_files_to_popup_button
+        self._publish_files_to_page = publish_files_to_page
         
     
     def _ActionPaths( self ):
@@ -2176,6 +2180,44 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def _CheckFolder( self, job_key ):
+        
+        filenames = os.listdir( HydrusData.ToUnicode( self._path ) )
+        
+        raw_paths = [ os.path.join( self._path, filename ) for filename in filenames ]
+        
+        all_paths = ClientFiles.GetAllPaths( raw_paths )
+        
+        all_paths = HydrusPaths.FilterFreePaths( all_paths )
+        
+        new_paths = []
+        
+        for path in all_paths:
+            
+            if job_key.IsCancelled():
+                
+                break
+                
+            
+            if path.endswith( '.txt' ):
+                
+                continue
+                
+            
+            if not self._path_cache.HasPath( path ):
+                
+                new_paths.append( path )
+                
+            
+            job_key.SetVariable( 'popup_text_1', 'checking: found ' + HydrusData.ConvertIntToPrettyString( len( new_paths ) ) + ' new files' )
+            
+        
+        self._path_cache.AddPaths( new_paths )
+        
+        self._last_checked = HydrusData.GetNow()
+        self._check_now = False
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
@@ -2187,12 +2229,198 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         action_pairs = self._actions.items()
         action_location_pairs = self._action_locations.items()
         
-        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now )
+        return ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_path_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
+        
+    
+    def _ImportFiles( self, job_key ):
+        
+        did_work = False
+        
+        time_to_save = HydrusData.GetNow() + 600
+        
+        num_files_imported = 0
+        presentation_hashes = []
+        presentation_hashes_fast = set()
+        
+        i = 0
+        
+        num_total = len( self._path_cache )
+        num_total_unknown = self._path_cache.GetSeedCount( CC.STATUS_UNKNOWN )
+        num_total_done = num_total - num_total_unknown
+        
+        while True:
+            
+            seed = self._path_cache.GetNextSeed( CC.STATUS_UNKNOWN )
+            
+            p1 = HC.options[ 'pause_import_folders_sync' ] or self._paused
+            p2 = HydrusThreading.IsThreadShuttingDown()
+            p3 = job_key.IsCancelled()
+            
+            if seed is None or p1 or p2 or p3:
+                
+                break
+                
+            
+            if HydrusData.TimeHasPassed( time_to_save ):
+                
+                HG.client_controller.WriteSynchronous( 'serialisable', self )
+                
+                time_to_save = HydrusData.GetNow() + 600
+                
+            
+            gauge_num_done = num_total_done + num_files_imported + 1
+            
+            job_key.SetVariable( 'popup_text_1', 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
+            job_key.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
+            
+            path = seed.seed_data
+            
+            try:
+                
+                mime = HydrusFileHandling.GetMime( path )
+                
+                if mime in self._mimes:
+                    
+                    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                    
+                    try:
+                        
+                        copied = HydrusPaths.MirrorFile( path, temp_path )
+                        
+                        if not copied:
+                            
+                            raise Exception( 'File failed to copy--see log for error.' )
+                            
+                        
+                        file_import_job = FileImportJob( temp_path, self._file_import_options )
+                        
+                        client_files_manager = HG.client_controller.client_files_manager
+                        
+                        ( status, hash ) = client_files_manager.ImportFile( file_import_job )
+                        
+                    finally:
+                        
+                        HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                        
+                    
+                    seed.SetStatus( status )
+                    
+                    if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
+                        
+                        downloaded_tags = []
+                        
+                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, downloaded_tags ) # explicit tags
+                        
+                        if len( service_keys_to_content_updates ) > 0:
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        
+                        service_keys_to_tags = {}
+                        
+                        for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
+                            
+                            if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                                
+                                continue
+                                
+                            
+                            try:
+                                
+                                tags = filename_tagging_options.GetTags( tag_service_key, path )
+                                
+                                if len( tags ) > 0:
+                                    
+                                    service_keys_to_tags[ tag_service_key ] = tags
+                                    
+                                
+                            except Exception as e:
+                                
+                                HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
+                                
+                                HydrusData.ShowException( e )
+                                
+                            
+                        
+                        if len( service_keys_to_tags ) > 0:
+                            
+                            service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                            
+                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            
+                        
+                        num_files_imported += 1
+                        
+                        if hash not in presentation_hashes_fast:
+                            
+                            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                            
+                            if self._file_import_options.ShouldPresent( status, in_inbox ):
+                                
+                                presentation_hashes.append( hash )
+                                
+                                presentation_hashes_fast.add( hash )
+                                
+                            
+                        
+                    
+                else:
+                    
+                    seed.SetStatus( CC.STATUS_UNINTERESTING_MIME )
+                    
+                
+            except Exception as e:
+                
+                error_text = traceback.format_exc()
+                
+                HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' + path )
+                
+                seed.SetStatus( CC.STATUS_FAILED, exception = e )
+                
+            finally:
+                
+                did_work = True
+                
+            
+            i += 1
+            
+            if i % 10 == 0:
+                
+                self._ActionPaths()
+                
+            
+        
+        if num_files_imported > 0:
+            
+            HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ConvertIntToPrettyString( num_files_imported ) + ' files.' )
+            
+            if len( presentation_hashes ) > 0:
+                
+                if self._publish_files_to_popup_button:
+                    
+                    job_key = ClientThreading.JobKey()
+                    
+                    job_key.SetVariable( 'popup_files_mergable', True )
+                    job_key.SetVariable( 'popup_files', ( list( presentation_hashes ), self._name ) )
+                    
+                    HG.client_controller.pub( 'message', job_key )
+                    
+                
+                if self._publish_files_to_page:
+                    
+                    HG.client_controller.pub( 'imported_files_to_page', list( presentation_hashes ), self._name )
+                    
+                
+            
+        
+        self._ActionPaths()
+        
+        return did_work
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._open_popup, serialisable_path_cache, self._last_checked, self._paused, self._check_now ) = serialisable_info
+        ( self._path, self._mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_path_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page ) = serialisable_info
         
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
@@ -2271,6 +2499,20 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, open_popup, serialisable_path_cache, last_checked, paused, check_now ) = old_serialisable_info
+            
+            check_regularly = not paused
+            show_working_popup = True
+            publish_files_to_page = False
+            publish_files_to_popup_button = open_popup
+            
+            new_serialisable_info = ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_path_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def CheckNow( self ):
         
@@ -2284,206 +2526,63 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             return
             
         
-        time_to_stop = HydrusData.GetNow() + 600
-        was_interrupted = False
+        if HC.options[ 'pause_import_folders_sync' ] or self._paused:
+            
+            return
+            
+        
+        if not os.path.exists( self._path ) or not os.path.isdir( self._path ):
+            
+            return
+            
+        
+        pubbed_job_key = False
+        
+        job_key = ClientThreading.JobKey( pausable = False, cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
+        
         due_by_check_now = self._check_now
-        due_by_period = not self._paused and HydrusData.TimeHasPassed( self._last_checked + self._period )
+        due_by_period = self._check_regularly and HydrusData.TimeHasPassed( self._last_checked + self._period )
+        
+        checked_folder = False
         
         if due_by_check_now or due_by_period:
             
-            if os.path.exists( self._path ) and os.path.isdir( self._path ):
+            if not pubbed_job_key and self._show_working_popup:
                 
-                filenames = os.listdir( HydrusData.ToUnicode( self._path ) )
+                HG.client_controller.pub( 'message', job_key )
                 
-                raw_paths = [ os.path.join( self._path, filename ) for filename in filenames ]
-                
-                all_paths = ClientFiles.GetAllPaths( raw_paths )
-                
-                all_paths = HydrusPaths.FilterFreePaths( all_paths )
-                
-                new_paths = []
-                
-                for path in all_paths:
-                    
-                    if path.endswith( '.txt' ):
-                        
-                        continue
-                        
-                    
-                    if not self._path_cache.HasPath( path ):
-                        
-                        new_paths.append( path )
-                        
-                    
-                
-                self._path_cache.AddPaths( new_paths )
-                
-                num_files_imported = 0
-                presentation_hashes = []
-                presentation_hashes_fast = set()
-                
-                i = 0
-                
-                while True:
-                    
-                    seed = self._path_cache.GetNextSeed( CC.STATUS_UNKNOWN )
-                    
-                    p1 = HC.options[ 'pause_import_folders_sync' ] or self._paused
-                    p2 = HG.view_shutdown
-                    
-                    if seed is None or p1 or p2:
-                        
-                        was_interrupted = True
-                        
-                        break
-                        
-                    
-                    if HydrusData.TimeHasPassed( time_to_stop ):
-                        
-                        was_interrupted = True
-                        
-                        break
-                        
-                    
-                    path = seed.seed_data
-                    
-                    try:
-                        
-                        mime = HydrusFileHandling.GetMime( path )
-                        
-                        if mime in self._mimes:
-                            
-                            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
-                            
-                            try:
-                                
-                                copied = HydrusPaths.MirrorFile( path, temp_path )
-                                
-                                if not copied:
-                                    
-                                    raise Exception( 'File failed to copy--see log for error.' )
-                                    
-                                
-                                file_import_job = FileImportJob( temp_path, self._file_import_options )
-                                
-                                client_files_manager = HG.client_controller.client_files_manager
-                                
-                                ( status, hash ) = client_files_manager.ImportFile( file_import_job )
-                                
-                            finally:
-                                
-                                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
-                                
-                            
-                            seed.SetStatus( status )
-                            
-                            if status in ( CC.STATUS_SUCCESSFUL, CC.STATUS_REDUNDANT ):
-                                
-                                downloaded_tags = []
-                                
-                                service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, downloaded_tags ) # explicit tags
-                                
-                                if len( service_keys_to_content_updates ) > 0:
-                                    
-                                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                                    
-                                
-                                service_keys_to_tags = {}
-                                
-                                for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
-                                    
-                                    if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
-                                        
-                                        continue
-                                        
-                                    
-                                    try:
-                                        
-                                        tags = filename_tagging_options.GetTags( tag_service_key, path )
-                                        
-                                        if len( tags ) > 0:
-                                            
-                                            service_keys_to_tags[ tag_service_key ] = tags
-                                            
-                                        
-                                    except Exception as e:
-                                        
-                                        HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
-                                        
-                                        HydrusData.ShowException( e )
-                                        
-                                    
-                                
-                                if len( service_keys_to_tags ) > 0:
-                                    
-                                    service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                                    
-                                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                                    
-                                
-                                num_files_imported += 1
-                                
-                                if hash not in presentation_hashes_fast:
-                                    
-                                    in_inbox = HG.client_controller.Read( 'in_inbox', hash )
-                                    
-                                    if self._file_import_options.ShouldPresent( status, in_inbox ):
-                                        
-                                        presentation_hashes.append( hash )
-                                        
-                                        presentation_hashes_fast.add( hash )
-                                        
-                                    
-                                
-                            
-                        else:
-                            
-                            seed.SetStatus( CC.STATUS_UNINTERESTING_MIME )
-                            
-                        
-                    except Exception as e:
-                        
-                        error_text = traceback.format_exc()
-                        
-                        HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' )
-                        
-                        seed.SetStatus( CC.STATUS_FAILED, exception = e )
-                        
-                    
-                    i += 1
-                    
-                    if i % 10 == 0:
-                        
-                        self._ActionPaths()
-                        
-                    
-                
-                if num_files_imported > 0:
-                    
-                    HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ConvertIntToPrettyString( num_files_imported ) + ' files.' )
-                    
-                    if len( presentation_hashes ) > 0 and self._open_popup:
-                        
-                        job_key = ClientThreading.JobKey()
-                        
-                        job_key.SetVariable( 'popup_title', 'import folder - ' + self._name )
-                        job_key.SetVariable( 'popup_files', ( presentation_hashes, self._name ) )
-                        
-                        HG.client_controller.pub( 'message', job_key )
-                        
-                    
-                
-                self._ActionPaths()
+                pubbed_job_key = True
                 
             
-            if not was_interrupted:
+            self._CheckFolder( job_key )
+            
+            checked_folder = True
+            
+        
+        seed = self._path_cache.GetNextSeed( CC.STATUS_UNKNOWN )
+        
+        did_import_file_work = False
+        
+        if seed is not None:
+            
+            if not pubbed_job_key and self._show_working_popup:
                 
-                self._last_checked = HydrusData.GetNow()
-                self._check_now = False
+                HG.client_controller.pub( 'message', job_key )
                 
+                pubbed_job_key = True
+                
+            
+            did_import_file_work = self._ImportFiles( job_key )
+            
+        
+        if checked_folder or did_import_file_work:
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
+        
+        job_key.Delete()
         
     
     def GetSeedCache( self ):
@@ -2498,7 +2597,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._tag_service_keys_to_filename_tagging_options, self._actions, self._action_locations, self._period, self._open_popup, self._paused, self._check_now )
+        return ( self._name, self._path, self._mimes, self._file_import_options, self._tag_import_options, self._tag_service_keys_to_filename_tagging_options, self._actions, self._action_locations, self._period, self._check_regularly, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
     def SetSeedCache( self, seed_cache ):
@@ -2506,7 +2605,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_cache = seed_cache
         
     
-    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, open_popup, paused, check_now ):
+    def SetTuple( self, name, path, mimes, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ):
         
         if path != self._path:
             
@@ -2527,9 +2626,12 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._actions = actions
         self._action_locations = action_locations
         self._period = period
-        self._open_popup = open_popup
+        self._check_regularly = check_regularly
         self._paused = paused
         self._check_now = check_now
+        self._show_working_popup = show_working_popup
+        self._publish_files_to_popup_button = publish_files_to_popup_button
+        self._publish_files_to_page = publish_files_to_page
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ] = ImportFolder
@@ -4397,6 +4499,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
             files_job_key = ClientThreading.JobKey()
             
+            files_job_key.SetVariable( 'popup_files_mergable', True )
             files_job_key.SetVariable( 'popup_files', ( all_presentation_hashes, file_popup_text ) )
             
             HG.client_controller.pub( 'message', files_job_key )
@@ -5378,14 +5481,17 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             watcher_status = 'Could not parse the given URL!'
             
         
-        # convert to API url as appropriate
-        ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._thread_url )
-        
-        if parser is None:
+        if not error_occurred:
             
-            error_occurred = True
+            # convert to API url as appropriate
+            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._thread_url )
             
-            watcher_status = 'Could not find a parser for the given URL!'
+            if parser is None:
+                
+                error_occurred = True
+                
+                watcher_status = 'Could not find a parser for the given URL!'
+                
             
         
         if error_occurred:

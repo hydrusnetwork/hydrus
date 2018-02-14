@@ -7,6 +7,7 @@ import ClientGUIMenus
 import ClientSearch
 import collections
 import HydrusConstants as HC
+import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusTags
@@ -120,18 +121,12 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._initial_matches_fetched = False
         
-        self._move_hide_timer = None
+        self._move_hide_job = None
         
         if self._float_mode:
             
             self.Bind( wx.EVT_MOVE, self.EventMove )
             self.Bind( wx.EVT_SIZE, self.EventMove )
-            
-            self.Bind( wx.EVT_TIMER, self.TIMEREventDropdownHide, id = ID_TIMER_DROPDOWN_HIDE )
-            
-            self._move_hide_timer = wx.Timer( self, id = ID_TIMER_DROPDOWN_HIDE )
-            
-            self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
             
             tlp.Bind( wx.EVT_MOVE, self.EventMove )
             
@@ -155,13 +150,11 @@ class AutoCompleteDropdown( wx.Panel ):
                 
             
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREventLag, id = ID_TIMER_AC_LAG )
-        
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         
-        self._lag_timer = wx.Timer( self, id = ID_TIMER_AC_LAG )
+        self._refresh_list_job = None
         
-        wx.CallAfter( self._UpdateList )
+        self._ScheduleListRefresh( 0.0 )
         
     
     def _BroadcastChoices( self, predicates ):
@@ -174,6 +167,14 @@ class AutoCompleteDropdown( wx.Panel ):
         text = self._text_ctrl.GetValue()
         
         self._BroadcastChoices( { text } )
+        
+    
+    def _CancelScheduledListRefresh( self ):
+        
+        if self._refresh_list_job is not None:
+            
+            self._refresh_list_job.Cancel()
+            
         
     
     def _GenerateMatches( self ):
@@ -194,6 +195,27 @@ class AutoCompleteDropdown( wx.Panel ):
     def _InitDropDownList( self ):
         
         raise NotImplementedError()
+        
+    
+    def _ScheduleListRefresh( self, delay ):
+        
+        if self._refresh_list_job is not None and delay == 0.0:
+            
+            self._refresh_list_job.MoveNextWorkTimeToNow()
+            
+        else:
+            
+            self._CancelScheduledListRefresh()
+            
+            self._refresh_list_job = HG.client_controller.CallLaterWXSafe( self, delay, self._UpdateList )
+            
+        
+    
+    def _SetListDirty( self ):
+        
+        self._cache_text = None
+        
+        self._ScheduleListRefresh( 0.0 )
         
     
     def _ShouldShow( self ):
@@ -309,18 +331,38 @@ class AutoCompleteDropdown( wx.Panel ):
         self._BroadcastChoices( predicates )
         
     
-    def CleanBeforeDestroy( self ):
+    def DropdownHideShow( self ):
         
-        if self._move_hide_timer is not None:
+        try:
             
-            self._move_hide_timer.Stop()
-            self._move_hide_timer = None
+            should_show = self._ShouldShow()
             
-        
-        if self._lag_timer is not None:
+            if should_show:
+                
+                self._ShowDropdown()
+                
+                if self._move_hide_job is not None:
+                    
+                    self._move_hide_job.Cancel()
+                    
+                    self._move_hide_job = None
+                    
+                
+            else:
+                
+                self._HideDropdown()
+                
             
-            self._lag_timer.Stop()
-            self._lag_timer = None
+        except:
+            
+            if self._move_hide_job is not None:
+                
+                self._move_hide_job.Cancel()
+                
+                self._move_hide_job = None
+                
+            
+            raise
             
         
     
@@ -338,9 +380,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif key == wx.WXK_SPACE and event.RawControlDown(): # this is control, not command on os x, for which command+space does some os stuff
             
-            self._UpdateList()
-            
-            self._lag_timer.Stop()
+            self._ScheduleListRefresh( 0.0 )
             
         elif self._intercept_key_events:
             
@@ -397,9 +437,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventKillFocus( self, event ):
         
-        if self._move_hide_timer:
+        if self._float_mode:
             
-            self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
+            self.DropdownHideShow()
             
         
         event.Skip()
@@ -453,11 +493,19 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventMove( self, event ):
         
-        self._HideDropdown()
-        
-        if self._move_hide_timer:
+        if self._float_mode:
             
-            self._move_hide_timer.Start( 250, wx.TIMER_ONE_SHOT )
+            self._HideDropdown()
+            
+            if self._ShouldShow():
+                
+                if self._move_hide_job is None:
+                    
+                    self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self.DropdownHideShow )
+                    
+                
+                self._move_hide_job.Delay( 0.25 )
+                
             
         
         event.Skip()
@@ -465,9 +513,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventSetFocus( self, event ):
         
-        if self._move_hide_timer:
+        if self._float_mode:
             
-            self._move_hide_timer.Start( 1, wx.TIMER_ONE_SHOT )
+            self.DropdownHideShow()
             
         
         event.Skip()
@@ -479,7 +527,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if num_chars == 0:
             
-            self._UpdateList()
+            self._ScheduleListRefresh( 0.0 )
             
         elif HC.options[ 'fetch_ac_results_automatically' ]:
             
@@ -487,67 +535,18 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._next_updatelist_is_probably_fast = self._next_updatelist_is_probably_fast and num_chars > len( self._last_search_text )
             
-            if self._next_updatelist_is_probably_fast: self._UpdateList()
+            if self._next_updatelist_is_probably_fast:
+                
+                self._ScheduleListRefresh( 0.0 )
+                
             elif num_chars < char_limit:
                 
-                self._lag_timer.Start( long_wait, wx.TIMER_ONE_SHOT )
+                self._ScheduleListRefresh( long_wait / 1000.0 )
                 
             else:
                 
-                self._lag_timer.Start( short_wait, wx.TIMER_ONE_SHOT )
+                self._ScheduleListRefresh( short_wait / 1000.0 )
                 
-            
-        
-    
-    def RefreshList( self ):
-        
-        self._cache_text = None
-        
-        self._UpdateList()
-        
-    
-    def TIMEREventDropdownHide( self, event ):
-        
-        try:
-            
-            should_show = self._ShouldShow()
-            
-            if should_show:
-                
-                self._ShowDropdown()
-                
-            else:
-                
-                self._HideDropdown()
-                
-            
-            if self._move_hide_timer:
-                
-                self._move_hide_timer.Start( 250, wx.TIMER_ONE_SHOT )
-                
-            
-        except:
-            
-            if self._move_hide_timer:
-                
-                self._move_hide_timer.Stop()
-                
-            
-            raise
-            
-        
-    
-    def TIMEREventLag( self, event ):
-        
-        try:
-            
-            self._UpdateList()
-            
-        except:
-            
-            self._lag_timer.Stop()
-            
-            raise
             
         
     
@@ -588,7 +587,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._file_repo_button.SetLabelText( name )
         
-        wx.CallAfter( self.RefreshList )
+        self._SetListDirty()
         
     
     def _ChangeTagService( self, tag_service_key ):
@@ -610,10 +609,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._cache_text = None
         
-        wx.CallAfter( self.RefreshList )
+        self._SetListDirty()
         
     
     def _UpdateList( self ):
+        
+        self._refresh_list_job = None
         
         self._last_search_text = self._text_ctrl.GetValue()
         
@@ -629,7 +630,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         if num_chars == 0:
             
-            self._lag_timer.Start( 5 * 60 * 1000, wx.TIMER_ONE_SHOT )
+            # refresh system preds after five mins
+            
+            self._ScheduleListRefresh( 300 )
             
         
     
@@ -1060,7 +1063,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._file_search_context.SetIncludeCurrentTags( value )
             
-            wx.CallAfter( self.RefreshList )
+            self._SetListDirty()
             
             HG.client_controller.pub( 'refresh_query', self._page_key )
             
@@ -1072,7 +1075,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
             self._file_search_context.SetIncludePendingTags( value )
             
-            wx.CallAfter( self.RefreshList )
+            self._SetListDirty()
             
             HG.client_controller.pub( 'refresh_query', self._page_key )
             

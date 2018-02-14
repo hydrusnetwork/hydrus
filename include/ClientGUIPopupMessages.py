@@ -560,23 +560,15 @@ class PopupMessageManager( wx.Frame ):
         HydrusData.ShowException = ClientData.ShowExceptionClient
         HydrusData.ShowText = ClientData.ShowTextClient
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREvent )
-        
-        self._timer = wx.Timer( self )
-        
-        self._timer.Start( 500, wx.TIMER_CONTINUOUS )
-        
         job_key = ClientThreading.JobKey()
         
         job_key.SetVariable( 'popup_text_1', u'initialising popup message manager\u2026' )
         
-        wx.CallAfter( self.AddMessage, job_key )
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 0.25, self.REPEATINGUpdate )
         
-        wx.CallAfter( self._Update )
+        HG.client_controller.CallLaterWXSafe( self, 0.5, self.AddMessage, job_key )
         
-        wx.CallAfter( job_key.Delete )
-        
-        wx.CallAfter( self._Update )
+        HG.client_controller.CallLaterWXSafe( self, 1.0, job_key.Delete )
         
     
     def _CheckPending( self ):
@@ -772,7 +764,7 @@ class PopupMessageManager( wx.Frame ):
             
             wx.MessageBox( text )
             
-            self._timer.Stop()
+            self._update_job.Cancel()
             
             self.CleanBeforeDestroy()
             
@@ -780,11 +772,79 @@ class PopupMessageManager( wx.Frame ):
             
         
     
+    def _GetAllMessageJobKeys( self ):
+        
+        job_keys = []
+        
+        sizer_items = self._message_vbox.GetChildren()
+        
+        for sizer_item in sizer_items:
+            
+            message_window = sizer_item.GetWindow()
+            
+            job_key = message_window.GetJobKey()
+            
+            job_keys.append( job_key )
+            
+        
+        job_keys.extend( self._pending_job_keys )
+        
+        return job_keys
+        
+    
+    def _TryToMergeMessage( self, job_key ):
+        
+        if not job_key.HasVariable( 'popup_files_mergable' ):
+            
+            return False
+            
+        
+        result = job_key.GetIfHasVariable( 'popup_files' )
+        
+        if result is not None:
+            
+            ( hashes, name ) = result
+            
+            existing_job_keys = self._GetAllMessageJobKeys()
+            
+            for existing_job_key in existing_job_keys:
+                
+                if existing_job_key.HasVariable( 'popup_files_mergable' ):
+                    
+                    result = existing_job_key.GetIfHasVariable( 'popup_files' )
+                    
+                    if result is not None:
+                        
+                        ( existing_hashes, existing_name ) = result
+                        
+                        if existing_name == name:
+                            
+                            if isinstance( existing_hashes, list ):
+                                
+                                existing_hashes.extend( hashes )
+                                
+                            elif isinstance( existing_hashes, set ):
+                                
+                                existing_hashes.update( hashes )
+                                
+                            
+                            return True
+                            
+                        
+                    
+                
+            
+        
+        return False
+        
+    
     def _Update( self ):
         
         if HG.view_shutdown:
             
-            self._timer.Stop()
+            self._update_job.Cancel()
+            
+            self.CleanBeforeDestroy()
             
             self.Destroy()
             
@@ -815,6 +875,13 @@ class PopupMessageManager( wx.Frame ):
     def AddMessage( self, job_key ):
         
         try:
+            
+            was_merged = self._TryToMergeMessage( job_key )
+            
+            if was_merged:
+                
+                return
+                
             
             self._pending_job_keys.append( job_key )
             
@@ -851,13 +918,6 @@ class PopupMessageManager( wx.Frame ):
                 
                 job_key.Cancel()
                 
-            
-        
-        if self._timer is not None:
-            
-            self._timer.Stop()
-            
-            self._timer = None
             
         
         sys.excepthook = self._old_excepthook
@@ -905,7 +965,7 @@ class PopupMessageManager( wx.Frame ):
         self._SizeAndPositionAndShow()
         
     
-    def TIMEREvent( self, event ):
+    def REPEATINGUpdate( self ):
         
         try:
             
@@ -918,7 +978,7 @@ class PopupMessageManager( wx.Frame ):
             
         except:
             
-            self._timer.Stop()
+            self._update_job.Cancel()
             
             raise
             
@@ -940,27 +1000,13 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         
         self.SetSizer( vbox )
         
-        self.Bind( wx.EVT_TIMER, self.TIMEREvent )
-        
         self._windows_minimised = []
         
         self._MinimiseOtherWindows()
         
-        self._timer = wx.Timer( self )
-        
-        self._timer.Start( 500, wx.TIMER_CONTINUOUS )
-        
         self._message_pubbed = False
         
-    
-    def _DestroyTimer( self ):
-        
-        if self._timer is not None:
-            
-            self._timer.Stop()
-            
-            self._timer = None
-            
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 0.25, self.REPEATINGUpdate )
         
     
     def _MinimiseOtherWindows( self ):
@@ -1040,8 +1086,6 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
             self._ReleaseMessage()
             
-            self._DestroyTimer()
-            
         else:
             
             if self._job_key.IsCancellable():
@@ -1053,8 +1097,6 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                         self._job_key.Cancel()
                         
                         self._ReleaseMessage()
-                        
-                        self._DestroyTimer()
                         
                     else:
                         
@@ -1069,7 +1111,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
         
     
-    def TIMEREvent( self, event ):
+    def REPEATINGUpdate( self ):
         
         try:
             
@@ -1089,7 +1131,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
             
         except:
             
-            self._DestroyTimer()
+            self._update_job.Cancel()
             
             raise
             

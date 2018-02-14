@@ -5076,7 +5076,7 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         else:
             
             pretty_delay = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until, prefix = 'for' ) + ' - ' + no_work_until_reason
-            delay = no_work_until - HydrusData.GetNow()
+            delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
             
         
         num_urls_done = 0

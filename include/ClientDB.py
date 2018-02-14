@@ -3190,6 +3190,17 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _DisplayCatastrophicError( self, text ):
+        
+        message = 'The db encountered a serious error! This is going to be written to the log as well, but here it is for a screenshot:'
+        message += os.linesep * 2
+        message += text
+        
+        HydrusData.DebugPrint( message )
+        
+        wx.SafeShowMessage( message )
+        
+    
     def _ExportToTagArchive( self, path, service_key, hash_type, hashes = None ):
         
         # This could nicely take a whitelist or a blacklist for namespace filtering

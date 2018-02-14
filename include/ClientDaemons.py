@@ -45,7 +45,7 @@ def DAEMONCheckImportFolders( controller ):
                 
                 import_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
                 
-                if controller.options[ 'pause_import_folders_sync' ] or HG.view_shutdown:
+                if controller.options[ 'pause_import_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
                     
                     break
                     
