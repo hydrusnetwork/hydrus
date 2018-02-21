@@ -8,6 +8,42 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 295</h3></li>
+				<ul>
+					<li>fixed the runtimeerror popups that would come up on restore from minimise or main gui move after the complete destruction of a general search page</li>
+					<li>cleaned up some main gui move code generally, and removed a memory leak on the way</li>
+					<li>file queries can now cancel at multiple checkpoints during the first phase, saving a bunch of CPU time on certain large queries that are replaced mid-search</li>
+					<li>after a file query has been going three seconds, a little 'stop' button will appear beside the regular autocomplete input. clicking this will cancel the current query! it will stop when it next hits one of the checkpoints above</li>
+					<li>the floating autocomplete dropdown should be less flickery in some circumstances</li>
+					<li>dejanked some more file query code</li>
+					<li>added a 'clear orphan file records' entry to the database->maintain menu. this looks for and purges orphan file rows as you may have seen a notification about recently. this mostly affects the duplicate filter system</li>
+					<li>fixed up the delete file code to be a bit more robust--it should lead to fewer orphans in future</li>
+					<li>all the parsing edit panels have new layout: they no longer have info panels but instead a help button that points to the html help, and the edit and test panels are now beside each other rather than in notebook pages</li>
+					<li>harmonised a bunch of the parser ui test panel code, refactored how the results are stored</li>
+					<li>the test panel now presents a better 'preview' of what it contains (the actual text control has like 64KB text limit on some OSes and has unreliable text encoding rules, so using it as the raw container for the example data has lead to problems), and we now read and write the example data with a couple of new copy to/paste from clipboard buttons</li>
+					<li>wrote another new test panel for subsidiary page parsers that does the separation formula stuff a bit better. the test results now come back for all posts as well, rather than just the first</li>
+					<li>added a new 'deeply_nested_dialog' frame key to options->gui for the parsing ui to better lay out five or six nested dialogs in a nice 'topleft' way</li>
+					<li>the 'topleft' frame padding is reduced from 50 to 24 pixels to better fit in deeply nested dialogs</li>
+					<li>misc parsing ui improvements and little fixes</li>
+					<li>the manage url classes and manager parsers dialogs now have a better 'add defaults' button that allows you to just select the defaults you want (by name) from a checklistbox</li>
+					<li>wrote a parser for 420chan and added it to the defaults. it should automatically add and link up when you update</li>
+					<li>if the install_dir/db directory is not writable-to (e.g. you have installed the program to a protected location like "C:\Program Files"), the client and server will default to ~/Hydrus as the db directory</li>
+					<li>wrote a new 'TagSummaryGenerator' class that will do 'bunch of tags'->'nice summary string' conversions for the thumbnail banners and export filenames</li>
+					<li>substituted some static tagsummarygenerators to do thumbnail banners</li>
+					<li>did the same for the media viewer top-center namespace summary</li>
+					<li>started some edit ui for tagsummarygenerators--I'll have some proper customisable stuff in the near future</li>
+					<li>moved the background memory maintenance and misc daemons to the new job scheduler, reducing thread count and idle CPU some more</li>
+					<li>added a debug 'show scheduled jobs' entry for the new job scheduler system</li>
+					<li>decompression bomb failures will no longer count towards a subscription's fail count, so having a bunch of them won't abandon a sync</li>
+					<li>fixed and otherwise improved a potential crash condition when a thumbnail panel closes while a menu is popup'd on it</li>
+					<li>to forestall this program instability, the thumbnail window will no longer replace while its menu is open. the behaviour after this delayed window delivery is slightly borked, but it isn't a crash so I'm ok with it for now</li>
+					<li>removed some other jank from the thumbnail media panel swap code</li>
+					<li>non-cancellable modal popups will no longer have the 'close' button. trying to close them with the dialog's X button will still give the 'sorry lad, can't cancel' error</li>
+					<li>rating and file service system predicates for services that no longer exist will now render a neat 'unknown x system predicate' presentation string rather than throwing an error</li>
+					<li>searches in 'all known tags'/'specific tag domain' no longer provide system:untagged, wew</li>
+					<li>some delayed events are now posted in a more thread-safe way</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 294</h3></li>
 				<ul>
 					<li>fixed video scan</li>
@@ -30,7 +66,7 @@
 					<li>if the client fails to initialise the db, it will now try to present the error in a bit of screenshottable-gui before the program quits</li>
 					<li>improved thread watcher error handling when the given url is unwatchable</li>
 					<li>lots of timer related cleanup and tiny fixes</li>
-					<li>mix fixes</li>
+					<li>misc fixes</li>
 				</ul>
 				<li><h3>version 293</h3></li>
 				<ul>
