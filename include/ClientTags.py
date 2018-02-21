@@ -1,8 +1,10 @@
 import ClientConstants as CC
 import ClientGUIDialogs
+import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
+import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
 import os
@@ -239,3 +241,99 @@ def RenderTag( tag, render_for_user ):
         return namespace + connector + subtag
         
     
+class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR
+    SERIALISABLE_NAME = 'Tag Summary Generator'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, namespace_info = None, separator = None ):
+        
+        if namespace_info is None:
+            
+            namespace_info = []
+            
+            namespace_info.append( ( 'creator', '', ', ' ) )
+            namespace_info.append( ( 'series', '', ', ' ) )
+            namespace_info.append( ( 'title', '', ', ' ) )
+            
+        
+        if separator is None:
+            
+            separator = ' - '
+            
+        
+        self._namespace_info = namespace_info
+        self._separator = separator
+        
+        self._UpdateNamespaceLookup()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._namespace_info, self._separator )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._namespace_info, self._separator ) = serialisable_info
+        
+        self._namespace_info = [ tuple( row ) for row in self._namespace_info ]
+        
+        self._UpdateNamespaceLookup()
+        
+    
+    def _UpdateNamespaceLookup( self ):
+        
+        self._interesting_namespaces = { namespace for ( namespace, prefix, separator ) in self._namespace_info }
+        
+    
+    def GenerateSummary( self, tags, max_length = None ):
+        
+        namespaces_to_subtags = collections.defaultdict( list )
+        
+        for tag in tags:
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            if namespace in self._interesting_namespaces:
+                
+                namespaces_to_subtags[ namespace ].append( subtag )
+                
+            
+        
+        for l in namespaces_to_subtags.values():
+            
+            l.sort()
+            
+        
+        namespace_texts = []
+        
+        for ( namespace, prefix, separator ) in self._namespace_info:
+            
+            subtags = namespaces_to_subtags[ namespace ]
+            
+            if len( subtags ) > 0:
+                
+                namespace_text = prefix + separator.join( namespaces_to_subtags[ namespace ] )
+                
+                namespace_texts.append( namespace_text )
+                
+            
+        
+        summary = self._separator.join( namespace_texts )
+        
+        if max_length is not None:
+            
+            summary = summary[:max_length]
+            
+        
+        return summary
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._namespace_info, self._separator )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR ] = TagSummaryGenerator

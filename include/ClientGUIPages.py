@@ -434,7 +434,6 @@ class Page( wx.SplitterWindow ):
             
         
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
-        self._controller.sub( self, 'SwapMediaPanel', 'swap_media_panel' )
         
     
     def _SetPrettyStatus( self, status ):
@@ -445,6 +444,16 @@ class Page( wx.SplitterWindow ):
         
     
     def _SwapMediaPanel( self, new_panel ):
+        
+        # if a new media page comes in while its menu is open, we can enter program instability.
+        # so let's just put it off.
+        
+        if self._controller.MenuIsOpen():
+            
+            self._controller.CallLaterWXSafe( self, 0.5, self._SwapMediaPanel, new_panel )
+            
+            return
+            
         
         self._preview_panel.SetMedia( None )
         
@@ -458,6 +467,8 @@ class Page( wx.SplitterWindow ):
         self._controller.CallLaterWXSafe( self._media_panel, 0.5, self._media_panel.Destroy )
         
         self._media_panel = new_panel
+        
+        self._controller.pub( 'refresh_page_name', self._page_key )
         
     
     def CleanBeforeDestroy( self ):
@@ -703,14 +714,9 @@ class Page( wx.SplitterWindow ):
             
         
     
-    def SwapMediaPanel( self, page_key, new_panel ):
+    def SwapMediaPanel( self, new_panel ):
         
-        if page_key == self._page_key:
-            
-            self._SwapMediaPanel( new_panel )
-            
-            self._controller.pub( 'refresh_page_name', self._page_key )
-            
+        self._SwapMediaPanel( new_panel )
         
     
     def TestAbleToClose( self ):

@@ -5631,7 +5631,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _OKParent( self ):
         
-        wx.PostEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
         
     
     def _ProcessApplicationCommand( self, command ):
@@ -6342,7 +6342,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def OK( self ):
             
-            wx.PostEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
+            wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
             
         
         def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -6598,72 +6598,6 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-class ManageURLMatchesPanel( ClientGUIScrolledPanels.ManagePanel ):
-    
-    def __init__( self, parent ):
-        
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
-        
-        self._url_matches = ClientGUIListCtrl.BetterListCtrl( self, 'manage_url_matches', 15, 30, [ ( 'name', 20 ), ( 'example url', -1 ) ], self._ConvertURLMatchToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
-        
-        # add, edit, delete buttons
-        # it would be nice to wrap this up in a panel rather than writing it out manually
-        
-        #
-        
-        # load them from the db, populate the listctrl
-        
-        self._original_names = set()
-        # set self._original_names
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._url_matches, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-    
-    def _Add( self ):
-        
-        pass
-        
-    
-    def _ConvertURLMatchToListCtrlTuples( self, url_match ):
-        
-        name = url_match.GetName()
-        example_url = url_match.GetExampleURL()
-        
-        display_tuple = ( name, example_url )
-        sort_tuple = display_tuple
-        
-        return ( display_tuple, sort_tuple )
-        
-    
-    def _Delete( self ):
-        
-        pass
-        
-    
-    def _Edit( self ):
-        
-        pass
-        
-    
-    def CommitChanges( self ):
-        
-        datas = self._url_matches.GetData()
-        
-        datas_names = { data.GetName() for data in datas }
-        
-        to_delete = [ name for name in self._original_names if name not in datas_names ]
-        
-        # save datas to db
-        
-        # delete names from db
-        
-
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, missing_locations ):

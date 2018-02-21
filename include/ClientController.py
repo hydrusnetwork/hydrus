@@ -682,7 +682,6 @@ class Controller( HydrusController.HydrusController ):
         
         if not self._no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'CheckMouseIdle', ClientDaemons.DAEMONCheckMouseIdle, period = 10 ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SynchroniseAccounts', ClientDaemons.DAEMONSynchroniseAccounts, ( 'notify_unknown_accounts', ) ) )
             self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SaveDirtyObjects', ClientDaemons.DAEMONSaveDirtyObjects, ( 'important_dirt_to_clean', ), period = 30 ) )
             
@@ -695,6 +694,8 @@ class Controller( HydrusController.HydrusController ):
             
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'UPnP', ClientDaemons.DAEMONUPnP, ( 'notify_new_upnp_mappings', ), init_wait = 120, pre_call_wait = 6 ) )
             
+        
+        self.CallRepeatingWXSafe( self, 10.0, 10.0, self.CheckMouseIdle )
         
         if self.db.IsFirstStart():
             
@@ -873,7 +874,7 @@ class Controller( HydrusController.HydrusController ):
             self._menu_open = False
             
         
-        ClientGUIMenus.DestroyMenu( menu )
+        ClientGUIMenus.DestroyMenu( window, menu )
         
     
     def PrepStringForDisplay( self, text ):
@@ -1127,11 +1128,6 @@ class Controller( HydrusController.HydrusController ):
         HydrusController.HydrusController.ShutdownView( self )
         
     
-    def StartFileQuery( self, page_key, job_key, search_context ):
-        
-        self.CallToThread( self.THREADDoFileQuery, page_key, job_key, search_context )
-        
-    
     def SystemBusy( self ):
         
         if HG.force_idle_mode:
@@ -1189,35 +1185,6 @@ class Controller( HydrusController.HydrusController ):
         return False
         
     
-    def THREADDoFileQuery( self, page_key, job_key, search_context ):
-        
-        QUERY_CHUNK_SIZE = 256
-        
-        query_hash_ids = self.Read( 'file_query_ids', search_context )
-        
-        media_results = []
-        
-        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
-            
-            if job_key.IsCancelled():
-                
-                return
-                
-            
-            more_media_results = self.Read( 'media_results_from_ids', sub_query_hash_ids )
-            
-            media_results.extend( more_media_results )
-            
-            self.pub( 'set_num_query_results', page_key, len( media_results ), len( query_hash_ids ) )
-            
-            self.WaitUntilViewFree()
-            
-        
-        search_context.SetComplete()
-        
-        self.pub( 'file_query_done', page_key, job_key, media_results )
-        
-    
     def THREADBootEverything( self ):
         
         try:
@@ -1244,8 +1211,9 @@ class Controller( HydrusController.HydrusController ):
             
         except Exception as e:
             
-            text = 'A serious error occured while trying to start the program. Its traceback will be shown next. It should have also been written to client.log.'
+            text = 'A serious error occured while trying to start the program. The error will be shown next in a window. More information may have been written to client.log.'
             
+            HydrusData.DebugPrint( 'If the db crashed, another error may be written just above ^.' )
             HydrusData.DebugPrint( text )
             
             HydrusData.DebugPrint( traceback.format_exc() )

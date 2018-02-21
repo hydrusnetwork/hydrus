@@ -218,6 +218,17 @@ class HydrusController( object ):
         return job
         
     
+    def CallRepeating( self, period, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, call, period, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
     def CallToThread( self, callable, *args, **kwargs ):
         
         if HG.callto_report_mode:
@@ -296,6 +307,13 @@ class HydrusController( object ):
             
         
     
+    def DebugShowScheduledJobs( self ):
+        
+        summary = self._job_scheduler.GetPrettyJobSummary()
+        
+        HydrusData.ShowText( summary )
+        
+    
     def GetBootTime( self ):
         
         return self._timestamps[ 'boot' ]
@@ -353,12 +371,12 @@ class HydrusController( object ):
         
         if not self._no_daemons:
             
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'SleepCheck', HydrusDaemons.DAEMONSleepCheck, period = 120 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemoryFast', HydrusDaemons.DAEMONMaintainMemoryFast, period = 60 ) )
-            self._daemons.append( HydrusThreading.DAEMONWorker( self, 'MaintainMemorySlow', HydrusDaemons.DAEMONMaintainMemorySlow, period = 300 ) )
-            
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300, init_wait = 60 ) )
             
+        
+        self.CallRepeating( 120.0, 10.0, self.SleepCheck )
+        self.CallRepeating( 60.0, 10.0, self.MaintainMemoryFast )
+        self.CallRepeating( 300.0, 10.0, self.MaintainMemorySlow )
         
     
     def IsFirstStart( self ):
@@ -376,6 +394,11 @@ class HydrusController( object ):
     def MaintainDB( self, stop_time = None ):
         
         pass
+        
+    
+    def MaintainMemoryFast( self ):
+        
+        self.pub( 'memory_maintenance_pulse' )
         
     
     def MaintainMemorySlow( self ):

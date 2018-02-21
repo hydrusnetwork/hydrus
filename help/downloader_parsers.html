@@ -14,14 +14,14 @@
 			<p>There are three main components in the parsing system:</p>
 			<ul>
 				<li><b>Formulae:</b> Take parsable data, search it in some manner, and return 0 to n strings.</li>
-				<li><b>Content Parser:</b> Take parsable data, apply a formula to it to get some strings, and apply a single metadata 'type' and perhaps some additional modifiers.</li>
-				<li><b>Page Parser:</b> Take parsable data, apply content parsers to it, and return all the metadata.</li>
+				<li><b>Content Parsers:</b> Take parsable data, apply a formula to it to get some strings, and apply a single metadata 'type' and perhaps some additional modifiers.</li>
+				<li><b>Page Parsers:</b> Take parsable data, apply content parsers to it, and return all the metadata.</li>
 			</ul>
 			<p>Formulae do the grunt work of parsing and string conversion, content parsers turn the strings into something richer, and page parsers are the containers.</li>
-			<h3>formulae</h3>
+			<h3 id="formulae">formulae</h3>
 			<p>A formula takes some data and returns some strings. The different kinds are:</p>
 			<ul>
-				<li><h3>html</h3></li>
+				<li><h3 id="html_formula">html</h3></li>
 				<li>This takes HTML or a sample of HTML--and any regular sort of XML <i>should</i> also work, it is not at all strict--searches for nodes with certain tag names and/or attributes, and then returns those nodes' particular attribute value, string content, or html beneath.</li>
 				<li>The search occurs in steps:</li>
 				<li>(image of a decent formula with several steps)</li>
@@ -61,7 +61,7 @@
 				<li>Once you have narrowed down the right nodes you want, you can decide what to return. So, given a node of:</li>
 				<li><pre>&lt;a href="(URL A)" class="thumb"&gt;Forest Glade&lt;/a&gt;</pre></li>
 				<li>Returning the 'href' attribute would return the string "(URL A)", returning the string content would give "Forest Glade", and returning the full html would give "&lt;a href="(URL A)" class="thumb"&gt;Forest Glade&lt;/a&gt;". This last choice is useful in complicated situations where you want a second, separated layer of parsing, which we will get to later.</li>
-				<li><h3>json</h3></li>
+				<li><h3 id="json_formula">json</h3></li>
 				<li>This takes some JSON and does a similar style of search:</li>
 				<li>(image of edit formula panel)</li>
 				<li>It is a bit simpler than HTML--if the current node is a list (called an 'Array' in JSON), you can fetch every item or the xth item, and if it is a dictionary (called an 'Object' in JSON), you can fetch a particular string entry. Since you can't jump down several layers with attribute lookups or tag names, you have to go down every layer one at a time. In any case, if you have something like this:</li>
@@ -71,11 +71,11 @@
 				<li>Searching for "posts"->1st list item->"com" will give you the OP's comment, <span class="dealwithit">~AS RAW UNPARSED HTML~</span>.</li>
 				<li>The default is to fetch the final nodes' 'data content', which means coercing simple variables into strings. If the current node is a list or dict, no string is returned.</li>
 				<li>But if you like, you can return the json beneath the current node (which, like HTML, includes the current node). This again will come in useful later.</li>
-				<li><h3>compound</h3></li>
+				<li><h3 id="compound_formula">compound</h3></li>
 				<li>If you want to create a string from multiple parsed strings--for instance by appending the 'tim' and the 'ext' in our json example together--you can use a Compound formula. This fetches multiple lists of strings and tries to place them into a single string using \1 \2 \3 regex substitution syntax:</li>
 				<li>(image of the edit panel--use the thread watcher one with complicated gubbins)</li>
 				<li>This is where the magic happens, sometimes, so keep it in mind if you need to do something cleverer than the data you have seems to provide.</li>
-				<li><h3>context variable</h3></li>
+				<li><h3 id="context_variable_formula">context variable</h3></li>
 				<li>desc</li>
 				<li>ui walkthrough</li>
 				<li>misc</li>
@@ -83,11 +83,11 @@
 			<p>talk about string match and string converter</p>
 			<p>how to test</p>
 			<p>It is a great idea to check the html or json you are trying to parse with your browser. Most web browsers have great developer tools that let you walk through the different nodes in a pretty way. The JSON image above is one of the views Firefox provides if you simply enter a JSON URL.</p>
-			<h3>content parser</h3>
+			<h3 id="content_parsers">content parsers</h3>
 			<p>different types and what they mean</p>
 			<p>hash needs conversion to bytes</p>
 			<p>vetos</p>
-			<h3>page parser</h3>
+			<h3 id="page_parsers">page parsers</h3>
 			<p>pre-parsing conversion example for tumblr</p>
 			<p>example urls are helpful</p>
 			<p>mention vetos again</p>
@@ -100,7 +100,7 @@
 			<p>subsidiary page parsers in the example</p>
 			<p>source time and subject->comment fallback fun</p>
 			<p>The context variable bit to fetch the right board for the file url</p>
-			<p class="right"><a href="downloader_downloaders.html">Let's learn about Downloaders ----></a></p>
+			<p class="right"><a href="downloader_searches.html">Let's learn about Searches ----></a></p>
 		</div>
 	</body>
 </html>

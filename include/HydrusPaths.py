@@ -242,6 +242,21 @@ def DeletePath( path ):
             
         
     
+def DirectoryIsWritable( path ):
+    
+    try:
+        
+        t = tempfile.TemporaryFile( dir = path )
+        
+        t.close()
+        
+        return True
+        
+    except:
+        
+        return False
+        
+    
 def FilterFreePaths( paths ):
     
     free_paths = []

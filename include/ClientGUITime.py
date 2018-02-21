@@ -148,7 +148,7 @@ class TimeDeltaButton( wx.Button ):
                 
                 new_event = TimeDeltaEvent( 0 )
                 
-                wx.PostEvent( self.GetEventHandler(), new_event )
+                wx.QueueEvent( self.GetEventHandler(), new_event )
                 
             
         
@@ -293,7 +293,7 @@ class TimeDeltaCtrl( wx.Panel ):
         
         new_event = TimeDeltaEvent( 0 )
         
-        wx.PostEvent( self.GetEventHandler(), new_event )
+        wx.QueueEvent( self.GetEventHandler(), new_event )
         
     
     def GetValue( self ):

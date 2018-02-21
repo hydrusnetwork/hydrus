@@ -14,15 +14,15 @@ import HydrusGlobals as HG
 
 def HitButton( button ):
     
-    wx.PostEvent( button, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = button.GetId() ) )
+    wx.QueueEvent( button, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = button.GetId() ) )
     
 def HitCancelButton( window ):
     
-    wx.PostEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_CANCEL ) )
+    wx.QueueEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_CANCEL ) )
     
 def HitOKButton( window ):
     
-    wx.PostEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_OK ) )
+    wx.QueueEvent( window, wx.CommandEvent( commandEventType = wx.EVT_BUTTON.typeId, id = wx.ID_OK ) )
     
 def CancelChildDialog( window ):
     

@@ -48,6 +48,11 @@ try:
         
         db_dir = HC.DEFAULT_DB_DIR
         
+        if not HydrusPaths.DirectoryIsWritable( db_dir ):
+            
+            db_dir = os.path.join( os.path.expanduser( '~' ), 'Hydrus' )
+            
+        
     else:
         
         db_dir = result.db_dir

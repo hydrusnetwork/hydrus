@@ -15,6 +15,8 @@ class JobKey( object ):
         
         self._key = HydrusData.GenerateKey()
         
+        self._creation_time = HydrusData.GetNowFloat()
+        
         self._pausable = pausable
         self._cancellable = cancellable
         self._only_when_idle = only_when_idle
@@ -168,6 +170,11 @@ class JobKey( object ):
             
             HG.client_controller.CallLater( seconds, self.Finish )
             
+        
+    
+    def GetCreationTime( self ):
+        
+        return self._creation_time
         
     
     def GetIfHasVariable( self, name ):

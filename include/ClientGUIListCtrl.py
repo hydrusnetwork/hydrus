@@ -952,6 +952,16 @@ class BetterListCtrlPanel( wx.Panel ):
         self._button_infos = []
         
     
+    def _AddAllDefaults( self, defaults_callable, add_callable ):
+        
+        defaults = defaults_callable()
+        
+        for default in defaults:
+            
+            add_callable( default )
+            
+        
+    
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_check_func = None ):
         
         self._buttonbox.Add( button, CC.FLAGS_VCENTER )
@@ -964,6 +974,30 @@ class BetterListCtrlPanel( wx.Panel ):
         if enabled_check_func is not None:
             
             self._button_infos.append( ( button, enabled_check_func ) )
+            
+        
+    
+    def _AddSomeDefaults( self, defaults_callable, add_callable ):
+        
+        defaults = defaults_callable()
+        
+        selected = False
+        
+        choice_tuples = [ ( default.GetName(), default, selected ) for default in defaults ]
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogCheckFromList( self, 'select the defaults to add', choice_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                defaults_to_add = dlg.GetChecked()
+                
+                for default in defaults_to_add:
+                    
+                    add_callable( default )
+                    
+                
             
         
     
@@ -1182,6 +1216,19 @@ class BetterListCtrlPanel( wx.Panel ):
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_check_func = enabled_check_func )
         
         self._UpdateButtons()
+        
+    
+    def AddDefaultsButton( self, defaults_callable, add_callable ):
+        
+        import_menu_items = []
+        
+        all_call = HydrusData.Call( self._AddAllDefaults, defaults_callable, add_callable )
+        some_call = HydrusData.Call( self._AddSomeDefaults, defaults_callable, add_callable )
+        
+        import_menu_items.append( ( 'normal', 'add them all', 'Load all the defaults.', all_call ) )
+        import_menu_items.append( ( 'normal', 'select from a list', 'Load some of the defaults.', some_call ) )
+        
+        self.AddMenuButton( 'add defaults', import_menu_items )
         
     
     def AddImportExportButtons( self, permitted_object_types, import_add_callable ):

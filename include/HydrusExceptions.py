@@ -17,6 +17,7 @@ class MimeException( Exception ): pass
 class NameException( Exception ): pass
 class ShutdownException( Exception ): pass
 class SizeException( Exception ): pass
+class DecompressionBombException( SizeException ): pass
 class VetoException( Exception ): pass
 
 class ParseException( Exception ): pass

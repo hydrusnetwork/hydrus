@@ -2381,7 +2381,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self.Scroll( -1, y_to_scroll_to )
                 
-                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
+                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
             elif y > ( start_y * y_unit ) + height - ( thumbnail_span_height * percent_visible ):
                 
@@ -2389,7 +2389,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self.Scroll( -1, y_to_scroll_to + 2 )
                 
-                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
+                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
                 
             
         
@@ -3995,80 +3995,31 @@ class Thumbnail( Selectable ):
         
         wx_bmp.Destroy()
         
-        namespaces = self.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
-        
-        creators = namespaces[ 'creator' ]
-        series = namespaces[ 'series' ]
-        titles = namespaces[ 'title' ]
-        volumes = namespaces[ 'volume' ]
-        chapters = namespaces[ 'chapter' ]
-        pages = namespaces[ 'page' ]
-        
         new_options = HG.client_controller.new_options
         
         if new_options.GetBoolean( 'show_thumbnail_page' ):
             
-            collections_string = ''
+            namespace_info = []
             
-            if len( volumes ) > 0:
-                
-                if len( volumes ) == 1:
-                    
-                    ( volume, ) = volumes
-                    
-                    collections_string = 'v' + HydrusData.ToUnicode( volume )
-                    
-                else:
-                    
-                    volumes_sorted = HydrusTags.SortNumericTags( volumes )
-                    
-                    collections_string_append = 'v' + HydrusData.ToUnicode( volumes_sorted[0] ) + '-' + HydrusData.ToUnicode( volumes_sorted[-1] )
-                    
-                
+            namespace_info.append( ( 'volume', 'v', '-' ) )
+            namespace_info.append( ( 'chapter', 'c', '-' ) )
+            namespace_info.append( ( 'page', 'p', '-' ) )
             
-            if len( chapters ) > 0:
-                
-                if len( chapters ) == 1:
-                    
-                    ( chapter, ) = chapters
-                    
-                    collections_string_append = 'c' + HydrusData.ToUnicode( chapter )
-                    
-                else:
-                    
-                    chapters_sorted = HydrusTags.SortNumericTags( chapters )
-                    
-                    collections_string_append = 'c' + HydrusData.ToUnicode( chapters_sorted[0] ) + '-' + HydrusData.ToUnicode( chapters_sorted[-1] )
-                    
-                
-                if len( collections_string ) > 0: collections_string += '-' + collections_string_append
-                else: collections_string = collections_string_append
-                
+            tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, '-' )
             
-            if len( pages ) > 0:
-                
-                if len( pages ) == 1:
-                    
-                    ( page, ) = pages
-                    
-                    collections_string_append = 'p' + HydrusData.ToUnicode( page )
-                    
-                else:
-                    
-                    pages_sorted = HydrusTags.SortNumericTags( pages )
-                    
-                    collections_string_append = 'p' + HydrusData.ToUnicode( pages_sorted[0] ) + '-' + HydrusData.ToUnicode( pages_sorted[-1] )
-                    
-                
-                if len( collections_string ) > 0: collections_string += '-' + collections_string_append
-                else: collections_string = collections_string_append
-                
+            tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
             
-            if len( collections_string ) > 0:
+            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+            
+            tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
+            
+            lower_summary = tags_summary_generator.GenerateSummary( tags )
+            
+            if len( lower_summary ) > 0:
                 
                 dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
                 
-                ( text_x, text_y ) = dc.GetTextExtent( collections_string )
+                ( text_x, text_y ) = dc.GetTextExtent( lower_summary )
                 
                 top_left_x = width - text_x - CC.THUMBNAIL_BORDER
                 top_left_y = height - text_y - CC.THUMBNAIL_BORDER
@@ -4081,37 +4032,33 @@ class Thumbnail( Selectable ):
                 
                 dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
                 
-                dc.DrawText( collections_string, top_left_x, top_left_y )
+                dc.DrawText( lower_summary, top_left_x, top_left_y )
                 
             
         
         if new_options.GetBoolean( 'show_thumbnail_title_banner' ):
             
+            namespace_info = []
+            
+            namespace_info.append( ( 'creator', '', ', ' ) )
+            namespace_info.append( ( 'series', '', ', ' ) )
+            namespace_info.append( ( 'title', '', ', ' ) )
+            
+            tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, ' - ' )
+            
+            tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
+            
             siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
             
-            upper_info_string = ''
+            tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
             
-            if len( creators ) > 0:
-                
-                upper_info_string = ', '.join( creators )
-                
-                if len( series ) > 0 or len( titles ) > 0: upper_info_string += ' - '
-                
+            upper_summary = tags_summary_generator.GenerateSummary( tags )
             
-            if len( series ) > 0:
-                
-                upper_info_string += ', '.join( series )
-                
-            elif len( titles ) > 0:
-                
-                upper_info_string += ', '.join( titles )
-                
-            
-            if len( upper_info_string ) > 0:
+            if len( upper_summary ) > 0:
                 
                 dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
                 
-                ( text_x, text_y ) = dc.GetTextExtent( upper_info_string )
+                ( text_x, text_y ) = dc.GetTextExtent( upper_summary )
                 
                 top_left_x = int( ( width - text_x ) / 2 )
                 top_left_y = CC.THUMBNAIL_BORDER
@@ -4124,7 +4071,7 @@ class Thumbnail( Selectable ):
                 
                 dc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
                 
-                dc.DrawText( upper_info_string, top_left_x, top_left_y )
+                dc.DrawText( upper_summary, top_left_x, top_left_y )
                 
             
         

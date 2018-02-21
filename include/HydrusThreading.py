@@ -378,6 +378,22 @@ class JobScheduler( threading.Thread ):
         self._new_job_arrived.set()
         
     
+    def GetPrettyJobSummary( self ):
+        
+        with self._waiting_lock:
+            
+            num_jobs = len( self._waiting )
+            
+            job_lines = [ repr( job ) for job in self._waiting ]
+            
+            lines = [ HydrusData.ConvertIntToPrettyString( num_jobs ) + ' jobs:' ] + job_lines
+            
+            text = os.linesep.join( lines )
+            
+            return text
+            
+        
+    
     def JobCancelled( self ):
         
         self._cancel_filter_needed.set()
@@ -473,7 +489,7 @@ class SchedulableJob( object ):
     
     def __repr__( self ):
         
-        return 'Schedulable Job: ' + repr( self._work_callable )
+        return repr( self.__class__ ) + ': ' + repr( self._work_callable ) + ' next in ' + HydrusData.ConvertTimeDeltaToPrettyString( self._next_work_time - HydrusData.GetNowFloat() )
         
     
     def _BootWorker( self ):

@@ -11,15 +11,3 @@ def DAEMONMaintainDB( controller ):
     
     controller.MaintainDB()
     
-def DAEMONMaintainMemoryFast( controller ):
-    
-    controller.pub( 'memory_maintenance_pulse' )
-    
-def DAEMONMaintainMemorySlow( controller ):
-    
-    controller.MaintainMemorySlow()
-    
-def DAEMONSleepCheck( controller ):
-    
-    controller.SleepCheck()
-    

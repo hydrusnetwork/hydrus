@@ -2683,6 +2683,86 @@ class DB( HydrusDB.HydrusDB ):
         self._service_cache = {}
         
     
+    def _ClearOrphanFileRecords( self ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        job_key.SetVariable( 'popup_title', 'clear orphan file records' )
+        
+        self._controller.pub( 'modal_message', job_key )
+        
+        try:
+            
+            job_key.SetVariable( 'popup_text_1', 'looking for orphans' )
+            
+            local_file_service_ids = self._GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) )
+            
+            local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id IN ' + HydrusData.SplayListForDB( local_file_service_ids ) + ';' ) )
+            
+            combined_local_file_service_id = self._GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            
+            combined_local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ?;', ( combined_local_file_service_id, ) ) )
+            
+            in_local_not_in_combined = local_hash_ids.difference( combined_local_hash_ids )
+            in_combined_not_in_local = combined_local_hash_ids.difference( local_hash_ids )
+            
+            if job_key.IsCancelled():
+                
+                return
+                
+            
+            job_key.SetVariable( 'popup_text_1', 'deleting orphans' )
+            
+            if len( in_local_not_in_combined ) > 0:
+                
+                # these files were deleted from the umbrella service without being cleared from a specific file domain
+                # they are most likely deleted from disk
+                # pushing the 'delete combined' call will flush from the local services as well
+                
+                self._DeleteFiles( self._combined_file_service_id, in_local_not_in_combined )
+                
+                for hash_id in in_local_not_in_combined:
+                    
+                    self._CacheSimilarFilesDeleteFile( hash_id )
+                    
+                
+                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ConvertIntToPrettyString( len( in_local_not_in_combined ) ) + ' local domain orphan file records.' )
+                
+            
+            if job_key.IsCancelled():
+                
+                return
+                
+            
+            if len( in_combined_not_in_local ) > 0:
+                
+                # these files were deleted from all specific services but not from the combined service
+                # I have only ever seen one example of this and am not sure how it happened
+                # in any case, the same 'delete combined' call will do the job
+                
+                self._DeleteFiles( self._combined_file_service_id, in_combined_not_in_local )
+                
+                for hash_id in in_combined_not_in_local:
+                    
+                    self._CacheSimilarFilesDeleteFile( hash_id )
+                    
+                
+                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ConvertIntToPrettyString( len( in_combined_not_in_local ) ) + ' combined domain orphan file records.' )
+                
+            
+            if len( in_local_not_in_combined ) == 0 and len( in_combined_not_in_local ) == 0:
+                
+                HydrusData.ShowText( 'No orphan file records found!' )
+                
+            
+        finally:
+            
+            job_key.SetVariable( 'popup_text_1', 'done!' )
+            
+            job_key.Finish()
+            
+        
+    
     def _CreateDB( self ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
@@ -2878,13 +2958,26 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DeleteFiles( self, service_id, hash_ids ):
         
+        # the gui sometimes gets out of sync and sends a DELETE FROM TRASH call before the SEND TO TRASH call
+        # in this case, let's make sure the local file domains are clear before deleting from the umbrella domain
+        
+        if service_id == self._combined_local_file_service_id:
+            
+            local_file_service_ids = self._GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
+            
+            for local_file_service_id in local_file_service_ids:
+                
+                self._DeleteFiles( local_file_service_id, hash_ids )
+                
+            
+            self._DeleteFiles( self._trash_service_id, hash_ids )
+            
+        
         service = self._GetService( service_id )
         
         service_type = service.GetServiceType()
         
-        splayed_hash_ids = HydrusData.SplayListForDB( hash_ids )
-        
-        existing_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id = ? AND hash_id IN ' + splayed_hash_ids + ';', ( service_id, ) ) }
+        existing_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM current_files WHERE service_id = ' + str( service_id ) + ' AND hash_id IN %s;', hash_ids ) )
         
         service_info_updates = []
         
@@ -3727,7 +3820,7 @@ class DB( HydrusDB.HydrusDB ):
             
             predicates.append( ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_EVERYTHING, min_current_count = num_everything ) )
             
-            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_UNTAGGED, HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
+            predicates.extend( [ ClientSearch.Predicate( predicate_type, None ) for predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_HASH ] ] )
             
             if have_ratings:
                 
@@ -3984,7 +4077,12 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromQuery( self, search_context ):
+    def _GetHashIdsFromQuery( self, search_context, job_key = None ):
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
         
         self._controller.ResetIdleTimer()
         
@@ -4287,6 +4385,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if job_key.IsCancelled():
+            
+            return set()
+            
+        
         # at this point, query_hash_ids has something in it
         
         # hide update files
@@ -4318,6 +4421,11 @@ class DB( HydrusDB.HydrusDB ):
             
         
         query_hash_ids.difference_update( exclude_query_hash_ids )
+        
+        if job_key.IsCancelled():
+            
+            return set()
+            
         
         #
         
@@ -4420,6 +4528,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 query_hash_ids.intersection_update( self._CacheSimilarFilesGetHashIdsFromDuplicatePredicate( file_service_key, operator, num_relationships, dupe_type ) )
                 
+            
+        
+        if job_key.IsCancelled():
+            
+            return set()
             
         
         #
@@ -4540,6 +4653,11 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids.intersection_update( good_tag_count_hash_ids )
             
         
+        if job_key.IsCancelled():
+            
+            return set()
+            
+        
         #
         
         if 'min_tag_as_number' in simple_preds:
@@ -4558,6 +4676,11 @@ class DB( HydrusDB.HydrusDB ):
             good_hash_ids = self._GetHashIdsThatHaveTagAsNum( file_service_key, tag_service_key, namespace, num, '<', include_current_tags, include_pending_tags )
             
             query_hash_ids.intersection_update( good_hash_ids )
+            
+        
+        if job_key.IsCancelled():
+            
+            return set()
             
         
         #
@@ -10274,8 +10397,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    local_hash_ids = set()
-                    
                     local_file_service_ids = self._GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN ) )
                     
                     local_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM current_files WHERE service_id IN ' + HydrusData.SplayListForDB( local_file_service_ids ) + ';' ) )
@@ -10409,6 +10530,48 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( 'The client was unable to fix a predicate issue. The error has been written to the log--hydrus_dev would be interested in this information.' )
                 
+            
+        
+        if version == 294:
+            
+            try:
+            
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                #
+                
+                existing_parsers = domain_manager.GetParsers()
+                
+                new_parsers = list( existing_parsers )
+                
+                default_parsers = ClientDefaults.GetDefaultParsers()
+                
+                interesting_name = '420chan'
+                
+                if True not in ( interesting_name in parser.GetName() for parser in existing_parsers ): # if not already in there
+                    
+                    interesting_new_parsers = [ parser for parser in default_parsers if interesting_name in parser.GetName() ] # add it
+                    
+                    new_parsers.extend( interesting_new_parsers )
+                    
+                
+                domain_manager.SetParsers( new_parsers )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except:
+                
+                HydrusData.PrintException( e )
+                
+                self.pub_initial_message( 'The client was unable to add some new parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
+                
+            
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
@@ -10975,6 +11138,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'analyze': result = self._AnalyzeStaleBigTables( *args, **kwargs )
         elif action == 'associate_repository_update_hashes': result = self._AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
+        elif action == 'clear_orphan_file_records': result = self._ClearOrphanFileRecords( *args, **kwargs )
         elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )

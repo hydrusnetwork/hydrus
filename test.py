@@ -269,6 +269,11 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
+    def CallLaterWXSafe( self, *args, **kwargs ):
+        
+        pass
+        
+    
     def DBCurrentlyDoingJob( self ):
         
         return False
@@ -336,6 +341,11 @@ class Controller( object ):
     def Read( self, name, *args, **kwargs ):
         
         return self._reads[ name ]
+        
+    
+    def RegisterUIUpdateWindow( self, window ):
+        
+        pass
         
     
     def ReportDataUsed( self, num_bytes ):
@@ -421,11 +431,6 @@ class Controller( object ):
     def SetWebCookies( self, name, value ):
         
         self._cookies[ name ] = value
-        
-    
-    def StartFileQuery( self, page_key, job_key, search_context ):
-        
-        pass
         
     
     def TidyUp( self ):

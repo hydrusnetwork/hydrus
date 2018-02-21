@@ -1,6 +1,7 @@
 import collections
 import HydrusData
 import HydrusGlobals as HG
+import os
 import wx
 
 menus_to_submenus = collections.defaultdict( set )
@@ -99,6 +100,11 @@ def UnbindMenuItems( menu ):
     
     for ( menu_item, event_handler ) in menu_item_data:
         
+        if not event_handler: # under some circumstances, this has been deleted before the menu was
+            
+            continue
+            
+        
         event_handler.Unbind( wx.EVT_MENU, source = menu_item )
         
     
@@ -116,11 +122,20 @@ def UnbindMenuItems( menu ):
         del menus_to_submenus[ menu ]
         
     
-def DestroyMenu( menu ):
+def DestroyMenu( window, menu ):
     
     UnbindMenuItems( menu )
     
     menu.is_dead = True
+    
+    # if the window we just popupmenu'd on is dead now (i.e. it died while the menu was open), destroying the menu will cause a crash and letting the event continue will cause a crash
+    
+    if not window:
+        
+        message = 'A window just died before its menu could be safely destroyed! If an exception were not raised here, the program would crash! If you know you did something tricky, please avoid this in future. If you think you did something normal, please let hydrus dev know.'
+        
+        raise Exception( message )
+        
     
     menu.Destroy()
     

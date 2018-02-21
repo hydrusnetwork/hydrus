@@ -59,10 +59,6 @@ def DAEMONCheckImportFolders( controller ):
             
         
     
-def DAEMONCheckMouseIdle( controller ):
-    
-    wx.CallAfter( controller.CheckMouseIdle )
-    
 def DAEMONDownloadFiles( controller ):
     
     hashes = controller.Read( 'downloads' )

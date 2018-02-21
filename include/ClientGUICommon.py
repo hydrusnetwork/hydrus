@@ -1365,14 +1365,14 @@ class ListBook( wx.Panel ):
         # this tells any parent scrolled panel to update its virtualsize and recalc its scrollbars
         event = wx.NotifyEvent( wx.wxEVT_SIZE, self.GetId() )
         
-        wx.PostEvent( self.GetEventHandler(), event )
+        wx.QueueEvent( self.GetEventHandler(), event )
         
         # now the virtualsize is updated, we now tell any parent resizing frame/dialog that is interested in resizing that now is the time
         ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
         event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGED, -1 )
         
-        wx.PostEvent( self.GetEventHandler(), event )
+        wx.QueueEvent( self.GetEventHandler(), event )
         
     
     def AddPage( self, display_name, key, page, select = False ):
@@ -1519,7 +1519,7 @@ class ListBook( wx.Panel ):
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
-            wx.PostEvent( self.GetEventHandler(), event )
+            wx.QueueEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -1599,7 +1599,7 @@ class ListBook( wx.Panel ):
             
             event = wx.NotifyEvent( wx.wxEVT_COMMAND_NOTEBOOK_PAGE_CHANGING, -1 )
             
-            wx.PostEvent( self.GetEventHandler(), event )
+            wx.QueueEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -3151,7 +3151,7 @@ class ThreadToGUIUpdater( object ):
                         return
                         
                     
-                    wx.PostEvent( self._event_handler, DirtyEvent() )
+                    wx.QueueEvent( self._event_handler, DirtyEvent() )
                     
                 
                 wx.CallAfter( wx_code )

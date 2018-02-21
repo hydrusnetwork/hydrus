@@ -114,6 +114,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_TIMER, self.TIMEREventUIUpdate, id = ID_TIMER_UI_UPDATE )
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimationUpdate, id = ID_TIMER_ANIMATION_UPDATE )
         
+        self.Bind( wx.EVT_MOVE, self.EventMove )
+        self._last_move_pub = 0.0
+        
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'DeleteOldClosedPages', 'delete_old_closed_pages' )
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
@@ -693,7 +696,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'notify_new_import_folders' )
         
     
-    def _ClearOrphans( self ):
+    def _ClearOrphanFiles( self ):
         
         text = 'This will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
         text += os.linesep * 2
@@ -728,6 +731,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         self._controller.CallToThread( client_files_manager.ClearOrphans )
                         
                     
+                
+            
+        
+    
+    def _ClearOrphanFileRecords( self ):
+        
+        text = 'This will instruct the database to review its file records and delete any orphans. You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
+        text += os.linesep * 2
+        text += 'It will create a popup message while it works and inform you of the number of orphan records found.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.Write( 'clear_orphan_file_records' )
                 
             
         
@@ -821,6 +839,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
         
         HydrusData.DebugPrint( 'garbage printing finished' )
+        
+    
+    def _DebugShowScheduledJobs( self ):
+        
+        self._controller.DebugShowScheduledJobs()
         
     
     def _DeleteGUISession( self, name ):
@@ -1299,7 +1322,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'vacuum', 'Defrag the database by completely rebuilding it.', self._VacuumDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphans', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphans )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
             
@@ -1642,6 +1666,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
             ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
             ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
@@ -3187,7 +3212,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 title = 'important job'
                 
             
-            with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, title ) as dlg:
+            hide_close_button = not job_key.IsCancellable()
+            
+            with ClientGUITopLevelWindows.DialogNullipotentVetoable( self, title, hide_close_button = hide_close_button ) as dlg:
                 
                 panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
                 
@@ -3324,6 +3351,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         screen_position = wx.GetMousePosition()
         
         self._notebook.EventMenuFromScreenPosition( screen_position )
+        
+    
+    def EventMove( self, event ):
+        
+        if HydrusData.TimeHasPassedFloat( self._last_move_pub + 0.1 ):
+            
+            self._controller.pub( 'main_gui_move_event' )
+            
+            self._last_move_pub = HydrusData.GetNowPrecise()
+            
+        
+        event.Skip()
         
     
     def TIMEREventAnimationUpdate( self, event ):
@@ -3899,7 +3938,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._menus[ name ] = ( menu, label, show )
             
-            ClientGUIMenus.DestroyMenu( old_menu )
+            ClientGUIMenus.DestroyMenu( self, old_menu )
             
         
         self._dirty_menus = set()

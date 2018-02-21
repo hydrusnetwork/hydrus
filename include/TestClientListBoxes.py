@@ -13,7 +13,7 @@ import HydrusGlobals as HG
 
 def DoClick( click, panel ):
     
-    wx.PostEvent( panel, click )
+    wx.QueueEvent( panel, click )
     
     wx.YieldIfNeeded()
     
@@ -82,13 +82,6 @@ class TestListBoxes( unittest.TestCase ):
             
             #
             
-            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
-            
-            current_y = 5
-            
-            click.SetX( 10 )
-            click.SetY( current_y )
-            
             all_clickable_indices = GetAllClickableIndices( panel )
             
             self.assertEqual( len( all_clickable_indices.keys() ), len( terms ) )
@@ -98,6 +91,9 @@ class TestListBoxes( unittest.TestCase ):
             
             for ( index, y ) in all_clickable_indices.items():
                 
+                click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                
+                click.SetX( 10 )
                 click.SetY( y )
                 
                 DoClick( click, panel )
@@ -108,6 +104,11 @@ class TestListBoxes( unittest.TestCase ):
             #
             
             current_y = 5
+            
+            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+            
+            click.SetX( 10 )
+            click.SetY( current_y )
             
             while panel._GetIndexUnderMouse( click ) is not None:
                 
@@ -122,7 +123,7 @@ class TestListBoxes( unittest.TestCase ):
             
             #
             
-            click.SetControlDown( True )
+            
             
             if len( all_clickable_indices.keys() ) > 2:
                 
@@ -130,6 +131,11 @@ class TestListBoxes( unittest.TestCase ):
                 
                 for index in indices:
                     
+                    click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+                    
+                    click.SetControlDown( True )
+                    
+                    click.SetX( 10 )
                     click.SetY( all_clickable_indices[ index ] )
                     
                     DoClick( click, panel )
@@ -139,8 +145,6 @@ class TestListBoxes( unittest.TestCase ):
                 
                 self.assertEqual( panel.GetSelectedNamespaceColours(), dict( expected_selected_terms ) )
                 
-            
-            click.SetControlDown( False )
             
             #
             
@@ -157,6 +161,11 @@ class TestListBoxes( unittest.TestCase ):
             
             current_y = 5
             
+            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+            
+            click.SetX( 10 )
+            click.SetY( current_y )
+            
             while panel._GetIndexUnderMouse( click ) is not None:
                 
                 current_y += 5
@@ -168,6 +177,9 @@ class TestListBoxes( unittest.TestCase ):
             
             # select the random index
             
+            click = wx.MouseEvent( wx.wxEVT_LEFT_DOWN )
+            
+            click.SetX( 10 )
             click.SetY( all_clickable_indices[ random_index ] )
             
             DoClick( click, panel )

@@ -2087,7 +2087,7 @@ class DialogCheckFromList( Dialog ):
         
         Dialog.__init__( self, parent, title )
         
-        self._check_list_box = ClientGUICommon.BetterCheckListBox( self )
+        self._check_list_box = ClientGUICommon.BetterCheckListBox( self, style = wx.LB_EXTENDED )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._cancel = wx.Button( self, id = wx.ID_CANCEL, label = 'cancel' )

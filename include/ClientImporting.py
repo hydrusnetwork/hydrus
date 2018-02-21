@@ -474,7 +474,7 @@ class FileImportJob( object ):
             
             if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
                 
-                raise HydrusExceptions.SizeException( 'Image seems to be a Decompression Bomb!' )
+                raise HydrusExceptions.DecompressionBombException( 'Image seems to be a Decompression Bomb!' )
                 
             
         
@@ -4465,9 +4465,20 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         seed.SetStatus( status, exception = e )
                         
                     
-                    # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files in e621 (or any other booru)
-                    # this should be richer in any case in the new system
-                    if not isinstance( e, HydrusExceptions.DataMissing ):
+                    if isinstance( e, HydrusExceptions.DecompressionBombException ):
+                        
+                        job_key.SetVariable( 'popup_text_2', x_out_of_y + 'file failed: decompression bomb' )
+                        
+                        time.sleep( 1 )
+                        
+                    elif isinstance( e, HydrusExceptions.DataMissing ):
+                        
+                        # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files in e621 (or any other booru)
+                        # this should be richer in any case in the new system
+                        
+                        pass
+                        
+                    else:
                         
                         error_count += 1
                         
@@ -5540,12 +5551,12 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             parser = HG.client_controller.network_engine.domain_manager.GetParser( url_to_check )
             
-            parse_context = {}
+            parsing_context = {}
             
-            parse_context[ 'thread_url' ] = self._thread_url
-            parse_context[ 'url' ] = url_to_check
+            parsing_context[ 'thread_url' ] = self._thread_url
+            parsing_context[ 'url' ] = url_to_check
             
-            all_parse_results = parser.Parse( parse_context, data )
+            all_parse_results = parser.Parse( parsing_context, data )
             
             subject = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
             

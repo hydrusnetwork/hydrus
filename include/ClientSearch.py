@@ -5,6 +5,7 @@ import ClientTags
 import datetime
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
@@ -1228,52 +1229,59 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value, service_key ) = self._value
                     
-                    service = HG.client_controller.services_manager.GetService( service_key )
-                    
-                    service_type = service.GetServiceType()
-                    
-                    pretty_value = HydrusData.ToUnicode( value )
-                    
-                    if service_type == HC.LOCAL_RATING_LIKE:
+                    try:
                         
-                        if value == 0:
+                        service = HG.client_controller.services_manager.GetService( service_key )
+                        
+                        service_type = service.GetServiceType()
+                        
+                        pretty_value = HydrusData.ToUnicode( value )
+                        
+                        if service_type == HC.LOCAL_RATING_LIKE:
                             
-                            pretty_value = 'dislike'
+                            if value == 0:
+                                
+                                pretty_value = 'dislike'
+                                
+                            elif value == 1:
+                                
+                                pretty_value = 'like'
+                                
                             
-                        elif value == 1:
+                        elif service_type == HC.LOCAL_RATING_NUMERICAL:
                             
-                            pretty_value = 'like'
+                            if isinstance( value, float ):
+                                
+                                allow_zero = service.AllowZero()
+                                num_stars = service.GetNumStars()
+                                
+                                if allow_zero:
+                                    
+                                    star_range = num_stars
+                                    
+                                else:
+                                    
+                                    star_range = num_stars - 1
+                                    
+                                
+                                pretty_x = int( round( value * star_range ) )
+                                pretty_y = num_stars
+                                
+                                if not allow_zero:
+                                    
+                                    pretty_x += 1
+                                    
+                                
+                                pretty_value = HydrusData.ConvertValueRangeToPrettyString( pretty_x, pretty_y )
+                                
                             
                         
-                    elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                        base += u' for ' + service.GetName() + u' ' + operator + u' ' + pretty_value
                         
-                        if isinstance( value, float ):
-                            
-                            allow_zero = service.AllowZero()
-                            num_stars = service.GetNumStars()
-                            
-                            if allow_zero:
-                                
-                                star_range = num_stars
-                                
-                            else:
-                                
-                                star_range = num_stars - 1
-                                
-                            
-                            pretty_x = int( round( value * star_range ) )
-                            pretty_y = num_stars
-                            
-                            if not allow_zero:
-                                
-                                pretty_x += 1
-                                
-                            
-                            pretty_value = HydrusData.ConvertValueRangeToPrettyString( pretty_x, pretty_y )
-                            
+                    except HydrusExceptions.DataMissing:
                         
-                    
-                    base += u' for ' + service.GetName() + u' ' + operator + u' ' + pretty_value
+                        base = u'system:unknown rating service system predicate'
+                        
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO:
@@ -1303,9 +1311,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if current_or_pending == HC.CONTENT_STATUS_PENDING: base += u' pending to '
                     else: base += u' currently in '
                     
-                    service = HG.client_controller.services_manager.GetService( service_key )
-                    
-                    base += service.GetName()
+                    try:
+                        
+                        service = HG.client_controller.services_manager.GetService( service_key )
+                        
+                        base += service.GetName()
+                        
+                    except HydrusExceptions.DataMissing:
+                        
+                        base = u'unknown file service system predicate'
+                        
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:

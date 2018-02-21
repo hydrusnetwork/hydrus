@@ -42,7 +42,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         # This turned out to be ugly when I added the manage tags frame, so I've set it to if the tlp has a parent, which basically means "not the main gui"
         
-        if tlp.GetParent() is not None or HC.options[ 'always_embed_autocompletes' ]:
+        not_main_gui = tlp.GetParent() is not None
+        
+        if not_main_gui or HC.options[ 'always_embed_autocompletes' ]:
             
             self._float_mode = False
             
@@ -57,6 +59,9 @@ class AutoCompleteDropdown( wx.Panel ):
         
         self._last_attempted_dropdown_width = 0
         self._last_attempted_dropdown_position = ( None, None )
+        
+        self._last_move_event_started = 0.0
+        self._last_move_event_occurred = 0.0
         
         if self._float_mode:
             
@@ -128,7 +133,7 @@ class AutoCompleteDropdown( wx.Panel ):
             self.Bind( wx.EVT_MOVE, self.EventMove )
             self.Bind( wx.EVT_SIZE, self.EventMove )
             
-            tlp.Bind( wx.EVT_MOVE, self.EventMove )
+            HG.client_controller.sub( self, '_ParentMovedOrResized', 'main_gui_move_event' )
             
             parent = self
             
@@ -195,6 +200,44 @@ class AutoCompleteDropdown( wx.Panel ):
     def _InitDropDownList( self ):
         
         raise NotImplementedError()
+        
+    
+    def _ParentMovedOrResized( self ):
+        
+        if self._float_mode:
+            
+            if HydrusData.TimeHasPassedFloat( self._last_move_event_occurred + 1.0 ):
+                
+                self._last_move_event_started = HydrusData.GetNowFloat()
+                
+            
+            self._last_move_event_occurred = HydrusData.GetNowFloat()
+            
+            # we'll do smoother move updates for a little bit to stop flickeryness, but after that we'll just hide
+            
+            NICE_ANIMATION_GRACE_PERIOD = 0.25
+            
+            time_to_delay_these_calls = HydrusData.TimeHasPassedFloat( self._last_move_event_started + NICE_ANIMATION_GRACE_PERIOD )
+            
+            if time_to_delay_these_calls:
+                
+                self._HideDropdown()
+                
+                if self._ShouldShow():
+                    
+                    if self._move_hide_job is None:
+                        
+                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self.DropdownHideShow )
+                        
+                    
+                    self._move_hide_job.Delay( 0.25 )
+                    
+                
+            else:
+                
+                self.DropdownHideShow()
+                
+            
         
     
     def _ScheduleListRefresh( self, delay ):
@@ -335,9 +378,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         try:
             
-            should_show = self._ShouldShow()
-            
-            if should_show:
+            if self._ShouldShow():
                 
                 self._ShowDropdown()
                 
@@ -403,7 +444,7 @@ class AutoCompleteDropdown( wx.Panel ):
                     new_event = SelectDownEvent( -1 )
                     
                 
-                wx.PostEvent( self.GetEventHandler(), new_event )
+                wx.QueueEvent( self.GetEventHandler(), new_event )
                 
             elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
                 
@@ -416,11 +457,11 @@ class AutoCompleteDropdown( wx.Panel ):
                     new_event = ShowNextEvent( -1 )
                     
                 
-                wx.PostEvent( self.GetEventHandler(), new_event )
+                wx.QueueEvent( self.GetEventHandler(), new_event )
                 
             else:
                 
-                # Don't say process/postevent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
+                # Don't say QueueEvent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
                 self._dropdown_list.EventCharHook( event ) # this typically skips the event, letting the text ctrl take it
                 
             
@@ -458,7 +499,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 new_event = SelectDownEvent( -1 )
                 
             
-            wx.PostEvent( self.GetEventHandler(), new_event )
+            wx.QueueEvent( self.GetEventHandler(), new_event )
             
         else:
             
@@ -486,27 +527,14 @@ class AutoCompleteDropdown( wx.Panel ):
                 if event.GetWheelRotation() > 0: command_type = wx.wxEVT_SCROLLWIN_LINEUP
                 else: command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
                 
-                wx.PostEvent( self._dropdown_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
+                wx.QueueEvent( self._dropdown_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
                 
             
         
     
     def EventMove( self, event ):
         
-        if self._float_mode:
-            
-            self._HideDropdown()
-            
-            if self._ShouldShow():
-                
-                if self._move_hide_job is None:
-                    
-                    self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self.DropdownHideShow )
-                    
-                
-                self._move_hide_job.Delay( 0.25 )
-                
-            
+        self._ParentMovedOrResized()
         
         event.Skip()
         
@@ -548,6 +576,11 @@ class AutoCompleteDropdown( wx.Panel ):
                 self._ScheduleListRefresh( short_wait / 1000.0 )
                 
             
+        
+    
+    def ForceSizeCalcNow( self ):
+        
+        self.DropdownHideShow()
         
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):

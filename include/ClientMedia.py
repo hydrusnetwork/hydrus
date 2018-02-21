@@ -5,6 +5,7 @@ import ClientData
 import ClientFiles
 import ClientRatings
 import ClientSearch
+import ClientTags
 import HydrusConstants as HC
 import HydrusTags
 import os
@@ -1686,101 +1687,26 @@ class MediaSingleton( Media ):
     
     def GetTitleString( self ):
         
-        title_string = ''
+        namespace_info = []
+        
+        namespace_info.append( ( 'creator', '', ', ' ) )
+        namespace_info.append( ( 'series', '', ', ' ) )
+        namespace_info.append( ( 'title', '', ', ' ) )
+        namespace_info.append( ( 'volume', 'v', '-' ) )
+        namespace_info.append( ( 'chapter', 'c', '-' ) )
+        namespace_info.append( ( 'page', 'p', '-' ) )
+        
+        tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, ' - ' )
+        
+        tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
         
         siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
         
-        namespaces = self._media_result.GetTagsManager().GetCombinedNamespaces( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ) )
+        tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
         
-        creators = namespaces[ 'creator' ]
-        series = namespaces[ 'series' ]
-        titles = namespaces[ 'title' ]
-        volumes = namespaces[ 'volume' ]
-        chapters = namespaces[ 'chapter' ]
-        pages = namespaces[ 'page' ]
+        summary = tags_summary_generator.GenerateSummary( tags )
         
-        if len( creators ) > 0:
-            
-            title_string_append = ', '.join( creators )
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        if len( series ) > 0:
-            
-            title_string_append = ', '.join( series )
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        if len( titles ) > 0:
-            
-            title_string_append = ', '.join( titles )
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        if len( volumes ) > 0:
-            
-            if len( volumes ) == 1:
-                
-                ( volume, ) = volumes
-                
-                title_string_append = 'volume ' + HydrusData.ToUnicode( volume )
-                
-            else:
-                
-                volumes_sorted = HydrusTags.SortNumericTags( volumes )
-                
-                title_string_append = 'volumes ' + HydrusData.ToUnicode( volumes_sorted[0] ) + '-' + HydrusData.ToUnicode( volumes_sorted[-1] )
-                
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        if len( chapters ) > 0:
-            
-            if len( chapters ) == 1:
-                
-                ( chapter, ) = chapters
-                
-                title_string_append = 'chapter ' + HydrusData.ToUnicode( chapter )
-                
-            else:
-                
-                chapters_sorted = HydrusTags.SortNumericTags( chapters )
-                
-                title_string_append = 'chapters ' + HydrusData.ToUnicode( chapters_sorted[0] ) + '-' + HydrusData.ToUnicode( chapters_sorted[-1] )
-                
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        if len( pages ) > 0:
-            
-            if len( pages ) == 1:
-                
-                ( page, ) = pages
-                
-                title_string_append = 'page ' + HydrusData.ToUnicode( page )
-                
-            else:
-                
-                pages_sorted = HydrusTags.SortNumericTags( pages )
-                
-                title_string_append = 'pages ' + HydrusData.ToUnicode( pages_sorted[0] ) + '-' + HydrusData.ToUnicode( pages_sorted[-1] )
-                
-            
-            if len( title_string ) > 0: title_string += ' - ' + title_string_append
-            else: title_string = title_string_append
-            
-        
-        return title_string
+        return summary
         
     
     def HasAnyOfTheseHashes( self, hashes ):

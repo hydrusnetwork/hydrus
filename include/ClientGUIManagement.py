@@ -303,7 +303,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
             
             event = wx.NotifyEvent( CAPTCHA_FETCH_EVENT_TYPE )
             
-            wx.PostEvent( self.GetEventHandler(), event )
+            wx.QueueEvent( self.GetEventHandler(), event )
             
             if event.IsAllowed():
                 
@@ -1091,7 +1091,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, media_results )
         
-        self._controller.pub( 'swap_media_panel', self._page_key, panel )
+        self._page.SwapMediaPanel( panel )
         
     
     def _UpdateStatus( self ):
@@ -2846,7 +2846,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         panel.Sort( self._page_key, self._sort_by.GetSort() )
         
-        self._controller.pub( 'swap_media_panel', self._page_key, panel )
+        self._page.SwapMediaPanel( panel )
         
     
     def EventContentDoubleClick( self, event ):
@@ -3044,6 +3044,8 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._query_job_key = ClientThreading.JobKey( cancellable = True )
         
+        self._query_job_key.Finish()
+        
         initial_predicates = file_search_context.GetPredicates()
         
         if self._search_enabled:
@@ -3055,8 +3057,18 @@ class ManagementPanelQuery( ManagementPanel ):
             synchronised = self._management_controller.GetVariable( 'synchronised' )
             
             self._searchbox = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_callable = self._page.GetMedia, synchronised = synchronised )
+            
+            self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.GlobalBMPs.stop, self._CancelSearch )
+            
+            self._cancel_search_button.Hide()
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( self._searchbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( self._cancel_search_button, CC.FLAGS_VCENTER )
+            
             self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._search_panel.Add( self._searchbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         
         vbox = wx.BoxSizer( wx.VERTICAL )
@@ -3064,7 +3076,10 @@ class ManagementPanelQuery( ManagementPanel ):
         vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._collect_by, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        if self._search_enabled: vbox.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        if self._search_enabled:
+            
+            vbox.Add( self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -3072,51 +3087,15 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._controller.sub( self, 'AddMediaResultsFromQuery', 'add_media_results_from_query' )
         self._controller.sub( self, 'SearchImmediately', 'notify_search_immediately' )
-        self._controller.sub( self, 'ShowQuery', 'file_query_done' )
         self._controller.sub( self, 'RefreshQuery', 'refresh_query' )
         self._controller.sub( self, 'ChangeFileServicePubsub', 'change_file_service' )
         
     
-    def _DoQuery( self ):
-        
-        self._controller.ResetIdleTimer()
+    def _CancelSearch( self ):
         
         self._query_job_key.Cancel()
         
-        self._query_job_key = ClientThreading.JobKey()
-        
-        if self._management_controller.GetVariable( 'search_enabled' ):
-            
-            if self._management_controller.GetVariable( 'synchronised' ):
-                
-                file_search_context = self._searchbox.GetFileSearchContext()
-                
-                current_predicates = self._current_predicates_box.GetPredicates()
-                
-                file_search_context.SetPredicates( current_predicates )
-                
-                self._management_controller.SetVariable( 'file_search_context', file_search_context )
-                
-                file_service_key = file_search_context.GetFileServiceKey()
-                
-                if len( current_predicates ) > 0:
-                    
-                    self._controller.StartFileQuery( self._page_key, self._query_job_key, file_search_context )
-                    
-                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
-                    
-                else:
-                    
-                    panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
-                    
-                
-                self._controller.pub( 'swap_media_panel', self._page_key, panel )
-                
-            
-        else:
-            
-            self._sort_by.BroadcastSort()
-            
+        self._UpdateCancelButton()
         
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
@@ -3141,6 +3120,88 @@ class ManagementPanelQuery( ManagementPanel ):
         tags_box.SetTagsBox( t )
         
         sizer.Add( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def _RefreshQuery( self ):
+        
+        self._controller.ResetIdleTimer()
+        
+        self._query_job_key.Cancel()
+        
+        if self._management_controller.GetVariable( 'search_enabled' ):
+            
+            if self._management_controller.GetVariable( 'synchronised' ):
+                
+                file_search_context = self._searchbox.GetFileSearchContext()
+                
+                current_predicates = self._current_predicates_box.GetPredicates()
+                
+                file_search_context.SetPredicates( current_predicates )
+                
+                self._management_controller.SetVariable( 'file_search_context', file_search_context )
+                
+                file_service_key = file_search_context.GetFileServiceKey()
+                
+                if len( current_predicates ) > 0:
+                    
+                    self._query_job_key = ClientThreading.JobKey()
+                    
+                    self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context )
+                    
+                    panel = ClientGUIMedia.MediaPanelLoading( self._page, self._page_key, file_service_key )
+                    
+                else:
+                    
+                    panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, file_service_key, [] )
+                    
+                
+                self._page.SwapMediaPanel( panel )
+                
+            
+        else:
+            
+            self._sort_by.BroadcastSort()
+            
+        
+    
+    def _UpdateCancelButton( self ):
+        
+        if self._search_enabled:
+            
+            do_layout = False
+            
+            if self._query_job_key.IsDone():
+                
+                if self._cancel_search_button.IsShown():
+                    
+                    self._cancel_search_button.Hide()
+                    
+                    do_layout = True
+                    
+                
+            else:
+                
+                # don't show it immediately to save on flickeriness on short queries
+                
+                WAIT_PERIOD = 3.0
+                
+                can_show = HydrusData.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
+                
+                if can_show and not self._cancel_search_button.IsShown():
+                    
+                    self._cancel_search_button.Show()
+                    
+                    do_layout = True
+                    
+                
+            
+            if do_layout:
+                
+                self.Layout()
+                
+                self._searchbox.ForceSizeCalcNow()
+                
+            
         
     
     def AddMediaResultsFromQuery( self, query_job_key, media_results ):
@@ -3182,7 +3243,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            self._DoQuery()
+            self._RefreshQuery()
             
         
     
@@ -3192,7 +3253,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             self._management_controller.SetVariable( 'synchronised', value )
             
-            self._DoQuery()
+            self._RefreshQuery()
             
         
     
@@ -3205,11 +3266,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ShowQuery( self, page_key, query_job_key, media_results ):
+    def ShowFinishedQuery( self, query_job_key, media_results ):
         
-        if page_key == self._page_key and query_job_key == self._query_job_key:
-            
-            current_predicates = self._current_predicates_box.GetPredicates()
+        if query_job_key == self._query_job_key:
             
             file_service_key = self._management_controller.GetKey( 'file_service' )
             
@@ -3219,7 +3278,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             panel.Sort( self._page_key, self._sort_by.GetSort() )
             
-            self._controller.pub( 'swap_media_panel', self._page_key, panel )
+            self._page.SwapMediaPanel( panel )
             
         
     
@@ -3231,8 +3290,59 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
             
-            wx.CallAfter( self._DoQuery )
+            wx.CallAfter( self._RefreshQuery )
             
         
-
+    
+    def THREADDoQuery( self, controller, page_key, query_job_key, search_context ):
+        
+        def wx_code():
+            
+            query_job_key.Finish()
+            
+            if not self:
+                
+                return
+                
+            
+            self.ShowFinishedQuery( query_job_key, media_results )
+            
+        
+        QUERY_CHUNK_SIZE = 256
+        
+        query_hash_ids = controller.Read( 'file_query_ids', search_context, query_job_key )
+        
+        if query_job_key.IsCancelled():
+            
+            return
+            
+        
+        media_results = []
+        
+        for sub_query_hash_ids in HydrusData.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
+            
+            if query_job_key.IsCancelled():
+                
+                return
+                
+            
+            more_media_results = controller.Read( 'media_results_from_ids', sub_query_hash_ids )
+            
+            media_results.extend( more_media_results )
+            
+            controller.pub( 'set_num_query_results', page_key, len( media_results ), len( query_hash_ids ) )
+            
+            controller.WaitUntilViewFree()
+            
+        
+        search_context.SetComplete()
+        
+        wx.CallAfter( wx_code )
+        
+    
+    def TIMERPageUpdate( self ):
+        
+        self._UpdateCancelButton()
+        
+    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_QUERY ] = ManagementPanelQuery

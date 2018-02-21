@@ -326,6 +326,19 @@ def GetURLsFromParseResults( results, desired_url_types ):
     
     return url_list
     
+def MakeParsedTextPretty( parsed_text ):
+    
+    try:
+        
+        parsed_text = unicode( parsed_text )
+        
+    except UnicodeDecodeError:
+        
+        parsed_text = repr( parsed_text )
+        
+    
+    return parsed_text
+    
 def RenderJSONParseRule( parse_rule ):
     
     if parse_rule is None:
@@ -389,26 +402,31 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         self._string_converter = string_converter
         
     
-    def _ParseRawContents( self, parse_context, data ):
+    def _GetParsePrettySeparator( self ):
+        
+        return os.linesep
+        
+    
+    def _ParseRawContents( self, parsing_context, data ):
         
         raise NotImplementedError()
         
     
-    def Parse( self, parse_context, data ):
+    def Parse( self, parsing_context, data ):
         
-        raw_contents = self._ParseRawContents( parse_context, data )
+        raw_texts = self._ParseRawContents( parsing_context, data )
         
-        contents = []
+        texts = []
         
-        for raw_content in raw_contents:
+        for raw_text in raw_texts:
             
             try:
                 
-                self._string_match.Test( raw_content )
+                self._string_match.Test( raw_text )
                 
-                content = self._string_converter.Convert( raw_content )
+                text = self._string_converter.Convert( raw_text )
                 
-                contents.append( content )
+                texts.append( text )
                 
             except HydrusExceptions.ParseException:
                 
@@ -416,7 +434,22 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        return contents
+        return texts
+        
+    
+    def ParsePretty( self, parsing_context, data ):
+        
+        texts = self.Parse( parsing_context, data )
+        
+        pretty_texts = [ MakeParsedTextPretty( text ) for text in texts ]
+        
+        pretty_texts = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( pretty_texts ) ) + ' RESULTS BEGIN ***' ] + pretty_texts + [ '*** RESULTS END ***' ]
+        
+        separator = self._GetParsePrettySeparator()
+        
+        result = separator.join( pretty_texts )
+        
+        return result
         
     
     def ParsesSeparatedContent( self ):
@@ -479,7 +512,7 @@ class ParseFormulaCompound( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, parse_context, data ):
+    def _ParseRawContents( self, parsing_context, data ):
         
         def get_stream_data( index, s ):
             
@@ -501,7 +534,7 @@ class ParseFormulaCompound( ParseFormula ):
         
         for formula in self._formulae:
             
-            stream = formula.Parse( parse_context, data )
+            stream = formula.Parse( parsing_context, data )
             
             if len( stream ) == 0: # no contents were found for one of the /1 replace components, so no valid strings can be made.
                 
@@ -598,13 +631,13 @@ class ParseFormulaContextVariable( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, parse_context, data ):
+    def _ParseRawContents( self, parsing_context, data ):
         
         raw_contents = []
         
-        if self._variable_name in parse_context:
+        if self._variable_name in parsing_context:
             
-            raw_contents.append( parse_context[ self._variable_name ] )
+            raw_contents.append( parsing_context[ self._variable_name ] )
             
         
         return raw_contents
@@ -704,6 +737,18 @@ class ParseFormulaHTML( ParseFormula ):
         return tags
         
     
+    def _GetParsePrettySeparator( self ):
+        
+        if self._content_to_fetch == HTML_CONTENT_HTML:
+            
+            return os.linesep * 2
+            
+        else:
+            
+            return os.linesep
+            
+        
+    
     def _GetRawContentFromTag( self, tag ):
         
         if self._content_to_fetch == HTML_CONTENT_ATTRIBUTE:
@@ -797,9 +842,16 @@ class ParseFormulaHTML( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, parse_context, data ):
+    def _ParseRawContents( self, parsing_context, data ):
         
-        root = bs4.BeautifulSoup( data, 'lxml' )
+        try:
+            
+            root = bs4.BeautifulSoup( data, 'lxml' )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.ParseException( 'Unable to parse that HTML: ' + HydrusData.ToUnicode( e ) )
+            
         
         tags = self._FindHTMLTags( root )
         
@@ -970,6 +1022,18 @@ class ParseFormulaJSON( ParseFormula ):
         self._content_to_fetch = content_to_fetch
         
     
+    def _GetParsePrettySeparator( self ):
+        
+        if self._content_to_fetch == JSON_CONTENT_JSON:
+            
+            return os.linesep * 2
+            
+        else:
+            
+            return os.linesep
+            
+        
+    
     def _GetRawContentsFromJSON( self, j ):
         
         roots = ( j, )
@@ -1066,9 +1130,16 @@ class ParseFormulaJSON( ParseFormula ):
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
         
     
-    def _ParseRawContents( self, parse_context, data ):
+    def _ParseRawContents( self, parsing_context, data ):
         
-        j = json.loads( data )
+        try:
+            
+            j = json.loads( data )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.ParseException( 'Unable to parse that JSON: ' + HydrusData.ToUnicode( e ) )
+            
         
         raw_contents = self._GetRawContentsFromJSON( j )
         
@@ -1234,9 +1305,9 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         return { ( self._name, self._content_type, self._additional_info ) }
         
     
-    def Parse( self, parse_context, data ):
+    def Parse( self, parsing_context, data ):
         
-        parsed_texts = self._formula.Parse( parse_context, data )
+        parsed_texts = self._formula.Parse( parsing_context, data )
         
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
@@ -1263,6 +1334,30 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             return [ ( content_description, parsed_text ) for parsed_text in parsed_texts ]
             
+        
+    
+    def ParsePretty( self, parsing_context, data ):
+        
+        try:
+            
+            parse_results = self.Parse( parsing_context, data )
+            
+            results = [ ConvertParseResultToPrettyString( parse_result ) for parse_result in parse_results ]
+            
+        except HydrusExceptions.VetoException as e:
+            
+            results = [ 'veto: ' + HydrusData.ToUnicode( e ) ]
+            
+        
+        result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
+        
+        result_lines.extend( results )
+        
+        result_lines.append( '*** RESULTS END ***' )
+        
+        results_text = os.linesep.join( result_lines )
+        
+        return results_text
         
     
     def SetName( self, name ):
@@ -1411,7 +1506,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return self._string_converter
         
     
-    def Parse( self, parse_context, page_data ):
+    def Parse( self, parsing_context, page_data ):
         
         try:
             
@@ -1430,7 +1525,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                whole_page_parse_results.extend( content_parser.Parse( parse_context, converted_page_data ) )
+                whole_page_parse_results.extend( content_parser.Parse( parsing_context, converted_page_data ) )
                 
             except HydrusExceptions.VetoException:
                 
@@ -1464,11 +1559,11 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( formula, page_parser ) in self._sub_page_parsers:
                 
-                posts = formula.Parse( parse_context, converted_page_data )
+                posts = formula.Parse( parsing_context, converted_page_data )
                 
                 for post in posts:
                     
-                    page_parser_all_parse_results = page_parser.Parse( parse_context, post )
+                    page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
                     
                     for page_parser_parse_results in page_parser_all_parse_results:
                         
@@ -1481,6 +1576,36 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         return all_parse_results
+        
+    
+    def ParsePretty( self, parsing_context, page_data ):
+        
+        try:
+            
+            all_parse_results = self.Parse( parsing_context, page_data )
+            
+            pretty_groups_of_parse_results = [ os.linesep.join( [ ConvertParseResultToPrettyString( parse_result ) for parse_result in parse_results ] ) for parse_results in all_parse_results ]
+            
+            group_separator = os.linesep * 2 + '*** SEPARATE FILE RESULTS BREAK ***' + os.linesep * 2
+            
+            pretty_parse_result_text = group_separator.join( pretty_groups_of_parse_results )
+            
+        except HydrusExceptions.VetoException as e:
+            
+            pretty_parse_result_text = HydrusData.ToUnicode( e )
+            
+        
+        result_lines = []
+        
+        result_lines.append( '*** ' + HydrusData.ConvertIntToPrettyString( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + os.linesep )
+        
+        result_lines.append( pretty_parse_result_text )
+        
+        result_lines.append( os.linesep + '*** RESULTS END ***' )
+        
+        results_text = os.linesep.join( result_lines )
+        
+        return results_text
         
     
     def RegenerateParserKey( self ):

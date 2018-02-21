@@ -100,7 +100,7 @@ class AddEditDeleteListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Edit( self ):
@@ -130,7 +130,7 @@ class AddEditDeleteListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def AddDatas( self, datas ):
@@ -140,7 +140,7 @@ class AddEditDeleteListBox( wx.Panel ):
             self._AddData( data )
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def Bind( self, event, handler ):
@@ -291,7 +291,7 @@ class QueueListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Down( self ):
@@ -311,7 +311,7 @@ class QueueListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Edit( self ):
@@ -341,7 +341,7 @@ class QueueListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _SwapRows( self, index_a, index_b ):
@@ -387,7 +387,7 @@ class QueueListBox( wx.Panel ):
                 
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def AddDatas( self, datas ):
@@ -397,7 +397,7 @@ class QueueListBox( wx.Panel ):
             self._AddData( data )
             
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def Bind( self, event, handler ):
@@ -563,7 +563,7 @@ class ListBox( wx.ScrolledWindow ):
         
         self._SetDirty()
         
-        wx.PostEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
     def _Deselect( self, index ):
@@ -774,7 +774,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 #self.Scroll( -1, y_to_scroll_to )
                 
-                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
+                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to ) )
                 
             elif y > ( start_y * y_unit ) + height - self._text_y:
                 
@@ -782,7 +782,7 @@ class ListBox( wx.ScrolledWindow ):
                 
                 #self.Scroll( -1, y_to_scroll_to + 2 )
                 
-                wx.PostEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
+                wx.QueueEvent( self.GetEventHandler(), wx.ScrollWinEvent( wx.wxEVT_SCROLLWIN_THUMBRELEASE, pos = y_to_scroll_to + 2 ) )
                 
             
         

@@ -2966,6 +2966,99 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
         return tag_import_options
         
     
+class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, tag_summary_generator ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        namespace_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( edit_panel )
+        
+        # add in a way to maintain order
+        # I guess an enumerated column and some up/down buttons on the panel
+        
+        self._namespace_info = ClientGUIListCtrl.BetterListCtrl( namespace_info_panel, 'tag_summary_generator_namespace_info', 8, 24, [ ( 'namespace', -1 ), ( 'prefix', 8 ), ( 'separator', 8 ) ], self._ConvertNamespaceInfoToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        namespace_info_panel.SetListCtrl( self._namespace_info )
+        
+        namespace_info_panel.AddButton( 'add', self._Add )
+        namespace_info_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        namespace_info_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        
+        self._separator = wx.TextCtrl( edit_panel )
+        
+        # example panel
+        # multilinelistpanel
+        # readonly result
+        
+        #
+        
+        ( namespace_info, separator ) = tag_summary_generator.ToTuple()
+        
+        self._namespace_info.SetData( namespace_info )
+        self._separator.SetValue( separator )
+        
+        #
+        
+        edit_panel.Add( self._namespace_info, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( ClientGUICommon.WrapInText( self._separator, edit_panel, 'separator' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        pass
+        
+    
+    def _ConvertNamespaceInfoToListCtrlTuples( self, namespace_info ):
+        
+        ( namespace, prefix, separator ) = namespace_info
+        
+        if namespace == '':
+            
+            pretty_namespace = 'unnamespaced'
+            
+        else:
+            
+            pretty_namespace = namespace
+            
+        
+        pretty_prefix = prefix
+        pretty_separator = separator
+        
+        display_tuple = ( pretty_namespace, pretty_prefix, pretty_separator )
+        sort_tuple = ( namespace, prefix, separator )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        pass
+        
+    
+    def _Edit( self ):
+        
+        pass
+        
+    
+    def GetValue( self ):
+        
+        # order based on the new enumerated column
+        
+        namespace_info = []
+        separator = self._separator.GetValue()
+        
+        ClientTags.TagSummaryGenerator( namespace_info, separator )
+        
+    
 class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, url_match ):
@@ -3432,7 +3525,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingDomain.URLMatch, ), self._AddURLMatch )
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddButton( 'add the defaults', self._AddDefaults )
+        self._list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultURLMatches, self._AddURLMatch )
         
         #
         

@@ -11,7 +11,7 @@ import wx
 
 ( OKEvent, EVT_OK ) = wx.lib.newevent.NewCommandEvent()
 
-CHILD_POSITION_PADDING = 50
+CHILD_POSITION_PADDING = 24
 FUZZY_PADDING = 15
 
 def GetDisplayPosition( window ):
@@ -147,7 +147,7 @@ def PostSizeChangedEvent( window ):
     
     event = CC.SizeChangedEvent( -1 )
     
-    wx.PostEvent( window.GetEventHandler(), event )
+    wx.QueueEvent( window.GetEventHandler(), event )
     
 def SaveTLWSizeAndPosition( tlw, frame_key ):
     
@@ -530,9 +530,16 @@ class DialogNullipotent( DialogThatTakesScrollablePanelClose ):
     
 class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
     
-    def __init__( self, parent, title, style_override = None ):
+    def __init__( self, parent, title, style_override = None, hide_close_button = False ):
         
         DialogThatTakesScrollablePanelClose.__init__( self, parent, title, style_override = style_override )
+        
+        if hide_close_button:
+            
+            self._close.Hide()
+            
+            self.Bind( wx.EVT_CLOSE, self.EventOK ) # the close event no longer goes to the default button, since it is hidden, wew
+            
         
     
     def DoOK( self ):
