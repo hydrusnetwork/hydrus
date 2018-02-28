@@ -971,6 +971,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
         #
         
         info_panel = ClientGUICommon.StaticBox( self, 'locations' )
@@ -1013,17 +1015,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         migration_panel = ClientGUICommon.StaticBox( self, 'migrate entire database' )
         
         self._migrate_db_button = ClientGUICommon.BetterButton( migration_panel, 'move entire database and all portable paths', self._MigrateDatabase )
-        
-        #
-        
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.Add( st, CC.FLAGS_VCENTER )
-        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         #
         

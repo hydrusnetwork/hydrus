@@ -1330,12 +1330,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
         #self._listbook.AddPage( 'sound', 'sound', self._SoundPanel( self._listbook ) )
         self._listbook.AddPage( 'default file system predicates', 'default file system predicates', self._DefaultFileSystemPredicatesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'default tag import options', 'default tag import options', self._DefaultTagImportOptionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', 'colours', self._ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag summaries', 'tag summaries', self._TagSummariesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
         #
@@ -1812,6 +1812,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            default_tios = ClientGUICommon.StaticBox( self, 'default tag import options' )
+            
+            self._tag_import_options = wx.ListBox( default_tios )
+            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+            
+            self._add = wx.Button( default_tios, label = 'add' )
+            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            
+            self._edit = wx.Button( default_tios, label = 'edit' )
+            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            
+            self._delete = wx.Button( default_tios, label = 'delete' )
+            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            
+            #
+            
+            for ( gallery_identifier, tag_import_options ) in self._new_options.GetDefaultTagImportOptions().items():
+                
+                name = gallery_identifier.ToString()
+                
+                self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
+                
+            
+            #
+            
             rows = []
             
             rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
@@ -1823,17 +1848,144 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            default_tios.Add( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( self._add, CC.FLAGS_VCENTER )
+            hbox.Add( self._edit, CC.FLAGS_VCENTER )
+            hbox.Add( self._delete, CC.FLAGS_VCENTER )
+            
+            default_tios.Add( hbox, CC.FLAGS_BUTTON_SIZER )
+            
+            #
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( default_tios, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
+            
+        
+        def EventAdd( self, event ):
+            
+            gallery_identifiers = []
+            
+            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_THREAD_WATCHER ]:
+                
+                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
+                
+            
+            gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU ) )
+            
+            boorus = HG.client_controller.Read( 'remote_boorus' )
+            
+            for booru_name in boorus.keys():
+                
+                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name ) )
+                
+            
+            list_of_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
+            
+            with ClientGUIDialogs.DialogSelectFromList( self, 'select tag domain', list_of_tuples ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    gallery_identifier = dlg.GetChoice()
+                    
+                    name = gallery_identifier.ToString()
+                    
+                    for i in range( self._tag_import_options.GetCount() ):
+                        
+                        if name == self._tag_import_options.GetString( i ):
+                            
+                            wx.MessageBox( 'You already have default tag import options set up for that domain!' )
+                            
+                            return
+                            
+                        
+                    
+                    new_options = HG.client_controller.new_options
+                    
+                    tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
+                    
+                    ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                    
+                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+                        
+                        panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
+                        
+                        dlg.SetPanel( panel )
+                        
+                        if dlg.ShowModal() == wx.ID_OK:
+                            
+                            tag_import_options = panel.GetValue()
+                            
+                            self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
+                            
+                        
+                    
+                
+            
+        
+        def EventDelete( self, event ):
+            
+            selection = self._tag_import_options.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                name = self._tag_import_options.GetString( selection )
+                
+                with ClientGUIDialogs.DialogYesNo( self, 'Delete \'' + name + '\' entry?' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        self._tag_import_options.Delete( selection )
+                        
+                    
+                
+            
+        
+        def EventEdit( self, event ):
+            
+            selection = self._tag_import_options.GetSelection()
+            
+            if selection != wx.NOT_FOUND:
+                
+                name = self._tag_import_options.GetString( selection )
+                
+                ( gallery_identifier, tag_import_options ) = self._tag_import_options.GetClientData( selection )
+                
+                ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                
+                with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+                    
+                    panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.ShowModal() == wx.ID_OK:
+                        
+                        tag_import_options = panel.GetValue()
+                        
+                        self._tag_import_options.SetClientData( selection, ( gallery_identifier, tag_import_options ) )
+                        
+                    
+                
             
         
         def UpdateOptions( self ):
             
             self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
             self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
+            
+            self._new_options.ClearDefaultTagImportOptions()
+            
+            for ( gallery_identifier, tag_import_options ) in [ self._tag_import_options.GetClientData( i ) for i in range( self._tag_import_options.GetCount() ) ]:
+                
+                self._new_options.SetDefaultTagImportOptions( gallery_identifier, tag_import_options )
+                
             
         
     
@@ -2083,7 +2235,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _DefaultTagImportOptionsPanel( wx.Panel ):
+    class _TagSummariesPanel( wx.Panel ):
         
         def __init__( self, parent, new_options ):
             
@@ -2091,159 +2243,45 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
-            self._tag_import_options = wx.ListBox( self )
-            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
+            #
             
-            self._add = wx.Button( self, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
-            self._edit = wx.Button( self, label = 'edit' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
+            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
             
-            self._delete = wx.Button( self, label = 'delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
+            
+            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
+            
+            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            # file export favourites
+            # file dnd
             
             #
             
-            for ( gallery_identifier, tag_import_options ) in self._new_options.GetDefaultTagImportOptions().items():
-                
-                name = gallery_identifier.ToString()
-                
-                self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
-                
+            rows = []
             
-            #
+            rows.append( ( 'On thumbnail top:', self._thumbnail_top ) )
+            rows.append( ( 'On thumbnail bottom-right:', self._thumbnail_bottom_right ) )
+            rows.append( ( 'On media viewer top:', self._media_viewer_top ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            vbox.Add( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.Add( self._add, CC.FLAGS_BUTTON_SIZER )
-            hbox.Add( self._edit, CC.FLAGS_BUTTON_SIZER )
-            hbox.Add( self._delete, CC.FLAGS_BUTTON_SIZER )
-            
-            vbox.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
         
-        def EventAdd( self, event ):
-            
-            gallery_identifiers = []
-            
-            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_THREAD_WATCHER ]:
-                
-                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
-                
-            
-            gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU ) )
-            
-            boorus = HG.client_controller.Read( 'remote_boorus' )
-            
-            for booru_name in boorus.keys():
-                
-                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name ) )
-                
-            
-            list_of_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
-            
-            with ClientGUIDialogs.DialogSelectFromList( self, 'select tag domain', list_of_tuples ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    gallery_identifier = dlg.GetChoice()
-                    
-                    name = gallery_identifier.ToString()
-                    
-                    for i in range( self._tag_import_options.GetCount() ):
-                        
-                        if name == self._tag_import_options.GetString( i ):
-                            
-                            wx.MessageBox( 'You already have default tag import options set up for that domain!' )
-                            
-                            return
-                            
-                        
-                    
-                    new_options = HG.client_controller.new_options
-                    
-                    tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
-                    
-                    ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                    
-                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
-                        
-                        panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
-                        
-                        dlg.SetPanel( panel )
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            tag_import_options = panel.GetValue()
-                            
-                            self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
-                            
-                        
-                    
-                
-            
-        
-        def EventDelete( self, event ):
-            
-            selection = self._tag_import_options.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                name = self._tag_import_options.GetString( selection )
-                
-                with ClientGUIDialogs.DialogYesNo( self, 'Delete \'' + name + '\' entry?' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        self._tag_import_options.Delete( selection )
-                        
-                    
-                
-            
-        
-        def EventEdit( self, event ):
-            
-            selection = self._tag_import_options.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                name = self._tag_import_options.GetString( selection )
-                
-                ( gallery_identifier, tag_import_options ) = self._tag_import_options.GetClientData( selection )
-                
-                ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
-                    
-                    panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, namespaces, tag_import_options )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        tag_import_options = panel.GetValue()
-                        
-                        self._tag_import_options.SetClientData( selection, ( gallery_identifier, tag_import_options ) )
-                        
-                    
-                
-            
-        
         def UpdateOptions( self ):
             
-            self._new_options.ClearDefaultTagImportOptions()
-            
-            for ( gallery_identifier, tag_import_options ) in [ self._tag_import_options.GetClientData( i ) for i in range( self._tag_import_options.GetCount() ) ]:
-                
-                self._new_options.SetDefaultTagImportOptions( gallery_identifier, tag_import_options )
-                
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
             
         
     
@@ -2448,9 +2486,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._hide_preview = wx.CheckBox( self )
             
-            self._show_thumbnail_title_banner = wx.CheckBox( self )
-            self._show_thumbnail_page = wx.CheckBox( self )
-            
             self._thumbnail_fill = wx.CheckBox( self )
             
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
@@ -2526,10 +2561,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
             
-            self._show_thumbnail_title_banner.SetValue( self._new_options.GetBoolean( 'show_thumbnail_title_banner' ) )
-            
-            self._show_thumbnail_page.SetValue( self._new_options.GetBoolean( 'show_thumbnail_page' ) )
-            
             self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
             
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
@@ -2569,8 +2600,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
-            rows.append( ( 'Show \'title\' banner on thumbnails: ', self._show_thumbnail_title_banner ) )
-            rows.append( ( 'Show volume/chapter/page number on thumbnails: ', self._show_thumbnail_page ) )
             rows.append( ( 'Zoom thumbnails so they \'fill\' their space (experimental): ', self._thumbnail_fill ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
@@ -2666,8 +2695,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.pub( 'main_gui_title', title )
             
-            self._new_options.SetBoolean( 'show_thumbnail_title_banner', self._show_thumbnail_title_banner.GetValue() )
-            self._new_options.SetBoolean( 'show_thumbnail_page', self._show_thumbnail_page.GetValue() )
             self._new_options.SetBoolean( 'thumbnail_fill', self._thumbnail_fill.GetValue() )
             
             self._new_options.SetInteger( 'thumbnail_visibility_scroll_percent', self._thumbnail_visibility_scroll_percent.GetValue() )
@@ -2702,9 +2729,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil = wx.CheckBox( self )
             self._load_images_with_pil.SetToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
-            self._do_not_import_decompression_bombs = wx.CheckBox( self )
-            self._do_not_import_decompression_bombs.SetToolTip( 'Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large (typically 100MegaPixel+) images. Check this to disallow them before they blat your computer.' )
-            
             self._use_system_ffmpeg = wx.CheckBox( self )
             self._use_system_ffmpeg.SetToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
@@ -2725,7 +2749,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
-            self._do_not_import_decompression_bombs.SetValue( self._new_options.GetBoolean( 'do_not_import_decompression_bombs' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._anchor_and_hide_canvas_drags.SetValue( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             
@@ -2755,7 +2778,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
-            rows.append( ( 'Do not import Decompression Bombs: ', self._do_not_import_decompression_bombs ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
@@ -2855,7 +2877,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
-            self._new_options.SetBoolean( 'do_not_import_decompression_bombs', self._do_not_import_decompression_bombs.GetValue() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.GetValue() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.GetValue() )
             
@@ -3076,6 +3097,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             disk_cache_help_button = ClientGUICommon.BetterBitmapButton( disk_panel, CC.GlobalBMPs.help, self._ShowDiskCacheHelp )
             disk_cache_help_button.SetToolTip( 'Show help regarding the disk cache.' )
             
+            help_hbox = ClientGUICommon.WrapInText( disk_cache_help_button, disk_panel, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+            
             self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
             self._disk_cache_init_period.SetToolTip( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
             
@@ -3169,19 +3192,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            
-            help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            st = ClientGUICommon.BetterStaticText( disk_panel, 'help for this panel -->' )
-            
-            st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-            
-            help_hbox.Add( st, CC.FLAGS_VCENTER )
-            help_hbox.Add( disk_cache_help_button, CC.FLAGS_VCENTER )
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
-            disk_panel.Add( help_hbox, CC.FLAGS_LONE_BUTTON )
+            disk_panel.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
             disk_panel.Add( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
             disk_panel.Add( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4871,6 +4884,8 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
         subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ) ]
@@ -4921,15 +4936,6 @@ class ManageSubscriptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._subscriptions.AddDatas( subscriptions )
         
         #
-        
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.Add( st, CC.FLAGS_VCENTER )
-        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

@@ -35,9 +35,21 @@ def GetThreadInfo( thread = None ):
     
 def IsThreadShuttingDown():
     
-    if HG.view_shutdown:
+    me = threading.current_thread()
+    
+    if isinstance( me, DAEMON ):
         
-        return True
+        if HG.view_shutdown:
+            
+            return True
+            
+        
+    else:
+        
+        if HG.model_shutdown:
+            
+            return True
+            
         
     
     thread_info = GetThreadInfo()
@@ -227,7 +239,7 @@ class THREADCallToThread( DAEMON ):
                 
                 while self._queue.empty():
                     
-                    if self._controller.ModelIsShutdown():
+                    if IsThreadShuttingDown():
                         
                         return
                         
@@ -378,6 +390,14 @@ class JobScheduler( threading.Thread ):
         self._new_job_arrived.set()
         
     
+    def ClearOutDead( self ):
+        
+        with self._waiting_lock:
+            
+            self._waiting = [ job for job in self._waiting if not job.IsDead() ]
+            
+        
+    
     def GetPrettyJobSummary( self ):
         
         with self._waiting_lock:
@@ -417,7 +437,7 @@ class JobScheduler( threading.Thread ):
                 
                 while self._NoWorkToStart():
                     
-                    if self._controller.ModelIsShutdown():
+                    if IsThreadShuttingDown():
                         
                         return
                         
@@ -517,6 +537,11 @@ class SchedulableJob( object ):
     def IsCancelled( self ):
         
         return self._is_cancelled.is_set()
+        
+    
+    def IsDead( self ):
+        
+        return False
         
     
     def IsDue( self ):

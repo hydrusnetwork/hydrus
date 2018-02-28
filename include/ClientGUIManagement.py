@@ -25,8 +25,12 @@ import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
 import ClientRendering
+import ClientSearch
 import ClientThreading
+import HydrusData
+import HydrusGlobals as HG
 import HydrusText
+import HydrusThreading
 import json
 import multipart
 import os
@@ -37,9 +41,6 @@ import urlparse
 import webbrowser
 import wx
 import wx.lib.scrolledpanel
-import HydrusData
-import ClientSearch
-import HydrusGlobals as HG
 
 CAPTCHA_FETCH_EVENT_TYPE = wx.NewEventType()
 CAPTCHA_FETCH_EVENT = wx.PyEventBinder( CAPTCHA_FETCH_EVENT_TYPE )
@@ -609,12 +610,20 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 paths = [ path_info for ( path_type, path_info ) in paths_info if path_type != 'zip' ]
                 
-                automatic_archive = advanced_import_options[ 'automatic_archive' ]
                 exclude_deleted = advanced_import_options[ 'exclude_deleted' ]
+                allow_decompression_bombs = False
                 min_size = advanced_import_options[ 'min_size' ]
+                max_size = None
+                max_gif_size = None
                 min_resolution = advanced_import_options[ 'min_resolution' ]
+                max_resolution = None
                 
-                file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                automatic_archive = advanced_import_options[ 'automatic_archive' ]
+                
+                file_import_options = ClientImporting.FileImportOptions()
+                
+                file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                file_import_options.SetPostImportOptions( automatic_archive )
                 
                 paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
                 
@@ -1199,7 +1208,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         while not job_key.IsDone():
             
-            if HG.model_shutdown:
+            if HydrusThreading.IsThreadShuttingDown:
                 
                 return
                 

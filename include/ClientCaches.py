@@ -1007,29 +1007,22 @@ class ClientFilesManager( object ):
             
             file_import_job.GenerateInfo()
             
-            ( good_to_import, reason ) = file_import_job.IsGoodToImport()
+            file_import_job.CheckIsGoodToImport()
             
-            if good_to_import:
+            with self._lock:
                 
-                with self._lock:
+                ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
+                
+                mime = file_import_job.GetMime()
+                
+                self.LocklessAddFile( hash, mime, temp_path )
+                
+                if thumbnail is not None:
                     
-                    ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
-                    
-                    mime = file_import_job.GetMime()
-                    
-                    self.LocklessAddFile( hash, mime, temp_path )
-                    
-                    if thumbnail is not None:
-                        
-                        self.LocklessAddFullSizeThumbnail( hash, thumbnail )
-                        
-                    
-                    import_status = self._controller.WriteSynchronous( 'import_file', file_import_job )
+                    self.LocklessAddFullSizeThumbnail( hash, thumbnail )
                     
                 
-            else:
-                
-                raise Exception( reason )
+                import_status = self._controller.WriteSynchronous( 'import_file', file_import_job )
                 
             
         else:
@@ -1946,7 +1939,17 @@ class ThumbnailCache( object ):
     
     def GetThumbnail( self, media ):
         
-        display_media = media.GetDisplayMedia()
+        try:
+            
+            display_media = media.GetDisplayMedia()
+            
+        except:
+            
+            # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
+            # just return for now, we'll see how it goes
+            
+            return self._special_thumbs[ 'hydrus' ]
+            
         
         if display_media.GetLocationsManager().ShouldHaveThumbnail():
             

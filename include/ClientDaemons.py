@@ -117,12 +117,19 @@ def DAEMONDownloadFiles( controller ):
                                 
                                 controller.WaitUntilModelFree()
                                 
-                                automatic_archive = False
                                 exclude_deleted = False # this is the important part here
+                                allow_decompression_bombs = True
                                 min_size = None
+                                max_size = None
+                                max_gif_size = None
                                 min_resolution = None
+                                max_resolution = None
+                                automatic_archive = False
                                 
-                                file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, min_size = min_size, min_resolution = min_resolution )
+                                file_import_options = ClientImporting.FileImportOptions()
+                                
+                                file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+                                file_import_options.SetPostImportOptions( automatic_archive )
                                 
                                 file_import_job = ClientImporting.FileImportJob( temp_path, file_import_options )
                                 
@@ -317,7 +324,7 @@ def DAEMONSynchroniseSubscriptions( controller ):
         for name in subscription_names:
             
             p1 = controller.options[ 'pause_subs_sync' ]
-            p2 = controller.ViewIsShutdown()
+            p2 = HydrusThreading.IsThreadShuttingDown()
             
             if p1 or p2:
                 

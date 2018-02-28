@@ -821,35 +821,35 @@ class NetworkEngine( object ):
                 
             elif job.NeedsLogin():
                 
-                if job.CanLogin():
+                try:
                     
-                    if self._current_login_process is None:
-                        
-                        login_process = job.GenerateLoginProcess()
-                        
-                        self.controller.CallToThread( login_process.Start )
-                        
-                        self._current_login_process = login_process
-                        
-                        job.SetStatus( u'logging in\u2026' )
-                        
-                    else:
-                        
-                        job.SetStatus( u'waiting in login queue\u2026' )
-                        
-                        job.Sleep( 5 )
-                        
+                    job.CheckCanLogin()
                     
-                    return True
+                except Exception as e:
                     
-                else:
-                    
-                    error_text = u'unable to login!'
-                    
-                    job.SetError( HydrusExceptions.LoginException( error_text ), error_text )
+                    job.SetError( e, HydrusData.ToUnicode( e ) )
                     
                     return False
                     
+                
+                if self._current_login_process is None:
+                    
+                    login_process = job.GenerateLoginProcess()
+                    
+                    self.controller.CallToThread( login_process.Start )
+                    
+                    self._current_login_process = login_process
+                    
+                    job.SetStatus( u'logging in\u2026' )
+                    
+                else:
+                    
+                    job.SetStatus( u'waiting in login queue\u2026' )
+                    
+                    job.Sleep( 5 )
+                    
+                
+                return True
                 
             else:
                 
@@ -1322,26 +1322,26 @@ class NetworkJob( object ):
             
         
     
-    def CanLogin( self ):
-        
-        with self._lock:
-            
-            if self._for_login:
-                
-                raise Exception( 'Login jobs should not be asked if they can login!' )
-                
-            else:
-                
-                return self.engine.login_manager.CanLogin( self._login_network_context )
-                
-            
-        
-    
     def CanValidateInPopup( self ):
         
         with self._lock:
             
             return self.engine.domain_manager.CanValidateInPopup( self._network_contexts )
+            
+        
+    
+    def CheckCanLogin( self ):
+        
+        with self._lock:
+            
+            if self._for_login:
+                
+                raise HydrusExceptions.LoginException( 'Login jobs should not be asked if they can login!' )
+                
+            else:
+                
+                return self.engine.login_manager.CheckCanLogin( self._login_network_context )
+                
             
         
     

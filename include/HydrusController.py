@@ -400,6 +400,8 @@ class HydrusController( object ):
         
         self.pub( 'memory_maintenance_pulse' )
         
+        self._job_scheduler.ClearOutDead()
+        
     
     def MaintainMemorySlow( self ):
         

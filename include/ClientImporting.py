@@ -352,6 +352,13 @@ class FileImportJob( object ):
         self._extra_hashes = None
         
     
+    def CheckIsGoodToImport( self ):
+        
+        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
+        
+        self._file_import_options.CheckFileIsValid( size, mime, width, height )
+        
+    
     def GetExtraHashes( self ):
         
         return self._extra_hashes
@@ -398,43 +405,13 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_REDUNDANT:
             
-            if self._file_import_options.GetAutomaticArchive():
+            if self._file_import_options.AutomaticallyArchives():
                 
                 service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, set( ( self._hash, ) ) ) ] }
                 
                 HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
             
-        
-    
-    def IsGoodToImport( self ):
-        
-        ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution ) = self._file_import_options.ToTuple()
-        
-        ( size, mime, width, height, duration, num_frames, num_words ) = self._file_info
-        
-        if width is not None and height is not None:
-            
-            if min_resolution is not None:
-                
-                ( min_x, min_y ) = min_resolution
-                
-                if width < min_x or height < min_y:
-                    
-                    return ( False, 'Resolution too small.' )
-                    
-                
-            
-        
-        if min_size is not None:
-            
-            if size < min_size:
-                
-                return ( False, 'File too small.' )
-                
-            
-        
-        return ( True, 'File looks good.' )
         
     
     def IsNewToDB( self ):
@@ -446,7 +423,7 @@ class FileImportJob( object ):
         
         if self._pre_import_status == CC.STATUS_DELETED:
             
-            if not self._file_import_options.GetExcludeDeleted():
+            if not self._file_import_options.ExcludesDeleted():
                 
                 return True
                 
@@ -470,7 +447,7 @@ class FileImportJob( object ):
         
         new_options = HG.client_controller.new_options
         
-        if mime in HC.DECOMPRESSION_BOMB_IMAGES and new_options.GetBoolean( 'do_not_import_decompression_bombs' ):
+        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._file_import_options.AllowsDecompressionBombs():
             
             if HydrusImageHandling.IsDecompressionBomb( self._temp_path ):
                 
@@ -665,7 +642,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._file_import_options.GetExcludeDeleted():
+                if not self._file_import_options.ExcludesDeleted():
                     
                     status = CC.STATUS_NEW
                     note = ''
@@ -1507,54 +1484,41 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, automatic_archive = None, exclude_deleted = None, present_new_files = None, present_already_in_inbox_files = None, present_archived_files = None, min_size = None, min_resolution = None ):
+    def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        if automatic_archive is None:
-            
-            automatic_archive = False
-            
-        
-        if exclude_deleted is None:
-            
-            exclude_deleted = True
-            
-        
-        if present_new_files is None:
-            
-            present_new_files = True
-            
-        
-        if present_already_in_inbox_files is None:
-            
-            present_already_in_inbox_files = True
-            
-        
-        if present_archived_files is None:
-            
-            present_archived_files = True
-            
-        
-        self._automatic_archive = automatic_archive
-        self._exclude_deleted = exclude_deleted
-        self._present_new_files = present_new_files
-        self._present_already_in_inbox_files = present_already_in_inbox_files
-        self._present_archived_files = present_archived_files
-        self._min_size = min_size
-        self._min_resolution = min_resolution
+        self._exclude_deleted = True
+        self._allow_decompression_bombs = False
+        self._min_size = None
+        self._max_size = None
+        self._max_gif_size = None
+        self._min_resolution = None
+        self._max_resolution = None
+        self._automatic_archive = False
+        self._present_new_files = True
+        self._present_already_in_inbox_files = True
+        self._present_already_in_archive_files = True
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution )
+        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        post_import_options = self._automatic_archive
+        presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
+        
+        return ( pre_import_options, post_import_options, presentation_options )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution ) = serialisable_info
+        ( pre_import_options, post_import_options, presentation_options ) = serialisable_info
+        
+        ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution ) = pre_import_options
+        self._automatic_archive = post_import_options
+        ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files ) = presentation_options 
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -1565,58 +1529,164 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             present_new_files = True
             present_already_in_inbox_files = False
-            present_archived_files = False
+            present_already_in_archive_files = False
             
-            new_serialisable_info = ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution )
+            new_serialisable_info = ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_already_in_archive_files, min_size, min_resolution )
             
             return ( 2, new_serialisable_info )
             
         
-    def FileIsValid( self, size, resolution = None ):
-        
-        if self._min_size is not None and size < self._min_size:
+        if version == 2:
             
-            return False
+            ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_already_in_archive_files, min_size, min_resolution ) = old_serialisable_info
             
-        
-        if resolution is not None and self._min_resolution is not None:
+            max_size = None
+            max_resolution = None
             
-            ( x, y ) = resolution
+            allow_decompression_bombs = False
+            max_gif_size = 32 * 1048576
             
-            ( min_x, min_y ) = self._min_resolution
+            pre_import_options = ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+            post_import_options = automatic_archive
+            presentation_options = ( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
             
-            if x < min_x or y < min_y:
-                
-                return False
-                
+            new_serialisable_info = ( pre_import_options, post_import_options, presentation_options )
             
-        
-        return True
+            return ( 3, new_serialisable_info )
+            
         
     
-    def GetAutomaticArchive( self ):
+    def AllowsDecompressionBombs( self ):
+        
+        return self._allow_decompression_bombs
+        
+    
+    def AutomaticallyArchives( self ):
         
         return self._automatic_archive
         
     
-    def GetExcludeDeleted( self ):
+    def CheckFileIsValid( self, size, mime, width, height ):
+        
+        if self._min_size is not None and size < self._min_size:
+            
+            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ConvertIntToBytes( size ) + ' but the lower limit is ' + HydrusData.ConvertIntToBytes( self._min_size ) + '.' )
+            
+        
+        if self._max_size is not None and size > self._max_size:
+            
+            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ConvertIntToBytes( size ) + ' but the upper limit is ' + HydrusData.ConvertIntToBytes( self._max_size ) + '.' )
+            
+        
+        if mime == HC.IMAGE_GIF and self._max_gif_size is not None and size > self._max_gif_size:
+            
+            raise HydrusExceptions.SizeException( 'File was ' + HydrusData.ConvertIntToBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ConvertIntToBytes( self._max_gif_size ) + '.' )
+            
+        
+        if self._min_resolution is not None:
+            
+            ( min_width, min_height ) = self._min_resolution
+            
+            too_thin = width is not None and width < min_width
+            too_short = height is not None and height < min_height
+            
+            if too_thin or too_short:
+                
+                raise HydrusExceptions.SizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + HydrusData.ConvertResolutionToPrettyString( self._min_resolution ) )
+                
+            
+        
+        if self._max_resolution is not None:
+            
+            ( max_width, max_height ) = self._max_resolution
+            
+            too_wide = width is not None and width > max_width
+            too_tall = height is not None and height > max_height
+            
+            if too_wide or too_tall:
+                
+                raise HydrusExceptions.SizeException( 'File had resolution ' + HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + HydrusData.ConvertResolutionToPrettyString( self._max_resolution ) )
+                
+            
+        
+    
+    def ExcludesDeleted( self ):
         
         return self._exclude_deleted
+        
+    
+    def GetPostImportOptions( self ):
+        
+        post_import_options = self._automatic_archive
+        
+        return post_import_options
+        
+    
+    def GetPresentationOptions( self ):
+        
+        presentation_options = ( self._present_new_files, self._present_already_in_inbox_files, self._present_already_in_archive_files )
+        
+        return presentation_options
+        
+    
+    def GetPreImportOptions( self ):
+        
+        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        
+        return pre_import_options
         
     
     def GetSummary( self ):
         
         statements = []
         
+        if self._exclude_deleted:
+            
+            statements.append( 'excluding previously deleted' )
+            
+        
+        if not self._allow_decompression_bombs:
+            
+            statements.append( 'excluding decompression bombs' )
+            
+        
+        if self._min_size is not None:
+            
+            statements.append( 'excluding < ' + HydrusData.ConvertIntToBytes( self._min_size ) )
+            
+        
+        if self._max_size is not None:
+            
+            statements.append( 'excluding > ' + HydrusData.ConvertIntToBytes( self._max_size ) )
+            
+        
+        if self._max_gif_size is not None:
+            
+            statements.append( 'excluding gifs > ' + HydrusData.ConvertIntToBytes( self._max_gif_size ) )
+            
+        
+        if self._min_resolution is not None:
+            
+            ( width, height ) = self._min_resolution
+            
+            statements.append( 'excluding < ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
+            
+        
+        if self._max_resolution is not None:
+            
+            ( width, height ) = self._max_resolution
+            
+            statements.append( 'excluding > ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
+            
+        
+        #
+        
         if self._automatic_archive:
             
             statements.append( 'automatically archiving' )
             
         
-        if self._exclude_deleted:
-            
-            statements.append( 'excluding previously deleted' )
-            
+        #
         
         presentation_statements = []
         
@@ -1630,7 +1700,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             presentation_statements.append( 'already in inbox' )
             
         
-        if self._present_archived_files:
+        if self._present_already_in_archive_files:
             
             presentation_statements.append( 'already in archive' )
             
@@ -1648,21 +1718,32 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             statements.append( 'presenting ' + ', '.join( presentation_statements ) + ' files' )
             
         
-        if self._min_size is not None:
-            
-            statements.append( 'excluding < ' + HydrusData.ConvertIntToBytes( self._min_size ) )
-            
-        
-        if self._min_resolution is not None:
-            
-            ( width, height ) = self._min_resolution
-            
-            statements.append( 'excluding < ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
-            
-        
         summary = os.linesep.join( statements )
         
         return summary
+        
+    
+    def SetPostImportOptions( self, automatic_archive ):
+        
+        self._automatic_archive = automatic_archive
+        
+    
+    def SetPresentationOptions( self, present_new_files, present_already_in_inbox_files, present_already_in_archive_files ):
+        
+        self._present_new_files = present_new_files
+        self._present_already_in_inbox_files = present_already_in_inbox_files
+        self._present_already_in_archive_files = present_already_in_archive_files
+        
+    
+    def SetPreImportOptions( self, exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
+        
+        self._exclude_deleted = exclude_deleted
+        self._allow_decompression_bombs = allow_decompression_bombs
+        self._min_size = min_size
+        self._max_size = max_size
+        self._max_gif_size = max_gif_size
+        self._min_resolution = min_resolution
+        self._max_resolution = max_resolution
         
     
     def ShouldPresent( self, status, inbox ):
@@ -1677,18 +1758,13 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
                 
                 return True
                 
-            elif not inbox and self._present_archived_files:
+            elif not inbox and self._present_already_in_archive_files:
                 
                 return True
                 
             
         
         return False
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._automatic_archive, self._exclude_deleted, self._present_new_files, self._present_already_in_inbox_files, self._present_archived_files, self._min_size, self._min_resolution )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS ] = FileImportOptions
@@ -2726,7 +2802,7 @@ class PageOfImagesImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._file_import_options.GetExcludeDeleted():
+                if not self._file_import_options.ExcludesDeleted():
                     
                     status = CC.STATUS_NEW
                     note = ''
@@ -4345,7 +4421,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if status == CC.STATUS_DELETED:
                         
-                        if not self._file_import_options.GetExcludeDeleted():
+                        if not self._file_import_options.ExcludesDeleted():
                             
                             status = CC.STATUS_NEW
                             note = ''
@@ -4506,12 +4582,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( all_presentation_hashes ) > 0:
             
-            file_popup_text = self._name
-            
             files_job_key = ClientThreading.JobKey()
             
             files_job_key.SetVariable( 'popup_files_mergable', True )
-            files_job_key.SetVariable( 'popup_files', ( all_presentation_hashes, file_popup_text ) )
+            files_job_key.SetVariable( 'popup_files', ( all_presentation_hashes, self._name ) )
             
             HG.client_controller.pub( 'message', files_job_key )
             
@@ -5859,7 +5933,7 @@ class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._file_import_options.GetExcludeDeleted():
+                if not self._file_import_options.ExcludesDeleted():
                     
                     status = CC.STATUS_NEW
                     note = ''
@@ -6367,7 +6441,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             if status == CC.STATUS_DELETED:
                 
-                if not self._file_import_options.GetExcludeDeleted():
+                if not self._file_import_options.ExcludesDeleted():
                     
                     status = CC.STATUS_NEW
                     note = ''

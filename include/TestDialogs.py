@@ -84,11 +84,11 @@ class TestDBDialogs( unittest.TestCase ):
             
             dlg.SetPanel( panel )
             
-            ClientThreading.CallLater( dlg, 2, panel.Add )
+            HG.test_controller.CallLaterWXSafe( dlg, 2, panel.Add )
             
-            ClientThreading.CallLater( dlg, 4, OKChildDialog, panel )
+            HG.test_controller.CallLaterWXSafe( dlg, 4, OKChildDialog, panel )
             
-            ClientThreading.CallLater( dlg, 6, HitCancelButton, dlg )
+            HG.test_controller.CallLaterWXSafe( dlg, 6, HitCancelButton, dlg )
             
             result = dlg.ShowModal()
             
@@ -172,8 +172,8 @@ class TestNonDBDialogs( unittest.TestCase ):
         
         with ClientGUIDialogs.DialogSelectFromList( None, 'select from a list of strings', list_of_tuples ) as dlg:
             
-            ClientThreading.CallLater( self, 0.5, dlg._list.Select, 1 )
-            ClientThreading.CallLater( self,1, PressKey, dlg._list, wx.WXK_RETURN )
+            HG.test_controller.CallLaterWXSafe( self, 0.5, dlg._list.Select, 1 )
+            HG.test_controller.CallLaterWXSafe( self, 1, PressKey, dlg._list, wx.WXK_RETURN )
             
             result = dlg.ShowModal()
             

@@ -450,11 +450,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             self._controller.SetServices( all_services )
             
+            time.sleep( 1 )
+            
             admin_service = self._controller.services_manager.GetService( admin_service_key ) # let's refresh it
             
             credentials = HydrusNetwork.Credentials( host, port )
             
             admin_service.SetCredentials( credentials )
+            
+            time.sleep( 1 )
             
             response = admin_service.Request( HC.GET, 'access_key', { 'registration_key' : 'init' } )
             

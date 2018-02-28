@@ -835,12 +835,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         
-        self._dictionary[ 'booleans' ][ 'do_not_import_decompression_bombs' ] = True
-        
         self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'show_thumbnail_title_banner' ] = True
-        self._dictionary[ 'booleans' ][ 'show_thumbnail_page' ] = True
         
         self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
         
@@ -911,6 +906,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 0, 0, 0 )
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_TEXT ] = ( 112, 128, 144 ) # Slate Gray
         self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_TAGS_BOX ] = ( 0, 0, 0 )
+        
+        #
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
@@ -995,6 +992,59 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'tag_summary_generators' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        import ClientTags
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'creator', '', ', ' ) )
+        namespace_info.append( ( 'series', '', ', ' ) )
+        namespace_info.append( ( 'title', '', ', ' ) )
+        
+        separator = ' - '
+        
+        # the cleantags here converts to unicode, which is important!
+        
+        example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info, separator, example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_top' ] = tsg
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'volume', 'v', '-' ) )
+        namespace_info.append( ( 'chapter', 'c', '-' ) )
+        namespace_info.append( ( 'page', 'p', '-' ) )
+        
+        separator = '-'
+        
+        example_tags = HydrusTags.CleanTags( [ 'volume:3', 'chapter:10', 'page:330', 'page:331' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info, separator, example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_bottom_right' ] = tsg
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'creator', '', ', ' ) )
+        namespace_info.append( ( 'series', '', ', ' ) )
+        namespace_info.append( ( 'title', '', ', ' ) )
+        namespace_info.append( ( 'volume', 'v', '-' ) )
+        namespace_info.append( ( 'chapter', 'c', '-' ) )
+        namespace_info.append( ( 'page', 'p', '-' ) )
+        
+        separator = ' - '
+        
+        example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title', 'volume:1', 'chapter:1', 'page:1' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info, separator, example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'media_viewer_top' ] = tsg
+        
+        #
+        
         client_files_default = os.path.join( db_dir, 'client_files' )
         
         self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
@@ -1005,27 +1055,39 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        automatic_archive = False
         exclude_deleted = True
-        
+        allow_decompression_bombs = False
         min_size = None
+        max_size = None
+        max_gif_size = 32 * 1048576
         min_resolution = None
+        max_resolution = None
+        
+        automatic_archive = False
         
         present_new_files = True
         present_already_in_inbox_files = False
-        present_archived_files = False
+        present_already_in_archive_files = False
         
         import ClientImporting
         
-        quiet_file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
+        quiet_file_import_options = ClientImporting.FileImportOptions()
+        
+        quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        quiet_file_import_options.SetPostImportOptions( automatic_archive )
+        quiet_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
         
         present_new_files = True
         present_already_in_inbox_files = True
-        present_archived_files = True
+        present_already_in_archive_files = True
         
-        loud_file_import_options = ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
+        loud_file_import_options = ClientImporting.FileImportOptions()
+        
+        loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        loud_file_import_options.SetPostImportOptions( automatic_archive )
+        loud_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
         
@@ -1619,6 +1681,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetTagSummaryGenerator( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'tag_summary_generators' ][ name ]
+            
+        
+    
     def InvertBoolean( self, name ):
         
         with self._lock:
@@ -1854,6 +1924,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             service_key_hex = service_key.encode( 'hex' )
             
             self._dictionary[ 'suggested_tags' ][ 'favourites' ][ service_key_hex ] = list( tags )
+            
+        
+    
+    def SetTagSummaryGenerator( self, name, tag_summary_generator ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'tag_summary_generators' ][ name ] = tag_summary_generator
             
         
     

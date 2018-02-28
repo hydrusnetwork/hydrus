@@ -1,4 +1,3 @@
-import ClientCaches
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
@@ -10,7 +9,6 @@ import ClientGUIDialogs
 import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
-import ClientGUIMenus
 import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
@@ -27,6 +25,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusNetwork
 import HydrusSerialisable
+import HydrusTags
 import HydrusText
 import os
 import webbrowser
@@ -697,72 +696,173 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._auto_archive = wx.CheckBox( self, label = 'archive all imports' )
-        self._auto_archive.SetToolTip( 'If this is set, all successful imports will be automatically archived rather than sent to the inbox.' )
+        help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         
-        self._exclude_deleted = wx.CheckBox( self, label = 'exclude previously deleted files' )
-        self._exclude_deleted.SetToolTip( 'If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.' )
-        
-        self._present_new_files = wx.CheckBox( self, label = 'present new files' )
-        self._present_already_in_inbox_files = wx.CheckBox( self, label = 'present \'already in db\' files in inbox' )
-        self._present_archived_files = wx.CheckBox( self, label = 'present \'already in db\' files in archive' )
-        
-        self._min_size = ClientGUICommon.NoneableSpinCtrl( self, 'size', unit = 'KB', multiplier = 1024 )
-        self._min_size.SetValue( 5120 )
-        
-        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( self, 'resolution', num_dimensions = 2 )
-        self._min_resolution.SetValue( ( 50, 50 ) )
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
         
         #
         
-        ( automatic_archive, exclude_deleted, present_new_files, present_already_in_inbox_files, present_archived_files, min_size, min_resolution ) = file_import_options.ToTuple()
+        pre_import_panel = ClientGUICommon.StaticBox( self, 'pre-import checks' )
+        
+        self._exclude_deleted = wx.CheckBox( pre_import_panel )
+        
+        self._allow_decompression_bombs = wx.CheckBox( pre_import_panel )
+        
+        self._min_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'KB', multiplier = 1024 )
+        self._min_size.SetValue( 5120 )
+        
+        self._max_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'MB', multiplier = 1048576 )
+        self._max_size.SetValue( 100 * 1024 )
+        
+        self._max_gif_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'MB', multiplier = 1048576 )
+        self._max_gif_size.SetValue( 32 * 1024 )
+        
+        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'resolution', num_dimensions = 2 )
+        self._min_resolution.SetValue( ( 50, 50 ) )
+        
+        self._max_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'resolution', num_dimensions = 2 )
+        self._max_resolution.SetValue( ( 8192, 8192 ) )
+        
+        #
+        
+        post_import_panel = ClientGUICommon.StaticBox( self, 'post-import actions' )
+        
+        self._auto_archive = wx.CheckBox( post_import_panel )
+        
+        #
+        
+        presentation_panel = ClientGUICommon.StaticBox( self, 'presentation options' )
+        
+        self._present_new_files = wx.CheckBox( presentation_panel )
+        self._present_already_in_inbox_files = wx.CheckBox( presentation_panel )
+        self._present_already_in_archive_files = wx.CheckBox( presentation_panel )
+        
+        #
+        
+        ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        
+        self._exclude_deleted.SetValue( exclude_deleted )
+        self._allow_decompression_bombs.SetValue( allow_decompression_bombs )
+        self._min_size.SetValue( min_size )
+        self._max_size.SetValue( max_size )
+        self._max_gif_size.SetValue( max_gif_size )
+        self._min_resolution.SetValue( min_resolution )
+        self._max_resolution.SetValue( max_resolution )
+        
+        #
+        
+        automatic_archive = file_import_options.GetPostImportOptions()
         
         self._auto_archive.SetValue( automatic_archive )
-        self._exclude_deleted.SetValue( exclude_deleted )
+        
+        #
+        
+        ( present_new_files, present_already_in_inbox_files, present_already_in_archive_files ) = file_import_options.GetPresentationOptions()
+        
         self._present_new_files.SetValue( present_new_files )
         self._present_already_in_inbox_files.SetValue( present_already_in_inbox_files )
-        self._present_archived_files.SetValue( present_archived_files )
-        self._min_size.SetValue( min_size )
-        self._min_resolution.SetValue( min_resolution )
+        self._present_already_in_archive_files.SetValue( present_already_in_archive_files )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
+        rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
+        rows.append( ( 'minimum filesize: ', self._min_size ) )
+        rows.append( ( 'maximum filesize: ', self._max_size ) )
+        rows.append( ( 'maximum gif filesize: ', self._max_gif_size ) )
+        rows.append( ( 'minimum resolution: ', self._min_resolution ) )
+        rows.append( ( 'maximum resolution: ', self._max_resolution ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( pre_import_panel, rows )
+        
+        pre_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'archive all imports: ', self._auto_archive ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( post_import_panel, rows )
+        
+        post_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'present new files', self._present_new_files ) )
+        rows.append( ( 'present \'already in db\' files in inbox', self._present_already_in_inbox_files ) )
+        rows.append( ( 'present \'already in db\' files in archive', self._present_already_in_archive_files ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( presentation_panel, rows )
+        
+        presentation_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._auto_archive, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._exclude_deleted, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        presentation_message = 'For regular import pages, \'presentation\' means if the imported file\'s thumbnail will be added. For quieter queues like subscriptions, it determines if the file will be in any popup message button.'
-        presentation_message += os.linesep * 2
-        presentation_message += 'If you have a very large (10k+ files) file import page, consider hiding some or all of its thumbs to reduce ui lag and increase import speed.'
-        
-        presentation_st = ClientGUICommon.BetterStaticText( self, presentation_message )
-        
-        presentation_st.Wrap( 440 )
-        
-        vbox.Add( presentation_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._present_new_files, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._present_already_in_inbox_files, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._present_archived_files, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox.Add( ClientGUICommon.BetterStaticText( self, 'minimum:' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._min_size, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._min_resolution, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( presentation_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
     
+    def _ShowHelp( self ):
+        
+        help_message = '''-exclude previously deleted files-
+
+If this is set and an incoming file has already been seen and deleted before by this client, the import will be abandoned. This is useful to make sure you do not keep importing and deleting the same bad files over and over. Files currently in the trash count as deleted.
+
+-allow decompression bombs-
+
+Some images, called Decompression Bombs, consume huge amounts of memory and CPU time (typically multiple GB and 30s+) to render. These can be malicious attacks or accidentally inelegant compressions of very large images (typically 100MegaPixel+ pngs). Keep this unchecked to catch and disallow them before they blat your computer.
+
+-max gif size-
+
+Some artists and over-enthusiastic fans re-encode popular webms into gif, typically so they can be viewed on simpler platforms like older phones. These people do not know what they are doing and generate 20MB, 100MB, even 220MB(!) gif files that they then upload to the boorus. Most hydrus users do not want these duplicate, bloated, bad-paletted, and CPU-laggy files on their clients, so this can probit them.
+
+-archive all imports-
+
+If this is set, all successful imports will be archived rather than sent to the inbox. This applies to files 'already in db' as well (these would otherwise retain their existing inbox status unaltered).
+
+-presentation options-
+
+For regular import pages, 'presentation' means if the imported file's thumbnail will be added. For quieter queues like subscriptions, it determines if the file will be in any popup message button.
+
+If you have a very large (10k+ files) file import page, consider hiding some or all of its thumbs to reduce ui lag and increase overall import speed.'''
+        
+        wx.MessageBox( help_message )
+        
+    
     def GetValue( self ):
         
-        automatic_archive = self._auto_archive.GetValue()
         exclude_deleted = self._exclude_deleted.GetValue()
+        allow_decompression_bombs = self._allow_decompression_bombs.GetValue()
+        min_size = self._min_size.GetValue()
+        max_size = self._max_size.GetValue()
+        max_gif_size = self._max_gif_size.GetValue()
+        min_resolution = self._min_resolution.GetValue()
+        max_resolution = self._max_resolution.GetValue()
+        
+        automatic_archive = self._auto_archive.GetValue()
+        
         present_new_files = self._present_new_files.GetValue()
         present_already_in_inbox_files = self._present_already_in_inbox_files.GetValue()
-        present_archived_files = self._present_archived_files.GetValue()
-        min_size = self._min_size.GetValue()
-        min_resolution = self._min_resolution.GetValue()
+        present_already_in_archive_files = self._present_already_in_archive_files.GetValue()
         
-        return ClientImporting.FileImportOptions( automatic_archive = automatic_archive, exclude_deleted = exclude_deleted, present_new_files = present_new_files, present_already_in_inbox_files = present_already_in_inbox_files, present_archived_files = present_archived_files, min_size = min_size, min_resolution = min_resolution )
+        file_import_options = ClientImporting.FileImportOptions()
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPostImportOptions( automatic_archive )
+        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        return file_import_options
         
     
 class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -2523,6 +2623,8 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
         #
         
         blacklist_panel = ClientGUICommon.StaticBox( self, 'exclude these' )
@@ -2586,15 +2688,6 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         whitelist_panel.Add( button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
-        
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.Add( st, CC.FLAGS_VCENTER )
-        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2974,50 +3067,61 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        namespace_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( edit_panel )
-        
-        # add in a way to maintain order
-        # I guess an enumerated column and some up/down buttons on the panel
-        
-        self._namespace_info = ClientGUIListCtrl.BetterListCtrl( namespace_info_panel, 'tag_summary_generator_namespace_info', 8, 24, [ ( 'namespace', -1 ), ( 'prefix', 8 ), ( 'separator', 8 ) ], self._ConvertNamespaceInfoToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
-        
-        namespace_info_panel.SetListCtrl( self._namespace_info )
-        
-        namespace_info_panel.AddButton( 'add', self._Add )
-        namespace_info_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
-        namespace_info_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        self._namespaces_listbox = ClientGUIListBoxes.QueueListBox( edit_panel, 8, self._ConvertNamespaceToListBoxString, self._AddNamespaceInfo, self._EditNamespaceInfo )
         
         self._separator = wx.TextCtrl( edit_panel )
         
-        # example panel
-        # multilinelistpanel
-        # readonly result
+        example_panel = ClientGUICommon.StaticBox( self, 'example' )
+        
+        self._example_tags = wx.TextCtrl( example_panel, style = wx.TE_MULTILINE )
+        
+        self._test_result = wx.TextCtrl( example_panel, style = wx.TE_READONLY )
         
         #
         
-        ( namespace_info, separator ) = tag_summary_generator.ToTuple()
+        ( namespace_info, separator, example_tags ) = tag_summary_generator.ToTuple()
         
-        self._namespace_info.SetData( namespace_info )
+        self._namespaces_listbox.AddDatas( namespace_info )
         self._separator.SetValue( separator )
+        self._example_tags.SetValue( os.linesep.join( example_tags ) )
+        
+        self._UpdateTest()
         
         #
         
-        edit_panel.Add( self._namespace_info, CC.FLAGS_EXPAND_BOTH_WAYS )
+        edit_panel.Add( self._namespaces_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ClientGUICommon.WrapInText( self._separator, edit_panel, 'separator' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        example_panel.Add( ClientGUICommon.BetterStaticText( example_panel, 'Enter some newline-separated tags here to see what your current object would generate.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        example_panel.Add( self._example_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
+        example_panel.Add( self._test_result, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
-    
-    def _Add( self ):
+        #
         
-        pass
+        self._separator.Bind( wx.EVT_TEXT, self.EventText )
+        self._example_tags.Bind( wx.EVT_TEXT, self.EventText )
+        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventText )
         
     
-    def _ConvertNamespaceInfoToListCtrlTuples( self, namespace_info ):
+    def _AddNamespaceInfo( self ):
+        
+        namespace = ''
+        prefix = ''
+        separator = ', '
+        
+        namespace_info = ( namespace, prefix, separator )
+        
+        return self._EditNamespaceInfo( namespace_info )
+        
+    
+    def _ConvertNamespaceToListBoxString( self, namespace_info ):
         
         ( namespace, prefix, separator ) = namespace_info
         
@@ -3033,30 +3137,114 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_prefix = prefix
         pretty_separator = separator
         
-        display_tuple = ( pretty_namespace, pretty_prefix, pretty_separator )
-        sort_tuple = ( namespace, prefix, separator )
-        
-        return ( display_tuple, sort_tuple )
+        return pretty_namespace + ' | prefix: "' + pretty_prefix + '" | separator: "' + pretty_separator + '"'
         
     
-    def _Delete( self ):
+    def _EditNamespaceInfo( self, namespace_info ):
         
-        pass
+        ( namespace, prefix, separator ) = namespace_info
+        
+        message = 'Edit namespace.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, namespace, allow_blank = True ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                namespace = dlg.GetValue()
+                
+            else:
+                
+                return ( False, '' )
+                
+            
+        
+        message = 'Edit prefix.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, prefix, allow_blank = True ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                prefix = dlg.GetValue()
+                
+            else:
+                
+                return ( False, '' )
+                
+            
+        
+        message = 'Edit separator.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, separator, allow_blank = True ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                separator = dlg.GetValue()
+                
+                namespace_info = ( namespace, prefix, separator )
+                
+                return ( True, namespace_info )
+                
+            else:
+                
+                return ( False, '' )
+                
+            
         
     
-    def _Edit( self ):
+    def _UpdateTest( self ):
         
-        pass
+        tag_summary_generator = self.GetValue()
+        
+        self._test_result.SetValue( tag_summary_generator.GenerateExampleSummary() )
+        
+    
+    def EventText( self, event ):
+        
+        self._UpdateTest()
+        
+        event.Skip()
         
     
     def GetValue( self ):
         
-        # order based on the new enumerated column
-        
-        namespace_info = []
+        namespace_info = self._namespaces_listbox.GetData()
         separator = self._separator.GetValue()
+        example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.GetValue() ) )
         
-        ClientTags.TagSummaryGenerator( namespace_info, separator )
+        return ClientTags.TagSummaryGenerator( namespace_info, separator, example_tags )
+        
+    
+class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, tag_summary_generator ):
+        
+        label = tag_summary_generator.GenerateExampleSummary()
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
+        
+        self._tag_summary_generator = tag_summary_generator
+        
+    
+    def _Edit( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag summary' ) as dlg:
+            
+            panel = EditTagSummaryGeneratorPanel( dlg, self._tag_summary_generator )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._tag_summary_generator = panel.GetValue()
+                
+                self.SetLabelText( self._tag_summary_generator.GenerateExampleSummary() )
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._tag_summary_generator
         
     
 class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -3090,7 +3278,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         path_components_panel = ClientGUICommon.StaticBox( self, 'path components' )
         
-        self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, self._ConvertPathComponentToString, self._AddPathComponent, self._EditPathComponent )
+        self._path_components = ClientGUIListBoxes.QueueListBox( path_components_panel, 6, self._ConvertPathComponentToString, self._AddPathComponent, self._EditPathComponent )
         
         #
         
@@ -3223,8 +3411,6 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        import ClientGUIParsing
-        
         string_match = ClientParsing.StringMatch()
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
@@ -3325,8 +3511,6 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            import ClientGUIParsing
-            
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit value' ) as dlg:
                 
                 panel = ClientGUIParsing.EditStringMatchPanel( dlg, original_string_match )
@@ -3358,8 +3542,6 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     def _EditPathComponent( self, string_match ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit path component' ) as dlg:
-            
-            import ClientGUIParsing
             
             panel = ClientGUIParsing.EditStringMatchPanel( dlg, string_match )
             
@@ -3513,6 +3695,8 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
@@ -3534,15 +3718,6 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl.Sort( 0 )
         
         #
-        
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.Add( st, CC.FLAGS_VCENTER )
-        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         

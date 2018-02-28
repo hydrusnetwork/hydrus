@@ -182,6 +182,44 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
     
+    def _DropdownHideShow( self ):
+        
+        if not self._float_mode:
+            
+            return
+            
+        
+        try:
+            
+            if self._ShouldShow():
+                
+                self._ShowDropdown()
+                
+                if self._move_hide_job is not None:
+                    
+                    self._move_hide_job.Cancel()
+                    
+                    self._move_hide_job = None
+                    
+                
+            else:
+                
+                self._HideDropdown()
+                
+            
+        except:
+            
+            if self._move_hide_job is not None:
+                
+                self._move_hide_job.Cancel()
+                
+                self._move_hide_job = None
+                
+            
+            raise
+            
+        
+    
     def _GenerateMatches( self ):
         
         raise NotImplementedError()
@@ -227,7 +265,7 @@ class AutoCompleteDropdown( wx.Panel ):
                     
                     if self._move_hide_job is None:
                         
-                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self.DropdownHideShow )
+                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self._DropdownHideShow )
                         
                     
                     self._move_hide_job.Delay( 0.25 )
@@ -235,7 +273,7 @@ class AutoCompleteDropdown( wx.Panel ):
                 
             else:
                 
-                self.DropdownHideShow()
+                self._DropdownHideShow()
                 
             
         
@@ -374,39 +412,6 @@ class AutoCompleteDropdown( wx.Panel ):
         self._BroadcastChoices( predicates )
         
     
-    def DropdownHideShow( self ):
-        
-        try:
-            
-            if self._ShouldShow():
-                
-                self._ShowDropdown()
-                
-                if self._move_hide_job is not None:
-                    
-                    self._move_hide_job.Cancel()
-                    
-                    self._move_hide_job = None
-                    
-                
-            else:
-                
-                self._HideDropdown()
-                
-            
-        except:
-            
-            if self._move_hide_job is not None:
-                
-                self._move_hide_job.Cancel()
-                
-                self._move_hide_job = None
-                
-            
-            raise
-            
-        
-    
     def EventCharHook( self, event ):
         
         HG.client_controller.ResetIdleTimer()
@@ -480,7 +485,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._float_mode:
             
-            self.DropdownHideShow()
+            self._DropdownHideShow()
             
         
         event.Skip()
@@ -543,7 +548,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._float_mode:
             
-            self.DropdownHideShow()
+            self._DropdownHideShow()
             
         
         event.Skip()
@@ -580,7 +585,10 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def ForceSizeCalcNow( self ):
         
-        self.DropdownHideShow()
+        if self._float_mode:
+            
+            self._DropdownHideShow()
+            
         
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):

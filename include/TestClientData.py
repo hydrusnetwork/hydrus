@@ -1,5 +1,8 @@
+import ClientConstants as CC
 import ClientData
 import ClientImporting
+import HydrusConstants as HC
+import HydrusExceptions
 import os
 import unittest
 
@@ -172,3 +175,194 @@ class TestData( unittest.TestCase ):
         self.assertEqual( slow_checker_options.GetNextCheckTime( new_thread_seed_cache, last_check_time ), last_check_time + 600 )
         
     
+    def test_file_import_options( self ):
+        
+        file_import_options = ClientImporting.FileImportOptions()
+        
+        exclude_deleted = False
+        allow_decompression_bombs = False
+        min_size = None
+        max_size = None
+        max_gif_size = None
+        min_resolution = None
+        max_resolution = None
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        automatic_archive = False
+        
+        file_import_options.SetPostImportOptions( automatic_archive )
+        
+        present_new_files = True
+        present_already_in_inbox_files = True
+        present_already_in_archive_files = True
+        
+        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        #
+        
+        self.assertFalse( file_import_options.ExcludesDeleted() )
+        self.assertFalse( file_import_options.AllowsDecompressionBombs() )
+        self.assertFalse( file_import_options.AutomaticallyArchives() )
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        file_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
+        
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_DELETED, False ) )
+        
+        #
+        
+        exclude_deleted = True
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        self.assertTrue( file_import_options.ExcludesDeleted() )
+        self.assertFalse( file_import_options.AllowsDecompressionBombs() )
+        self.assertFalse( file_import_options.AutomaticallyArchives() )
+        
+        #
+        
+        allow_decompression_bombs = True
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        self.assertTrue( file_import_options.ExcludesDeleted() )
+        self.assertTrue( file_import_options.AllowsDecompressionBombs() )
+        self.assertFalse( file_import_options.AutomaticallyArchives() )
+        
+        #
+        
+        automatic_archive = True
+        
+        file_import_options.SetPostImportOptions( automatic_archive )
+        
+        self.assertTrue( file_import_options.ExcludesDeleted() )
+        self.assertTrue( file_import_options.AllowsDecompressionBombs() )
+        self.assertTrue( file_import_options.AutomaticallyArchives() )
+        
+        #
+        
+        min_size = 4096
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 512, HC.IMAGE_JPEG, 640, 480 )
+            
+        
+        #
+        
+        min_size = None
+        max_size = 2000
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
+            
+        
+        #
+        
+        max_size = None
+        max_gif_size = 2000
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
+        file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
+        
+        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_GIF, 640, 480 )
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 2200, HC.IMAGE_GIF, 640, 480 )
+            
+        
+        #
+        
+        max_gif_size = None
+        min_resolution = ( 200, 100 )
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 180, 480 )
+            
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 80 )
+            
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 180 )
+        
+        #
+        
+        min_resolution = None
+        max_resolution = ( 3000, 4000 )
+        
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 3200, 480 )
+            
+        
+        with self.assertRaises( HydrusExceptions.SizeException ):
+            
+            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 4200 )
+            
+        
+        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 2800, 3800 )
+        
+        #
+        
+        present_new_files = False
+        
+        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        
+        #
+        
+        present_new_files = True
+        present_already_in_inbox_files = False
+        
+        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        
+        #
+        
+        present_already_in_inbox_files = True
+        present_already_in_archive_files = False
+        
+        file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        

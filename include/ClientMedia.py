@@ -1687,18 +1687,18 @@ class MediaSingleton( Media ):
     
     def GetTitleString( self ):
         
-        namespace_info = []
+        new_options = HG.client_controller.new_options
         
-        namespace_info.append( ( 'creator', '', ', ' ) )
-        namespace_info.append( ( 'series', '', ', ' ) )
-        namespace_info.append( ( 'title', '', ', ' ) )
-        namespace_info.append( ( 'volume', 'v', '-' ) )
-        namespace_info.append( ( 'chapter', 'c', '-' ) )
-        namespace_info.append( ( 'page', 'p', '-' ) )
+        tags_summary_generator = new_options.GetTagSummaryGenerator( 'media_viewer_top' )
         
-        tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, ' - ' )
+        tm = self.GetTagsManager()
         
-        tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
+        tags = tm.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY ).union( tm.GetPending( CC.COMBINED_TAG_SERVICE_KEY ) )
+        
+        if len( tags ) == 0:
+            
+            return ''
+            
         
         siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
         
@@ -2383,7 +2383,7 @@ class TagsManagerSimple( object ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
+        return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
         
     
     def GetDeleted( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
@@ -2395,7 +2395,7 @@ class TagsManagerSimple( object ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.CONTENT_STATUS_DELETED ] )
+        return statuses_to_tags[ HC.CONTENT_STATUS_DELETED ]
         
     
     def GetNamespaceSlice( self, namespaces ):
@@ -2425,7 +2425,7 @@ class TagsManagerSimple( object ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
+        return statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
         
     
     def GetPetitioned( self, service_key = CC.COMBINED_TAG_SERVICE_KEY ):
@@ -2437,7 +2437,7 @@ class TagsManagerSimple( object ):
         
         statuses_to_tags = self._service_keys_to_statuses_to_tags[ service_key ]
         
-        return set( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] )
+        return statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]
         
     
 class TagsManager( TagsManagerSimple ):

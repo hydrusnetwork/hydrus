@@ -565,18 +565,24 @@ class HydrusDB( object ):
             
         except Exception as e:
             
+            self._ManageDBError( job, e )
+            
             try:
                 
                 self._Rollback()
                 
             except Exception as rollback_e:
                 
-                HydrusData.Print( 'When the transaction failed, attempting to rollback the database failed.' )
+                HydrusData.Print( 'When the transaction failed, attempting to rollback the database failed. Please restart the client as soon as is convenient.' )
+                
+                self._in_transaction = False
+                
+                self._CloseDBCursor()
+                
+                self._InitDBCursor()
                 
                 HydrusData.PrintException( rollback_e )
                 
-            
-            self._ManageDBError( job, e )
             
         finally:
             

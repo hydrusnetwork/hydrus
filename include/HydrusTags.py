@@ -67,6 +67,34 @@ def CensorshipMatch( tag, censorships ):
     
     return False
     
+def CollapseMultipleSortedNumericTagsToMinMax( tags ):
+    
+    if len( tags ) <= 2:
+        
+        return tags
+        
+    else:
+        
+        includes_non_numeric_tag = True in ( not isinstance( ConvertTagToSortable( tag ), tuple ) for tag in tags )
+        
+        if includes_non_numeric_tag:
+            
+            return tags
+            
+        else:
+            
+            # this list of tags is entirely numeric and may well be something like 1, 2, 3, 4, 5
+            # the caller wants to present 1-5 instead, so lets cut out the first and last
+            
+            if not isinstance( tags, list ):
+                
+                tags = list( tags )
+                
+            
+            return [ tags[0], tags[-1] ]
+            
+        
+    
 def ConvertTagToSortable( t ):
     
     if len( t ) > 0 and t[0].isdecimal():

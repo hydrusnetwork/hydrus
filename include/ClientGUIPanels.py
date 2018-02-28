@@ -797,7 +797,7 @@ class ReviewServicePanel( wx.Panel ):
             
             message = 'This will tell the database to process any outstanding update files.'
             message += os.linesep * 2
-            message += 'This is a big task that usually runs during idle time. It locks the entire database and takes over the ui, stopping you from interacting with it. It is cancellable.'
+            message += 'This is a big task that usually runs during idle time. It locks the entire database and takes over the ui, stopping you from interacting with it. It is cancellable but may still take some time to return ui control to you.'
             message += os.linesep * 2
             message += 'If you are a new user, click \'no\'!'
             

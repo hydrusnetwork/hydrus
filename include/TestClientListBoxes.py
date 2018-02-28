@@ -11,9 +11,14 @@ import unittest
 import wx
 import HydrusGlobals as HG
 
-def DoClick( click, panel ):
+def DoClick( click, panel, do_delayed_ok_afterwards = False ):
     
     wx.QueueEvent( panel, click )
+    
+    if do_delayed_ok_afterwards:
+        
+        HG.test_controller.CallLaterWXSafe( panel, 1, PressKeyOnFocusedWindow, wx.WXK_RETURN )
+        
     
     wx.YieldIfNeeded()
     
@@ -45,6 +50,20 @@ def GetAllClickableIndices( panel ):
         
     
     return all_clickable_indices
+    
+def PressKey( window, key ):
+    
+    window.SetFocus()
+    
+    uias = wx.UIActionSimulator()
+    
+    uias.Char( key )
+    
+def PressKeyOnFocusedWindow( key ):
+    
+    uias = wx.UIActionSimulator()
+    
+    uias.Char( key )
     
 class TestListBoxes( unittest.TestCase ):
     
@@ -191,7 +210,7 @@ class TestListBoxes( unittest.TestCase ):
             doubleclick.SetX( 5 )
             doubleclick.SetY( all_clickable_indices[ random_index ] )
             
-            DoClick( doubleclick, panel )
+            DoClick( doubleclick, panel, do_delayed_ok_afterwards = True )
             
             self.assertEqual( panel.GetNamespaceColours(), new_namespace_colours )
             

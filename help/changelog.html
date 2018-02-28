@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 296</h3></li>
+				<ul>
+					<li>?the 'allow decompression bombs' option is now moved to 'file import options'. it defaults to False</li>
+					<li>file import options now allow max size and max resolution rules. they default to None</li>
+					<li>file import options now allows a max gif size rule to deal with THE SFM COMMUNITY. it defaults to 32MB</li>
+					<li>file imports will give better quality errors if they fail due to file import option exclusion rules</li>
+					<li>file import fail errors will now also specify the incorrect amount--e.g. if a file is 64KB but the minimum limit is 256KB, it will state this in the error</li>
+					<li>wrote a bunch of unit tests to make sure the new complicated file import options object works good</li>
+					<li>finished the tag summary edit ui and added a new 'tag summaries' page to the options</li>
+					<li>you can set the thumbnail top, thumbnail bottom right, and media viewer top summaries here, and everything should link up right!</li>
+					<li>the old options to hide thumbnail top and thumbnail bottom right text are removed from the options->gui page</li>
+					<li>tag summaries now include pending tags again</li>
+					<li>tag summaries will order tags according to hydrus numeric tag sorting rules (0 < 0a < 0b < 1 < 9 < 10)</li>
+					<li>tag summaries will collapse namespace groups that all start with decimals into a "min-max" phrase instead of the whole list (so 'collecting' a chapter will list p1-23 for the page phrase instead of each number in turn)</li>
+					<li>fixed some potential error popups from the autocomplete dropdown when not in float mode (this hit non-windows users more often)</li>
+					<li>split the parser help pages up a bit more and updated the client ui html links</li>
+					<li>finished off the formulae help pages</li>
+					<li>updated to wx 4.0.1 on all platforms. it promises increased stability!</li>
+					<li>default tag import options are now moved to the 'importing' options panel, alongside the default file import options</li>
+					<li>the database will deal with and recover from rollback exceptions more reliably. rollback-loops should be fixed, but the original event will now also produce a request to restart the client (which will safely reset everything) anyway</li>
+					<li>improved how I create and layout the 'help for this panel -->' help buttons</li>
+					<li>the job scheduler now regularly checks for and clears out dead wx-related jobs (this saves a bit of memory)</li>
+					<li>cleaned up an old tag retrieval method that was wasting CPU. some larger pages with many thousands of tags should do tag calculation after selection and so on a bit faster</li>
+					<li>fixed a thread shutdown test that wasn't working until app shutdown time</li>
+					<li>improved some more thread shutdown code</li>
+					<li>deleted some old thread-inefficient calllater and wx-safe timer code</li>
+					<li>emergency server errors that occur during the response writing stage should be handled better by the client</li>
+					<li>emergency server errors are more robust in general serverside</li>
+					<li>improved the quality of the errors thrown by the new network engine's login system</li>
+					<li>improved some test timing and key press simulation code</li>
+					<li>misc refactoring</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 295</h3></li>
 				<ul>
 					<li>fixed the runtimeerror popups that would come up on restore from minimise or main gui move after the complete destruction of a general search page</li>

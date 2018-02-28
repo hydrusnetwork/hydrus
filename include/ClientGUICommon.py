@@ -460,11 +460,16 @@ def WrapInGrid( parent, rows, expand_text = False ):
     
     return gridbox
     
-def WrapInText( control, parent, text ):
+def WrapInText( control, parent, text, colour = None ):
     
     hbox = wx.BoxSizer( wx.HORIZONTAL )
     
     st = BetterStaticText( parent, text )
+    
+    if colour is not None:
+        
+        st.SetForegroundColour( colour )
+        
     
     hbox.Add( st, CC.FLAGS_VCENTER )
     hbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )

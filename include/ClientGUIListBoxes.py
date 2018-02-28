@@ -190,7 +190,7 @@ class AddEditDeleteListBox( wx.Panel ):
     
 class QueueListBox( wx.Panel ):
     
-    def __init__( self, parent, data_to_pretty_callable, add_callable = None, edit_callable = None ):
+    def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None ):
         
         self._data_to_pretty_callable = data_to_pretty_callable
         self._add_callable = add_callable
@@ -243,6 +243,12 @@ class QueueListBox( wx.Panel ):
         vbox.Add( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        #
+        
+        ( width, height ) = ClientData.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        
+        self._listbox.SetInitialSize( ( width, height ) )
         
         #
         

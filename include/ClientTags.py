@@ -247,7 +247,7 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Tag Summary Generator'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, namespace_info = None, separator = None ):
+    def __init__( self, namespace_info = None, separator = None, example_tags = None ):
         
         if namespace_info is None:
             
@@ -263,20 +263,26 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
             separator = ' - '
             
         
+        if example_tags is None:
+            
+            example_tags = []
+            
+        
         self._namespace_info = namespace_info
         self._separator = separator
+        self._example_tags = list( example_tags )
         
         self._UpdateNamespaceLookup()
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._namespace_info, self._separator )
+        return ( self._namespace_info, self._separator, self._example_tags )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._namespace_info, self._separator ) = serialisable_info
+        ( self._namespace_info, self._separator, self._example_tags ) = serialisable_info
         
         self._namespace_info = [ tuple( row ) for row in self._namespace_info ]
         
@@ -286,6 +292,11 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     def _UpdateNamespaceLookup( self ):
         
         self._interesting_namespaces = { namespace for ( namespace, prefix, separator ) in self._namespace_info }
+        
+    
+    def GenerateExampleSummary( self ):
+        
+        return self.GenerateSummary( self._example_tags )
         
     
     def GenerateSummary( self, tags, max_length = None ):
@@ -302,9 +313,13 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        for l in namespaces_to_subtags.values():
+        for ( namespace, unsorted_l ) in list( namespaces_to_subtags.items() ):
             
-            l.sort()
+            sorted_l = HydrusTags.SortNumericTags( unsorted_l )
+            
+            sorted_l = HydrusTags.CollapseMultipleSortedNumericTagsToMinMax( sorted_l )
+            
+            namespaces_to_subtags[ namespace ] = sorted_l
             
         
         namespace_texts = []
@@ -333,7 +348,7 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._namespace_info, self._separator )
+        return ( self._namespace_info, self._separator, self._example_tags )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR ] = TagSummaryGenerator

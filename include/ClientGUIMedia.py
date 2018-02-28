@@ -3997,60 +3997,17 @@ class Thumbnail( Selectable ):
         
         new_options = HG.client_controller.new_options
         
-        if new_options.GetBoolean( 'show_thumbnail_page' ):
-            
-            namespace_info = []
-            
-            namespace_info.append( ( 'volume', 'v', '-' ) )
-            namespace_info.append( ( 'chapter', 'c', '-' ) )
-            namespace_info.append( ( 'page', 'p', '-' ) )
-            
-            tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, '-' )
-            
-            tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
-            
-            siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-            
-            tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
-            
-            lower_summary = tags_summary_generator.GenerateSummary( tags )
-            
-            if len( lower_summary ) > 0:
-                
-                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-                
-                ( text_x, text_y ) = dc.GetTextExtent( lower_summary )
-                
-                top_left_x = width - text_x - CC.THUMBNAIL_BORDER
-                top_left_y = height - text_y - CC.THUMBNAIL_BORDER
-                
-                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
-                
-                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
-                
-                dc.SetPen( wx.TRANSPARENT_PEN )
-                
-                dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
-                
-                dc.DrawText( lower_summary, top_left_x, top_left_y )
-                
-            
+        tm = self.GetTagsManager()
         
-        if new_options.GetBoolean( 'show_thumbnail_title_banner' ):
-            
-            namespace_info = []
-            
-            namespace_info.append( ( 'creator', '', ', ' ) )
-            namespace_info.append( ( 'series', '', ', ' ) )
-            namespace_info.append( ( 'title', '', ', ' ) )
-            
-            tags_summary_generator = ClientTags.TagSummaryGenerator( namespace_info, ' - ' )
-            
-            tags = self.GetTagsManager().GetCurrent( CC.COMBINED_TAG_SERVICE_KEY )
+        tags = tm.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY ).union( tm.GetPending( CC.COMBINED_TAG_SERVICE_KEY ) )
+        
+        if len( tags ) > 0:
             
             siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
             
             tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
+            
+            tags_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
             upper_summary = tags_summary_generator.GenerateSummary( tags )
             
@@ -4072,6 +4029,30 @@ class Thumbnail( Selectable ):
                 dc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
                 
                 dc.DrawText( upper_summary, top_left_x, top_left_y )
+                
+            
+            tags_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
+            
+            lower_summary = tags_summary_generator.GenerateSummary( tags )
+            
+            if len( lower_summary ) > 0:
+                
+                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+                
+                ( text_x, text_y ) = dc.GetTextExtent( lower_summary )
+                
+                top_left_x = width - text_x - CC.THUMBNAIL_BORDER
+                top_left_y = height - text_y - CC.THUMBNAIL_BORDER
+                
+                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
+                
+                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
+                
+                dc.SetPen( wx.TRANSPARENT_PEN )
+                
+                dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
+                
+                dc.DrawText( lower_summary, top_left_x, top_left_y )
                 
             
         

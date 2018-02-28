@@ -432,6 +432,11 @@ class HydrusResource( Resource ):
         
         self._CleanUpTempFile( request )
         
+        if request.channel is None:
+            
+            raise HydrusExceptions.ServerException( 'Channel was closed! Probably a connectionLost that was not caught!' )
+            
+        
         response_context = request.hydrus_response_context
         
         status_code = response_context.GetStatusCode()
@@ -556,11 +561,20 @@ class HydrusResource( Resource ):
         try: HydrusData.DebugPrint( failure.getTraceback() )
         except: pass
         
-        try: request.write( failure.getTraceback() )
-        except: pass
+        if request.channel is not None:
+            
+            try: request.setResponseCode( 500 )
+            except: pass
+            
+            try: request.write( failure.getTraceback() )
+            except: pass
+            
         
-        try: request.finish()
-        except: pass
+        if not request.finished:
+            
+            try: request.finish()
+            except: pass
+            
         
     
     def _errbackHandleProcessingError( self, failure, request ):

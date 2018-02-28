@@ -19,7 +19,10 @@
 			<ul>
 				<li>pip install beautifulsoup4 lxml lz4 nose numpy opencv-python six pafy Pillow psutil pycrypto pylzma PyOpenSSL PyPDF2 PyYAML requests Send2Trash service_identity twisted youtube-dl</li>
 			</ul>
-			<p>You may want to do all that in smaller batches. Ultimately, the best way to figure out if you have enough is to just keep running client.pyw and see what it complains about missing.</p>
+			<p>You may want to do all that in smaller batches. Ultimately, the best way to figure out if you have enough for hydrus is to just keep running client.pyw and see what it complains about missing. If you are not familiar with pip and get an error about a library already existing, know that you update an existing library with the --upgrade switch, like so:</p>
+			<ul>
+				<li>pip install --upgrade libraryname</li>
+			</ul>
 			<p>For Windows, depending on which compiler you are using, pip can have problems building some modules like lz4 and lxml. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times. You may want to update python's sqlite3.dll as well--you can get it <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in C:\Python27\DLLs or wherever you have python installed. I have a fair bit of experience with Windows python, so send me a mail if you need help.</a>
 			<p>A user has also created <a href="https://github.com/eider-i128/hydrus-win">an environment</a> to help Windows users run from source and build a distribution.</p>
 			<p>You will also need wxPython 4.0. This can be simple or complicated. For Windows and OS X, just get it with pip like the rest:</p>

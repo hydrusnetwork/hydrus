@@ -16,6 +16,8 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         help_button.SetToolTip( 'Show help regarding these checker options.' )
         
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
         # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
         # or indeed this could just take the seed cache and last check of the caller, if there is one
         # this would be more useful to the user, to know 'right, on ok, it'll refresh in 30 mins'
@@ -50,16 +52,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        help_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        st = ClientGUICommon.BetterStaticText( self, 'help for this panel -->' )
-        
-        st.SetForegroundColour( wx.Colour( 0, 0, 255 ) )
-        
-        help_hbox.Add( st, CC.FLAGS_VCENTER )
-        help_hbox.Add( help_button, CC.FLAGS_VCENTER )
-        
-        vbox.Add( help_hbox, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )

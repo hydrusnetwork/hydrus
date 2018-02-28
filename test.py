@@ -149,6 +149,10 @@ class Controller( object ):
         
         self._cookies = {}
         
+        self._job_scheduler = HydrusThreading.JobScheduler( self )
+        
+        self._job_scheduler.start()
+        
     
     def _GetCallToThread( self ):
         
@@ -269,9 +273,48 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
-    def CallLaterWXSafe( self, *args, **kwargs ):
+    def CallLater( self, delay, func, *args, **kwargs ):
         
-        pass
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, call, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
+    def CallLaterWXSafe( self, window, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, call, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
+    def CallRepeating( self, period, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, call, period, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
+        
+    
+    def CallRepeatingWXSafe( self, window, period, delay, func, *args, **kwargs ):
+        
+        call = HydrusData.Call( func, *args, **kwargs )
+        
+        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, call, period, initial_delay = delay )
+        
+        self._job_scheduler.AddJob( job )
+        
+        return job
         
     
     def DBCurrentlyDoingJob( self ):

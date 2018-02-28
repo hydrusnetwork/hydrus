@@ -6623,7 +6623,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_import_options = file_import_job.GetFileImportOptions()
             
-            if file_import_options.GetAutomaticArchive():
+            if file_import_options.AutomaticallyArchives():
                 
                 self._ArchiveFiles( ( hash_id, ) )
                 
@@ -10571,7 +10571,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( 'The client was unable to add some new parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
                 
-            
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

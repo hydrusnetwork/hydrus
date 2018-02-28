@@ -100,7 +100,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_logins = {}
         
     
-    def CanLogin( self, network_context ):
+    def CheckCanLogin( self, network_context ):
         
         with self._lock:
             
@@ -110,14 +110,12 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 if login_network_context is None:
                     
-                    return False
+                    raise HydrusExceptions.LoginException( 'Could not find a network context to login with!' )
                     
                 
                 ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
                 
-                ( result, reason ) = login_script.CanLogin( credentials )
-                
-                return result
+                login_script.CheckCanLogin( credentials )
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -127,15 +125,16 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 if not services_manager.ServiceExists( service_key ):
                     
-                    return False
+                    raise HydrusExceptions.LoginException( 'Service does not exist!' )
                     
                 
                 service = services_manager.GetService( service_key )
                 
-                return service.IsFunctional( ignore_account = True )
+                if not service.IsFunctional( ignore_account = True ):
+                    
+                    raise HydrusExceptions.LoginException( 'Service has had a recent error or is otherwise not functional! You might like to try refreshing its account in \'review services\'.' )
+                    
                 
-            
-            return False
             
         
     
@@ -635,11 +634,11 @@ class LoginScriptDomain( object ):
         return True
         
     
-    def CanLogin( self, credentials ):
+    def CheckCanLogin( self, credentials ):
         
         if self._validity == VALIDITY_INVALID:
             
-            return ( False, 'Script is not valid: ' + self._error_reason )
+            raise HydrusExceptions.LoginException( 'Login script is not valid: ' + self._error_reason )
             
         
         for step in self._login_steps:
@@ -650,11 +649,9 @@ class LoginScriptDomain( object ):
                 
             except HydrusExceptions.ValidationException as e:
                 
-                return ( False, str( e ) )
+                raise HydrusExceptions.LoginException( str( e ) )
                 
             
-        
-        return True
         
     
     def GetExpectedCredentialDestinations( self, domain ):

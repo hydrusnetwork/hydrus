@@ -224,6 +224,17 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
     return result
     
+def ConvertResolutionToPrettyString( ( width, height ) ):
+    
+    return ConvertIntToPrettyString( width ) + 'x' + ConvertIntToPrettyString( height )
+    
+def ConvertStatusToPrefix( status ):
+    
+    if status == HC.CONTENT_STATUS_CURRENT: return ''
+    elif status == HC.CONTENT_STATUS_PENDING: return '(+) '
+    elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
+    elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
+    
 def ConvertTimeDeltaToPrettyString( seconds ):
     
     if seconds is None:
@@ -372,13 +383,6 @@ def ConvertTimeDeltaToPrettyString( seconds ):
         
     
     return result
-    
-def ConvertStatusToPrefix( status ):
-    
-    if status == HC.CONTENT_STATUS_CURRENT: return ''
-    elif status == HC.CONTENT_STATUS_PENDING: return '(+) '
-    elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
-    elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
     
 def ConvertTimestampToPrettyAge( timestamp ):
     
