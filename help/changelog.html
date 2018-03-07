@@ -8,9 +8,50 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 297</h3></li>
+				<ul>
+					<li>finished a prototype 'file notes' system. thumbnails and media viewer canvas now support 'manage->file notes' in their right-click menus. this launches a simple text box which will save its contents to db</li>
+					<li>added 'manage_file_notes' shortcut to the 'media' shortcut set</li>
+					<li>tag summary generators now have a simple show/hide checkbox and (for thumbnails) custom colours for background and text including alpha channel!</li>
+					<li>fixed a variety of timing and display logic related to subscription query DEAD vs next check time calculation</li>
+					<li>all currently dead subscription queries will be revived on update, just in case they were formerly set dead by accident</li>
+					<li>the 'fetch tags even if url known and file already in db' option is moved from the download/subscription panel's cog icon to tag import options</li>
+					<li>cleaned up tag import options layout, controls, internal workflow, and help button</li>
+					<li>added 'select all/none' buttons to tag import options panels with multiple namespaces</li>
+					<li>if a subscription is blocked by bandwidth, the manage subscriptions dialog will display that in its 'recent error/delay' column</li>
+					<li>the edit subscription dialog will show similar bandwidth blocking info on a per-query basis, under a new 'recent delays' column</li>
+					<li>the review bandwidth usage panel will no longer show some unusual results by default that you can see with 'show all' hit anyway</li>
+					<li>the review bandwidth usage panel will show the usage at the current search distance in a new column</li>
+					<li>the review bandiwdth usage panel will show number of requests after data usage. this might be info-overload, so I might alter the syntax or roll it back entirely</li>
+					<li>fixed an issue with hentai foundry parser pulling images placed in the image description area instead of main image. this particularly affected the artist 'teku'</li>
+					<li>tags for deviant art and tumblr and thread watchers, which were formerly stored in volatile session memory--meaning half-completed import queues were losing their tags through a program restart--are now saved to the new import object directly</li>
+					<li>removed all the old volatile session memory patch code</li>
+					<li>added the new import object through a larger part of the parsing pipeline</li>
+					<li>deleted the old remains of the giphy parser--if it comes back, it'll all be rewritten in the new system</li>
+					<li>harmonised some other import pipeline code to the new system</li>
+					<li>added a new 'management and preview panels' submenu to the 'pages' menu</li>
+					<li>added an option to control 'save sash positions on close' to this menu</li>
+					<li>added an entry to force-save the current sash positions to this menu</li>
+					<li>added an entry to 'restore' the currently saved sash positions to all pages to this menu (this is useful if your window resizes real small and all your pages get crushed up)</li>
+					<li>rejiggered how URL Classes are matched with URLs to make sure some Post URLs are not lost (this was affecting Hentai Foundry Post URLs, which were sometimes not displaying in the media viewer despite matching)</li>
+					<li>fixed an issue where the duplicate filter page's jobs would not trigger an update after a job finished</li>
+					<li>fixed an outside chance of a crash after running a duplicate filter page job</li>
+					<li>improved how strings are coerced to unicode--now the preferred system encoding will be tried before utf-16, which should improve support for é-type characters in various non-unicode sources (like neighbouring .txt files)</li>
+					<li>fixed an issue with the client's local booru and flash files (and some other file fetching and mime reporting is a bit faster and neater overall)</li>
+					<li>the options should be more reliable about redrawing all thumbnail banner summaries on an option ok now</li>
+					<li>the options->media->media zooms option will now remove any <=0.0 values when it saves</li>
+					<li>fixed up some old test code</li>
+					<li>improved how some thread-to-gui update reporting code works</li>
+					<li>deleted some old network object code</li>
+					<li>converted manage subscriptions panel to an edit panel--a decoupling refactor I will likely ultimately make across the program</li>
+					<li>wrote a help page for content parsers</li>
+					<li>did the first half of a help page for page parsers</li>
+					<li>misc refactoring</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 296</h3></li>
 				<ul>
-					<li>?the 'allow decompression bombs' option is now moved to 'file import options'. it defaults to False</li>
+					<li>the 'allow decompression bombs' option is now moved to 'file import options'. it defaults to False</li>
 					<li>file import options now allow max size and max resolution rules. they default to None</li>
 					<li>file import options now allows a max gif size rule to deal with THE SFM COMMUNITY. it defaults to 32MB</li>
 					<li>file imports will give better quality errors if they fail due to file import option exclusion rules</li>
