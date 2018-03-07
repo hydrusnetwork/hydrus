@@ -2,6 +2,7 @@ import ClientConstants as CC
 import collections
 import HydrusConstants as HC
 import HydrusExceptions
+import HydrusNetwork
 import HydrusSessions
 import os
 import TestConstants
@@ -22,13 +23,11 @@ class TestSessions( unittest.TestCase ):
         
         access_key = HydrusData.GenerateKey()
         account_key = HydrusData.GenerateKey()
-        account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
+        account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( HC.SERVER_ADMIN )
         created = HydrusData.GetNow() - 100000
         expires = HydrusData.GetNow() + 300
-        used_bytes = 0
-        used_requests = 0
         
-        account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
+        account = HydrusNetwork.Account( account_key, account_type, created, expires )
         
         expires = HydrusData.GetNow() - 10
         
@@ -59,7 +58,7 @@ class TestSessions( unittest.TestCase ):
         
         account_key_2 = HydrusData.GenerateKey()
         
-        account_2 = HydrusData.Account( account_key_2, account_type, created, expires, used_bytes, used_requests )
+        account_2 = HydrusNetwork.Account( account_key_2, account_type, created, expires )
         
         HG.test_controller.SetRead( 'account_key_from_access_key', account_key_2 )
         HG.test_controller.SetRead( 'account', account_2 )
@@ -101,7 +100,7 @@ class TestSessions( unittest.TestCase ):
         
         expires = HydrusData.GetNow() + 300
         
-        updated_account = HydrusData.Account( account_key, account_type, created, expires, 1, 1 )
+        updated_account = HydrusNetwork.Account( account_key, account_type, created, expires )
         
         HG.test_controller.SetRead( 'account', updated_account )
         
@@ -119,7 +118,7 @@ class TestSessions( unittest.TestCase ):
         
         expires = HydrusData.GetNow() + 300
         
-        updated_account_2 = HydrusData.Account( account_key, account_type, created, expires, 2, 2 )
+        updated_account_2 = HydrusNetwork.Account( account_key, account_type, created, expires )
         
         HG.test_controller.SetRead( 'sessions', [ ( session_key_1, service_key, updated_account_2, expires ), ( session_key_2, service_key, account_2, expires ), ( session_key_3, service_key, updated_account_2, expires ) ] )
         

@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientDefaults
 import ClientGUIDialogs
+import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
 import ClientThreading
@@ -74,13 +75,11 @@ class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_manage_subs( self ):
         
-        HG.test_controller.SetRead( 'serialisable_named', [] )
-        
         title = 'subs test'
         
-        with ClientGUITopLevelWindows.DialogManage( None, title ) as dlg:
+        with ClientGUITopLevelWindows.DialogEdit( None, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageSubscriptionsPanel( dlg )
+            panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, [] )
             
             dlg.SetPanel( panel )
             

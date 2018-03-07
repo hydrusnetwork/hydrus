@@ -24,20 +24,6 @@ import HydrusGlobals as HG
 URL_EXTRA_INFO = {}
 URL_EXTRA_INFO_LOCK = threading.Lock()
 
-def GetExtraURLInfo( url ):
-    
-    with URL_EXTRA_INFO_LOCK:
-        
-        if url in URL_EXTRA_INFO:
-            
-            return URL_EXTRA_INFO[ url ]
-            
-        else:
-            
-            return None
-            
-        
-    
 def GetGalleryStreamIdentifiers( gallery_identifier ):
     
     site_type = gallery_identifier.GetSiteType()
@@ -57,13 +43,6 @@ def GetGalleryStreamIdentifiers( gallery_identifier ):
     
     return gallery_stream_identifiers
     
-def SetExtraURLInfo( url, info ):
-    
-    with URL_EXTRA_INFO_LOCK:
-        
-        URL_EXTRA_INFO[ url ] = info
-        
-    
 def GetGallery( gallery_identifier ):
     
     site_type = gallery_identifier.GetSiteType()
@@ -77,10 +56,6 @@ def GetGallery( gallery_identifier ):
     elif site_type == HC.SITE_TYPE_DEVIANT_ART:
         
         return GalleryDeviantArt()
-        
-    elif site_type == HC.SITE_TYPE_GIPHY:
-        
-        return GalleryGiphy()
         
     elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ):
         
@@ -606,9 +581,22 @@ class Gallery( object ):
         
         data = self._FetchData( gallery_url )
         
-        ( page_of_urls, definitely_no_more_pages ) = self._ParseGalleryPage( data, gallery_url )
+        ( page_of_urls_and_tags, definitely_no_more_pages ) = self._ParseGalleryPage( data, gallery_url )
         
-        return ( page_of_urls, definitely_no_more_pages )
+        import ClientImporting
+        
+        page_of_seeds = []
+        
+        for ( url, tags ) in page_of_urls_and_tags:
+            
+            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            
+            seed.AddTags( tags )
+            
+            page_of_seeds.append( seed )
+            
+        
+        return ( page_of_seeds, definitely_no_more_pages )
         
     
     def GetTags( self, url ):
@@ -814,7 +802,9 @@ class GalleryBooru( Gallery ):
             urls = [ ClientData.ConvertHTTPToHTTPS( url ) for url in urls ]
             
         
-        return ( urls, definitely_no_more_pages )
+        urls_and_tags = [ ( url, set() ) for url in urls ]
+        
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def _ParseImagePage( self, html, url_base ):
@@ -1039,7 +1029,7 @@ class GalleryDeviantArt( Gallery ):
         
         definitely_no_more_pages = False
         
-        urls = []
+        urls_and_tags = []
         
         soup = GetSoup( html )
         
@@ -1052,8 +1042,6 @@ class GalleryDeviantArt( Gallery ):
         for thumb in thumbs:
             
             url = thumb[ 'href' ] # something in the form of blah.da.com/art/blah-123456
-            
-            urls.append( url )
             
             tags = []
             
@@ -1071,10 +1059,10 @@ class GalleryDeviantArt( Gallery ):
                     
                 
             
-            SetExtraURLInfo( url, tags )
+            urls_and_tags.append( ( url, tags ) )
             
         
-        return ( urls, definitely_no_more_pages )
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def _ParseImagePage( self, html, referral_url ):
@@ -1158,82 +1146,7 @@ class GalleryDeviantArt( Gallery ):
     
     def GetTags( self, url ):
         
-        result = GetExtraURLInfo( url )
-        
-        if result is None:
-            
-            return []
-            
-        else:
-            
-            return result
-            
-        
-    
-class GalleryGiphy( Gallery ):
-    
-    def _GetGalleryPageURL( self, query, page_index ):
-        
-        tag = query
-        
-        return 'http://giphy.com/api/gifs?tag=' + urllib.quote( HydrusData.ToByteString( tag ).replace( ' ', '+' ), '' ) + '&page=' + str( page_index + 1 )
-        
-    
-    def _ParseGalleryPage( self, data, url_base ):
-        
-        definitely_no_more_pages = False
-        
-        json_dict = json.loads( data )
-        
-        urls = []
-        
-        if 'data' in json_dict:
-            
-            json_data = json_dict[ 'data' ]
-            
-            for d in json_data:
-                
-                url = d[ 'image_original_url' ]
-                id = d[ 'id' ]
-                
-                SetExtraURLInfo( url, id )
-                
-                urls.append( url )
-                
-            
-        
-        return ( urls, definitely_no_more_pages )
-        
-    
-    def GetTags( self, url ):
-        
-        id = GetExtraURLInfo( url )
-        
-        if id is None:
-            
-            return []
-            
-        else:
-            
-            url = 'http://giphy.com/api/gifs/' + str( id )
-            
-            try:
-                
-                raw_json = self._FetchData( url )
-                
-                json_dict = json.loads( raw_json )
-                
-                tags_data = json_dict[ 'data' ][ 'tags' ]
-                
-                return [ tag_data[ 'name' ] for tag_data in tags_data ]
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-                return []
-                
-            
+        return set()
         
     
 class GalleryHentaiFoundry( Gallery ):
@@ -1303,7 +1216,9 @@ class GalleryHentaiFoundry( Gallery ):
             definitely_no_more_pages = True
             
         
-        return ( urls, definitely_no_more_pages )
+        urls_and_tags = [ ( url, set() ) for url in urls ]
+        
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def _ParseImagePage( self, html, url_base ):
@@ -1312,14 +1227,36 @@ class GalleryHentaiFoundry( Gallery ):
         # find http://pictures.hentai-foundry.com//
         # then extend it to http://pictures.hentai-foundry.com//k/KABOS/172144/image.jpg
         # the .jpg bit is what we really need, but whatever
+        
+        # an example of this:
+        # http://www.hentai-foundry.com/pictures/user/Sparrow/440257/Meroulix-LeBeau
+        
+        # addendum:
+        # some users put pictures.hentai-foundry.com links in their profile images, which then gets repeated up above in some <meta> tag
+        # so, lets limit this search to a smaller bit of html
+        
+        # example of this:
+        # http://www.hentai-foundry.com/pictures/user/teku/572881/Special-Gang-Bang
+        
         try:
             
-            index = html.index( 'pictures.hentai-foundry.com' )
+            image_soup = GetSoup( html )
             
-            image_url = html[ index : index + 256 ]
+            image_html = unicode( image_soup.find( 'section', id = 'picBox' ) )
             
-            if '"' in image_url: ( image_url, gumpf ) = image_url.split( '"', 1 )
-            if '&#039;' in image_url: ( image_url, gumpf ) = image_url.split( '&#039;', 1 )
+            index = image_html.index( 'pictures.hentai-foundry.com' )
+            
+            image_url = image_html[ index : index + 256 ]
+            
+            if '"' in image_url:
+                
+                ( image_url, gumpf ) = image_url.split( '"', 1 )
+                
+            
+            if '&#039;' in image_url:
+                
+                ( image_url, gumpf ) = image_url.split( '&#039;', 1 )
+                
             
             image_url = 'http://' + image_url
             
@@ -1453,7 +1390,9 @@ class GalleryNewgrounds( Gallery ):
         
         definitely_no_more_pages = True
         
-        return ( urls, definitely_no_more_pages )
+        urls_and_tags = [ ( url, set() ) for url in urls ]
+        
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def _ParseImagePage( self, html, url_base ):
@@ -1599,7 +1538,9 @@ class GalleryPixiv( Gallery ):
                 
             
         
-        return ( urls, definitely_no_more_pages )
+        urls_and_tags = [ ( url, set() ) for url in urls ]
+        
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def _ParseImagePage( self, html, page_url ):
@@ -1777,7 +1718,7 @@ class GalleryTumblr( Gallery ):
         
         json_object = json.loads( processed_raw_json )
         
-        urls = []
+        urls_and_tags = []
         
         if 'posts' in json_object:
             
@@ -1790,8 +1731,14 @@ class GalleryTumblr( Gallery ):
                 
                 raw_url_available = date_struct.tm_year > 2012
                 
-                if 'tags' in post: tags = post[ 'tags' ]
-                else: tags = []
+                if 'tags' in post:
+                    
+                    tags = post[ 'tags' ]
+                    
+                else:
+                    
+                    tags = []
+                    
                 
                 post_type = post[ 'type' ]
                 
@@ -1833,9 +1780,7 @@ class GalleryTumblr( Gallery ):
                             
                             url = ClientData.ConvertHTTPToHTTPS( url )
                             
-                            SetExtraURLInfo( url, tags )
-                            
-                            urls.append( url )
+                            urls_and_tags.append( ( url, tags ) )
                             
                         except:
                             
@@ -1857,7 +1802,7 @@ class GalleryTumblr( Gallery ):
                             
                             url = vp_source[ 'src' ]
                             
-                            urls.append( url )
+                            urls_and_tags.append( ( url, tags ) )
                             
                         except:
                             
@@ -1868,20 +1813,11 @@ class GalleryTumblr( Gallery ):
                 
             
         
-        return ( urls, definitely_no_more_pages )
+        return ( urls_and_tags, definitely_no_more_pages )
         
     
     def GetTags( self, url ):
         
-        result = GetExtraURLInfo( url )
-        
-        if result is None:
-            
-            return []
-            
-        else:
-            
-            return result
-            
+        return set()
         
     

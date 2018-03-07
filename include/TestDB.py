@@ -1148,7 +1148,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        NUM_DEFAULT_SERVICES = 8
+        NUM_DEFAULT_SERVICES = 9
         
         services = self._read( 'services' )
         

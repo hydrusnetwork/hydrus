@@ -338,22 +338,6 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
             result = set()
             
-            for ( network_context, bandwidth_rules ) in self._network_contexts_to_bandwidth_rules.items():
-                
-                if network_context.IsDefault() or network_context.IsEphemeral():
-                    
-                    continue
-                    
-                
-                # if a context has rules but no activity, list it so the user can edit the rules if needed
-                # in case they set too restrictive rules on an old context and now can't get it up again with activity because of the rules!
-                
-                if network_context not in self._network_contexts_to_bandwidth_trackers or self._network_contexts_to_bandwidth_trackers[ network_context ].GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None ) == 0:
-                    
-                    result.add( network_context )
-                    
-                
-            
             for ( network_context, bandwidth_tracker ) in self._network_contexts_to_bandwidth_trackers.items():
                 
                 if network_context.IsDefault() or network_context.IsEphemeral():

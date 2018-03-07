@@ -1206,9 +1206,19 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _THREADWaitOnJob( self, job_key ):
         
+        def wx_done():
+            
+            if not self:
+                
+                return
+                
+            
+            self._RefreshAndUpdateStatus()
+            
+        
         while not job_key.IsDone():
             
-            if HydrusThreading.IsThreadShuttingDown:
+            if HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 
@@ -1216,7 +1226,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             time.sleep( 0.25 )
             
         
-        wx.CallAfter( self._RefreshAndUpdateStatus )
+        wx.CallAfter( wx_done )
         
     
     def EventSearchDistanceChanged( self, event ):
@@ -1316,23 +1326,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._query_input = ClientGUICommon.TextAndPasteCtrl( self._pending_queries_panel, self._PendQueries )
         
-        menu_items = []
-        
-        invert_call = self._gallery_import.InvertGetTagsIfURLKnownAndFileRedundant
-        value_call = self._gallery_import.GetTagsIfURLKnownAndFileRedundant
-        
-        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
-        
-        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (this downloader)', 'If this is selected, the client will fetch the tags from a file\'s page even if it has the file and already previously downloaded it from that location.', check_manager ) )
-        
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
-        
-        check_manager = ClientGUICommon.CheckboxManagerOptions( 'get_tags_if_url_known_and_file_redundant' )
-        
-        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (default)', 'Set the default for this value.', check_manager ) )
-        
-        self._cog_button = ClientGUICommon.MenuBitmapButton( self._gallery_downloader_panel, CC.GlobalBMPs.cog, menu_items )
-        
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
         self._file_limit.SetToolTip( 'per query, stop searching the gallery once this many files has been reached' )
@@ -1385,7 +1378,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._cog_button, CC.FLAGS_LONE_BUTTON )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )

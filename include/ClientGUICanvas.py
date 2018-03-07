@@ -10,6 +10,7 @@ import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIHoverFrames
 import ClientGUIMenus
+import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
@@ -1546,6 +1547,67 @@ class Canvas( wx.Window ):
             
         
     
+    def _ManageNotes( self ):
+        
+        def wx_do_it( media, notes ):
+            
+            if not self:
+                
+                return
+                
+            
+            title = 'manage notes'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
+                
+                size = ClientData.ConvertTextToPixels( control, ( 80, 14 ) )
+                
+                control.SetInitialSize( size )
+                
+                control.SetValue( notes )
+                
+                panel.SetControl( control )
+                
+                dlg.SetPanel( panel )
+                
+                wx.CallAfter( control.SetFocus )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    notes = control.GetValue()
+                    
+                    hash = media.GetHash()
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( notes, hash ) ) ]
+                    
+                    service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+                    
+                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    
+                
+            
+        
+        def thread_wait( media ):
+            
+            # if it ultimately makes sense, I can load/cache notes in the media result
+            
+            notes = HG.client_controller.Read( 'file_notes', media.GetHash() )
+            
+            wx.CallAfter( wx_do_it, media, notes )
+            
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        HG.client_controller.CallToThread( thread_wait, self._current_media )
+        
+    
     def _ManageRatings( self ):
         
         if self._current_media is None:
@@ -1690,6 +1752,10 @@ class Canvas( wx.Window ):
             elif action == 'manage_file_urls':
                 
                 self._ManageURLs()
+                
+            elif action == 'manage_file_notes':
+                
+                self._ManageNotes()
                 
             elif action == 'archive_file':
                 
@@ -2364,6 +2430,7 @@ class CanvasPanel( Canvas ):
                 
             
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known URLs.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -4659,6 +4726,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'known urls', 'Manage this file\'s known urls.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'notes', 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             

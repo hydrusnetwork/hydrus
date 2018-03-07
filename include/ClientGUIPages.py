@@ -434,6 +434,7 @@ class Page( wx.SplitterWindow ):
             
         
         self._controller.sub( self, 'SetPrettyStatus', 'new_page_status' )
+        self._controller.sub( self, 'SetSplitterPositions', 'set_splitter_positions' )
         
     
     def _SetPrettyStatus( self, status ):
@@ -693,6 +694,32 @@ class Page( wx.SplitterWindow ):
     def SetSearchFocus( self ):
         
         self._controller.pub( 'set_search_focus', self._page_key )
+        
+    
+    def SetSplitterPositions( self, hpos, vpos ):
+        
+        if self._search_preview_split.IsSplit():
+            
+            self._search_preview_split.SetSashPosition( vpos )
+            
+        else:
+            
+            self._search_preview_split.SplitHorizontally( self._management_panel, self._preview_panel, vpos )
+            
+        
+        if self.IsSplit():
+            
+            self.SetSashPosition( hpos )
+            
+        else:
+            
+            self.SplitVertically( self._search_preview_split, self._media_panel, hpos )
+            
+        
+        if HC.options[ 'hide_preview' ]:
+            
+            wx.CallAfter( self._search_preview_split.Unsplit, self._preview_panel )
+            
         
     
     def SetSynchronisedWait( self ):

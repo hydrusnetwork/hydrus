@@ -2792,6 +2792,8 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'files_info', [ 'duration' ] )
         self._CreateIndex( 'files_info', [ 'num_frames' ] )
         
+        self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER PRIMARY KEY, notes TEXT );' )
+        
         self._c.execute( 'CREATE TABLE file_transfers ( service_id INTEGER REFERENCES services ON DELETE CASCADE, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         self._CreateIndex( 'file_transfers', [ 'hash_id' ] )
         
@@ -2908,8 +2910,7 @@ class DB( HydrusDB.HydrusDB ):
         init_service_info.append( ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, CC.COMBINED_FILE_SERVICE_KEY ) )
         init_service_info.append( ( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, CC.COMBINED_TAG_SERVICE_KEY ) )
         init_service_info.append( ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, CC.LOCAL_BOORU_SERVICE_KEY ) )
-        
-        self._combined_files_ac_caches = {}
+        init_service_info.append( ( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, CC.LOCAL_NOTES_SERVICE_KEY ) )
         
         for ( service_key, service_type, name ) in init_service_info:
             
@@ -3794,6 +3795,24 @@ class DB( HydrusDB.HydrusDB ):
             
         
         return desired_hashes
+        
+    
+    def _GetFileNotes( self, hash ):
+        
+        hash_id = self._GetHashId( hash )
+        
+        result = self._c.execute( 'SELECT notes FROM file_notes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            return ''
+            
+        else:
+            
+            ( notes, ) = result
+            
+            return notes
+            
         
     
     def _GetFileSystemPredicates( self, service_key ):
@@ -7595,6 +7614,21 @@ class DB( HydrusDB.HydrusDB ):
                             
                         
                     
+                elif service_type == HC.LOCAL_NOTES:
+                    
+                    if action == HC.CONTENT_UPDATE_SET:
+                        
+                        ( notes, hash ) = row
+                        
+                        hash_id = self._GetHashId( hash )
+                        
+                        self._c.execute( 'DELETE FROM file_notes WHERE hash_id = ?;', ( hash_id, ) )
+                        
+                        if len( notes ) > 0:
+                            
+                            self._c.execute( 'INSERT OR IGNORE INTO file_notes ( hash_id, notes ) VALUES ( ?, ? );', ( hash_id, notes ) )
+                            
+                    
                 
             
             if len( ultimate_mappings_ids ) + len( ultimate_deleted_mappings_ids ) + len( ultimate_pending_mappings_ids ) + len( ultimate_pending_rescinded_mappings_ids ) + len( ultimate_petitioned_mappings_ids ) + len( ultimate_petitioned_rescinded_mappings_ids ) > 0:
@@ -8187,6 +8221,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'duplicate_types_to_counts': result = self._CacheSimilarFilesGetDupeStatusesToCounts( *args, **kwargs )
         elif action == 'unique_duplicate_pairs': result = self._CacheSimilarFilesGetUniqueDuplicatePairs( *args, **kwargs )
         elif action == 'file_hashes': result = self._GetFileHashes( *args, **kwargs )
+        elif action == 'file_notes': result = self._GetFileNotes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
@@ -10571,6 +10606,34 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( 'The client was unable to add some new parsing data. The error has been written to the log--hydrus_dev would be interested in this information.' )
                 
+            
+        
+        if version == 296:
+            
+            try:
+                
+                subscriptions = self._GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                for subscription in subscriptions:
+                    
+                    subscription.ReviveDead()
+                    
+                    self._SetJSONDump( subscription )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.Print( 'While attempting to revive dead subscription queries, I had this problem:' )
+                HydrusData.PrintException( e )
+                
+            
+            #
+            
+            self._c.execute( 'CREATE TABLE file_notes ( hash_id INTEGER PRIMARY KEY, notes TEXT );' )
+            
+            dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.LOCAL_NOTES )
+            
+            self._AddService( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, CC.LOCAL_NOTES_SERVICE_KEY, dictionary )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

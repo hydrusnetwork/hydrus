@@ -12,11 +12,13 @@ import ClientGUIListCtrl
 import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
+import ClientGUISerialisable
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingDomain
 import ClientParsing
+import ClientSerialisable
 import ClientTags
 import collections
 import HydrusConstants as HC
@@ -1907,7 +1909,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'urls', 14 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'urls', 8 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -1930,23 +1932,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
         
-        menu_items = []
-        
-        invert_call = self._InvertGetTagsIfURLKnownAndFileRedundant
-        value_call = self._GetTagsIfURLKnownAndFileRedundant
-        
-        check_manager = ClientGUICommon.CheckboxManagerCalls( invert_call, value_call )
-        
-        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (this downloader)', 'If this is selected, the client will fetch the tags from a file\'s page even if it has the file and already previously downloaded it from that location.', check_manager ) )
-        
-        menu_items.append( ( 'separator', 0, 0, 0 ) )
-        
-        check_manager = ClientGUICommon.CheckboxManagerOptions( 'get_tags_if_url_known_and_file_redundant' )
-        
-        menu_items.append( ( 'check', 'get tags even if url is known and file is already in db (default)', 'Set the default for this value.', check_manager ) )
-        
-        cog_button = ClientGUICommon.MenuBitmapButton( self._options_panel, CC.GlobalBMPs.cog, menu_items )
-        
         self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
         self._initial_file_limit.SetToolTip( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
         
@@ -1961,7 +1946,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( name, gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
@@ -2019,7 +2004,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
         self._options_panel.Add( ClientGUICommon.BetterStaticText( self._options_panel, 'If you are new to subscriptions, do not set these too high! In general, subscriptions that are larger than a couple of thousand files are a headache if they go wrong!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._options_panel.Add( cog_button, CC.FLAGS_LONE_BUTTON )
         self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -2160,6 +2144,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         file_velocity = self._checker_options.GetRawCurrentVelocity( query.GetSeedCache(), last_check_time )
         pretty_file_velocity = self._checker_options.GetPrettyCurrentVelocity( query.GetSeedCache(), last_check_time, no_prefix = True )
         
+        estimate = self._original_subscription.GetBandwidthWaitingEstimate( query )
+        
+        if estimate == 0:
+            
+            pretty_delay = ''
+            delay = 0
+            
+        else:
+            
+            pretty_delay = 'bandwidth: ' + HydrusData.ConvertTimeDeltaToPrettyString( estimate )
+            delay = estimate
+            
+        
         ( file_status, ( num_done, num_total ) ) = seed_cache.GetStatus()
         
         if num_total > 0:
@@ -2171,21 +2168,21 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             sort_float = 0.0
             
         
-        file_value_range = ( sort_float, num_total, num_done )
+        urls = ( sort_float, num_total, num_done )
         
         if num_done == num_total:
             
-            pretty_file_value_range = HydrusData.ConvertIntToPrettyString( num_total )
+            pretty_urls = HydrusData.ConvertIntToPrettyString( num_total )
             
         else:
             
-            pretty_file_value_range = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
+            pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
             
         
         pretty_file_status = file_status
         
-        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_file_value_range, pretty_file_status )
-        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, file_value_range, file_status )
+        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_urls, pretty_file_status )
+        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, urls, file_status )
         
         return ( display_tuple, sort_tuple )
         
@@ -2290,16 +2287,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return gallery_identifier
-        
-    
-    def _GetTagsIfURLKnownAndFileRedundant( self ):
-        
-        return self._get_tags_if_url_known_and_file_redundant
-        
-    
-    def _InvertGetTagsIfURLKnownAndFileRedundant( self ):
-        
-        self._get_tags_if_url_known_and_file_redundant = not self._get_tags_if_url_known_and_file_redundant
         
     
     def _ListCtrlCanCheckNow( self ):
@@ -2519,7 +2506,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = self._tag_import_options.GetValue()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, self._get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
         return subscription
         
@@ -2613,6 +2600,712 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         query = self._GetValue()
         
         return query
+        
+    
+class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, subscriptions ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        #
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' )
+        
+        menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browesr.', page_func ) )
+        
+        help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ) ]
+        
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        
+        subscriptions_panel.SetListCtrl( self._subscriptions )
+        
+        subscriptions_panel.AddButton( 'add', self.Add )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'to clipboard', 'Serialise the script and put it on your clipboard.', self.ExportToClipboard ) )
+        menu_items.append( ( 'normal', 'to png', 'Serialise the script and encode it to an image file you can easily share with other hydrus users.', self.ExportToPng ) )
+        
+        subscriptions_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
+        
+        menu_items = []
+        
+        menu_items.append( ( 'normal', 'from clipboard', 'Load a script from text in your clipboard.', self.ImportFromClipboard ) )
+        menu_items.append( ( 'normal', 'from png', 'Load a script from an encoded png.', self.ImportFromPng ) )
+        
+        subscriptions_panel.AddMenuButton( 'import', menu_items )
+        subscriptions_panel.AddButton( 'duplicate', self.Duplicate, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'edit', self.Edit, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'delete', self.Delete, enabled_only_on_selection = True )
+        
+        subscriptions_panel.NewButtonRow()
+        
+        subscriptions_panel.AddButton( 'merge', self.Merge, enabled_check_func = self._CanMerge )
+        subscriptions_panel.AddButton( 'separate', self.Separate, enabled_check_func = self._CanSeparate )
+        
+        subscriptions_panel.AddSeparator()
+        
+        subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'retry failures', self.RetryFailures, enabled_check_func = self._CanRetryFailures )
+        subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
+        subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
+        subscriptions_panel.AddButton( 'reset', self.Reset, enabled_check_func = self._CanReset )
+        
+        subscriptions_panel.NewButtonRow()
+        
+        subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
+        subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
+        
+        #
+        
+        self._subscriptions.AddDatas( subscriptions )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _CanCheckNow( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanCheckNow() for subscription in subscriptions )
+        
+    
+    def _CanMerge( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        # only subs with queries can be merged
+        
+        subscriptions = [ subscription for subscription in subscriptions if len( subscription.GetQueries() ) > 0 ]
+        
+        gallery_identifiers = { subscription.GetGalleryIdentifier() for subscription in subscriptions }
+        
+        # if there are fewer, there must be dupes, so we must be able to merge
+        
+        return len( gallery_identifiers ) < len( subscriptions )
+        
+    
+    def _CanReset( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanReset() for subscription in subscriptions )
+        
+    
+    def _CanRetryFailures( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanRetryFailures() for subscription in subscriptions )
+        
+    
+    def _CanScrubDelays( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanScrubDelay() for subscription in subscriptions )
+        
+    
+    def _CanSeparate( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            if len( subscription.GetQueries() ) > 1:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
+        
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
+        
+        pretty_site = gallery_identifier.ToString()
+        
+        period = 100
+        pretty_period = 'fix this'
+        
+        if len( queries ) > 0:
+            
+            last_new_file_time = max( ( query.GetLatestAddedTime() for query in queries ) )
+            pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
+            
+            last_checked = max( ( query.GetLastChecked() for query in queries ) )
+            pretty_last_checked = HydrusData.ConvertTimestampToPrettyAgo( last_checked )
+            
+        else:
+            
+            last_new_file_time = 0
+            pretty_last_new_file_time = 'n/a'
+            
+            last_checked = 0
+            pretty_last_checked = 'n/a'
+            
+        
+        #
+        
+        num_queries = len( queries )
+        num_dead = 0
+        num_paused = 0
+        
+        for query in queries:
+            
+            if query.IsDead():
+                
+                num_dead += 1
+                
+            elif query.IsPaused():
+                
+                num_paused += 1
+                
+            
+        
+        num_ok = num_queries - ( num_dead + num_paused )
+        
+        status = ( num_queries, num_paused, num_dead )
+        
+        if num_queries == 0:
+            
+            pretty_status = 'no queries'
+            
+        else:
+            
+            status_components = [ HydrusData.ConvertIntToPrettyString( num_ok ) + ' working' ]
+            
+            if num_paused > 0:
+                
+                status_components.append( HydrusData.ConvertIntToPrettyString( num_paused ) + ' paused' )
+                
+            
+            if num_dead > 0:
+                
+                status_components.append( HydrusData.ConvertIntToPrettyString( num_dead ) + ' dead' )
+                
+            
+            pretty_status = ', '.join( status_components )
+            
+        
+        #
+        
+        if HydrusData.TimeHasPassed( no_work_until ):
+            
+            ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax()
+            
+            if max_estimate == 0: # don't seem to be any delays of any kind
+                
+                pretty_delay = ''
+                delay = 0
+                
+            elif min_estimate == 0: # some are good to go, but there are delays
+                
+                pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                delay = max_estimate
+                
+            else:
+                
+                if min_estimate == max_estimate: # probably just one query, and it is delayed
+                    
+                    pretty_delay = 'bandwidth: up to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                    delay = max_estimate
+                    
+                else:
+                    
+                    pretty_delay = 'bandwidth: from ' + HydrusData.ConvertTimeDeltaToPrettyString( min_estimate ) + ' to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                    delay = max_estimate
+                    
+                
+            
+        else:
+            
+            pretty_delay = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until, prefix = 'for' ) + ' - ' + no_work_until_reason
+            delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
+            
+        
+        num_urls_done = 0
+        num_urls = 0
+        num_failed = 0
+        
+        for query in queries:
+            
+            ( query_num_urls_unknown, query_num_urls, query_num_failed ) = query.GetNumURLsAndFailed()
+            
+            num_urls_done += query_num_urls - query_num_urls_unknown
+            
+            num_urls += query_num_urls
+            
+            num_failed += query_num_failed
+            
+        
+        if num_urls_done == num_urls:
+            
+            pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
+            
+        else:
+            
+            pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_urls_done, num_urls )
+            
+        
+        if num_urls > 0:
+            
+            sort_float = float( num_urls_done ) / num_urls
+            
+        else:
+            
+            sort_float = 0.0
+            
+        
+        num_urls_sortable = ( sort_float, num_urls, num_urls_done )
+        
+        pretty_failures = HydrusData.ConvertIntToPrettyString( num_failed )
+        
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
+        
+        display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_urls, pretty_failures, pretty_paused )
+        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, num_urls_sortable, num_failed, paused )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _GetExistingNames( self ):
+        
+        subscriptions = self._subscriptions.GetData()
+        
+        names = { subscription.GetName() for subscription in subscriptions }
+        
+        return names
+        
+    
+    def _GetExportObject( self ):
+        
+        to_export = HydrusSerialisable.SerialisableList()
+        
+        for subscription in self._subscriptions.GetData( only_selected = True ):
+            
+            to_export.append( subscription )
+            
+        
+        if len( to_export ) == 0:
+            
+            return None
+            
+        elif len( to_export ) == 1:
+            
+            return to_export[0]
+            
+        else:
+            
+            return to_export
+            
+        
+    
+    def _ImportObject( self, obj ):
+        
+        if isinstance( obj, HydrusSerialisable.SerialisableList ):
+            
+            for sub_obj in obj:
+                
+                self._ImportObject( sub_obj )
+                
+            
+        else:
+            
+            if isinstance( obj, ClientImporting.Subscription ):
+                
+                subscription = obj
+                
+                subscription.SetNonDupeName( self._GetExistingNames() )
+                
+                self._subscriptions.AddDatas( ( subscription, ) )
+                
+            else:
+                
+                wx.MessageBox( 'That was not a subscription--it was a: ' + type( obj ).__name__ )
+                
+            
+        
+    
+    def Add( self ):
+        
+        empty_subscription = ClientImporting.Subscription( 'new subscription' )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg_edit:
+            
+            panel = EditSubscriptionPanel( dlg_edit, empty_subscription )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.ShowModal() == wx.ID_OK:
+                
+                new_subscription = panel.GetValue()
+                
+                new_subscription.SetNonDupeName( self._GetExistingNames() )
+                
+                self._subscriptions.AddDatas( ( new_subscription, ) )
+                
+            
+        
+    
+    def CheckNow( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            subscription.CheckNow()
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._subscriptions.DeleteSelected()
+                
+            
+        
+    
+    def Duplicate( self ):
+        
+        subs_to_dupe = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subs_to_dupe:
+            
+            dupe_subscription = subscription.Duplicate()
+            
+            dupe_subscription.SetNonDupeName( self._GetExistingNames() )
+            
+            self._subscriptions.AddDatas( ( dupe_subscription, ) )
+            
+        
+    
+    def Edit( self ):
+        
+        subs_to_edit = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subs_to_edit:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg:
+                
+                original_name = subscription.GetName()
+                
+                panel = EditSubscriptionPanel( dlg, subscription )
+                
+                dlg.SetPanel( panel )
+                
+                result = dlg.ShowModal()
+                
+                if result == wx.ID_OK:
+                    
+                    self._subscriptions.DeleteDatas( ( subscription, ) )
+                    
+                    edited_subscription = panel.GetValue()
+                    
+                    edited_subscription.SetNonDupeName( self._GetExistingNames() )
+                    
+                    self._subscriptions.AddDatas( ( edited_subscription, ) )
+                    
+                elif result == wx.ID_CANCEL:
+                    
+                    break
+                    
+                
+            
+        
+        self._subscriptions.Sort()
+        
+    
+    def ExportToClipboard( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', json )
+            
+        
+    
+    def ExportToPng( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def GetValue( self ):
+        
+        subscriptions = self._subscriptions.GetData()
+        
+        return subscriptions
+        
+    
+    def ImportFromClipboard( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text )
+            
+            self._ImportObject( obj )
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+        
+    
+    def ImportFromPng( self ):
+        
+        with wx.FileDialog( self, 'select the png with the encoded script', wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                try:
+                    
+                    payload = ClientSerialisable.LoadFromPng( path )
+                    
+                except Exception as e:
+                    
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
+                    
+                    return
+                    
+                
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                    
+                    self._ImportObject( obj )
+                    
+                except:
+                    
+                    wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                    
+                
+            
+        
+    
+    def Merge( self ):
+        
+        message = 'Are you sure you want to merge the selected subscriptions? This will combine all selected subscriptions that share the same downloader, wrapping all their different queries into one subscription.'
+        message += os.linesep * 2
+        message += 'This is a big operation, so if it does not do what you expect, hit cancel afterwards!'
+        message += os.linesep * 2
+        message += 'Please note that all other subscription settings settings (like name and paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings after the merge.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                to_be_merged_subs = self._subscriptions.GetData( only_selected = True )
+                
+                self._subscriptions.DeleteDatas( to_be_merged_subs )
+                
+                to_be_merged_subs = list( to_be_merged_subs )
+                
+                merged_subs = []
+                
+                while len( to_be_merged_subs ) > 1:
+                    
+                    primary_sub = to_be_merged_subs.pop()
+                    
+                    unmerged_subs = primary_sub.Merge( to_be_merged_subs )
+                    
+                    merged_subs.append( primary_sub )
+                    
+                    to_be_merged_subs = unmerged_subs
+                    
+                
+                self._subscriptions.AddDatas( merged_subs )
+                self._subscriptions.AddDatas( to_be_merged_subs )
+                
+                self._subscriptions.Sort()
+                
+            
+        
+    
+    def PauseResume( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            subscription.PauseResume()
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def Reset( self ):
+        
+        message = '''Resetting these subscriptions will delete all their remembered urls, meaning when they next run, they will try to download them all over again. This may be expensive in time and data. Only do it if you are willing to wait. Do you want to do it?'''
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                subscriptions = self._subscriptions.GetData( only_selected = True )
+                
+                for subscription in subscriptions:
+                    
+                    subscription.Reset()
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
+    def RetryFailures( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            subscription.RetryFailures()
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def ScrubDelays( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            subscription.ScrubDelay()
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def SelectSubscriptions( self ):
+        
+        message = 'This selects subscriptions based on query text. Please enter some search text, and any subscription that has a query that includes that text will be selected.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                search_text = dlg.GetValue()
+                
+                self._subscriptions.SelectNone()
+                
+                selectee_subscriptions = []
+                
+                for subscription in self._subscriptions.GetData():
+                    
+                    if subscription.HasQuerySearchText( search_text ):
+                        
+                        selectee_subscriptions.append( subscription )
+                        
+                    
+                
+                self._subscriptions.SelectDatas( selectee_subscriptions )
+                
+            
+        
+    
+    def Separate( self ):
+        
+        message = 'Are you sure you want to separate the selected subscriptions? This will cause all the subscriptions with multiple queries to be split into duplicates that each only have one query.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                to_be_separate_subs = self._subscriptions.GetData( only_selected = True )
+                
+                self._subscriptions.DeleteDatas( to_be_separate_subs )
+                
+                for subscription in to_be_separate_subs:
+                    
+                    separate_subs = subscription.Separate()
+                    
+                    for separate_subscription in separate_subs:
+                        
+                        separate_subscription.SetNonDupeName( self._GetExistingNames() )
+                        
+                        self._subscriptions.AddDatas( ( separate_subscription, ) )
+                        
+                    
+                
+                self._subscriptions.Sort()
+                
+            
+        
+    
+    def SetCheckerOptions( self ):
+        
+        checker_options = ClientData.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
+            
+            panel = ClientGUITime.EditCheckerOptions( dlg, checker_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                checker_options = panel.GetValue()
+                
+                subscriptions = self._subscriptions.GetData( only_selected = True )
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetCheckerOptions( checker_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
         
     
 class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -2860,55 +3553,81 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_censor
         
     
-class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
+class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, namespaces, tag_import_options ):
+    def __init__( self, parent, namespaces, tag_import_options, show_url_options = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._service_keys_to_checkbox_info = {}
         self._service_keys_to_explicit_button_info = {}
-        self._button_ids_to_service_keys = {}
         
         #
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         help_button.SetToolTip( 'Show help regarding these tag options.' )
         
+        url_options_panel = ClientGUICommon.StaticBox( self, 'fetch options' )
+        
+        self._fetch_tags_even_if_url_known_and_file_already_in_db = wx.CheckBox( url_options_panel )
+        
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
         
         #
         
-        self._SetNamespaces( namespaces )
+        self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        
+        self._InitialiseNamespaces( namespaces )
         self._SetOptions( tag_import_options )
         
         #
         
+        rows = []
+        
+        rows.append( ( 'fetch tags even if url known and file already in db: ', self._fetch_tags_even_if_url_known_and_file_already_in_db ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( url_options_panel, rows )
+        
+        url_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if not show_url_options:
+            
+            url_options_panel.Hide()
+            
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( url_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
-    def _SetNamespaces( self, namespaces ):
+    def _DoExplicitTags( self, service_key ):
         
-        self._service_keys_to_checkbox_info = {}
-        self._service_keys_to_explicit_button_info = {}
-        self._button_ids_to_service_keys = {}
+        ( explicit_tags, explicit_button ) = self._service_keys_to_explicit_button_info[ service_key ]
         
-        self._services_vbox.Clear( True )
+        with ClientGUIDialogs.DialogInputTags( self, service_key, explicit_tags ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                explicit_tags = dlg.GetTags()
+                
+            
+        
+        button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+        
+        explicit_button.SetLabelText( button_label )
+        
+        self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+        
+    
+    def _InitialiseNamespaces( self, namespaces ):
         
         services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         
-        button_id = 1
-        
         if len( services ) > 0:
-            
-            outer_gridbox = wx.FlexGridSizer( 2 )
-            
-            outer_gridbox.AddGrowableCol( 1, 1 )
             
             for service in services:
                 
@@ -2916,43 +3635,58 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 
-                outer_gridbox.Add( ClientGUICommon.BetterStaticText( self, service.GetName() ), CC.FLAGS_VCENTER )
-            
-                vbox = wx.BoxSizer( wx.VERTICAL )
+                panel = ClientGUICommon.StaticBox( self, service.GetName() )
+                
+                if len( namespaces ) > 1:
+                    
+                    select_all_button = ClientGUICommon.BetterButton( panel, 'select all', self._SelectAll, service_key, True )
+                    select_none_button = ClientGUICommon.BetterButton( panel, 'select none', self._SelectAll, service_key, False )
+                    
+                    hbox = wx.BoxSizer( wx.HORIZONTAL )
+                    
+                    hbox.Add( select_all_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    hbox.Add( select_none_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+                    
+                    panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                    
                 
                 for namespace in namespaces:
                     
                     label = ClientTags.RenderNamespaceForUser( namespace )
                     
-                    namespace_checkbox = wx.CheckBox( self, label = label )
+                    namespace_checkbox = wx.CheckBox( panel, label = label )
                     
                     self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
                     
-                    vbox.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                    panel.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
                 explicit_tags = set()
                 
                 button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
                 
-                explicit_button = wx.Button( self, label = button_label, id = button_id )
-                explicit_button.Bind( wx.EVT_BUTTON, self.EventExplicitTags )
+                explicit_button = ClientGUICommon.BetterButton( panel, button_label, self._DoExplicitTags, service_key )
                 
                 self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
-                self._button_ids_to_service_keys[ button_id ] = service_key
                 
-                button_id += 1
+                panel.Add( explicit_button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
-                vbox.Add( explicit_button, CC.FLAGS_VCENTER )
-                
-                outer_gridbox.Add( vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+                self._services_vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            self._services_vbox.Add( outer_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+    
+    def _SelectAll( self, service_key, value ):
+        
+        for ( namespace, namespace_checkbox ) in self._service_keys_to_checkbox_info[ service_key ]:
+            
+            namespace_checkbox.SetValue( value )
             
         
     
     def _SetOptions( self, tag_import_options ):
+        
+        self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         
         service_keys_to_namespaces = tag_import_options.GetServiceKeysToNamespaces()
         
@@ -3009,39 +3743,26 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
     
     def _ShowHelp( self ):
         
-        message = 'Here you can select which kinds of tags you would like applied to the files that are imported.'
-        message += os.linesep * 2
-        message += 'If this import context can parse tags (such as a gallery downloader, which may provide \'creator\' or \'series\' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.'
-        message += os.linesep * 2
-        message += 'You can also set some fixed \'explicit\' tags to be applied to all successful files. For instance, you might want to add something like \'read later\' or \'from my unsorted folder\' or \'pixiv subscription\'.'
+        message = '''Here you can select which kinds of tags you would like applied to the files that are imported.
+
+If this import context can fetch and parse tags from a remote location (such as a gallery downloader, which may provide 'creator' or 'series' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.
+
+In these cases, if the URL has been previously downloaded and the client knows its file is already in the database, the client will usually not make a new network request to fetch the file's tags. This allows for quick reprocessing/skipping of previously seen items in large download queues and saves bandwidth. If you however wish to purposely fetch tags for files you have previously downloaded, you can also force tag fetching for these 'already in db' files.
+
+I strongly recommend that you only ever turn this 'fetch tags even...' option for one-time jobs. It is typically only useful if you download some files and realised you forgot to set the tag parsing options you like--you can set the fetch option on and 'try again' the files to force the downloader to fetch the tags.
+
+You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my unsorted folder' or 'pixiv subscription') to be applied to all imported files.
+
+---
+
+Please note that you can set up 'default' values for these tag import options in the regular options panel, either globally and on a per-site basis. If you always want all the tags going to 'local tags', this is easy to set up, and you won't have to put it every time.'''
         
         wx.MessageBox( message )
         
     
-    def EventExplicitTags( self, event ):
-        
-        button_id = event.GetId()
-        
-        service_key = self._button_ids_to_service_keys[ button_id ]
-        
-        ( explicit_tags, explicit_button ) = self._service_keys_to_explicit_button_info[ service_key ]
-        
-        with ClientGUIDialogs.DialogInputTags( self, service_key, explicit_tags ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                explicit_tags = dlg.GetTags()
-                
-            
-        
-        button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
-        
-        explicit_button.SetLabelText( button_label )
-        
-        self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
-        
-    
     def GetValue( self ):
+        
+        fetch_tags_even_if_url_known_and_file_already_in_db = self._fetch_tags_even_if_url_known_and_file_already_in_db.GetValue()
         
         service_keys_to_namespaces = {}
         
@@ -3054,7 +3775,7 @@ class EditTagImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         service_keys_to_explicit_tags = { service_key : explicit_tags for ( service_key, ( explicit_tags, explicit_button ) ) in self._service_keys_to_explicit_button_info.items() }
         
-        tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+        tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
         
         return tag_import_options
         
@@ -3065,7 +3786,14 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        show_panel = ClientGUICommon.StaticBox( self, 'shows' )
+        
+        self._show = wx.CheckBox( show_panel )
+        
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        self._background_colour = ClientGUICommon.AlphaColourControl( edit_panel )
+        self._text_colour = ClientGUICommon.AlphaColourControl( edit_panel )
         
         self._namespaces_listbox = ClientGUIListBoxes.QueueListBox( edit_panel, 8, self._ConvertNamespaceToListBoxString, self._AddNamespaceInfo, self._EditNamespaceInfo )
         
@@ -3079,8 +3807,12 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( namespace_info, separator, example_tags ) = tag_summary_generator.ToTuple()
+        ( background_colour, text_colour, namespace_info, separator, example_tags, show ) = tag_summary_generator.ToTuple()
         
+        self._show.SetValue( show )
+        
+        self._background_colour.SetValue( background_colour )
+        self._text_colour.SetValue( text_colour )
         self._namespaces_listbox.AddDatas( namespace_info )
         self._separator.SetValue( separator )
         self._example_tags.SetValue( os.linesep.join( example_tags ) )
@@ -3089,6 +3821,23 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        rows = []
+        
+        rows.append( ( 'currently shows (turn off to hide): ', self._show ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( show_panel, rows )
+        
+        show_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'background colour: ', self._background_colour ) )
+        rows.append( ( 'text colour: ', self._text_colour ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'The colours only work for the thumbnails right now!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( self._namespaces_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ClientGUICommon.WrapInText( self._separator, edit_panel, 'separator' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3098,6 +3847,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
+        vbox.Add( show_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -3105,9 +3855,10 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._separator.Bind( wx.EVT_TEXT, self.EventText )
-        self._example_tags.Bind( wx.EVT_TEXT, self.EventText )
-        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventText )
+        self._show.Bind( wx.EVT_CHECKBOX, self.EventChange )
+        self._separator.Bind( wx.EVT_TEXT, self.EventChange )
+        self._example_tags.Bind( wx.EVT_TEXT, self.EventChange )
+        self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventChange )
         
     
     def _AddNamespaceInfo( self ):
@@ -3198,7 +3949,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._test_result.SetValue( tag_summary_generator.GenerateExampleSummary() )
         
     
-    def EventText( self, event ):
+    def EventChange( self, event ):
         
         self._UpdateTest()
         
@@ -3207,11 +3958,15 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
+        show = self._show.GetValue()
+        
+        background_colour = self._background_colour.GetValue()
+        text_colour = self._text_colour.GetValue()
         namespace_info = self._namespaces_listbox.GetData()
         separator = self._separator.GetValue()
         example_tags = HydrusTags.CleanTags( HydrusText.DeserialiseNewlinedTexts( self._example_tags.GetValue() ) )
         
-        return ClientTags.TagSummaryGenerator( namespace_info, separator, example_tags )
+        return ClientTags.TagSummaryGenerator( background_colour, text_colour, namespace_info, separator, example_tags, show )
         
     
 class TagSummaryGeneratorButton( ClientGUICommon.BetterButton ):

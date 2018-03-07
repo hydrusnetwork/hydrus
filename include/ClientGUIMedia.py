@@ -8,6 +8,7 @@ import ClientGUICommon
 import ClientGUIDialogs
 import ClientGUIDialogsManage
 import ClientGUIMenus
+import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
@@ -839,6 +840,69 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _ManageNotes( self ):
+        
+        def wx_do_it( media, notes ):
+            
+            if not self:
+                
+                return
+                
+            
+            title = 'manage notes'
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
+                
+                size = ClientData.ConvertTextToPixels( control, ( 80, 14 ) )
+                
+                control.SetInitialSize( size )
+                
+                control.SetValue( notes )
+                
+                panel.SetControl( control )
+                
+                dlg.SetPanel( panel )
+                
+                wx.CallAfter( control.SetFocus )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    notes = control.GetValue()
+                    
+                    hash = media.GetHash()
+                    
+                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( notes, hash ) ) ]
+                    
+                    service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+                    
+                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    
+                
+            
+            self.SetFocus()
+            
+        
+        def thread_wait( media ):
+            
+            # if it ultimately makes sense, I can load/cache notes in the media result
+            
+            notes = HG.client_controller.Read( 'file_notes', media.GetHash() )
+            
+            wx.CallAfter( wx_do_it, media, notes )
+            
+        
+        if self._focussed_media is None:
+            
+            return
+            
+        
+        HG.client_controller.CallToThread( thread_wait, self._focussed_media.GetDisplayMedia() )
+        
+    
     def _ManageRatings( self ):
         
         if len( self._selected_media ) > 0:
@@ -1050,6 +1114,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             elif action == 'manage_file_urls':
                 
                 self._ManageURLs()
+                
+            elif action == 'manage_file_notes':
+                
+                self._ManageNotes()
                 
             elif action == 'archive_file':
                 
@@ -3211,6 +3279,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
             ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s known urls', 'Manage urls for the focused file.', self._ManageURLs )
+            ClientGUIMenus.AppendMenuItem( self, manage_menu, 'file\'s notes', 'Manage notes for the focused file.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -4007,52 +4076,63 @@ class Thumbnail( Selectable ):
             
             tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
             
-            tags_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_top' )
+            upper_tag_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_top' )
             
-            upper_summary = tags_summary_generator.GenerateSummary( tags )
+            upper_summary = upper_tag_summary_generator.GenerateSummary( tags )
             
-            if len( upper_summary ) > 0:
-                
-                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
-                
-                ( text_x, text_y ) = dc.GetTextExtent( upper_summary )
-                
-                top_left_x = int( ( width - text_x ) / 2 )
-                top_left_y = CC.THUMBNAIL_BORDER
-                
-                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
-                
-                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
-                
-                dc.SetPen( wx.TRANSPARENT_PEN )
-                
-                dc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
-                
-                dc.DrawText( upper_summary, top_left_x, top_left_y )
-                
+            lower_tag_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
             
-            tags_summary_generator = new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
+            lower_summary = lower_tag_summary_generator.GenerateSummary( tags )
             
-            lower_summary = tags_summary_generator.GenerateSummary( tags )
-            
-            if len( lower_summary ) > 0:
+            if len( upper_summary ) > 0 or len( lower_summary ) > 0:
                 
-                dc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ) )
+                gc = wx.GraphicsContext.Create( dc )
                 
-                ( text_x, text_y ) = dc.GetTextExtent( lower_summary )
+                if len( upper_summary ) > 0:
+                    
+                    text_colour_with_alpha = upper_tag_summary_generator.GetTextColour()
+                    
+                    gc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ), text_colour_with_alpha )
+                    
+                    background_colour_with_alpha = upper_tag_summary_generator.GetBackgroundColour()
+                    
+                    gc.SetBrush( wx.Brush( background_colour_with_alpha ) )
+                    
+                    gc.SetPen( wx.TRANSPARENT_PEN )
+                    
+                    ( text_x, text_y ) = gc.GetTextExtent( upper_summary )
+                    
+                    top_left_x = int( ( width - text_x ) / 2 )
+                    top_left_y = CC.THUMBNAIL_BORDER
+                    
+                    gc.DrawRectangle( 0, top_left_y - 1, width, text_y + 2 )
+                    
+                    gc.DrawText( upper_summary, top_left_x, top_left_y )
+                    
                 
-                top_left_x = width - text_x - CC.THUMBNAIL_BORDER
-                top_left_y = height - text_y - CC.THUMBNAIL_BORDER
+                if len( lower_summary ) > 0:
+                    
+                    text_colour_with_alpha = lower_tag_summary_generator.GetTextColour()
+                    
+                    gc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ), text_colour_with_alpha )
+                    
+                    background_colour_with_alpha = lower_tag_summary_generator.GetBackgroundColour()
+                    
+                    gc.SetBrush( wx.Brush( background_colour_with_alpha ) )
+                    
+                    gc.SetPen( wx.TRANSPARENT_PEN )
+                    
+                    ( text_x, text_y ) = gc.GetTextExtent( lower_summary )
+                    
+                    top_left_x = width - text_x - CC.THUMBNAIL_BORDER
+                    top_left_y = height - text_y - CC.THUMBNAIL_BORDER
+                    
+                    gc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
+                    
+                    gc.DrawText( lower_summary, top_left_x, top_left_y )
+                    
                 
-                dc.SetBrush( wx.Brush( CC.COLOUR_UNSELECTED ) )
-                
-                dc.SetTextForeground( CC.COLOUR_SELECTED_DARK )
-                
-                dc.SetPen( wx.TRANSPARENT_PEN )
-                
-                dc.DrawRectangle( top_left_x - 1, top_left_y - 1, text_x + 2, text_y + 2 )
-                
-                dc.DrawText( lower_summary, top_left_x, top_left_y )
+                del gc
                 
             
         

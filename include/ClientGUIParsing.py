@@ -4482,9 +4482,9 @@ class TestPanel( wx.Panel ):
         
         if len( example_data ) > 0:
             
-            parse_phrase = 'did not parse'
+            parse_phrase = 'uncertain data type'
             
-            # can't just throw this at bs4, as that'll wrap any unparsable string in some bare <html><body><p> tags
+            # can't just throw this at bs4 to see if it 'works', as it'll just wrap any unparsable string in some bare <html><body><p> tags
             if '<html' in example_data:
                 
                 parse_phrase = 'looks like HTML'

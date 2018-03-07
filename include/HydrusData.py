@@ -1292,13 +1292,13 @@ def ToUnicode( text_producing_object ):
             
             try:
                 
-                text = text.decode( 'utf-16' )
+                text = text.decode( locale.getpreferredencoding() )
                 
             except:
                 
                 try:
                     
-                    text = text.decode( locale.getpreferredencoding() )
+                    text = text.decode( 'utf-16' )
                     
                 except:
                     
@@ -1331,171 +1331,6 @@ class HydrusYAMLBase( yaml.YAMLObject ):
     yaml_loader = yaml.SafeLoader
     yaml_dumper = yaml.SafeDumper
     
-class Account( HydrusYAMLBase ):
-    
-    yaml_tag = u'!Account'
-    
-    def __init__( self, account_key, account_type, created, expires, used_bytes, used_requests, banned_info = None ):
-        
-        HydrusYAMLBase.__init__( self )
-        
-        self._info = {}
-        
-        self._info[ 'account_key' ] = account_key
-        self._info[ 'account_type' ] = account_type
-        self._info[ 'created' ] = created
-        self._info[ 'expires' ] = expires
-        self._info[ 'used_bytes' ] = used_bytes
-        self._info[ 'used_requests' ] = used_requests
-        if banned_info is not None: self._info[ 'banned_info' ] = banned_info
-        
-        self._info[ 'fresh_timestamp' ] = GetNow()
-        
-    
-    def __repr__( self ): return self.ConvertToString()
-    
-    def __str__( self ): return self.ConvertToString()
-    
-    def _IsBanned( self ):
-        
-        if 'banned_info' not in self._info: return False
-        else:
-            
-            ( reason, created, expires ) = self._info[ 'banned_info' ]
-            
-            if expires is None: return True
-            else: return not TimeHasPassed( expires )
-            
-        
-    
-    def _IsBytesExceeded( self ):
-        
-        account_type = self._info[ 'account_type' ]
-        
-        max_num_bytes = account_type.GetMaxBytes()
-        
-        used_bytes = self._info[ 'used_bytes' ]
-        
-        return max_num_bytes is not None and used_bytes > max_num_bytes
-        
-    
-    def _IsExpired( self ):
-        
-        if self._info[ 'expires' ] is None: return False
-        else: return TimeHasPassed( self._info[ 'expires' ] )
-        
-    
-    def _IsRequestsExceeded( self ):
-        
-        account_type = self._info[ 'account_type' ]
-        
-        max_num_requests = account_type.GetMaxRequests()
-        
-        used_requests = self._info[ 'used_requests' ]
-        
-        return max_num_requests is not None and used_requests > max_num_requests
-        
-    
-    def CheckPermission( self, permission ):
-        
-        if self._IsBanned(): raise HydrusExceptions.PermissionException( 'This account is banned!' )
-        
-        if self._IsExpired(): raise HydrusExceptions.PermissionException( 'This account is expired.' )
-        
-        if self._IsBytesExceeded(): raise HydrusExceptions.PermissionException( 'You have hit your data transfer limit, and cannot make any more requests for the month.' )
-        
-        if self._IsRequestsExceeded(): raise HydrusExceptions.PermissionException( 'You have hit your requests limit, and cannot make any more requests for the month.' )
-        
-        if not self._info[ 'account_type' ].HasPermission( permission ): raise HydrusExceptions.PermissionException( 'You do not have permission to do that.' )
-        
-    
-    def ConvertToString( self ): return ConvertTimestampToPrettyAge( self._info[ 'created' ] ) + os.linesep + self._info[ 'account_type' ].ConvertToString() + os.linesep + 'which '+ ConvertTimestampToPrettyExpires( self._info[ 'expires' ] )
-    
-    def GetAccountKey( self ): return self._info[ 'account_key' ]
-    
-    def GetAccountType( self ): return self._info[ 'account_type' ]
-    
-    def GetCreated( self ): return self._info[ 'created' ]
-    
-    def GetExpires( self ): return self._info[ 'expires' ]
-    
-    def GetExpiresString( self ):
-        
-        if self._IsBanned():
-            
-            ( reason, created, expires ) = self._info[ 'banned_info' ]
-            
-            return 'banned ' + ConvertTimestampToPrettyAge( created ) + ', ' + ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
-            
-        else: return ConvertTimestampToPrettyAge( self._info[ 'created' ] ) + ' and ' + ConvertTimestampToPrettyExpires( self._info[ 'expires' ] )
-        
-    
-    def GetUsedBytesString( self ):
-        
-        max_num_bytes = self._info[ 'account_type' ].GetMaxBytes()
-        
-        used_bytes = self._info[ 'used_bytes' ]
-        
-        if max_num_bytes is None: return ConvertIntToBytes( used_bytes ) + ' used this month'
-        else: return ConvertIntToBytes( used_bytes ) + '/' + ConvertIntToBytes( max_num_bytes ) + ' used this month'
-        
-    
-    def GetUsedRequestsString( self ):
-        
-        max_num_requests = self._info[ 'account_type' ].GetMaxRequests()
-        
-        used_requests = self._info[ 'used_requests' ]
-        
-        if max_num_requests is None: return ConvertIntToPrettyString( used_requests ) + ' requests used this month'
-        else: return ConvertValueRangeToPrettyString( used_requests, max_num_requests ) + ' requests used this month'
-        
-    
-    def GetUsedBytes( self ): return self._info[ 'used_bytes' ]
-    
-    def GetUsedRequests( self ): return self._info[ 'used_bytes' ]
-    
-    def HasAccountKey( self ):
-        
-        if 'account_key' in self._info and self._info[ 'account_key' ] is not None: return True
-        
-        return False
-        
-    
-    def HasPermission( self, permission ):
-        
-        if self._IsBanned(): return False
-        
-        if self._IsExpired(): return False
-        
-        if self._IsBytesExceeded(): return False
-        
-        if self._IsRequestsExceeded(): return False
-        
-        return self._info[ 'account_type' ].HasPermission( permission )
-        
-    
-    def IsBanned( self ): return self._IsBanned()
-    
-    def IsStale( self ): return self._info[ 'fresh_timestamp' ] + HC.UPDATE_DURATION * 5 < GetNow()
-    
-    def IsUnknownAccount( self ): return self._info[ 'account_type' ].IsUnknownAccountType()
-    
-    def MakeFresh( self ): self._info[ 'fresh_timestamp' ] = GetNow()
-    
-    def MakeStale( self ): self._info[ 'fresh_timestamp' ] = 0
-    
-    def ReportDataUsed( self, num_bytes ):
-        
-        self._info[ 'used_bytes' ] += num_bytes
-        
-    
-    def ReportRequestUsed( self ):
-        
-        self._info[ 'used_requests' ] += 1
-        
-    
-sqlite3.register_adapter( Account, yaml.safe_dump )
-
 class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_IDENTIFIER
@@ -1766,6 +1601,15 @@ class ContentUpdate( object ):
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
                 ( rating, hashes ) = self._row
+                
+            
+        elif self._data_type == HC.CONTENT_TYPE_NOTES:
+            
+            if self._action == HC.CONTENT_UPDATE_SET:
+                
+                ( notes, hash ) = self._row
+                
+                hashes = { hash }
                 
             
         

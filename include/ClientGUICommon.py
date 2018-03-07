@@ -1107,6 +1107,49 @@ class ChoiceSort( wx.Panel ):
         self._UpdateAscLabels()
         
     
+class AlphaColourControl( wx.Panel ):
+    
+    def __init__( self, parent ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._colour_picker = wx.ColourPickerCtrl( self )
+        
+        self._alpha_selector = wx.SpinCtrl( self, min = 0, max = 255 )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._colour_picker, CC.FLAGS_VCENTER )
+        hbox.Add( BetterStaticText( self, 'alpha: ' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._alpha_selector, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetValue( self ):
+        
+        colour = self._colour_picker.GetColour()
+        
+        ( r, g, b, a ) = colour.Get() # no alpha support here, so it'll be 255
+        
+        a = self._alpha_selector.GetValue()
+        
+        colour = wx.Colour( r, g, b, a )
+        
+        return colour
+        
+    
+    def SetValue( self, colour ):
+        
+        ( r, g, b, a ) = colour.Get()
+        
+        picker_colour = wx.Colour( r, g, b )
+        
+        self._colour_picker.SetColour( picker_colour )
+        
+        self._alpha_selector.SetValue( a )
+        
+    
 class ExportPatternButton( BetterButton ):
     
     def __init__( self, parent ):
@@ -3029,8 +3072,6 @@ class TextAndGauge( wx.Panel ):
         self._gauge.SetValue( value )
         
     
-( DirtyEvent, EVT_DIRTY ) = wx.lib.newevent.NewEvent()
-
 class TextAndPasteCtrl( wx.Panel ):
     
     def __init__( self, parent, add_callable ):
@@ -3107,22 +3148,30 @@ class TextAndPasteCtrl( wx.Panel ):
     
 class ThreadToGUIUpdater( object ):
     
-    def __init__( self, event_handler, func ):
+    def __init__( self, win, func ):
         
-        self._event_handler = event_handler
+        self._win = win
         self._func = func
         
         self._lock = threading.Lock()
         self._dirty_count = 0
+        
         self._args = None
         self._kwargs = None
         
-        event_handler.Bind( EVT_DIRTY, self.EventDirty )
+        self._doing_it = False
         
     
-    def EventDirty( self, event ):
+    def WXDoIt( self ):
         
         with self._lock:
+            
+            if not self._win:
+                
+                self._win = None
+                
+                return
+                
             
             try:
                 
@@ -3134,10 +3183,11 @@ class ThreadToGUIUpdater( object ):
                 
             
             self._dirty_count = 0
+            self._doing_it = False
             
         
     
-    # the point here is that we can spam this a hundred times a second and wx will catch up to it when the single event gets processed
+    # the point here is that we can spam this a hundred times a second, updating the args and kwargs, and wx will catch up to it when it can
     # if wx feels like running fast, it'll update at 60fps
     # if not, we won't get bungled up with 10,000+ pubsub events in the event queue
     def Update( self, *args, **kwargs ):
@@ -3147,19 +3197,11 @@ class ThreadToGUIUpdater( object ):
             self._args = args
             self._kwargs = kwargs
             
-            if self._dirty_count == 0 and not HG.view_shutdown:
+            if not self._doing_it and not HG.view_shutdown:
                 
-                def wx_code():
-                    
-                    if not self._event_handler:
-                        
-                        return
-                        
-                    
-                    wx.QueueEvent( self._event_handler, DirtyEvent() )
-                    
+                wx.CallAfter( self.WXDoIt )
                 
-                wx.CallAfter( wx_code )
+                self._doing_it = True
                 
             
             self._dirty_count += 1

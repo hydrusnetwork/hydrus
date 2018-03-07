@@ -471,7 +471,6 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( obj._gallery_identifier, dupe_obj._gallery_identifier )
             self.assertEqual( obj._gallery_stream_identifiers, dupe_obj._gallery_stream_identifiers )
             self.assertEqual( len( obj._queries ), len( dupe_obj._queries ) )
-            self.assertEqual( obj._get_tags_if_url_known_and_file_redundant, dupe_obj._get_tags_if_url_known_and_file_redundant )
             self.assertEqual( obj._initial_file_limit, dupe_obj._initial_file_limit )
             self.assertEqual( obj._periodic_file_limit, dupe_obj._periodic_file_limit )
             self.assertEqual( obj._paused, dupe_obj._paused )
@@ -490,7 +489,6 @@ class TestSerialisables( unittest.TestCase ):
         gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
         queries = [ ClientImporting.SubscriptionQuery( 'test query' ), ClientImporting.SubscriptionQuery( 'test query 2' ) ]
         checker_options = ClientData.CheckerOptions()
-        get_tags_if_url_known_and_file_redundant = True
         initial_file_limit = 100
         periodic_file_limit = 50
         paused = False
@@ -500,7 +498,7 @@ class TestSerialisables( unittest.TestCase ):
         
         no_work_until = HydrusData.GetNow() - 86400 * 20
         
-        sub.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, checker_options, get_tags_if_url_known_and_file_redundant, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
+        sub.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until )
         
         self.assertEqual( sub.GetGalleryIdentifier(), gallery_identifier )
         self.assertEqual( sub.GetTagImportOptions(), tag_import_options )

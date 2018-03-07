@@ -1122,7 +1122,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'refresh', 'If the current page has a search, refresh it.', self._Refresh )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'show/hide management and preview panels', 'Show or hide the panels on the left.', self._ShowHideSplitters )
+            
+            splitter_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
+            ClientGUIMenus.AppendSeparator( splitter_menu )
+            ClientGUIMenus.AppendMenuCheckItem( self, splitter_menu, 'save current page\'s sash positions on client exit', 'Set whether sash position should be saved over on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
+            ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'save current page\'s sash positions now', 'Save the current page\'s sash positions.', self._SaveSplitterPositions )
+            ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'restore all pages\' sash positions to saved value', 'Restore the current sash positions for all pages to the values that are saved.', self._RestoreSplitterPositions )
+            
+            ClientGUIMenus.AppendMenu( menu, splitter_menu, 'management and preview panels' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -2037,6 +2046,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.pub( 'wake_daemons' )
         self._controller.gui.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
+        self._controller.pub( 'notify_new_colourset' )
         
     
     def _ManageParsers( self ):
@@ -2134,7 +2144,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageSubscriptions( self ):
         
-        def wx_do_it():
+        def wx_do_it( subscriptions ):
             
             if not self:
                 
@@ -2144,13 +2154,18 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             title = 'manage subscriptions'
             frame_key = 'manage_subscriptions_dialog'
             
-            with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
+            with ClientGUITopLevelWindows.DialogEdit( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.ManageSubscriptionsPanel( dlg )
+                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, subscriptions )
                 
                 dlg.SetPanel( panel )
                 
-                dlg.ShowModal()
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    subscriptions = panel.GetValue()
+                    
+                    HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ], subscriptions )
+                    
                 
             
         
@@ -2188,7 +2203,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                         
                     
                 
-                controller.CallBlockingToWx( wx_do_it )
+                subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                
+                controller.CallBlockingToWx( wx_do_it, subscriptions )
                 
             finally:
                 
@@ -2588,6 +2605,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _RestoreSplitterPositions( self ):
+        
+        self._controller.pub( 'set_splitter_positions', HC.options[ 'hpos' ], HC.options[ 'vpos' ] )
+        
+    
     def _ReviewBandwidth( self ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
@@ -2604,6 +2626,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         panel = ClientGUIScrolledPanelsReview.ReviewServicesPanel( frame, self._controller )
         
         frame.SetPanel( panel )
+        
+    
+    def _SaveSplitterPositions( self ):
+        
+        page = self._notebook.GetCurrentMediaPage()
+        
+        if page is not None:
+            
+            ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+            
         
     
     def _SetPassword( self ):
@@ -3550,11 +3582,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._notebook.CleanBeforeDestroy()
             
-            page = self._notebook.GetCurrentMediaPage()
-            
-            if page is not None:
+            if self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ):
                 
-                ( HC.options[ 'hpos' ], HC.options[ 'vpos' ] ) = page.GetSashPositions()
+                self._SaveSplitterPositions()
                 
             
             ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
@@ -3607,6 +3637,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._new_options.SetString( 'current_colourset', new_colourset )
+        
+        HG.client_controller.pub( 'notify_new_colourset' )
         
     
     def FlushOutPredicates( self, predicates ):

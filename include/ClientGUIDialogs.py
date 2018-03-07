@@ -2466,7 +2466,7 @@ class DialogSetupExport( Dialog ):
         
         def wx_update_label( text ):
             
-            if not self:
+            if not self or not self._export:
                 
                 return
                 
@@ -2476,7 +2476,7 @@ class DialogSetupExport( Dialog ):
         
         def wx_done():
             
-            if not self:
+            if not self or not self._export:
                 
                 return
                 

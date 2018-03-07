@@ -1689,7 +1689,7 @@ class MediaSingleton( Media ):
         
         new_options = HG.client_controller.new_options
         
-        tags_summary_generator = new_options.GetTagSummaryGenerator( 'media_viewer_top' )
+        tag_summary_generator = new_options.GetTagSummaryGenerator( 'media_viewer_top' )
         
         tm = self.GetTagsManager()
         
@@ -1704,7 +1704,7 @@ class MediaSingleton( Media ):
         
         tags = siblings_manager.CollapseTags( CC.COMBINED_TAG_SERVICE_KEY, tags )
         
-        summary = tags_summary_generator.GenerateSummary( tags )
+        summary = tag_summary_generator.GenerateSummary( tags )
         
         return summary
         

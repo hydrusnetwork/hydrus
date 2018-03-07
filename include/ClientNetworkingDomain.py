@@ -247,11 +247,33 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         # is before
         # post url
         
+        # also, put more 'precise' URL types above more typically permissive, in the order:
+        # file
+        # post
+        # gallery
+        # watchable
+        # sorting in reverse, so higher number means more precise
+        
         def key( u_m ):
+            
+            u_t = u_m.GetURLType()
+            
+            if u_t == HC.URL_TYPE_FILE:
+                
+                u_t_precision_value = 2
+                
+            elif u_t == HC.URL_TYPE_POST:
+                
+                u_t_precision_value = 1
+                
+            else:
+                
+                u_t_precision_value = 0
+                
             
             u_e = u_m.GetExampleURL()
             
-            return ( u_e.count( '/' ), u_e.count( '=' ) )
+            return ( u_t_precision_value, u_e.count( '/' ), u_e.count( '=' ) )
             
         
         for url_matches in self._domains_to_url_matches.values():

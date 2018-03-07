@@ -315,7 +315,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = wx.CheckBox( self, label = 'show all' )
         self._history_time_delta_none.Bind( wx.EVT_CHECKBOX, self.EventTimeDeltaChanged )
         
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'this month', 12 ), ( 'has specific rules', 18 ), ( 'blocked?', 10 ) ], self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, 'bandwidth review', 20, 30, [ ( 'name', -1 ), ( 'type', 14 ), ( 'current usage', 14 ), ( 'past 24 hours', 15 ), ( 'search distance', 17 ), ( 'this month', 12 ), ( 'has specific rules', 18 ), ( 'blocked?', 10 ) ], self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
         
         self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
         
@@ -328,7 +328,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._history_time_delta_threshold.SetValue( 86400 * 30 )
+        self._history_time_delta_threshold.SetValue( 86400 * 7 )
         
         self._bandwidths.Sort( 0 )
         
@@ -367,8 +367,33 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         sortable_network_context = ( network_context.context_type, network_context.context_data )
         sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
         current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
-        day_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
-        month_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+        
+        day_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, 86400 )
+        day_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 86400 )
+        
+        day_usage = ( day_usage_data, day_usage_requests )
+        
+        month_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None )
+        month_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None )
+        
+        month_usage = ( month_usage_data, month_usage_requests )
+        
+        if self._history_time_delta_none.GetValue():
+            
+            search_usage = 0
+            pretty_search_usage = ''
+            
+        else:
+            
+            search_delta = self._history_time_delta_threshold.GetValue()
+            
+            search_usage_requests = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, search_delta )
+            search_usage_data = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, search_delta )
+            
+            search_usage = ( search_usage_data, search_usage_requests )
+            
+            pretty_search_usage = HydrusData.ConvertIntToBytes( search_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( search_usage_requests ) + ' requests'
+            
         
         pretty_network_context = network_context.ToUnicode()
         pretty_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
@@ -382,8 +407,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
             
         
-        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage )
-        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage )
+        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( day_usage_requests ) + ' requests'
+        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( month_usage_requests ) + ' requests'
         
         if has_rules:
             
@@ -405,7 +430,10 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_blocked = ''
             
         
-        return ( ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_month_usage, pretty_has_rules, pretty_blocked ), ( sortable_network_context, sortable_context_type, current_usage, day_usage, month_usage, has_rules, blocked ) )
+        display_tuple = ( pretty_network_context, pretty_context_type, pretty_current_usage, pretty_day_usage, pretty_search_usage, pretty_month_usage, pretty_has_rules, pretty_blocked )
+        sort_tuple = ( sortable_network_context, sortable_context_type, current_usage, day_usage, search_usage, month_usage, has_rules, blocked )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _DeleteNetworkContexts( self ):

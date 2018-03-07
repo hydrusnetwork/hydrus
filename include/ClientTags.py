@@ -245,9 +245,19 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR
     SERIALISABLE_NAME = 'Tag Summary Generator'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, namespace_info = None, separator = None, example_tags = None ):
+    def __init__( self, background_colour = None, text_colour = None, namespace_info = None, separator = None, example_tags = None, show = True ):
+        
+        if background_colour is None:
+            
+            background_colour = wx.Colour( 223, 227, 230, 255 )
+            
+        
+        if text_colour is None:
+            
+            text_colour = wx.Colour( 1, 17, 26, 255 )
+            
         
         if namespace_info is None:
             
@@ -268,21 +278,32 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
             example_tags = []
             
         
+        self._background_colour = background_colour
+        self._text_colour = text_colour
         self._namespace_info = namespace_info
         self._separator = separator
         self._example_tags = list( example_tags )
+        self._show = show
         
         self._UpdateNamespaceLookup()
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._namespace_info, self._separator, self._example_tags )
+        return ( list( self._background_colour.Get() ), list( self._text_colour.Get() ), self._namespace_info, self._separator, self._example_tags, self._show )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._namespace_info, self._separator, self._example_tags ) = serialisable_info
+        ( background_rgba, text_rgba, self._namespace_info, self._separator, self._example_tags, self._show ) = serialisable_info
+        
+        ( r, g, b, a ) = background_rgba
+        
+        self._background_colour = wx.Colour( r, g, b, a )
+        
+        ( r, g, b, a ) = text_rgba
+        
+        self._text_colour = wx.Colour( r, g, b, a )
         
         self._namespace_info = [ tuple( row ) for row in self._namespace_info ]
         
@@ -294,12 +315,40 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         self._interesting_namespaces = { namespace for ( namespace, prefix, separator ) in self._namespace_info }
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( namespace_info, separator, example_tags ) = old_serialisable_info
+            
+            background_rgba = ( 223, 227, 230, 255 )
+            text_rgba = ( 1, 17, 26, 255 )
+            show = True
+            
+            new_serialisable_info = ( background_rgba, text_rgba, namespace_info, separator, example_tags, show )
+            
+            return ( 2, new_serialisable_info )
+            
+        
+    
     def GenerateExampleSummary( self ):
         
-        return self.GenerateSummary( self._example_tags )
+        if not self._show:
+            
+            return 'not showing'
+            
+        else:
+            
+            return self.GenerateSummary( self._example_tags )
+            
         
     
     def GenerateSummary( self, tags, max_length = None ):
+        
+        if not self._show:
+            
+            return ''
+            
         
         namespaces_to_subtags = collections.defaultdict( list )
         
@@ -346,9 +395,19 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
+    def GetBackgroundColour( self ):
+        
+        return self._background_colour
+        
+    
+    def GetTextColour( self ):
+        
+        return self._text_colour
+        
+    
     def ToTuple( self ):
         
-        return ( self._namespace_info, self._separator, self._example_tags )
+        return ( self._background_colour, self._text_colour, self._namespace_info, self._separator, self._example_tags, self._show )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR ] = TagSummaryGenerator

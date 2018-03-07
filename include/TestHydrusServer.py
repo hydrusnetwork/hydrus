@@ -46,6 +46,8 @@ class TestServer( unittest.TestCase ):
     @classmethod
     def setUpClass( cls ):
         
+        cls._access_key = HydrusData.GenerateKey()
+        
         services = []
         
         cls._serverside_file_service = HydrusNetwork.GenerateService( HydrusData.GenerateKey(), HC.FILE_REPOSITORY, 'file repo', HC.DEFAULT_SERVICE_PORT + 1 )
@@ -56,9 +58,9 @@ class TestServer( unittest.TestCase ):
         cls._clientside_tag_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.TAG_REPOSITORY, 'tag repo' )
         cls._clientside_admin_service = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.SERVER_ADMIN, 'server admin' )
         
-        cls._clientside_file_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT + 1 ) )
-        cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT ) )
-        cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT ) )
+        cls._clientside_file_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT + 1, cls._access_key ) )
+        cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT, cls._access_key ) )
+        cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, cls._access_key ) )
         
         cls._local_booru = ClientServices.GenerateService( HydrusData.GenerateKey(), HC.LOCAL_BOORU, 'local booru' )
         
@@ -71,15 +73,12 @@ class TestServer( unittest.TestCase ):
         permissions = [ HC.GET_DATA, HC.POST_DATA, HC.POST_PETITIONS, HC.RESOLVE_PETITIONS, HC.MANAGE_USERS, HC.GENERAL_ADMIN, HC.EDIT_SERVICES ]
         
         account_key = HydrusData.GenerateKey()
-        account_type = HydrusData.AccountType( 'account', permissions, ( None, None ) )
+        account_type = HydrusNetwork.AccountType.GenerateAdminAccountType( HC.SERVER_ADMIN )
         created = HydrusData.GetNow() - 100000
         expires = None
-        used_bytes = 0
-        used_requests = 0
         
-        cls._account = HydrusData.Account( account_key, account_type, created, expires, used_bytes, used_requests )
+        cls._account = HydrusNetwork.Account( account_key, account_type, created, expires )
         
-        cls._access_key = HydrusData.GenerateKey()
         cls._file_hash = HydrusData.GenerateKey()
         
         def TWISTEDSetup():
@@ -146,10 +145,6 @@ class TestServer( unittest.TestCase ):
         
     
     def _test_file_repo( self, service ):
-        
-        info = service.GetInfo()
-        
-        info[ 'access_key' ] = self._access_key
         
         # file
         
@@ -441,10 +436,6 @@ class TestServer( unittest.TestCase ):
         response = service.Request( HC.GET, 'access_key', { 'registration_key' : registration_key } )
         
         self.assertEqual( response[ 'access_key' ], self._access_key )
-        
-        info = service.GetInfo()
-        
-        info[ 'access_key' ] = self._access_key
         
         # set up session
         

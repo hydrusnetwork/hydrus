@@ -1010,13 +1010,14 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, namespaces, tag_import_options, update_callable = None ):
+    def __init__( self, parent, namespaces, tag_import_options, update_callable = None, show_url_options = True ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag import options', self._EditOptions )
         
         self._namespaces = namespaces
         self._tag_import_options = tag_import_options
         self._update_callable = update_callable
+        self._show_url_options = show_url_options
         
         self._SetToolTip()
         
@@ -1025,7 +1026,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptions( dlg, self._namespaces, self._tag_import_options )
+            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._namespaces, self._tag_import_options, show_url_options = self._show_url_options )
             
             dlg.SetPanel( panel )
             
@@ -1040,7 +1041,7 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def _SetToolTip( self ):
         
-        self.SetToolTip( self._tag_import_options.GetSummary() )
+        self.SetToolTip( self._tag_import_options.GetSummary( self._show_url_options ) )
         
     
     def _SetValue( self, tag_import_options ):
