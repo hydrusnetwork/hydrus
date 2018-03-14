@@ -3591,7 +3591,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
+        
+        if canvas_key is not None and canvas_key != self._canvas_key:
+            
+            return False
+            
         
         command_processed = True
         
@@ -4255,7 +4260,12 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
+        
+        if canvas_key is not None and canvas_key != self._canvas_key:
+            
+            return False
+            
         
         command_processed = True
         
@@ -4383,7 +4393,12 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
         
     
-    def ProcessApplicationCommand( self, command ):
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
+        
+        if canvas_key is not None and canvas_key != self._canvas_key:
+            
+            return False
+            
         
         command_processed = True
         
