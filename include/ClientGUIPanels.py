@@ -1209,7 +1209,7 @@ class ReviewServicePanel( wx.Panel ):
                 
             except Exception as e:
                 
-                wx.MessageBox( unicode( e ) )
+                wx.MessageBox( HydrusData.ToUnicode( e ) )
                 
                 return
                 

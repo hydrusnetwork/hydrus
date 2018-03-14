@@ -328,7 +328,19 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._history_time_delta_threshold.SetValue( 86400 * 7 )
+        last_review_bandwidth_search_distance = self._controller.new_options.GetNoneableInteger( 'last_review_bandwidth_search_distance' )
+        
+        if last_review_bandwidth_search_distance is None:
+            
+            self._history_time_delta_threshold.SetValue( 86400 * 7 )
+            self._history_time_delta_threshold.Disable()
+            
+            self._history_time_delta_none.SetValue( True )
+            
+        else:
+            
+            self._history_time_delta_threshold.SetValue( last_review_bandwidth_search_distance )
+            
         
         self._bandwidths.Sort( 0 )
         
@@ -535,10 +547,16 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._history_time_delta_threshold.Disable()
             
+            last_review_bandwidth_search_distance = None
+            
         else:
             
             self._history_time_delta_threshold.Enable()
             
+            last_review_bandwidth_search_distance = self._history_time_delta_threshold.GetValue()
+            
+        
+        self._controller.new_options.SetNoneableInteger( 'last_review_bandwidth_search_distance', last_review_bandwidth_search_distance )
         
         self._update_job.MoveNextWorkTimeToNow()
         

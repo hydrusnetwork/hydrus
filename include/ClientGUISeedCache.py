@@ -6,6 +6,7 @@ import ClientGUIMenus
 import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
+import ClientImporting
 import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
@@ -188,7 +189,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except Exception as e:
                     
-                    wx.MessageBox( unicode( e ) )
+                    wx.MessageBox( HydrusData.ToUnicode( e ) )
                     
                 
             
@@ -409,12 +410,16 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         if sources[0].startswith( 'http' ):
             
-            seed_cache.AddURLs( sources )
+            seed_type = ClientImporting.SEED_TYPE_URL
             
         else:
             
-            seed_cache.AddPaths( sources )
+            seed_type = ClientImporting.SEED_TYPE_HDD
             
+        
+        seeds = [ ClientImporting.Seed( seed_type, source ) for source in sources ]
+        
+        seed_cache.AddSeeds( seeds )
         
     
     def _ExportToPng( self ):

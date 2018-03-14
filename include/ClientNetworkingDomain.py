@@ -80,6 +80,16 @@ def ConvertURLIntoDomain( url ):
     
     parser_result = urlparse.urlparse( url )
     
+    if parser_result.scheme == '':
+        
+        raise HydrusExceptions.URLMatchException( 'URL "' + url + '" was not recognised--did you forget the http or https?' )
+        
+    
+    if parser_result.netloc == '':
+        
+        raise HydrusExceptions.URLMatchException( 'URL "' + url + '" was not recognised--is it missing a domain?' )
+        
+    
     domain = HydrusData.ToByteString( parser_result.netloc )
     
     return domain
@@ -1258,7 +1268,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                raise HydrusExceptions.URLMatchException( unicode( e ) )
+                raise HydrusExceptions.URLMatchException( HydrusData.ToUnicode( e ) )
                 
             
         
@@ -1286,7 +1296,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                raise HydrusExceptions.URLMatchException( unicode( e ) )
+                raise HydrusExceptions.URLMatchException( HydrusData.ToUnicode( e ) )
                 
             
         

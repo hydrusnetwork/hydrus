@@ -836,7 +836,7 @@ class DB( HydrusDB.HydrusDB ):
         outer_id = None
         outer_population = 0
         
-        self._c.execute( 'INSERT INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
+        self._c.execute( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) )
         
     
     def _CacheSimilarFilesAssociatePHashes( self, hash_id, phashes ):
@@ -980,7 +980,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key.SetVariable( 'popup_text_2', 'branch constructed, now committing' )
         
-        self._c.executemany( 'INSERT INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
+        self._c.executemany( 'INSERT OR REPLACE INTO shape_vptree ( phash_id, parent_id, radius, inner_id, inner_population, outer_id, outer_population ) VALUES ( ?, ?, ?, ?, ?, ?, ? );', insert_rows )
         
     
     def _CacheSimilarFilesGetDuplicateHashes( self, file_service_key, hash, duplicate_type ):

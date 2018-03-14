@@ -770,7 +770,7 @@ class LoginStep( object ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                reason = unicode( e )
+                reason = HydrusData.ToUnicode( e )
                 
                 raise HydrusExceptions.ValidationException( 'The credential \'' + pretty_name + '\' did not match requirements:' + os.linesep + reason )
                 
@@ -829,7 +829,7 @@ class LoginStep( object ):
                 
             except HydrusExceptions.VetoException as e:
                 
-                raise HydrusExceptions.ValidationException( unicode( e ) )
+                raise HydrusExceptions.ValidationException( HydrusData.ToUnicode( e ) )
                 
             
             # if content type is a temp variable:

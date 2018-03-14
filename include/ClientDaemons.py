@@ -18,16 +18,27 @@ def DAEMONCheckExportFolders( controller ):
     
     if not controller.options[ 'pause_export_folders_sync' ]:
         
-        export_folders = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+        HG.export_folders_running = True
         
-        for export_folder in export_folders:
+        try:
             
-            if controller.options[ 'pause_export_folders_sync' ]:
+            export_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
+            
+            for name in export_folder_names:
                 
-                break
+                export_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER, name )
+                
+                if controller.options[ 'pause_export_folders_sync' ] or HydrusThreading.IsThreadShuttingDown():
+                    
+                    break
+                    
+                
+                export_folder.DoWork()
                 
             
-            export_folder.DoWork()
+        finally:
+            
+            HG.export_folders_running = False
             
         
     
@@ -37,9 +48,9 @@ def DAEMONCheckImportFolders( controller ):
         
         HG.import_folders_running = True
         
-        import_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
-        
         try:
+            
+            import_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
             
             for name in import_folder_names:
                 

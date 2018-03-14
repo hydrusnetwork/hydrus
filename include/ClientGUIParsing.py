@@ -2660,7 +2660,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                example_data = 'fetch failed:' + os.linesep * 2 + unicode( e )
+                example_data = 'fetch failed:' + os.linesep * 2 + HydrusData.ToUnicode( e )
                 
                 HydrusData.ShowException( e )
                 
@@ -3830,7 +3830,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.StringMatchException as e:
                 
-                reason = unicode( e )
+                reason = HydrusData.ToUnicode( e )
                 
                 self._example_string_matches.SetLabelText( 'Example does not match - ' + reason )
                 self._example_string_matches.SetForegroundColour( ( 128, 0, 0 ) )

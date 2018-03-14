@@ -269,7 +269,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
             command = ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'inbox_file' )
             
         
-        HG.client_controller.pub( 'canvas_application_command', self._canvas_key, command )
+        HG.client_controller.pub( 'canvas_application_command', command, self._canvas_key )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -332,13 +332,13 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         
         self._zoom_text = ClientGUICommon.BetterStaticText( self, 'zoom' )
         
-        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ) )
+        zoom_in = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_in, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_in' ), self._canvas_key )
         zoom_in.SetToolTip( 'zoom in' )
         
-        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_out, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ) )
+        zoom_out = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_out, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'zoom_out' ), self._canvas_key )
         zoom_out.SetToolTip( 'zoom out' )
         
-        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ) )
+        zoom_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.zoom_switch, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'switch_between_100_percent_and_canvas_zoom' ), self._canvas_key )
         zoom_switch.SetToolTip( 'zoom switch' )
         
         menu_items = []
@@ -353,7 +353,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.SetToolTip( 'fullscreen switch' )
         
-        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ) )
+        open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ), self._canvas_key )
         open_externally.SetToolTip( 'open externally' )
         
         close = ClientGUICommon.BetterButton( self, 'X', HG.client_controller.pub, 'canvas_close', self._canvas_key )
@@ -555,19 +555,19 @@ class FullscreenHoverFrameTopArchiveDeleteFilter( FullscreenHoverFrameTop ):
     
     def _Archive( self ):
         
-        HG.client_controller.pub( 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ) )
+        HG.client_controller.pub( 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_file' ), self._canvas_key )
         
     
     def _PopulateLeftButtons( self ):
         
-        self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ) )
+        self._back_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_back' ), self._canvas_key )
         self._back_button.SetToolTip( 'back' )
         
         self._top_hbox.Add( self._back_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTop._PopulateLeftButtons( self )
         
-        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ) )
+        self._skip_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'archive_delete_filter_skip' ), self._canvas_key )
         self._skip_button.SetToolTip( 'skip' )
         
         self._top_hbox.Add( self._skip_button, CC.FLAGS_VCENTER )
@@ -583,12 +583,12 @@ class FullscreenHoverFrameTopNavigable( FullscreenHoverFrameTop ):
     
     def _PopulateLeftButtons( self ):
         
-        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ) )
+        self._previous_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.previous, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_previous' ), self._canvas_key )
         self._previous_button.SetToolTip( 'previous' )
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ) )
+        self._next_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.next, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_next' ), self._canvas_key )
         self._next_button.SetToolTip( 'next' )
         
         self._top_hbox.Add( self._previous_button, CC.FLAGS_VCENTER )
@@ -632,7 +632,7 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
         
         for ( label, tooltip, command ) in dupe_commands:
             
-            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, command )
+            command_button = ClientGUICommon.BetterButton( self, label, HG.client_controller.pub, 'canvas_application_command', command, self._canvas_key )
             
             command_button.SetToolTip( tooltip )
             
@@ -684,14 +684,14 @@ class FullscreenHoverFrameTopDuplicatesFilter( FullscreenHoverFrameTopNavigable 
     
     def _PopulateLeftButtons( self ):
         
-        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ) )
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_back' ), self._canvas_key )
         self._first_button.SetToolTip( 'go back a pair' )
         
         self._top_hbox.Add( self._first_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ) )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_filter_skip' ), self._canvas_key )
         self._last_button.SetToolTip( 'show a different pair' )
         
         self._top_hbox.Add( self._last_button, CC.FLAGS_VCENTER )
@@ -728,14 +728,14 @@ class FullscreenHoverFrameTopNavigableList( FullscreenHoverFrameTopNavigable ):
     
     def _PopulateLeftButtons( self ):
         
-        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ) )
+        self._first_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.first, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_first' ), self._canvas_key )
         self._first_button.SetToolTip( 'first' )
         
         self._top_hbox.Add( self._first_button, CC.FLAGS_VCENTER )
         
         FullscreenHoverFrameTopNavigable._PopulateLeftButtons( self )
         
-        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', self._canvas_key, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ) )
+        self._last_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.last, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'view_last' ), self._canvas_key )
         self._last_button.SetToolTip( 'last' )
         
         self._top_hbox.Add( self._last_button, CC.FLAGS_VCENTER )

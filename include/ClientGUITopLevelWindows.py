@@ -555,7 +555,7 @@ class DialogNullipotentVetoable( DialogThatTakesScrollablePanelClose ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = unicode( e )
+            message = HydrusData.ToUnicode( e )
             
             if len( message ) > 0:
                 
@@ -612,7 +612,7 @@ class DialogEdit( DialogThatTakesScrollablePanelApplyCancel ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = unicode( e )
+            message = HydrusData.ToUnicode( e )
             
             if len( message ) > 0:
                 
@@ -642,7 +642,7 @@ class DialogManage( DialogThatTakesScrollablePanelApplyCancel ):
             
         except HydrusExceptions.VetoException as e:
             
-            message = unicode( e )
+            message = HydrusData.ToUnicode( e )
             
             if len( message ) > 0:
                 

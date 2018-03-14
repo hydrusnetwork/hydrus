@@ -123,7 +123,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._PublishSelectionChange()
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
     
     def _Archive( self ):
@@ -168,9 +168,19 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def _CopyBMPToClipboard( self ):
         
-        media = self._focussed_media.GetDisplayMedia()
-        
-        HG.client_controller.pub( 'clipboard', 'bmp', media )
+        if self._focussed_media is not None:
+            
+            media = self._focussed_media.GetDisplayMedia()
+            
+            if media.GetMime() in HC.IMAGES and media.GetDuration() is None:
+                
+                HG.client_controller.pub( 'clipboard', 'bmp', media )
+                
+            else:
+                
+                wx.MessageBox( 'Sorry, cannot take bmps of anything but static images right now!' )
+                
+            
         
     
     def _CopyFilesToClipboard( self ):
@@ -563,7 +573,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         s = num_files_string # 23 files
         
-        if num_selected > 0:
+        if num_selected == 0:
+            
+            if num_files > 0:
+                
+                pretty_total_size = self._GetPrettyTotalSize()
+                
+                s += ' - totalling ' + pretty_total_size
+                
+            
+        else:
             
             s += ' - '
             
@@ -599,7 +618,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
                     
                 
-                pretty_total_size = self._GetPrettyTotalSelectedSize()
+                pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
                 
                 s += selected_files_string + ' selected, ' + inbox_phrase + 'totalling ' + pretty_total_size
                 
@@ -608,21 +627,42 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         return s
         
     
-    def _GetPrettyTotalSelectedSize( self ):
+    def _GetPrettyTotalSize( self, only_selected = False ):
         
-        total_size = sum( [ media.GetSize() for media in self._selected_media ] )
-        
-        unknown_size = False in ( media.IsSizeDefinite() for media in self._selected_media )
-        
-        if total_size == 0:
+        if only_selected:
             
-            if unknown_size: return 'unknown size'
-            else: return HydrusData.ConvertIntToBytes( 0 )
+            media_source = self._selected_media
             
         else:
             
-            if unknown_size: return HydrusData.ConvertIntToBytes( total_size ) + ' + some unknown size'
-            else: return HydrusData.ConvertIntToBytes( total_size )
+            media_source = self._sorted_media
+            
+        
+        total_size = sum( [ media.GetSize() for media in media_source ] )
+        
+        unknown_size = False in ( media.IsSizeDefinite() for media in media_source )
+        
+        if total_size == 0:
+            
+            if unknown_size:
+                
+                return 'unknown size'
+                
+            else:
+                
+                return HydrusData.ConvertIntToBytes( 0 )
+                
+            
+        else:
+            
+            if unknown_size:
+                
+                return HydrusData.ConvertIntToBytes( total_size ) + ' + some unknown size'
+                
+            else:
+                
+                return HydrusData.ConvertIntToBytes( total_size )
+                
             
         
     
@@ -853,7 +893,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
@@ -868,6 +908,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 dlg.SetPanel( panel )
                 
                 wx.CallAfter( control.SetFocus )
+                wx.CallAfter( control.SetInsertionPointEnd )
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -1074,122 +1115,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
             
-        
-    
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'copy_bmp':
-                
-                self._CopyBMPToClipboard()
-                
-            elif action == 'copy_file':
-                
-                self._CopyFilesToClipboard()
-                
-            elif action == 'copy_path':
-                
-                self._CopyPathsToClipboard()
-                
-            elif action == 'copy_sha256_hash':
-                
-                self._CopyHashesToClipboard( 'sha256' )
-                
-            elif action == 'manage_file_ratings':
-                
-                self._ManageRatings()
-                
-            elif action == 'manage_file_tags':
-                
-                self._ManageTags()
-                
-            elif action == 'manage_file_urls':
-                
-                self._ManageURLs()
-                
-            elif action == 'manage_file_notes':
-                
-                self._ManageNotes()
-                
-            elif action == 'archive_file':
-                
-                self._Archive()
-                
-            elif action == 'delete_file':
-                
-                self._Delete()
-                
-            elif action == 'inbox_file':
-                
-                self._Inbox()
-                
-            elif action == 'remove_file_from_view':
-                
-                self._Remove()
-                
-            elif action == 'get_similar_to_exact':
-                
-                self._GetSimilarTo( HC.HAMMING_EXACT_MATCH )
-                
-            elif action == 'get_similar_to_very_similar':
-                
-                self._GetSimilarTo( HC.HAMMING_VERY_SIMILAR )
-                
-            elif action == 'get_similar_to_similar':
-                
-                self._GetSimilarTo( HC.HAMMING_SIMILAR )
-                
-            elif action == 'get_similar_to_speculative':
-                
-                self._GetSimilarTo( HC.HAMMING_SPECULATIVE )
-                
-            elif action == 'open_file_in_external_program':
-                
-                self._OpenExternally()
-                
-            elif action == 'launch_the_archive_delete_filter':
-                
-                self._ArchiveDeleteFilter()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
-            
-            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
-    def _ProcessShortcut( self, shortcut ):
-        
-        shortcut_processed = False
-        
-        command = HG.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
-        
-        if command is not None:
-            
-            command_processed = self._ProcessApplicationCommand( command )
-            
-            shortcut_processed = command_processed
-            
-        
-        return shortcut_processed
         
     
     def _PublishSelectionChange( self, force_reload = False ):
@@ -1688,26 +1613,6 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
-    def EventCharHook( self, event ):
-        
-        if ClientGUIShortcuts.IShouldCatchCharHook( self ):
-            
-            shortcut = ClientData.ConvertKeyEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
-            
-        
-        event.Skip()
-        
-    
     def FileDumped( self, page_key, hash, status ):
         
         if page_key == self._page_key:
@@ -1730,6 +1635,106 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         HG.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
         
         self._PublishSelectionChange()
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'copy_bmp':
+                
+                self._CopyBMPToClipboard()
+                
+            elif action == 'copy_file':
+                
+                self._CopyFilesToClipboard()
+                
+            elif action == 'copy_path':
+                
+                self._CopyPathsToClipboard()
+                
+            elif action == 'copy_sha256_hash':
+                
+                self._CopyHashesToClipboard( 'sha256' )
+                
+            elif action == 'manage_file_ratings':
+                
+                self._ManageRatings()
+                
+            elif action == 'manage_file_tags':
+                
+                self._ManageTags()
+                
+            elif action == 'manage_file_urls':
+                
+                self._ManageURLs()
+                
+            elif action == 'manage_file_notes':
+                
+                self._ManageNotes()
+                
+            elif action == 'archive_file':
+                
+                self._Archive()
+                
+            elif action == 'delete_file':
+                
+                self._Delete()
+                
+            elif action == 'inbox_file':
+                
+                self._Inbox()
+                
+            elif action == 'remove_file_from_view':
+                
+                self._Remove()
+                
+            elif action == 'get_similar_to_exact':
+                
+                self._GetSimilarTo( HC.HAMMING_EXACT_MATCH )
+                
+            elif action == 'get_similar_to_very_similar':
+                
+                self._GetSimilarTo( HC.HAMMING_VERY_SIMILAR )
+                
+            elif action == 'get_similar_to_similar':
+                
+                self._GetSimilarTo( HC.HAMMING_SIMILAR )
+                
+            elif action == 'get_similar_to_speculative':
+                
+                self._GetSimilarTo( HC.HAMMING_SPECULATIVE )
+                
+            elif action == 'open_file_in_external_program':
+                
+                self._OpenExternally()
+                
+            elif action == 'launch_the_archive_delete_filter':
+                
+                self._ArchiveDeleteFilter()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -2664,8 +2669,11 @@ class MediaPanelThumbnails( MediaPanel ):
         
         # accelerator tables can't handle escape key in windows, gg
         
-        if event.GetKeyCode() == wx.WXK_ESCAPE: self._Select( 'none' )
-        if event.GetKeyCode() in ( wx.WXK_PAGEUP, wx.WXK_PAGEDOWN ):
+        if event.GetKeyCode() == wx.WXK_ESCAPE:
+            
+            self._Select( 'none' )
+            
+        elif event.GetKeyCode() in ( wx.WXK_PAGEUP, wx.WXK_PAGEDOWN ):
             
             if event.GetKeyCode() == wx.WXK_PAGEUP:
                 
@@ -3092,7 +3100,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if multiple_selected:
                 
-                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ConvertIntToPrettyString( num_selected ) + ' files, ' + self._GetPrettyTotalSelectedSize() )
+                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ConvertIntToPrettyString( num_selected ) + ' files, ' + self._GetPrettyTotalSize( only_selected = True ) )
                 
             else:
                 

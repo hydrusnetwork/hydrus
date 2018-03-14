@@ -23,7 +23,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, [ ( 'type', -1 ), ( 'time delta', 16 ), ( 'max allowed', 14 ) ], self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, [ ( 'max allowed', 14 ), ( 'every', 16 ) ], self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -67,8 +67,6 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
-        pretty_bandwidth_type = HC.bandwidth_type_string_lookup[ bandwidth_type ]
-        
         pretty_time_delta = HydrusData.ConvertTimeDeltaToPrettyString( time_delta )
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
@@ -77,11 +75,11 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
-            pretty_max_allowed = HydrusData.ConvertIntToPrettyString( max_allowed )
+            pretty_max_allowed = HydrusData.ConvertIntToPrettyString( max_allowed ) + ' requests'
             
         
-        sort_tuple = ( pretty_bandwidth_type, time_delta, max_allowed )
-        display_tuple = ( pretty_bandwidth_type, pretty_time_delta, pretty_max_allowed )
+        sort_tuple = ( max_allowed, time_delta )
+        display_tuple = ( pretty_max_allowed, pretty_time_delta )
         
         return ( display_tuple, sort_tuple )
         
@@ -154,11 +152,10 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             self._bandwidth_type.Bind( wx.EVT_CHOICE, self.EventBandwidth )
             
+            self._max_allowed_bytes = BytesControl( self )
+            self._max_allowed_requests = wx.SpinCtrl( self, min = 1, max = 1048576 )
+            
             self._time_delta = ClientGUITime.TimeDeltaButton( self, min = 1, days = True, hours = True, minutes = True, seconds = True, monthly_allowed = True )
-            
-            self._max_allowed = wx.SpinCtrl( self, min = 1, max = 1024 * 1024 * 1024 )
-            
-            self._max_allowed_st = ClientGUICommon.BetterStaticText( self )
             
             #
             
@@ -170,42 +167,49 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
                 
-                max_allowed /= 1048576
+                self._max_allowed_bytes.SetValue( max_allowed )
+                
+            else:
+                
+                self._max_allowed_requests.SetValue( max_allowed )
                 
             
-            self._max_allowed.SetValue( max_allowed )
-            
-            self._UpdateMaxAllowedSt()
+            self._UpdateEnabled()
             
             #
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
+            hbox.Add( self._max_allowed_bytes, CC.FLAGS_VCENTER )
+            hbox.Add( self._max_allowed_requests, CC.FLAGS_VCENTER )
             hbox.Add( self._bandwidth_type, CC.FLAGS_VCENTER )
+            hbox.Add( ClientGUICommon.BetterStaticText( self, ' every ' ), CC.FLAGS_VCENTER )
             hbox.Add( self._time_delta, CC.FLAGS_VCENTER )
-            hbox.Add( self._max_allowed, CC.FLAGS_VCENTER )
-            hbox.Add( self._max_allowed_st, CC.FLAGS_VCENTER )
             
             self.SetSizer( hbox )
             
         
-        def _UpdateMaxAllowedSt( self ):
+        def _UpdateEnabled( self ):
             
             bandwidth_type = self._bandwidth_type.GetChoice()
             
             if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
                 
-                self._max_allowed_st.SetLabelText( 'MB' )
+                self._max_allowed_bytes.Show()
+                self._max_allowed_requests.Hide()
                 
             elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                 
-                self._max_allowed_st.SetLabelText( 'requests' )
+                self._max_allowed_bytes.Hide()
+                self._max_allowed_requests.Show()
                 
+            
+            self.Layout()
             
         
         def EventBandwidth( self, event ):
             
-            self._UpdateMaxAllowedSt()
+            self._UpdateEnabled()
             
         
         def GetValue( self ):
@@ -214,15 +218,151 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
             time_delta = self._time_delta.GetValue()
             
-            max_allowed = self._max_allowed.GetValue()
-            
             if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
                 
-                max_allowed *= 1048576
+                max_allowed = self._max_allowed_bytes.GetValue()
+                
+            elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
+                
+                max_allowed = self._max_allowed_requests.GetValue()
                 
             
             return ( bandwidth_type, time_delta, max_allowed )
             
+        
+    
+class BytesControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_value = 65536 ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._spin = wx.SpinCtrl( self, min = 0, max = 1048576, size = ( 60, -1 ) )
+        
+        self._unit = ClientGUICommon.BetterChoice( self )
+        
+        self._unit.Append( 'B', 1 )
+        self._unit.Append( 'KB', 1024 )
+        self._unit.Append( 'MB', 1024 * 1024 )
+        self._unit.Append( 'GB', 1024 * 1024 * 1024 )
+        
+        #
+        
+        self.SetValue( initial_value )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._spin, CC.FLAGS_VCENTER )
+        hbox.Add( self._unit, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetSeparatedValue( self ):
+        
+        return ( self._spin.GetValue(), self._unit.GetChoice() )
+        
+    
+    def GetValue( self ):
+        
+        return self._spin.GetValue() * self._unit.GetChoice()
+        
+    
+    def SetSeparatedValue( self, value, unit ):
+        
+        return ( self._spin.SetValue( value ), self._unit.SelectClientData( unit ) )
+        
+    
+    def SetValue( self, value ):
+        
+        max_unit = 1024 * 1024 * 1024
+        
+        unit = 1
+        
+        while value % 1024 == 0 and unit < max_unit:
+            
+            value /= 1024
+            
+            unit *= 1024
+            
+        
+        self._spin.SetValue( value )
+        self._unit.SelectClientData( unit )
+        
+    
+class NoneableBytesControl( wx.Panel ):
+    
+    def __init__( self, parent, initial_value = 65536, none_label = 'no limit' ):
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._bytes = BytesControl( self )
+        
+        self._none_checkbox = wx.CheckBox( self, label = none_label )
+        
+        #
+        
+        self.SetValue( initial_value )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._bytes, CC.FLAGS_SIZER_VCENTER )
+        hbox.Add( self._none_checkbox, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+        #
+        
+        self._none_checkbox.Bind( wx.EVT_CHECKBOX, self.EventNoneChecked )
+        
+    
+    def _UpdateEnabled( self ):
+        
+        if self._none_checkbox.GetValue():
+            
+            self._bytes.Disable()
+            
+        else:
+            
+            self._bytes.Enable()
+            
+        
+    
+    def EventNoneChecked( self, event ):
+        
+        self._UpdateEnabled()
+        
+    
+    def GetValue( self ):
+        
+        if self._none_checkbox.GetValue():
+            
+            return None
+            
+        else:
+            
+            return self._bytes.GetValue()
+            
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            self._none_checkbox.SetValue( True )
+            
+        else:
+            
+            self._none_checkbox.SetValue( False )
+            
+            self._bytes.SetValue( value )
+            
+        
+        self._UpdateEnabled()
         
     
 class EditStringToStringDictControl( wx.Panel ):

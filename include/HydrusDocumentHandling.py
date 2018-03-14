@@ -28,7 +28,10 @@ def GetPDFNumWords( path ):
             return pdf_object.numPages * 350
             
         
-    except: num_words = 0
+    except:
+        
+        num_words = 0
+        
     
     return num_words
     

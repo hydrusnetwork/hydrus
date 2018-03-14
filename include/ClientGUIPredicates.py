@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import ClientGUICommon
+import ClientGUIControls
 import ClientGUIOptionsPanels
 import ClientRatings
 import ClientSearch
@@ -814,9 +815,7 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         self._sign = wx.RadioBox( self, choices = [ '<', u'\u2248', '=', '>' ] )
         
-        self._size = wx.SpinCtrl( self, max = 1048576, size = ( 60, -1 ) )
-        
-        self._unit = wx.RadioBox( self, choices = [ 'B', 'KB', 'MB', 'GB' ] )
+        self._bytes = ClientGUIControls.BytesControl( self )
         
         system_predicates = HC.options[ 'file_system_predicates' ]
         
@@ -824,25 +823,24 @@ class PanelPredicateSystemSize( PanelPredicateSystem ):
         
         self._sign.SetStringSelection( sign )
         
-        self._size.SetValue( size )
-        
-        self._unit.SetStringSelection( HydrusData.ConvertIntToUnit( unit ) )
+        self._bytes.SetSeparatedValue( size, unit )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:size' ), CC.FLAGS_VCENTER )
         hbox.Add( self._sign, CC.FLAGS_VCENTER )
-        hbox.Add( self._size, CC.FLAGS_VCENTER )
-        hbox.Add( self._unit, CC.FLAGS_VCENTER )
+        hbox.Add( self._bytes, CC.FLAGS_VCENTER )
         
         self.SetSizer( hbox )
         
-        wx.CallAfter( self._size.SetFocus )
+        wx.CallAfter( self._bytes.SetFocus )
         
     
     def GetInfo( self ):
         
-        info = ( self._sign.GetStringSelection(), self._size.GetValue(), HydrusData.ConvertUnitToInt( self._unit.GetStringSelection() ) )
+        ( size, unit ) = self._bytes.GetSeparatedValue()
+        
+        info = ( self._sign.GetStringSelection(), size, unit )
         
         return info
         

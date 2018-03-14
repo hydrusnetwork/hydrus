@@ -1159,6 +1159,7 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportObject( self, obj ):
         
+        
         bad_object_types = set()
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):

@@ -78,7 +78,15 @@ def ConvertFloatToPercentage( f ):
     
 def ConvertIntToBytes( size ):
     
-    if size is None: return 'unknown size'
+    if size is None:
+        
+        return 'unknown size'
+        
+    
+    if size < 1024:
+        
+        return ConvertIntToPrettyString( size ) + 'B'
+        
     
     suffixes = ( '', 'K', 'M', 'G', 'T', 'P' )
     
@@ -86,16 +94,21 @@ def ConvertIntToBytes( size ):
     
     size = float( size )
     
-    while size > 1024.0:
+    while size >= 1024.0:
         
         size = size / 1024.0
         
         suffix_index += 1
         
     
-    if size < 10.0: return '%.1f' % size + suffixes[ suffix_index ] + 'B'
-    
-    return '%.0f' % size + suffixes[ suffix_index ] + 'B'
+    if size < 10.0:
+        
+        return '%.1f' % size + suffixes[ suffix_index ] + 'B'
+        
+    else:
+        
+        return '%.0f' % size + suffixes[ suffix_index ] + 'B'
+        
     
 def ConvertIntToFirst( n ):
     

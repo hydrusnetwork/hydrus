@@ -710,19 +710,19 @@ class EditFileImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._allow_decompression_bombs = wx.CheckBox( pre_import_panel )
         
-        self._min_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'KB', multiplier = 1024 )
-        self._min_size.SetValue( 5120 )
+        self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._min_size.SetValue( 5 * 1024 )
         
-        self._max_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'MB', multiplier = 1048576 )
-        self._max_size.SetValue( 100 * 1024 )
+        self._max_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._max_size.SetValue( 100 * 1024 * 1024 )
         
-        self._max_gif_size = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'size', unit = 'MB', multiplier = 1048576 )
-        self._max_gif_size.SetValue( 32 * 1024 )
+        self._max_gif_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._max_gif_size.SetValue( 32 * 1024 * 1024 )
         
-        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'resolution', num_dimensions = 2 )
+        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
         self._min_resolution.SetValue( ( 50, 50 ) )
         
-        self._max_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, 'resolution', num_dimensions = 2 )
+        self._max_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
         self._max_resolution.SetValue( ( 8192, 8192 ) )
         
         #
@@ -4398,14 +4398,14 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.StringConvertException as e:
                 
-                reason = unicode( e )
+                reason = HydrusData.ToUnicode( e )
                 
                 self._api_url.SetValue( 'Could not convert - ' + reason )
                 
             
         except HydrusExceptions.URLMatchException as e:
             
-            reason = unicode( e )
+            reason = HydrusData.ToUnicode( e )
             
             self._example_url_matches.SetLabelText( 'Example does not match - ' + reason )
             self._example_url_matches.SetForegroundColour( ( 128, 0, 0 ) )

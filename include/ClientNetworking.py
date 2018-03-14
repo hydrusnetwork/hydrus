@@ -675,6 +675,8 @@ class NetworkEngine( object ):
         self._jobs_ready_to_start = []
         self._jobs_downloading = []
         
+        self._pause_all_new_network_traffic = self.controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
+        
         self._is_running = False
         self._is_shutdown = False
         self._local_shutdown = False
@@ -862,11 +864,20 @@ class NetworkEngine( object ):
                 
             elif len( self._jobs_downloading ) < self.MAX_JOBS:
                 
-                self.controller.CallToThread( job.Start )
-                
-                self._jobs_downloading.append( job )
-                
-                return False
+                if self._pause_all_new_network_traffic:
+                    
+                    job.SetStatus( u'all new network traffic is paused\u2026' )
+                    
+                    return True
+                    
+                else:
+                    
+                    self.controller.CallToThread( job.Start )
+                    
+                    self._jobs_downloading.append( job )
+                    
+                    return False
+                    
                 
             else:
                 
@@ -924,6 +935,13 @@ class NetworkEngine( object ):
         self._is_running = False
         
         self._is_shutdown = True
+        
+    
+    def PausePlayNewJobs( self ):
+        
+        self._pause_all_new_network_traffic = not self._pause_all_new_network_traffic
+        
+        self.controller.new_options.SetBoolean( 'pause_all_new_network_traffic', self._pause_all_new_network_traffic )
         
     
     def Shutdown( self ):

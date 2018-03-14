@@ -1039,6 +1039,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
+        self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -1135,6 +1137,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
         
         self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
+        
+        self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
         
         #
         

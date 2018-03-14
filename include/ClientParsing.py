@@ -1514,7 +1514,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         except HydrusExceptions.StringConvertException as e:
             
-            raise HydrusExceptions.ParseException( unicode( e ) )
+            raise HydrusExceptions.ParseException( HydrusData.ToUnicode( e ) )
             
         
         #

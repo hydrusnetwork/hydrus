@@ -1,3 +1,4 @@
+import ClientData
 import ClientGUICommon
 import HydrusConstants as HC
 import HydrusGlobals as HG
@@ -44,58 +45,88 @@ def IShouldCatchCharHook( evt_handler ):
     
 class ShortcutsHandler( object ):
     
-    def __init__( self, parent, initial_shortcuts = None ):
+    def __init__( self, parent, initial_shortcuts_names = None ):
         
-        if initial_shortcuts is None:
+        if initial_shortcuts_names is None:
             
-            initial_shortcuts = []
+            initial_shortcuts_names = []
             
         
         self._parent = parent
-        self._all_shortcuts = {}
-        
-        for shortcuts in initial_shortcuts:
-            
-            self._all_shortcuts[ shortcuts.GetName() ] = shortcuts
-            
+        self._shortcuts_names = list( initial_shortcuts_names )
         
         self._parent.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        self._parent.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
+        #self._parent.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse ) # let's not mess with this until we are doing something clever with it
+        
+    
+    def _ProcessShortcut( self, shortcut ):
+        
+        shortcut_processed = False
+        
+        command = HG.client_controller.GetCommandFromShortcut( self._shortcuts_names, shortcut )
+        
+        if command is not None:
+            
+            command_processed = self._parent.ProcessApplicationCommand( command )
+            
+            if command_processed:
+                
+                shortcut_processed = True
+                
+            
+        
+        return shortcut_processed
         
     
     def EventCharHook( self, event ):
         
-        # determine if the event came from a textctrl or a different tlp than my parent, in which case we want to skip it
-        
-        # fetch the event details, convert to modifier and key
-        # check with all my shortcuts for an action
-        
-        # if action exists, post it to parent
-        # else:
+        if IShouldCatchCharHook( self._parent ):
+            
+            shortcut = ClientData.ConvertKeyEventToShortcut( event )
+            
+            if shortcut is not None:
+                
+                shortcut_processed = self._ProcessShortcut( shortcut )
+                
+                if shortcut_processed:
+                    
+                    return
+                    
+                
+            
         
         event.Skip()
         
     
     def EventMouse( self, event ):
         
-        # fetch the event details, convert to modifier and key
-        # check with all my shortcuts for an action
+        shortcut = ClientData.ConvertMouseEventToShortcut( event )
         
-        # if action exists, post it to parent
-        # else:
+        if shortcut is not None:
+            
+            shortcut_processed = self._ProcessShortcut( shortcut )
+            
+            if shortcut_processed:
+                
+                return
+                
+            
         
         event.Skip()
         
     
-    def AddShortcuts( self, shortcuts ):
+    def AddShortcuts( self, shortcuts_name ):
         
-        self._all_shortcuts[ shortcuts.GetName() ] = shortcuts
+        if shortcuts_name not in self._shortcuts_names:
+            
+            self._shortcuts_names.append( shortcuts_name )
+            
         
     
     def RemoveShortcuts( self, shortcuts_name ):
         
-        if shortcuts_name in self._all_shortcuts:
+        if shortcuts_name in self._shortcuts_names:
             
-            del self._all_shortcuts[ shortcuts_name ]
+            self._shortcuts_names.remove( shortcuts_name )
             
         

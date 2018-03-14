@@ -95,6 +95,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._deleted_page_keys = set()
         self._lock = threading.Lock()
         
+        self._delayed_dialog_lock = threading.Lock()
+        
         self._notebook = ClientGUIPages.PagesNotebook( self, self._controller, 'top page notebook' )
         
         self.SetDropTarget( ClientDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURL, self._notebook.MediaDragAndDropDropped, self._notebook.PageDragAndDropDropped ) )
@@ -108,7 +110,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventFrameNotebookMenu )
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
         self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
         self.Bind( wx.EVT_TIMER, self.TIMEREventPageUpdate, id = ID_TIMER_PAGE_UPDATE )
         self.Bind( wx.EVT_TIMER, self.TIMEREventUIUpdate, id = ID_TIMER_UI_UPDATE )
@@ -170,6 +171,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._animation_update_timer = wx.Timer( self, id = ID_TIMER_ANIMATION_UPDATE )
         
         self._animation_update_windows = set()
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'main_gui' ] )
         
         wx.CallAfter( self.Layout ) # some i3 thing--doesn't layout main gui on init for some reason
         
@@ -990,6 +993,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+            #
+            
+            i_and_e_submenu = wx.Menu()
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'import folders', 'Pause the client\'s import folders.', HC.options[ 'pause_import_folders_sync' ], self._PauseSync, 'import_folders' )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'export folders', 'Pause the client\'s export folders.', HC.options[ 'pause_export_folders_sync' ], self._PauseSync, 'export_folders' )
+            
+            ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'pause' )
+            
+            ClientGUIMenus.AppendSeparator( i_and_e_submenu )
+            
             import_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
             
             if len( import_folder_names ) > 0:
@@ -1008,11 +1024,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Check this import folder now.', self._CheckImportFolder, name )
                     
                 
-                ClientGUIMenus.AppendMenu( menu, submenu, 'check import folder now' )
+                ClientGUIMenus.AppendMenu( i_and_e_submenu, submenu, 'check import folder now' )
+                
+                ClientGUIMenus.AppendSeparator( i_and_e_submenu )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
+            ClientGUIMenus.AppendMenuItem( self, i_and_e_submenu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
+            ClientGUIMenus.AppendMenuItem( self, i_and_e_submenu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
+            
+            ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import and export folders' )
+            
+            #
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1126,9 +1148,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             splitter_menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
+            
             ClientGUIMenus.AppendSeparator( splitter_menu )
+            
             ClientGUIMenus.AppendMenuCheckItem( self, splitter_menu, 'save current page\'s sash positions on client exit', 'Set whether sash position should be saved over on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
+            
+            ClientGUIMenus.AppendSeparator( splitter_menu )
+            
             ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'save current page\'s sash positions now', 'Save the current page\'s sash positions.', self._SaveSplitterPositions )
+            
+            ClientGUIMenus.AppendSeparator( splitter_menu )
+            
             ClientGUIMenus.AppendMenuItem( self, splitter_menu, 'restore all pages\' sash positions to saved value', 'Restore the current sash positions for all pages to the values that are saved.', self._RestoreSplitterPositions )
             
             ClientGUIMenus.AppendMenu( menu, splitter_menu, 'management and preview panels' )
@@ -1433,6 +1463,17 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def network():
             
+            submenu = wx.Menu()
+            
+            pause_all_new_network_traffic = self._controller.new_options.GetBoolean( 'pause_all_new_network_traffic' )
+            
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'all new network traffic', 'Stop any new network jobs from sending data.', pause_all_new_network_traffic, self._controller.network_engine.PausePlayNewJobs )
+            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'subscriptions', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1474,6 +1515,13 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
             
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: reset login' )
+            
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
@@ -1488,10 +1536,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'export folders synchronisation', 'Pause the client\'s export folders.', HC.options[ 'pause_export_folders_sync' ], self._PauseSync, 'export_folders' )
-            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'import folders synchronisation', 'Pause the client\'s import folders.', HC.options[ 'pause_import_folders_sync' ], self._PauseSync, 'import_folders' )
             ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'repositories synchronisation', 'Pause the client\'s synchronisation with hydrus repositories.', HC.options[ 'pause_repo_sync' ], self._PauseSync, 'repo' )
-            ClientGUIMenus.AppendMenuCheckItem( self, submenu, 'subscriptions synchronisation', 'Pause the client\'s synchronisation with website subscriptions.', HC.options[ 'pause_subs_sync' ], self._PauseSync, 'subs' )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
             
@@ -1927,21 +1972,67 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageExportFolders( self ):
         
-        original_pause_status = HC.options[ 'pause_export_folders_sync' ]
-        
-        HC.options[ 'pause_export_folders_sync' ] = True
-        
-        try:
+        def wx_do_it():
+            
+            if not self:
+                
+                return
+                
             
             with ClientGUIDialogsManage.DialogManageExportFolders( self ) as dlg:
                 
                 dlg.ShowModal()
                 
             
-        finally:
+        
+        def THREAD_do_it( controller ):
             
-            HC.options[ 'pause_export_folders_sync' ] = original_pause_status
+            with self._delayed_dialog_lock:
+                
+                original_pause_status = controller.options[ 'pause_export_folders_sync' ]
+                
+                controller.options[ 'pause_export_folders_sync' ] = True
+                
+                try:
+                    
+                    if HG.export_folders_running:
+                        
+                        job_key = ClientThreading.JobKey()
+                        
+                        try:
+                            
+                            job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
+                            
+                            controller.pub( 'message', job_key )
+                            
+                            while HG.export_folders_running:
+                                
+                                time.sleep( 0.1 )
+                                
+                                if HG.view_shutdown:
+                                    
+                                    return
+                                    
+                                
+                            
+                        finally:
+                            
+                            job_key.Delete()
+                            
+                        
+                    
+                    controller.CallBlockingToWx( wx_do_it )
+                    
+                finally:
+                    
+                    controller.options[ 'pause_export_folders_sync' ] = original_pause_status
+                    
+                    controller.pub( 'notify_new_export_folders' )
+                    
+                
             
+        
+        self._controller.CallToThread( THREAD_do_it, self._controller )
         
     
     def _ManageImportFolders( self ):
@@ -1961,45 +2052,48 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def THREAD_do_it( controller ):
             
-            original_pause_status = controller.options[ 'pause_import_folders_sync' ]
-            
-            controller.options[ 'pause_import_folders_sync' ] = True
-            
-            try:
+            with self._delayed_dialog_lock:
                 
-                if HG.import_folders_running:
+                original_pause_status = controller.options[ 'pause_import_folders_sync' ]
+                
+                controller.options[ 'pause_import_folders_sync' ] = True
+                
+                try:
                     
-                    job_key = ClientThreading.JobKey()
-                    
-                    try:
+                    if HG.import_folders_running:
                         
-                        job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
+                        job_key = ClientThreading.JobKey()
                         
-                        controller.pub( 'message', job_key )
-                        
-                        while HG.import_folders_running:
+                        try:
                             
-                            time.sleep( 0.1 )
+                            job_key.SetVariable( 'popup_text_1', 'Waiting for import folders to finish.' )
                             
-                            if HG.view_shutdown:
+                            controller.pub( 'message', job_key )
+                            
+                            while HG.import_folders_running:
                                 
-                                return
+                                time.sleep( 0.1 )
+                                
+                                if HG.view_shutdown:
+                                    
+                                    return
+                                    
                                 
                             
-                        
-                    finally:
-                        
-                        job_key.Delete()
+                        finally:
+                            
+                            job_key.Delete()
+                            
                         
                     
-                
-                controller.CallBlockingToWx( wx_do_it )
-                
-            finally:
-                
-                controller.options[ 'pause_import_folders_sync' ] = original_pause_status
-                
-                controller.pub( 'notify_new_import_folders' )
+                    controller.CallBlockingToWx( wx_do_it )
+                    
+                finally:
+                    
+                    controller.options[ 'pause_import_folders_sync' ] = original_pause_status
+                    
+                    controller.pub( 'notify_new_import_folders' )
+                    
                 
             
         
@@ -2171,47 +2265,50 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def THREAD_do_it( controller ):
             
-            original_pause_status = controller.options[ 'pause_subs_sync' ]
-            
-            controller.options[ 'pause_subs_sync' ] = True
-            
-            try:
+            with self._delayed_dialog_lock:
                 
-                if HG.subscriptions_running:
+                original_pause_status = controller.options[ 'pause_subs_sync' ]
+                
+                controller.options[ 'pause_subs_sync' ] = True
+                
+                try:
                     
-                    job_key = ClientThreading.JobKey()
-                    
-                    try:
+                    if HG.subscriptions_running:
                         
-                        job_key.SetVariable( 'popup_text_1', 'Waiting for subs to finish.' )
+                        job_key = ClientThreading.JobKey()
                         
-                        controller.pub( 'message', job_key )
-                        
-                        while HG.subscriptions_running:
+                        try:
                             
-                            time.sleep( 0.1 )
+                            job_key.SetVariable( 'popup_text_1', 'Waiting for subs to finish.' )
                             
-                            if HG.view_shutdown:
+                            controller.pub( 'message', job_key )
+                            
+                            while HG.subscriptions_running:
                                 
-                                return
+                                time.sleep( 0.1 )
+                                
+                                if HG.view_shutdown:
+                                    
+                                    return
+                                    
                                 
                             
-                        
-                    finally:
-                        
-                        job_key.Delete()
+                        finally:
+                            
+                            job_key.Delete()
+                            
                         
                     
-                
-                subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-                
-                controller.CallBlockingToWx( wx_do_it, subscriptions )
-                
-            finally:
-                
-                controller.options[ 'pause_subs_sync' ] = original_pause_status
-                
-                controller.pub( 'notify_new_subscriptions' )
+                    subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                    
+                    controller.CallBlockingToWx( wx_do_it, subscriptions )
+                    
+                finally:
+                    
+                    controller.options[ 'pause_subs_sync' ] = original_pause_status
+                    
+                    controller.pub( 'notify_new_subscriptions' )
+                    
                 
             
         
@@ -2374,97 +2471,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.Write( 'save_options', HC.options )
-        
-    
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'refresh':
-                
-                self._Refresh()
-                
-            elif action == 'new_page':
-                
-                self._notebook.ChooseNewPageForDeepestNotebook()
-                
-            if action == 'close_page':
-                
-                self._notebook.CloseCurrentPage()
-                
-            elif action == 'unclose_page':
-                
-                self._UnclosePage()
-                
-            elif action == 'check_all_import_folders':
-                
-                self._CheckImportFolder()
-                
-            elif action == 'flip_darkmode':
-                
-                self.FlipDarkmode()
-                
-            elif action == 'show_hide_splitters':
-                
-                self._ShowHideSplitters()
-                
-            elif action == 'synchronised_wait_switch':
-                
-                self._SetSynchronisedWait()
-                
-            elif action == 'set_media_focus':
-                
-                self._SetMediaFocus()
-                
-            elif action == 'set_search_focus':
-                
-                self._SetSearchFocus()
-                
-            elif action == 'redo':
-                
-                self._controller.pub( 'redo' )
-                
-            elif action == 'undo':
-                
-                self._controller.pub( 'undo' )
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
-    def _ProcessShortcut( self, shortcut ):
-        
-        shortcut_processed = False
-        
-        command = HG.client_controller.GetCommandFromShortcut( [ 'main_gui' ], shortcut )
-        
-        if command is not None:
-            
-            command_processed = self._ProcessApplicationCommand( command )
-            
-            if command_processed:
-                
-                shortcut_processed = True
-                
-            
-        
-        return shortcut_processed
         
     
     def _Refresh( self ):
@@ -3325,26 +3331,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( deletee_pages )
         
     
-    def EventCharHook( self, event ):
-        
-        if ClientGUIShortcuts.IShouldCatchCharHook( self ):
-            
-            shortcut = ClientData.ConvertKeyEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
-            
-        
-        event.Skip()
-        
-    
     def EventClose( self, event ):
         
         if not event.CanVeto():
@@ -3908,6 +3894,78 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
         dest_page = self._notebook.PresentImportedFilesToPage( hashes, page_name )
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'refresh':
+                
+                self._Refresh()
+                
+            elif action == 'new_page':
+                
+                self._notebook.ChooseNewPageForDeepestNotebook()
+                
+            if action == 'close_page':
+                
+                self._notebook.CloseCurrentPage()
+                
+            elif action == 'unclose_page':
+                
+                self._UnclosePage()
+                
+            elif action == 'check_all_import_folders':
+                
+                self._CheckImportFolder()
+                
+            elif action == 'flip_darkmode':
+                
+                self.FlipDarkmode()
+                
+            elif action == 'show_hide_splitters':
+                
+                self._ShowHideSplitters()
+                
+            elif action == 'synchronised_wait_switch':
+                
+                self._SetSynchronisedWait()
+                
+            elif action == 'set_media_focus':
+                
+                self._SetMediaFocus()
+                
+            elif action == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            elif action == 'redo':
+                
+                self._controller.pub( 'redo' )
+                
+            elif action == 'undo':
+                
+                self._controller.pub( 'undo' )
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def RefreshMenu( self ):

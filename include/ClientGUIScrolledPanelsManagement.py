@@ -14,6 +14,7 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsReview
 import ClientGUISerialisable
+import ClientGUIShortcuts
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
 import ClientNetworking
@@ -690,7 +691,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = unicode( e )
+                    message = HydrusData.ToUnicode( e )
                     
                     if len( message ) > 0:
                         
@@ -870,7 +871,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = unicode( e )
+                    message = HydrusData.ToUnicode( e )
                     
                     if len( message ) > 0:
                         
@@ -970,7 +971,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except HydrusExceptions.VetoException as e:
                     
-                    message = unicode( e )
+                    message = HydrusData.ToUnicode( e )
                     
                     if len( message ) > 0:
                         
@@ -3099,10 +3100,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             help_hbox = ClientGUICommon.WrapInText( disk_cache_help_button, disk_panel, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
             
-            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'max disk cache init period', none_phrase = 'do not run', min = 1, max = 120 )
+            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'run disk cache on boot for this long', unit = 's', none_phrase = 'do not run', min = 1, max = 120 )
             self._disk_cache_init_period.SetToolTip( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
             
-            self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'disk cache maintenance (MB)', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
+            self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'disk cache maintenance', unit = 'MB', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
             self._disk_cache_maintenance_mb.SetToolTip( 'The client can regularly check the front of its database is cached in memory. This represents how many megabytes it will ensure are cached.' )
             
             #
@@ -4917,8 +4918,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self.SetSizer( vbox )
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        
         self.Bind( ClientGUIACDropdown.EVT_SELECT_UP, self.EventSelectUp )
         self.Bind( ClientGUIACDropdown.EVT_SELECT_DOWN, self.EventSelectDown )
         
@@ -4929,6 +4928,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
+        
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
         
     
     def _GetServiceKeysToContentUpdates( self ):
@@ -4946,62 +4947,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         return service_keys_to_content_updates
-        
-    
-    def _OKParent( self ):
-        
-        wx.QueueEvent( self.GetEventHandler(), ClientGUITopLevelWindows.OKEvent( -1 ) )
-        
-    
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'manage_file_tags':
-                
-                self._OKParent()
-                
-            elif action == 'set_search_focus':
-                
-                self._SetSearchFocus()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
-    def _ProcessShortcut( self, shortcut ):
-        
-        shortcut_processed = False
-        
-        command = HG.client_controller.GetCommandFromShortcut( [ 'media', 'main_gui' ], shortcut )
-        
-        if command is not None:
-            
-            command_processed = self._ProcessApplicationCommand( command )
-            
-            if command_processed:
-                
-                shortcut_processed = True
-                
-            
-        
-        return shortcut_processed
         
     
     def _SetSearchFocus( self ):
@@ -5057,23 +5002,6 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def EventCharHook( self, event ):
-        
-        shortcut = ClientData.ConvertKeyEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            shortcut_processed = self._ProcessShortcut( shortcut )
-            
-            if shortcut_processed:
-                
-                return
-                
-            
-        
-        event.Skip()
-        
-    
     def EventSelectDown( self, event ):
         
         self._tag_repositories.SelectDown()
@@ -5108,6 +5036,38 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.CallAfter( page.SetTagBoxFocus )
             
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_tags':
+                
+                self._OKParent()
+                
+            elif action == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     class _Panel( wx.Panel ):

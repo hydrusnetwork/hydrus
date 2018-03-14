@@ -1002,10 +1002,34 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._canvas_window = None
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media_viewer' ] )
         
     
-    def _ProcessApplicationCommand( self, command ):
+    def Close( self ):
+        
+        if HC.PLATFORM_OSX and self.IsFullScreen():
+            
+            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
+            
+        
+        self.Destroy()
+        
+    
+    def FullscreenSwitch( self ):
+        
+        if self.IsFullScreen():
+            
+            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
+            
+        else:
+            
+            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
+            
+        
+        self._canvas_window.ResetDragDelta()
+        
+    
+    def ProcessApplicationCommand( self, command ):
         
         command_processed = True
         
@@ -1035,69 +1059,6 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         return command_processed
-        
-    
-    def _ProcessShortcut( self, shortcut ):
-        
-        shortcut_processed = False
-        
-        command = HG.client_controller.GetCommandFromShortcut( [ 'media_viewer' ], shortcut )
-        
-        if command is not None:
-            
-            command_processed = self._ProcessApplicationCommand( command )
-            
-            if command_processed:
-                
-                shortcut_processed = True
-                
-            
-        
-        return shortcut_processed
-        
-    
-    def Close( self ):
-        
-        if HC.PLATFORM_OSX and self.IsFullScreen():
-            
-            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-            
-        
-        self.Destroy()
-        
-    
-    def EventCharHook( self, event ):
-        
-        if ClientGUIShortcuts.IShouldCatchCharHook( self ):
-            
-            shortcut = ClientData.ConvertKeyEventToShortcut( event )
-            
-            if shortcut is not None:
-                
-                shortcut_processed = self._ProcessShortcut( shortcut )
-                
-                if shortcut_processed:
-                    
-                    return
-                    
-                
-            
-        
-        event.Skip()
-        
-    
-    def FullscreenSwitch( self ):
-        
-        if self.IsFullScreen():
-            
-            self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
-            
-        else:
-            
-            self.ShowFullScreen( True, wx.FULLSCREEN_ALL )
-            
-        
-        self._canvas_window.ResetDragDelta()
         
     
     def SetCanvas( self, canvas_window ):
@@ -1233,7 +1194,14 @@ class Canvas( wx.Window ):
         
         if self._current_media is not None:
             
-            HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
+            if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
+                
+                HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
+                
+            else:
+                
+                wx.MessageBox( 'Sorry, cannot take bmps of anything but static images right now!' )
+                
             
         
     
@@ -1560,7 +1528,7 @@ class Canvas( wx.Window ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, [ 'manage_file_notes' ] )
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
@@ -1575,6 +1543,7 @@ class Canvas( wx.Window ):
                 dlg.SetPanel( panel )
                 
                 wx.CallAfter( control.SetFocus )
+                wx.CallAfter( control.SetInsertionPointEnd )
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
@@ -1730,123 +1699,6 @@ class Canvas( wx.Window ):
         pass
         
     
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'manage_file_ratings':
-                
-                self._ManageRatings()
-                
-            elif action == 'manage_file_tags':
-                
-                self._ManageTags()
-                
-            elif action == 'manage_file_urls':
-                
-                self._ManageURLs()
-                
-            elif action == 'manage_file_notes':
-                
-                self._ManageNotes()
-                
-            elif action == 'archive_file':
-                
-                self._Archive()
-                
-            elif action == 'copy_bmp':
-                
-                self._CopyBMPToClipboard()
-                
-            elif action == 'copy_file':
-                
-                self._CopyFileToClipboard()
-                
-            elif action == 'copy_path':
-                
-                self._CopyPathToClipboard()
-                
-            elif action == 'copy_sha256_hash':
-                
-                self._CopyHashToClipboard( 'sha256' )
-                
-            elif action == 'delete_file':
-                
-                self._Delete()
-                
-            elif action == 'inbox_file':
-                
-                self._Inbox()
-                
-            elif action == 'open_file_in_external_program':
-                
-                self._OpenExternally()
-                
-            elif action == 'pan_up':
-                
-                self._DoManualPan( 0, -1 )
-                
-            elif action == 'pan_down':
-                
-                self._DoManualPan( 0, 1 )
-                
-            elif action == 'pan_left':
-                
-                self._DoManualPan( -1, 0 )
-                
-            elif action == 'pan_right':
-                
-                self._DoManualPan( 1, 0 )
-                
-            elif action == 'move_animation_to_previous_frame':
-                
-                self._media_container.GotoPreviousOrNextFrame( -1 )
-                
-            elif action == 'move_animation_to_next_frame':
-                
-                self._media_container.GotoPreviousOrNextFrame( 1 )
-                
-            elif action == 'zoom_in':
-                
-                self._ZoomIn()
-                
-            elif action == 'zoom_out':
-                
-                self._ZoomOut()
-                
-            elif action == 'switch_between_100_percent_and_canvas_zoom':
-                
-                self._ZoomSwitch()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
-            
-            if self._current_media is None:
-                
-                return
-                
-            
-            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
     def _ProcessShortcut( self, shortcut ):
         
         shortcut_processed = False
@@ -1857,7 +1709,7 @@ class Canvas( wx.Window ):
         
         if command is not None:
             
-            command_processed = self._ProcessApplicationCommand( command )
+            command_processed = self.ProcessApplicationCommand( command )
             
             shortcut_processed = command_processed
             
@@ -2277,12 +2129,126 @@ class Canvas( wx.Window ):
             
         
     
-    def ProcessApplicationCommand( self, canvas_key, command ):
+    def ProcessApplicationCommand( self, command, canvas_key = None ):
         
-        if canvas_key == self._canvas_key:
+        if canvas_key is not None and canvas_key != self._canvas_key:
             
-            self._ProcessApplicationCommand( command )
+            return False
             
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_ratings':
+                
+                self._ManageRatings()
+                
+            elif action == 'manage_file_tags':
+                
+                self._ManageTags()
+                
+            elif action == 'manage_file_urls':
+                
+                self._ManageURLs()
+                
+            elif action == 'manage_file_notes':
+                
+                self._ManageNotes()
+                
+            elif action == 'archive_file':
+                
+                self._Archive()
+                
+            elif action == 'copy_bmp':
+                
+                self._CopyBMPToClipboard()
+                
+            elif action == 'copy_file':
+                
+                self._CopyFileToClipboard()
+                
+            elif action == 'copy_path':
+                
+                self._CopyPathToClipboard()
+                
+            elif action == 'copy_sha256_hash':
+                
+                self._CopyHashToClipboard( 'sha256' )
+                
+            elif action == 'delete_file':
+                
+                self._Delete()
+                
+            elif action == 'inbox_file':
+                
+                self._Inbox()
+                
+            elif action == 'open_file_in_external_program':
+                
+                self._OpenExternally()
+                
+            elif action == 'pan_up':
+                
+                self._DoManualPan( 0, -1 )
+                
+            elif action == 'pan_down':
+                
+                self._DoManualPan( 0, 1 )
+                
+            elif action == 'pan_left':
+                
+                self._DoManualPan( -1, 0 )
+                
+            elif action == 'pan_right':
+                
+                self._DoManualPan( 1, 0 )
+                
+            elif action == 'move_animation_to_previous_frame':
+                
+                self._media_container.GotoPreviousOrNextFrame( -1 )
+                
+            elif action == 'move_animation_to_next_frame':
+                
+                self._media_container.GotoPreviousOrNextFrame( 1 )
+                
+            elif action == 'zoom_in':
+                
+                self._ZoomIn()
+                
+            elif action == 'zoom_out':
+                
+                self._ZoomOut()
+                
+            elif action == 'switch_between_100_percent_and_canvas_zoom':
+                
+                self._ZoomSwitch()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        elif command_type == CC.APPLICATION_COMMAND_TYPE_CONTENT:
+            
+            if self._current_media is None:
+                
+                return
+                
+            
+            command_processed = ClientGUICommon.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     def ResetDragDelta( self ):
@@ -3318,67 +3284,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_SAME_QUALITY )
         
     
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'duplicate_filter_this_is_better':
-                
-                self._CurrentMediaIsBetter()
-                
-            elif action == 'duplicate_filter_exactly_the_same':
-                
-                self._MediaAreTheSame()
-                
-            elif action == 'duplicate_filter_alternates':
-                
-                self._MediaAreAlternates()
-                
-            elif action == 'duplicate_filter_not_dupes':
-                
-                self._MediaAreNotDupes()
-                
-            elif action == 'duplicate_filter_custom_action':
-                
-                self._DoCustomAction()
-                
-            elif action == 'duplicate_filter_skip':
-                
-                self._SkipPair()
-                
-            elif action == 'duplicate_filter_back':
-                
-                self._GoBack()
-                
-            elif action in ( 'view_first', 'view_last', 'view_previous', 'view_next' ):
-                
-                self._SwitchMedia()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            command_processed = CanvasWithHovers._ProcessApplicationCommand( self, command )
-            
-        
-        return command_processed
-        
-    
     def _ProcessPair( self, duplicate_type, duplicate_action_options = None ):
         
         if self._current_media is None:
@@ -3684,6 +3589,67 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             self._Inbox()
             
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'duplicate_filter_this_is_better':
+                
+                self._CurrentMediaIsBetter()
+                
+            elif action == 'duplicate_filter_exactly_the_same':
+                
+                self._MediaAreTheSame()
+                
+            elif action == 'duplicate_filter_alternates':
+                
+                self._MediaAreAlternates()
+                
+            elif action == 'duplicate_filter_not_dupes':
+                
+                self._MediaAreNotDupes()
+                
+            elif action == 'duplicate_filter_custom_action':
+                
+                self._DoCustomAction()
+                
+            elif action == 'duplicate_filter_skip':
+                
+                self._SkipPair()
+                
+            elif action == 'duplicate_filter_back':
+                
+                self._GoBack()
+                
+            elif action in ( 'view_first', 'view_last', 'view_previous', 'view_next' ):
+                
+                self._SwitchMedia()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            command_processed = CanvasWithHovers.ProcessApplicationCommand( self, command )
+            
+        
+        return command_processed
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -4154,55 +4120,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         else: self._ShowNext()
         
     
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action in ( 'archive_delete_filter_keep', 'archive_file' ):
-                
-                self._Keep()
-                
-            elif action in ( 'archive_delete_filter_delete', 'delete_file' ):
-                
-                self._Delete()
-                
-            elif action == 'archive_delete_filter_skip':
-                
-                self._Skip()
-                
-            elif action == 'archive_delete_filter_back':
-                
-                self._Back()
-                
-            elif action == 'launch_the_archive_delete_filter':
-                
-                self._Close()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            command_processed = CanvasMediaList._ProcessApplicationCommand( self, command )
-            
-        
-        return command_processed
-        
-    
     def _Skip( self ):
         
         if self._current_media == self._GetLast():
@@ -4338,6 +4255,55 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action in ( 'archive_delete_filter_keep', 'archive_file' ):
+                
+                self._Keep()
+                
+            elif action in ( 'archive_delete_filter_delete', 'delete_file' ):
+                
+                self._Delete()
+                
+            elif action == 'archive_delete_filter_skip':
+                
+                self._Skip()
+                
+            elif action == 'archive_delete_filter_back':
+                
+                self._Back()
+                
+            elif action == 'launch_the_archive_delete_filter':
+                
+                self._Close()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            command_processed = CanvasMediaList.ProcessApplicationCommand( self, command )
+            
+        
+        return command_processed
+        
+    
     def Skip( self, canvas_key ):
         
         if canvas_key == self._canvas_key:
@@ -4373,7 +4339,51 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         return ClientGUIHoverFrames.FullscreenHoverFrameTopNavigableList( self, self._canvas_key )
         
     
-    def _ProcessApplicationCommand( self, command ):
+    def Archive( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Archive()
+            
+        
+    
+    def Delete( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Delete()
+            
+        
+    
+    def EventArchive( self, event ):
+        
+        self._Archive()
+        
+    
+    def EventDelete( self, event ):
+        
+        self._Delete()
+        
+    
+    def EventNext( self, event ):
+        
+        self._ShowNext()
+        
+    
+    def EventPrevious( self, event ):
+        
+        self._ShowPrevious()
+        
+    
+    def Inbox( self, canvas_key ):
+        
+        if self._canvas_key == canvas_key:
+            
+            self._Inbox()
+            
+        
+    
+    def ProcessApplicationCommand( self, command ):
         
         command_processed = True
         
@@ -4420,54 +4430,10 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         
         if not command_processed:
             
-            command_processed = CanvasMediaList._ProcessApplicationCommand( self, command )
+            command_processed = CanvasMediaList.ProcessApplicationCommand( self, command )
             
         
         return command_processed
-        
-    
-    def Archive( self, canvas_key ):
-        
-        if self._canvas_key == canvas_key:
-            
-            self._Archive()
-            
-        
-    
-    def Delete( self, canvas_key ):
-        
-        if self._canvas_key == canvas_key:
-            
-            self._Delete()
-            
-        
-    
-    def EventArchive( self, event ):
-        
-        self._Archive()
-        
-    
-    def EventDelete( self, event ):
-        
-        self._Delete()
-        
-    
-    def EventNext( self, event ):
-        
-        self._ShowNext()
-        
-    
-    def EventPrevious( self, event ):
-        
-        self._ShowPrevious()
-        
-    
-    def Inbox( self, canvas_key ):
-        
-        if self._canvas_key == canvas_key:
-            
-            self._Inbox()
-            
         
     
     def ShowFirst( self, canvas_key ):

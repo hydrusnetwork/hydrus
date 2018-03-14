@@ -15,6 +15,7 @@ import ClientGUIImport
 import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientGUIScrolledPanelsEdit
+import ClientGUIShortcuts
 import ClientGUISeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
@@ -3129,71 +3130,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
         
         #
         
-        self.Bind( wx.EVT_CHAR_HOOK, self.EventCharHook )
-        
-    
-    def _ProcessApplicationCommand( self, command ):
-        
-        command_processed = True
-        
-        command_type = command.GetCommandType()
-        data = command.GetData()
-        
-        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
-            
-            action = data
-            
-            if action == 'manage_file_ratings':
-                
-                self.EventOK( None )
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
-    def _ProcessShortcut( self, shortcut ):
-        
-        shortcut_processed = False
-        
-        command = HG.client_controller.GetCommandFromShortcut( [ 'media' ], shortcut )
-        
-        if command is not None:
-            
-            command_processed = self._ProcessApplicationCommand( command )
-            
-            if command_processed:
-                
-                shortcut_processed = True
-                
-            
-        
-        return shortcut_processed
-        
-    
-    def EventCharHook( self, event ):
-        
-        shortcut = ClientData.ConvertKeyEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            shortcut_processed = self._ProcessShortcut( shortcut )
-            
-            if shortcut_processed:
-                
-                return
-                
-            
-        
-        event.Skip()
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
     
     def EventOK( self, event ):
@@ -3229,6 +3166,34 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             
             self.EndModal( wx.ID_OK )
             
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_ratings':
+                
+                self.EventOK( None )
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
     class _LikePanel( wx.Panel ):
@@ -3687,6 +3652,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
             
+            self._tag_parents.Sort( 2 )
+            
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             
@@ -3706,7 +3673,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' + os.linesep + '.' )
+            self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             tags_box = wx.BoxSizer( wx.HORIZONTAL )
             
@@ -3721,6 +3689,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.Add( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3729,6 +3698,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self.SetSizer( vbox )
             
             #
+            
+            self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
@@ -4030,8 +4001,65 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         
         def _SetButtonStatus( self ):
             
-            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0: self._add.Disable()
-            else: self._add.Enable()
+            if len( self._children.GetTags() ) == 0 or len( self._parents.GetTags() ) == 0:
+                
+                self._add.Disable()
+                
+            else:
+                
+                self._add.Enable()
+                
+            
+        
+        def _UpdateListCtrlData( self ):
+            
+            children = self._children.GetTags()
+            parents = self._parents.GetTags()
+            
+            pertinent_tags = children.union( parents )
+            
+            self._tag_parents.DeleteDatas( self._tag_parents.GetData() )
+            
+            all_pairs = set()
+            
+            for ( status, pairs ) in self._current_statuses_to_pairs.items():
+                
+                if status == HC.CONTENT_STATUS_DELETED:
+                    
+                    continue
+                    
+                
+                
+                if len( pertinent_tags ) == 0:
+                    
+                    if status == HC.CONTENT_STATUS_CURRENT:
+                        
+                        continue
+                        
+                    
+                    # show all pending/petitioned
+                    
+                    all_pairs.update( pairs )
+                    
+                else:
+                    
+                    # show all appropriate
+                    
+                    for pair in pairs:
+                        
+                        ( a, b ) = pair
+                        
+                        if a in pertinent_tags or b in pertinent_tags:
+                            
+                            all_pairs.add( pair )
+                            
+                        
+                    
+                
+            
+            self._tag_parents.AddDatas( all_pairs )
+            
+            self._tag_parents.Sort()
             
         
         def EnterChildren( self, tags ):
@@ -4041,6 +4069,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._parents.RemoveTags( tags )
                 
                 self._children.EnterTags( tags )
+                
+                self._UpdateListCtrlData()
                 
                 self._SetButtonStatus()
                 
@@ -4053,6 +4083,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._children.RemoveTags( tags )
                 
                 self._parents.EnterTags( tags )
+                
+                self._UpdateListCtrlData()
                 
                 self._SetButtonStatus()
                 
@@ -4068,12 +4100,19 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             self._children.SetTags( [] )
             self._parents.SetTags( [] )
             
+            self._UpdateListCtrlData()
+            
             self._SetButtonStatus()
             
         
         def EventItemSelected( self, event ):
             
             self._SetButtonStatus()
+            
+        
+        def EventListBoxChanged( self, event ):
+            
+            self._UpdateListCtrlData()
             
         
         def GetContentUpdates( self ):
@@ -4134,11 +4173,12 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._original_statuses_to_pairs = original_statuses_to_pairs
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
-                self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' )
+                self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ConvertIntToPrettyString( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
                 
                 self._child_input.Enable()
                 self._parent_input.Enable()
-                
+                '''
                 all_pairs = set()
                 
                 for ( status, pairs ) in self._original_statuses_to_pairs.items():
@@ -4154,8 +4194,12 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._tag_parents.AddDatas( all_pairs )
                 
                 self._tag_parents.Sort( 2 )
-                
-                if tags is not None:
+                '''
+                if tags is None:
+                    
+                    self._UpdateListCtrlData()
+                    
+                else:
                     
                     self.EnterChildren( tags )
                     
@@ -4332,6 +4376,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             #
             
             self._status_st = ClientGUICommon.BetterStaticText( self, u'initialising\u2026' )
+            self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
             new_sibling_box = wx.BoxSizer( wx.VERTICAL )
             
@@ -4352,6 +4397,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.Add( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4843,6 +4889,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ConvertIntToPrettyString( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
                 
                 self._old_input.Enable()
                 self._new_input.Enable()

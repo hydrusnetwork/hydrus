@@ -8,6 +8,32 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 298</h3></li>
+				<ul>
+					<li>wrote a new 'bytescontrol' and related noneablebytescontrol that allows for a uniform way to choose a bytes size value with a wider range--and deployed it all over the place</li>
+					<li>hitting a mapped shortcut for 'manage file notes' should now ok the 'manage file notes' dialog as well as open it</li>
+					<li>the manage file notes text control will now start with its caret at the end of the document</li>
+					<li>manage siblings/parents now state how many pairs they have</li>
+					<li>as an experiment, manage parents now only lists pertinent information in its listctrl. this is hacky but potentially a big improvement to the workflow here, feedback would be appreciated</li>
+					<li>added a new menu entry, 'network->pause->all new network traffic', which will indefinitely pause any new network jobs. this value will persist through a restart</li>
+					<li>'pause subscriptions' is moved from 'services' to 'network'</li>
+					<li>'pause import/export folders' is moved to 'file' and all the import/export folder stuff is sent down to its own submenu</li>
+					<li>in lieu of proper session inspection gui, added some debug 'reset login' entries to the network menu for pixiv and hf</li>
+					<li>if a page has files but none are selected, it will now say the total size in the status bar</li>
+					<li>the edit bandwidth rules control and its subsidiary dialog use some saner and more user-friendly layout and presentation</li>
+					<li>the previous search distance on the 'review bandwidth usage' frame is now remembered</li>
+					<li>fixed some bad logic where a 'copy_bmp' event could trigger despite the current media being None or a non-static image</li>
+					<li>you can no longer open multiple copies of the subscriptions or import/export folder manage dialogs if you hit the menu entry multiple times while the first is waiting for the jobs to finish</li>
+					<li>like import folders and subscriptions, manage export folders now waits for currently running export folders to quit before opening</li>
+					<li>export folders run lighter and quit faster on client shutdown</li>
+					<li>the domain manager will give a better error if a URL submitted to it lacks a schema (the http or https part)</li>
+					<li>fixed a bunch of unicode error handling</li>
+					<li>fixed an issue with similar files metadata orphans prohibiting new file imports</li>
+					<li>finished up a simple shared shortcut processing object and replaced most old temp duplicate shortcut code with it</li>
+					<li>misc ui cleanup</li>
+					<li>misc text rendering fixes</li>
+					<li>misc shortcut code refactoring</li>
+				</ul>
 				<li><h3>version 297</h3></li>
 				<ul>
 					<li>finished a prototype 'file notes' system. thumbnails and media viewer canvas now support 'manage->file notes' in their right-click menus. this launches a simple text box which will save its contents to db</li>
@@ -19,7 +45,7 @@
 					<li>cleaned up tag import options layout, controls, internal workflow, and help button</li>
 					<li>added 'select all/none' buttons to tag import options panels with multiple namespaces</li>
 					<li>if a subscription is blocked by bandwidth, the manage subscriptions dialog will display that in its 'recent error/delay' column</li>
-					<li>the edit subscription dialog will show similar bandwidth blocking info on a per-query basis, under a new 'recent delays' column</li>
+					<li>the edit subscription dialog will show similar bandwidth blocking info, on a per-query basis, under a new 'recent delays' column</li>
 					<li>the review bandwidth usage panel will no longer show some unusual results by default that you can see with 'show all' hit anyway</li>
 					<li>the review bandwidth usage panel will show the usage at the current search distance in a new column</li>
 					<li>the review bandiwdth usage panel will show number of requests after data usage. this might be info-overload, so I might alter the syntax or roll it back entirely</li>
