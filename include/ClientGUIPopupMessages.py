@@ -1000,16 +1000,16 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         
         self.SetSizer( vbox )
         
-        self._windows_minimised = []
+        self._windows_hidden = []
         
-        self._MinimiseOtherWindows()
+        self._HideOtherWindows()
         
         self._message_pubbed = False
         
         self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 0.25, self.REPEATINGUpdate )
         
     
-    def _MinimiseOtherWindows( self ):
+    def _HideOtherWindows( self ):
         
         for tlw in wx.GetTopLevelWindows():
             
@@ -1035,9 +1035,9 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
                 continue
                 
             
-            tlw.Iconize()
+            tlw.Hide()
             
-            self._windows_minimised.append( tlw )
+            self._windows_hidden.append( tlw )
             
         
     
@@ -1055,12 +1055,12 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
     
     def _RestoreOtherWindows( self ):
         
-        for tlw in self._windows_minimised:
+        for tlw in self._windows_hidden:
             
-            tlw.Restore()
+            tlw.Show()
             
         
-        self._windows_minimised = []
+        self._windows_hidden = []
         
     
     def _Update( self ):

@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientDefaults
 import ClientGUICommon
+import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIFrames
 import ClientGUIListCtrl
@@ -15,6 +16,7 @@ import ClientNetworking
 import ClientTags
 import ClientThreading
 import collections
+import cookielib
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
@@ -565,7 +567,9 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for network_context in self._bandwidths.GetData( only_selected = True ):
             
-            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self._controller.GetGUI(), 'review bandwidth for ' + network_context.ToUnicode() )
+            parent = self.GetTopLevelParent().GetParent()
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review bandwidth for ' + network_context.ToUnicode() )
             
             panel = ReviewNetworkContextBandwidthPanel( frame, self._controller, network_context )
             
@@ -990,6 +994,325 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def RefreshServices( self ):
         
         self._InitialiseServices()
+        
+    
+class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, session_manager ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._session_manager = session_manager
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_sessions', 32, 34, [ ( 'network context', -1 ), ( 'cookies', 9 ), ( 'expires', 28 ) ], self._ConvertNetworkContextToListCtrlTuple, delete_key_callback = self._Clear, activation_callback = self._Review )
+        
+        self._listctrl.Sort()
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'create new', self._Add )
+        listctrl_panel.AddButton( 'review', self._Review, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
+        listctrl_panel.AddSeparator()
+        listctrl_panel.AddButton( 'refresh', self._Update )
+        
+        #
+        
+        self._Update()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'enter new network context' ) as dlg:
+            
+            network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'example.com' )
+            
+            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, network_context, limited_types = ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS ), allow_default = False )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                network_context = panel.GetValue()
+                
+                self._AddNetworkContext( network_context )
+                
+            
+        
+        self._Update()
+        
+    
+    def _AddNetworkContext( self, network_context ):
+        
+        # this establishes a bare session
+        
+        self._session_manager.GetSession( network_context )
+        
+    
+    def _Clear( self ):
+        
+        for network_context in self._listctrl.GetData( only_selected = True ):
+            
+            self._session_manager.ClearSession( network_context )
+            
+            self._AddNetworkContext( network_context )
+            
+        
+        self._Update()
+        
+    
+    def _ConvertNetworkContextToListCtrlTuple( self, network_context ):
+        
+        session = self._session_manager.GetSession( network_context )
+        
+        pretty_network_context = network_context.ToUnicode()
+        
+        number_of_cookies = len( session.cookies )
+        pretty_number_of_cookies = HydrusData.ConvertIntToPrettyString( number_of_cookies )
+        
+        expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
+        
+        if len( expires_numbers ) == 0:
+            
+            if number_of_cookies > 0:
+                
+                expiry = 0
+                pretty_expiry = 'session'
+                
+            else:
+                
+                expiry = -1
+                pretty_expiry = ''
+                
+            
+        else:
+            
+            expiry = max( expires_numbers )
+            pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+            
+        
+        display_tuple = ( pretty_network_context, pretty_number_of_cookies, pretty_expiry )
+        sort_tuple = ( pretty_network_context, number_of_cookies, expiry )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Review( self ):
+        
+        for network_context in self._listctrl.GetData( only_selected = True ):
+            
+            parent = self.GetTopLevelParent().GetParent()
+            
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToUnicode() )
+            
+            panel = ReviewNetworkSessionPanel( frame, self._session_manager, network_context )
+            
+            frame.SetPanel( panel )
+            
+        
+    
+    def _Update( self ):
+        
+        network_contexts = [ network_context for network_context in self._session_manager.GetNetworkContexts() if network_context.context_type in ( CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS ) ]
+        
+        self._listctrl.SetData( network_contexts )
+        
+    
+class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, session_manager, network_context ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._session_manager = session_manager
+        self._network_context = network_context
+        
+        self._session = self._session_manager.GetSession( self._network_context )
+        
+        self._description = ClientGUICommon.BetterStaticText( self, network_context.ToUnicode() )
+        
+        listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'review_network_session', 8, 18, [ ( 'name', -1 ), ( 'value', 32 ), ( 'domain', 20 ), ( 'path', 8 ), ( 'expires', 28 ) ], self._ConvertCookieToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        
+        self._listctrl.Sort()
+        
+        listctrl_panel.SetListCtrl( self._listctrl )
+        
+        listctrl_panel.AddButton( 'add', self._Add )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
+        listctrl_panel.AddSeparator()
+        listctrl_panel.AddButton( 'refresh', self._Update )
+        
+        #
+        
+        self._Update()
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _Add( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit cookie' ) as dlg:
+            
+            name = 'name'
+            value = '123'
+            
+            if self._network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                domain = '.' + self._network_context.context_data
+                
+            else:
+                
+                domain = 'service domain'
+                
+            
+            path = '/'
+            expires = HydrusData.GetNow() + 30 * 86400
+            
+            panel = ClientGUIScrolledPanelsEdit.EditCookiePanel( dlg, name, value, domain, path, expires )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( name, value, domain, path, expires ) = panel.GetValue()
+                
+                self._SetCookie( name, value, domain, path, expires )
+                
+            
+        
+        self._Update()
+        
+    
+    def _ConvertCookieToListCtrlTuple( self, cookie ):
+        
+        name = cookie.name
+        pretty_name = name
+        
+        value = cookie.value
+        pretty_value = value
+        
+        domain = cookie.domain
+        pretty_domain = domain
+        
+        path = cookie.path
+        pretty_path = path
+        
+        expiry = cookie.expires
+        
+        if expiry is None:
+            
+            expiry = -1
+            pretty_expiry = 'session'
+            
+        else:
+            
+            pretty_expiry = HydrusData.ConvertTimestampToPrettyExpires( expiry )
+            
+        
+        display_tuple = ( pretty_name, pretty_value, pretty_domain, pretty_path, pretty_expiry )
+        sort_tuple = ( name, value, domain, path, expiry )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Delete( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Delete all selected cookies?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for cookie in self._listctrl.GetData( only_selected = True ):
+                    
+                    domain = cookie.domain
+                    path = cookie.path
+                    name = cookie.name
+                    
+                    self._session.cookies.clear( domain, path, name )
+                    
+                
+                self._Update()
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        for cookie in self._listctrl.GetData( only_selected = True ):
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit cookie' ) as dlg:
+                
+                name = cookie.name
+                value = cookie.value
+                domain = cookie.domain
+                path = cookie.path
+                expires = cookie.expires
+                
+                panel = ClientGUIScrolledPanelsEdit.EditCookiePanel( dlg, name, value, domain, path, expires )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    ( name, value, domain, path, expires ) = panel.GetValue()
+                    
+                    self._SetCookie( name, value, domain, path, expires )
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._Update()
+        
+    
+    def _SetCookie( self, name, value, domain, path, expires ):
+        
+        version = 0
+        port = None
+        port_specified = False
+        domain_specified = True
+        domain_initial_dot = domain.startswith( '.' )
+        path_specified = True
+        secure = False
+        discard = False
+        comment = None
+        comment_url = None
+        rest = {}
+        
+        cookie = cookielib.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+        
+        self._session.cookies.set_cookie( cookie )
+        
+    
+    def _Update( self ):
+        
+        self._session = self._session_manager.GetSession( self._network_context )
+        
+        cookies = list( self._session.cookies )
+        
+        self._listctrl.SetData( cookies )
         
     
 class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):

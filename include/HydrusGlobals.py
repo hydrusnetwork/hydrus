@@ -15,6 +15,7 @@ callto_report_mode = False
 db_report_mode = False
 db_profile_mode = False
 gui_report_mode = False
+shortcut_report_mode = False
 hover_window_report_mode = False
 menu_profile_mode = False
 network_report_mode = False

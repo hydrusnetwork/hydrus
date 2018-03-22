@@ -237,7 +237,11 @@ class BytesControl( wx.Panel ):
         
         wx.Panel.__init__( self, parent )
         
-        self._spin = wx.SpinCtrl( self, min = 0, max = 1048576, size = ( 60, -1 ) )
+        self._spin = wx.SpinCtrl( self, min = 0, max = 1048576 )
+        
+        width = ClientData.ConvertTextToPixelWidth( self._spin, 9 )
+        
+        self._spin.SetSize( ( width, -1 ) )
         
         self._unit = ClientGUICommon.BetterChoice( self )
         
@@ -346,6 +350,16 @@ class NoneableBytesControl( wx.Panel ):
         else:
             
             return self._bytes.GetValue()
+            
+        
+    
+    def SetToolTip( self, text ):
+        
+        wx.Panel.SetToolTip( self, text )
+        
+        for c in self.GetChildren():
+            
+            c.SetToolTip( text )
             
         
     

@@ -4259,6 +4259,17 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return HydrusData.TimeHasPassed( self._no_work_until )
         
     
+    def _ShowHitPeriodicFileLimitMessage( self, query_text ):
+        
+        message = 'When syncing, the query "' + query_text + '" for subscription "' + self._name + '" hit its periodic file limit!'
+        message += os.linesep * 2
+        message += 'This may be because the query has not run in a while--so the backlog of files has built up--or that the site has changed how it presents file urls on its gallery pages (and so the subscription thinks it is seeing new files when it truly is not).'
+        message += os.linesep * 2
+        message += 'If the former is true, you might want to fill in the gap with a manual download page, but if the latter is true, the maintainer for the download parser (hydrus dev or whoever), would be interested in knowing this information so they can roll out a fix.'
+        
+        HydrusData.ShowText( message )
+        
+    
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
         
         if version == 1:
@@ -4678,6 +4689,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if self._periodic_file_limit is not None and total_new_urls + 1 > self._periodic_file_limit:
                         
+                        self._ShowHitPeriodicFileLimitMessage( query_text )
+                        
                         break
                         
                     
@@ -4767,6 +4780,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             else:
                                 
                                 if self._periodic_file_limit is not None and total_new_urls + 1 > self._periodic_file_limit:
+                                    
+                                    self._ShowHitPeriodicFileLimitMessage( query_text )
                                     
                                     keep_checking = False
                                     

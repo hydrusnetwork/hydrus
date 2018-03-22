@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 299</h3></li>
+				<ul>
+					<li>wrote ui to review and even edit session cookies by network context. it is still a bit rough but will help with future development.</li>
+					<li>added a 'open_selection_in_new_page' shortcut to the 'media' shortcut set that will work on the thumbnail view</li>
+					<li>added a 'export_files' shortcut to the 'media' shortcut set that will work on the thumbnail view</li>
+					<li>fudged manage siblings logic to not do the borked 'hey, that sibling already exists' as soon as you type the old sibling--it will now auto-petition any existing siblings when you click 'add' with a good automated petition reason that makes sense to the janitor</li>
+					<li>manage siblings now also only shows rows appropriate to the current selection like parents does. it gets a new 'notes' column to specify conflicts that will be auto-petitioned as above</li>
+					<li>manage siblings and parents now have a laggy 'show all pairs' checkbox to let you quickly review everything like you used to</li>
+					<li>fixed a database-level bug that meant petitioned and pending the same left-hand sibling tag (like petition a->b, pend a->c) would sometimes not both save together</li>
+					<li>when you middle-click or right-click->open a new page on a selection of tags/search predicates, the new page will now be named after the tags</li>
+					<li>if subscriptions hit their periodic file limit, they will now give a little popup message describing what happened and possible causes and actions the user can take</li>
+					<li>added a 'make a modal popup in five seconds' action to help->debug</li>
+					<li>modal popups will now hide/show other child frames (like review services) rather than minimise/restore, as this latter action can raise the entire progam to the front</li>
+					<li>added a 'make a parentless text control dialog' debug entry to test some key event catching</li>
+					<li>added a 'layout all tlws' debug entry to help->debug that'll hopefully help figure out some child window sizing/position issues</li>
+					<li>added a 'shortcut report mode', which will report caught shortcut keys and their matched commands, if any</li>
+					<li>fixed a little shortcut catching bug in the main gui</li>
+					<li>finished adding the new bytes control</li>
+					<li>updated ffmpeg for windows</li>
+					<li>improved sankaku default bandwidth rules to stop a subscription bandwidth rules mismatch that could sometimes make for subscription delays--existing users may like to add a 2GB/day rule for sankakucomplex.com</li>
+					<li>improved some service and account error handling to better propagate the exact problem up the exception handling chain</li>
+					<li>the clientside 'update A actually had hash B' repository sync error is now dealt with in a less severe way, and the bad update file is saved to disk with a request for it to be forwarded to hydrus dev for further investigation</li>
+					<li>file parsing is now more resistant to invalid negative values for properties like width, height, and duration</li>
+					<li>improved some focus code that may have been affecting linux stability</li>
+					<li>improved a deviant art url-not-found error</li>
+					<li>improved a wx version boot test</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 298</h3></li>
 				<ul>
 					<li>wrote a new 'bytescontrol' and related noneablebytescontrol that allows for a uniform way to choose a bytes size value with a wider range--and deployed it all over the place</li>

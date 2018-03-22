@@ -1187,7 +1187,13 @@ class ListBoxTags( ListBox ):
         
         if len( predicates ) > 0:
             
-            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates )
+            s = [ predicate.GetUnicode() for predicate in predicates ]
+            
+            s.sort()
+            
+            page_name = ', '.join( s )
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_predicates = predicates, page_name = page_name )
             
         
     

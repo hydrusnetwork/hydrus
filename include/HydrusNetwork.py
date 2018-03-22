@@ -356,6 +356,34 @@ class Account( object ):
         return self.__repr__()
         
     
+    def _CheckFunctional( self ):
+        
+        if self._created == 0:
+            
+            raise HydrusExceptions.PermissionException( 'account is unsynced' )
+            
+        
+        if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ):
+            
+            return # admins can do anything
+            
+        
+        if self._IsBanned():
+            
+            raise HydrusExceptions.PermissionException( 'This account is banned: ' + self._GetBannedString() )
+            
+        
+        if self._IsExpired():
+            
+            raise HydrusExceptions.PermissionException( 'This account is expired: ' + self._GetExpiresString() )
+            
+        
+        if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
+            
+            raise HydrusExceptions.PermissionException( 'account has exceeded bandwidth' )
+            
+        
+    
     def _GetBannedString( self ):
         
         if self._banned_info is None:
@@ -373,36 +401,6 @@ class Account( object ):
     def _GetExpiresString( self ):
         
         return HydrusData.ConvertTimestampToPrettyExpires( self._expires )
-        
-    
-    def _GetFunctionalStatus( self ):
-        
-        if self._created == 0:
-            
-            return ( False, 'account is unsynced' )
-            
-        
-        if self._account_type.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_OVERRULE ):
-            
-            return ( True, 'admin: can do anything' )
-            
-        
-        if self._IsBanned():
-            
-            return ( False, self._GetBannedString() )
-            
-        
-        if self._IsExpired():
-            
-            return ( False, self._GetExpiresString() )
-            
-        
-        if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
-            
-            return ( False, 'account has exceeded bandwidth' )
-            
-        
-        return ( True, 'account is functional' )
         
     
     def _IsBanned( self ):
@@ -464,22 +462,7 @@ class Account( object ):
         
         with self._lock:
         
-            if self._IsBanned():
-                
-                banned_string = self._GetBannedString()
-                
-                raise HydrusExceptions.PermissionException( 'This account is banned: ' + banned_string )
-                
-            
-            if self._IsExpired():
-                
-                raise HydrusExceptions.PermissionException( 'This account has expired.' )
-                
-            
-            if not self._account_type.BandwidthOK( self._bandwidth_tracker ):
-                
-                raise HydrusExceptions.PermissionException( 'This account has no remaining bandwidth.' )
-                
+            self._CheckFunctional()
             
         
     
@@ -545,15 +528,15 @@ class Account( object ):
         
         with self._lock:
             
-            ( functional, status ) = self._GetFunctionalStatus()
-            
-            if functional:
+            try:
                 
-                return status
+                self._CheckFunctional()
                 
-            else:
+                return 'account is functional'
                 
-                return 'account not functional: ' + status
+            except Exception as e:
+                
+                return HydrusData.ToUnicode( e )
                 
             
         
@@ -578,9 +561,16 @@ class Account( object ):
         
         with self._lock:
             
-            ( functional, status ) = self._GetFunctionalStatus()
-            
-            return functional
+            try:
+                
+                self._CheckFunctional()
+                
+                return True
+                
+            except:
+                
+                return False
+                
             
         
     

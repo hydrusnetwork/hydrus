@@ -1,6 +1,7 @@
 import ClientData
 import ClientGUICommon
 import HydrusConstants as HC
+import HydrusData
 import HydrusGlobals as HG
 import wx
 
@@ -74,17 +75,49 @@ class ShortcutsHandler( object ):
                 shortcut_processed = True
                 
             
+            if HG.shortcut_report_mode:
+                
+                message = 'Shortcut "' + shortcut.ToString() + '" matched to command "' + command.ToString() + '" on ' + repr( self._parent ) + '.'
+                
+                if command_processed:
+                    
+                    message += ' It was processed.'
+                    
+                else:
+                    
+                    message += ' It was not processed.'
+                    
+                
+                HydrusData.ShowText( message )
+                
+            
         
         return shortcut_processed
         
     
     def EventCharHook( self, event ):
         
-        if IShouldCatchCharHook( self._parent ):
+        shortcut = ClientData.ConvertKeyEventToShortcut( event )
+        
+        if shortcut is not None:
             
-            shortcut = ClientData.ConvertKeyEventToShortcut( event )
+            if HG.shortcut_report_mode:
+                
+                message = 'Key shortcut "' + shortcut.ToString() + '" passing through ' + repr( self._parent ) + '.'
+                
+                if IShouldCatchCharHook( self._parent ):
+                    
+                    message += ' I am in a state to catch it.'
+                    
+                else:
+                    
+                    message += ' I am not in a state to catch it.'
+                    
+                
+                HydrusData.ShowText( message )
+                
             
-            if shortcut is not None:
+            if IShouldCatchCharHook( self._parent ):
                 
                 shortcut_processed = self._ProcessShortcut( shortcut )
                 

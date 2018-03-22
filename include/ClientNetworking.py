@@ -1974,6 +1974,23 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         self._network_contexts_to_session_timeouts = {}
         
     
+    def _CleanSessionCookies( self, network_context, session ):
+        
+        if network_context not in self._network_contexts_to_session_timeouts:
+            
+            self._network_contexts_to_session_timeouts[ network_context ] = 0
+            
+        
+        if HydrusData.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
+            
+            session.cookies.clear_session_cookies()
+            
+        
+        self._network_contexts_to_session_timeouts[ network_context ] = HydrusData.GetNow() + self.SESSION_TIMEOUT
+        
+        session.cookies.clear_expired_cookies()
+        
+    
     def _GenerateSession( self, network_context ):
         
         session = requests.Session()
@@ -2026,6 +2043,14 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetNetworkContexts( self ):
+        
+        with self._lock:
+            
+            return self._network_contexts_to_sessions.keys()
+            
+        
+    
     def GetSession( self, network_context ):
         
         with self._lock:
@@ -2047,17 +2072,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
             #
             
-            if network_context not in self._network_contexts_to_session_timeouts:
-                
-                self._network_contexts_to_session_timeouts[ network_context ] = 0
-                
-            
-            if HydrusData.TimeHasPassed( self._network_contexts_to_session_timeouts[ network_context ] ):
-                
-                session.cookies.clear_session_cookies()
-                
-            
-            self._network_contexts_to_session_timeouts[ network_context ] = HydrusData.GetNow() + self.SESSION_TIMEOUT
+            self._CleanSessionCookies( network_context, session )
             
             #
             

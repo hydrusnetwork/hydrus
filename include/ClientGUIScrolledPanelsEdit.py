@@ -211,6 +211,97 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         return datas
         
     
+class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, name, value, domain, path, expires ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._name = wx.TextCtrl( self )
+        self._value = wx.TextCtrl( self )
+        self._domain = wx.TextCtrl( self )
+        self._path = wx.TextCtrl( self )
+        
+        expires_panel = ClientGUICommon.StaticBox( self, 'expires' )
+        
+        self._expires_st = ClientGUICommon.BetterStaticText( expires_panel )
+        self._expires_st_utc = ClientGUICommon.BetterStaticText( expires_panel )
+        self._expires_time_delta = ClientGUITime.TimeDeltaButton( expires_panel, min = 1200, days = True, hours = True, minutes = True )
+        
+        #
+        
+        self._name.SetValue( name )
+        self._value.SetValue( value )
+        self._domain.SetValue( domain )
+        self._path.SetValue( path )
+        
+        self._expires = expires
+        
+        self._expires_time_delta.SetValue( 30 * 86400 )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Actual expires as UTC Timestamp: ', self._expires_st_utc ) )
+        rows.append( ( 'Set expires as a delta from now: ', self._expires_time_delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( expires_panel, rows )
+        
+        expires_panel.Add( self._expires_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        expires_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        rows = []
+        
+        rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'value: ', self._value ) )
+        rows.append( ( 'domain: ', self._domain ) )
+        rows.append( ( 'path: ', self._path ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( expires_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._UpdateExpiresText()
+        
+        self._expires_time_delta.Bind( ClientGUITime.EVT_TIME_DELTA, self.EventTimeDelta )
+        
+    
+    def _UpdateExpiresText( self ):
+        
+        self._expires_st.SetLabelText( HydrusData.ConvertTimestampToPrettyExpires( self._expires ) )
+        self._expires_st_utc.SetLabelText( str( self._expires ) )
+        
+    
+    def EventTimeDelta( self, event ):
+        
+        time_delta = self._expires_time_delta.GetValue()
+        
+        expires = HydrusData.GetNow() + time_delta
+        
+        self._expires = expires
+        
+        self._UpdateExpiresText()
+        
+    
+    def GetValue( self ):
+        
+        name = self._name.GetValue()
+        value = self._value.GetValue()
+        domain = self._domain.GetValue()
+        path = self._path.GetValue()
+        expires = self._expires
+        
+        return ( name, value, domain, path, expires )
+        
+    
 class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, url_matches, network_contexts_to_custom_header_dicts ):
@@ -1147,13 +1238,18 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, network_context ):
+    def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        if limited_types is None:
+            
+            limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD )
+            
+        
         self._context_type = ClientGUICommon.BetterChoice( self )
         
-        for ct in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ):
+        for ct in limited_types:
             
             self._context_type.Append( CC.network_context_type_string_lookup[ ct ], ct )
             
@@ -1176,6 +1272,11 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         self._context_data_subscriptions = ClientGUICommon.BetterChoice( self )
         
         self._context_data_none = wx.CheckBox( self, label = 'No specific data--acts as default.' )
+        
+        if not allow_default:
+            
+            self._context_data_none.Hide()
+            
         
         names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
@@ -1453,7 +1554,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
-            self._network_context = ClientGUICommon.NetworkContextButton( self, network_context )
+            self._network_context = ClientGUICommon.NetworkContextButton( self, network_context, allow_default = False )
             
             self._key = wx.TextCtrl( self )
             self._value = wx.TextCtrl( self )
@@ -1795,7 +1896,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
             
             self._log_uploader_ips = wx.CheckBox( self )
-            self._max_storage = ClientGUICommon.NoneableSpinCtrl( self, unit = 'MB', multiplier = 1024 * 1024 )
+            self._max_storage = ClientGUIControls.NoneableBytesControl( self, initial_value = 5 * 1024 * 1024 * 1024 )
             
             #
             

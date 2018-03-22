@@ -497,6 +497,54 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
             
         
+    
+    def _ExportFiles( self ):
+        
+        if len( self._selected_media ) > 0:
+            
+            flat_media = []
+            
+            for media in self._sorted_media:
+                
+                if media in self._selected_media:
+                    
+                    if media.IsCollection():
+                        
+                        flat_media.extend( media.GetFlatMedia() )
+                        
+                    else:
+                        
+                        flat_media.append( media )
+                        
+                    
+                
+            
+            with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg:
+                
+                dlg.ShowModal()
+                
+            
+            self.SetFocus()
+            
+        
+    
+    def _ExportTags( self ):
+        
+        if len( self._selected_media ) > 0:
+            
+            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
+            
+            service_keys = [ service.GetServiceKey() for service in services ]
+            
+            service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
+            
+            hashes = self._GetSelectedHashes()
+            
+            if service_key is not None:
+                
+                ClientTags.ExportToHTA( self, service_key, hashes )
+                
+            
         
     
     def _FullScreen( self, first_media = None ):
@@ -1664,6 +1712,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._CopyHashesToClipboard( 'sha256' )
                 
+            elif action == 'export_files':
+                
+                self._ExportFiles()
+                
             elif action == 'manage_file_ratings':
                 
                 self._ManageRatings()
@@ -1715,6 +1767,10 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             elif action == 'open_file_in_external_program':
                 
                 self._OpenExternally()
+                
+            elif action == 'open_selection_in_new_page':
+                
+                self._ShowSelectionInNewPage()
                 
             elif action == 'launch_the_archive_delete_filter':
                 
@@ -2017,46 +2073,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
-        
-    
-    def _ExportFiles( self ):
-        
-        if len( self._selected_media ) > 0:
-            
-            flat_media = []
-            
-            for media in self._sorted_media:
-                
-                if media in self._selected_media:
-                    
-                    if media.IsCollection(): flat_media.extend( media.GetFlatMedia() )
-                    else: flat_media.append( media )
-                    
-                
-            
-            with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg: dlg.ShowModal()
-            
-            self.SetFocus()
-            
-        
-    
-    def _ExportTags( self ):
-        
-        if len( self._selected_media ) > 0:
-            
-            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ) )
-            
-            service_keys = [ service.GetServiceKey() for service in services ]
-            
-            service_key = ClientGUIDialogs.SelectServiceKey( service_keys = service_keys )
-            
-            hashes = self._GetSelectedHashes()
-            
-            if service_key is not None:
-                
-                ClientTags.ExportToHTA( self, service_key, hashes )
-                
-            
         
     
     def _FadeThumbnails( self, thumbnails ):

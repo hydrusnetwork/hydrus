@@ -653,7 +653,7 @@ class Page( wx.SplitterWindow ):
     
     def SetMediaFocus( self ):
         
-        self._media_panel.SetFocus()
+        wx.CallAfter( self._media_panel.SetFocus )
         
     
     def SetMediaResults( self, media_results ):

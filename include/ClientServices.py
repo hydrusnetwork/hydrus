@@ -148,9 +148,9 @@ class Service( object ):
     
     def __hash__( self ): return self._service_key.__hash__()
     
-    def _GetFunctionalStatus( self ):
+    def _CheckFunctional( self ):
         
-        return ( True, 'service is functional' )
+        pass
         
     
     def _GetSerialisableDictionary( self ):
@@ -168,6 +168,14 @@ class Service( object ):
         self._dirty = True
         
         HG.client_controller.pub( 'service_updated', self )
+        
+    
+    def CheckFunctional( self ):
+        
+        with self._lock:
+            
+            self._CheckFunctional()
+            
         
     
     def Duplicate( self ):
@@ -220,15 +228,15 @@ class Service( object ):
         
         with self._lock:
             
-            ( functional, status ) = self._GetFunctionalStatus()
-            
-            if not functional:
+            try:
                 
-                return 'service not functional: ' + status
+                self._CheckFunctional()
                 
-            else:
+                return 'service is functional'
                 
-                return status
+            except Exception as e:
+                
+                return HydrusData.ToUnicode( e )
                 
             
         
@@ -242,9 +250,16 @@ class Service( object ):
         
         with self._lock:
             
-            ( functional, status ) = self._GetFunctionalStatus()
-            
-            return functional
+            try:
+                
+                self._CheckFunctional()
+                
+                return True
+                
+            except:
+                
+                return False
+                
             
         
     
@@ -273,14 +288,14 @@ class Service( object ):
     
 class ServiceLocalBooru( Service ):
     
-    def _GetFunctionalStatus( self ):
+    def _CheckFunctional( self ):
         
         if not self._bandwidth_rules.CanStartRequest( self._bandwidth_tracker ):
             
-            return ( False, 'bandwidth exceeded' )
+            raise HydrusExceptions.BandwidthException( 'bandwidth exceeded' )
             
         
-        return Service._GetFunctionalStatus( self )
+        Service._CheckFunctional( self )
         
     
     def _GetSerialisableDictionary( self ):
@@ -490,11 +505,11 @@ class ServiceRemote( Service ):
         return 3600 * 4
         
     
-    def _GetFunctionalStatus( self ):
+    def _CheckFunctional( self ):
         
         if not HydrusData.TimeHasPassed( self._no_requests_until ):
             
-            return ( False, self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
+            raise HydrusExceptions.PermissionException( self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
             
         
         example_nj = ClientNetworking.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
@@ -503,10 +518,10 @@ class ServiceRemote( Service ):
         
         if not can_start:
             
-            return ( False, 'bandwidth exceeded' )
+            raise HydrusExceptions.BandwidthException( 'bandwidth exceeded' )
             
         
-        return Service._GetFunctionalStatus( self )
+        Service._CheckFunctional( self )
         
     
     def _GetSerialisableDictionary( self ):
@@ -619,19 +634,19 @@ class ServiceRestricted( ServiceRemote ):
             
         
     
-    def _GetFunctionalStatus( self, ignore_account = False ):
+    def _CheckFunctional( self, ignore_account = False ):
         
         if not self._credentials.HasAccessKey():
             
-            return ( False, 'this service has no access key set' )
+            raise HydrusExceptions.PermissionException( 'this service has no access key set' )
             
         
-        if not ignore_account and not self._account.IsFunctional():
+        if not ignore_account:
             
-            return ( False, 'account problem: ' + self._account.GetStatusString() )
+            self._account.CheckFunctional()
             
         
-        return ServiceRemote._GetFunctionalStatus( self )
+        ServiceRemote._CheckFunctional( self )
         
     
     def _GetSerialisableDictionary( self ):
@@ -650,6 +665,14 @@ class ServiceRestricted( ServiceRemote ):
         
         self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ] )
         self._next_account_sync = dictionary[ 'next_account_sync' ]
+        
+    
+    def CheckFunctional( self, ignore_account = False ):
+        
+        with self._lock:
+            
+            self._CheckFunctional( ignore_account = ignore_account )
+            
         
     
     def GetAccount( self ):
@@ -687,9 +710,16 @@ class ServiceRestricted( ServiceRemote ):
         
         with self._lock:
             
-            ( functional, status ) = self._GetFunctionalStatus( ignore_account = ignore_account )
-            
-            return functional
+            try:
+                
+                self._CheckFunctional( ignore_account = ignore_account )
+                
+                return True
+                
+            except:
+                
+                return False
+                
             
         
     
@@ -937,9 +967,16 @@ class ServiceRepository( ServiceRestricted ):
             return False
             
         
-        ( result, reason ) = self._GetFunctionalStatus()
+        try:
+            
+            self._CheckFunctional()
+            
+        except:
+            
+            return False
+            
         
-        return result
+        return True
         
     
     def _GetSerialisableDictionary( self ):
@@ -1147,16 +1184,28 @@ class ServiceRepository( ServiceRestricted ):
                     
                     if update_network_string_hash != update_hash:
                         
+                        # this is the weird update problem, seems to be network related
+                        # throwing a whole hullabaloo about it only caused problems, as the real fix was 'unpause it, try again'
+                        
                         with self._lock:
                             
-                            self._paused = True
-                            
-                            self._DealWithFundamentalNetworkError()
+                            self._DelayFutureRequests( 'had an unusual update response' )
                             
                         
-                        message = 'Update ' + update_hash.encode( 'hex' ) + ' downloaded from the ' + self._name + ' repository had hash ' + update_network_string_hash.encode( 'hex' ) + '! This is a serious error!'
+                        filename = 'should be ' + update_network_string_hash.encode( 'hex' ) + '.wew'
+                        
+                        path = os.path.join( HG.client_controller.db_dir, filename )
+                        
+                        with open( path, 'wb' ) as f:
+                            
+                            f.write( update_network_string )
+                            
+                        
+                        message = 'Update ' + update_hash.encode( 'hex' ) + ' downloaded from the ' + self._name + ' repository had hash ' + update_network_string_hash.encode( 'hex' ) + '!'
                         message += os.linesep * 2
-                        message += 'The repository has been paused for now. Please look into what could be wrong and report this to the hydrus dev.'
+                        message += 'This is an unusual network error that hydrus dev is trying to pin down. The bad file has been written to ' + path + '--please inform hydrus dev of what has happened and send him that file!'
+                        message += os.linesep * 2
+                        message += 'Your repository will try again later, which usually fixes this problem.'
                         
                         HydrusData.ShowText( message )
                         

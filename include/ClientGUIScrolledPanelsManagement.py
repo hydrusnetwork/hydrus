@@ -2780,8 +2780,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
-            rows.append( ( 'BUGFIX: Load images with PIL: ', self._load_images_with_pil ) )
-            rows.append( ( 'BUGFIX: Disable OpenCV for gifs: ', self._disable_cv_for_gifs ) )
+            rows.append( ( 'BUGFIX: Load images with PIL (slower): ', self._load_images_with_pil ) )
+            rows.append( ( 'BUGFIX: Load gifs with PIL instead of OpenCV (slower, bad transparency): ', self._disable_cv_for_gifs ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -3100,11 +3100,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             help_hbox = ClientGUICommon.WrapInText( disk_cache_help_button, disk_panel, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
             
-            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'run disk cache on boot for this long', unit = 's', none_phrase = 'do not run', min = 1, max = 120 )
-            self._disk_cache_init_period.SetToolTip( 'When the client boots, it can speed up operation by reading the front of the database into memory. This sets the max number of seconds it can spend doing that.' )
+            self._disk_cache_init_period = ClientGUICommon.NoneableSpinCtrl( disk_panel, unit = 's', none_phrase = 'do not run', min = 1, max = 120 )
+            self._disk_cache_init_period.SetToolTip( 'When the client boots, it can speed up operation (particularly loading your session pages) by reading the front of its database into memory. This sets the max number of seconds it can spend doing that.' )
             
-            self._disk_cache_maintenance_mb = ClientGUICommon.NoneableSpinCtrl( disk_panel, 'disk cache maintenance', unit = 'MB', none_phrase = 'do not keep db cached', min = 32, max = 65536 )
-            self._disk_cache_maintenance_mb.SetToolTip( 'The client can regularly check the front of its database is cached in memory. This represents how many megabytes it will ensure are cached.' )
+            self._disk_cache_maintenance = ClientGUIControls.NoneableBytesControl( disk_panel, initial_value = 256 * 1024 * 1024, none_label = 'do not keep db cached' )
+            self._disk_cache_maintenance.SetToolTip( 'The client can regularly ensure the front of its database is cached in your OS\'s disk cache. This represents how many megabytes it will ensure are cached in memory.' )
             
             #
             
@@ -3163,7 +3163,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._disk_cache_init_period.SetValue( self._new_options.GetNoneableInteger( 'disk_cache_init_period' ) )
-            self._disk_cache_maintenance_mb.SetValue( self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' ) )
+            
+            disk_cache_maintenance_mb = self._new_options.GetNoneableInteger( 'disk_cache_maintenance_mb' )
+            
+            if disk_cache_maintenance_mb is None:
+                
+                disk_cache_maintenance = disk_cache_maintenance_mb
+                
+            else:
+                
+                disk_cache_maintenance = disk_cache_maintenance_mb * 1024 * 1024
+                
+            
+            self._disk_cache_maintenance.SetValue( disk_cache_maintenance )
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
@@ -3193,11 +3205,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            rows = []
+            
+            rows.append( ( 'run disk cache on boot for this long: ', self._disk_cache_init_period ) )
+            rows.append( ( 'regularly ensure this much of the db is in OS\'s disk cache: ', self._disk_cache_maintenance ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( disk_panel, rows )
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             disk_panel.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-            disk_panel.Add( self._disk_cache_init_period, CC.FLAGS_EXPAND_PERPENDICULAR )
-            disk_panel.Add( self._disk_cache_maintenance_mb, CC.FLAGS_EXPAND_PERPENDICULAR )
+            disk_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             vbox.Add( disk_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -3237,7 +3255,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'If you have a lot of memory, you can set a generous potential video buffer to compensate.'
             text += os.linesep
-            text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will loop smoothly.'
+            text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will play and loop very smoothly.'
+            text += os.linesep
+            text += 'PROTIP: Do not go crazy here.'
             
             buffer_panel.Add( wx.StaticText( buffer_panel, label = text ), CC.FLAGS_VCENTER )
             
@@ -3299,7 +3319,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ShowDiskCacheHelp( self ):
             
-            message = 'The hydrus database runs best on a drive with fast random access latency. Important and heavy read and write operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
+            message = 'The hydrus database runs best on a drive with fast random access latency. Certain important operations can function up to 100 times faster when started raw from an SSD rather than an HDD.'
             message += os.linesep * 2
             message += 'To get around this, the client populates a pre-boot and ongoing disk cache. By contiguously frontloading the database into memory, the most important functions do not need to wait on your disk for most of their work.'
             message += os.linesep * 2
@@ -3307,7 +3327,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             message += os.linesep * 2
             message += 'If you run the database from an SSD, you can reduce or entirely eliminate these values, as the benefit is not so stark. 2s and 256MB is fine.'
             message += os.linesep * 2
-            message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing returns.'
+            message += 'Unless you are testing, do not go crazy with this stuff. You can set 8192MB if you like, but there are diminishing (and potentially negative) returns.'
             
             wx.MessageBox( message )
             
@@ -3354,7 +3374,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             self._new_options.SetNoneableInteger( 'disk_cache_init_period', self._disk_cache_init_period.GetValue() )
-            self._new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', self._disk_cache_maintenance_mb.GetValue() )
+            
+            disk_cache_maintenance = self._disk_cache_maintenance.GetValue()
+            
+            if disk_cache_maintenance is None:
+                
+                disk_cache_maintenance_mb = disk_cache_maintenance
+                
+            else:
+                
+                disk_cache_maintenance_mb = disk_cache_maintenance // ( 1024 * 1024 )
+                
+            
+            self._new_options.SetNoneableInteger( 'disk_cache_maintenance_mb', disk_cache_maintenance_mb )
             
             new_thumbnail_dimensions = [ self._thumbnail_width.GetValue(), self._thumbnail_height.GetValue() ]
             

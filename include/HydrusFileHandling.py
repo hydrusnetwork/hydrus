@@ -223,6 +223,31 @@ def GetFileInfo( path, mime = None ):
         duration = int( duration_in_s * 1000 )
         
     
+    if width is not None and width < 0:
+        
+        width *= -1
+        
+    
+    if height is not None and height < 0:
+        
+        width *= -1
+        
+    
+    if duration is not None and duration < 0:
+        
+        duration *= -1
+        
+    
+    if num_frames is not None and num_frames < 0:
+        
+        num_frames *= -1
+        
+    
+    if num_words is not None and num_words < 0:
+        
+        num_words *= -1
+        
+    
     return ( size, mime, width, height, duration, num_frames, num_words )
     
 def GetHashFromPath( path ):

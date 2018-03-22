@@ -1067,6 +1067,8 @@ class GalleryDeviantArt( Gallery ):
     
     def _ParseImagePage( self, html, referral_url ):
         
+        img_url = None
+        
         soup = GetSoup( html )
         
         download_button = soup.find( 'a', class_ = 'dev-page-download' )
@@ -1125,6 +1127,11 @@ class GalleryDeviantArt( Gallery ):
             # otherwise, it seems to redirect to a small interstitial redirect page that heads back to the original image page
             
             img_url = download_button[ 'href' ]
+            
+        
+        if img_url is None:
+            
+            raise HydrusExceptions.ParseException( 'Could not find a download link--maybe this work was text?' )
             
         
         return img_url

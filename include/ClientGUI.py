@@ -13,6 +13,7 @@ import ClientGUIMenus
 import ClientGUIPages
 import ClientGUIParsing
 import ClientGUIPopupMessages
+import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
 import ClientGUIScrolledPanelsReview
@@ -88,7 +89,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         self._statusbar_thread_updater = ClientGUICommon.ThreadToGUIUpdater( self._statusbar, self.RefreshStatusBar )
         
-        self._focus_holder = wx.Window( self, size = ( 0, 0 ) )
+        self._focus_holder = wx.Window( self )
+        
+        self._focus_holder.SetSize( ( 0, 0 ) )
         
         self._closed_pages = []
         self._closed_page_keys = set()
@@ -757,6 +760,55 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _DebugMakeDelayedModalPopup( self ):
+        
+        def do_it( controller ):
+            
+            time.sleep( 5 )
+            
+            job_key = ClientThreading.JobKey( cancellable = True )
+            
+            job_key.SetVariable( 'popup_title', 'debug modal job' )
+            
+            controller.pub( 'modal_message', job_key )
+            
+            for i in range( 5 ):
+                
+                if job_key.IsCancelled():
+                    
+                    break
+                    
+                
+                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.ConvertTimeDeltaToPrettyString( 5 - i ) + '.' )
+                job_key.SetVariable( 'popup_gauge_1', ( i, 5 ) )
+                
+                time.sleep( 1 )
+                
+            
+            job_key.Delete()
+            
+        
+        self._controller.CallToThread( do_it, self._controller )
+        
+    
+    def _DebugMakeParentlessTextCtrl( self ):
+        
+        with wx.Dialog( None, title = 'parentless debug dialog' ) as dlg:
+            
+            control = wx.TextCtrl( dlg )
+            
+            control.SetValue( 'debug test input' )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( control, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            dlg.SetSizer( vbox )
+            
+            dlg.ShowModal()
+            
+        
+    
     def _DebugMakeSomePopups( self ):
         
         for i in range( 1, 7 ):
@@ -980,6 +1032,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 wx.MessageBox( text + os.linesep * 2 + 'This has been written to the log.' )
                 
+            
+        
+    
+    def _ForceLayoutAllTLWs( self ):
+        
+        tlws = wx.GetTopLevelWindows()
+        
+        for tlw in tlws:
+            
+            HydrusData.ShowText( 'TLW ' + repr( tlw ) + ': pre size/pos - ' + repr( tuple( tlw.GetSize() ) ) + ' ' + repr( tuple( tlw.GetPosition() ) ) )
+            
+            tlw.Layout()
+            
+            HydrusData.ShowText( 'TLW ' + repr( tlw ) + ': post size/pos - ' + repr( tuple( tlw.GetSize() ) ) + ' ' + repr( tuple( tlw.GetPosition() ) ) )
             
         
     
@@ -1495,6 +1561,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
             
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            
             # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
             # need a name for this that isn't 'downloader', or maybe it should be, and I should rename downloaders below to 'gallery query generator' or whatever.
             
@@ -1716,12 +1788,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
             
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'force a layout for all tlws now', 'Tell all frames to relayout--useful to test some layout issues.', self._ForceLayoutAllTLWs )
             ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
@@ -2625,6 +2701,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame.SetPanel( panel )
         
     
+    def _ReviewNetworkSessions( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review network sessions' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
+        
+        frame.SetPanel( panel )
+        
+    
     def _ReviewServices( self ):
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, self._controller.PrepStringForDisplay( 'Review Services' ), 'review_services' )
@@ -2881,6 +2966,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode
+            
+        elif name == 'shortcut_report_mode':
+            
+            HG.shortcut_report_mode = not HG.shortcut_report_mode
             
         elif name == 'pubsub_profile_mode':
             
@@ -3915,7 +4004,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._notebook.ChooseNewPageForDeepestNotebook()
                 
-            if action == 'close_page':
+            elif action == 'close_page':
                 
                 self._notebook.CloseCurrentPage()
                 

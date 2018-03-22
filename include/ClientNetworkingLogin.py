@@ -130,9 +130,18 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 service = services_manager.GetService( service_key )
                 
-                if not service.IsFunctional( ignore_account = True ):
+                try:
                     
-                    raise HydrusExceptions.LoginException( 'Service has had a recent error or is otherwise not functional! You might like to try refreshing its account in \'review services\'.' )
+                    service.CheckFunctional( ignore_account = True )
+                    
+                except Exception as e:
+                    
+                    message = 'Service has had a recent error or is otherwise not functional! Specific error was:'
+                    message += os.linesep * 2
+                    message += HydrusData.ToUnicode( e )
+                    message += 'You might like to try refreshing its account in \'review services\'.'
+                    
+                    raise HydrusExceptions.LoginException( message )
                     
                 
             

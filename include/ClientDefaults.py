@@ -90,6 +90,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
     
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # keep this in there so subs can know better when to stop running (the files come from a subdomain, which causes a pain for bandwidth calcs)
+    
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
     
 def SetDefaultDomainManagerData( domain_manager ):

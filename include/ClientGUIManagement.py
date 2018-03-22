@@ -1586,7 +1586,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         if page_key == self._page_key:
             
-            self._query_input.SetFocus()
+            wx.CallAfter( self._query_input.SetFocus )
             
         
     
@@ -1978,7 +1978,10 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def SetSearchFocus( self, page_key ):
         
-        if page_key == self._page_key: self._page_url_input.SetFocus()
+        if page_key == self._page_key:
+            
+            wx.CallAfter( self._page_url_input.SetFocus )
+            
         
     
     def Start( self ):
@@ -2298,7 +2301,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         if page_key == self._page_key and self._thread_input.IsEditable():
             
-            self._thread_input.SetFocus()
+            wx.CallAfter( self._thread_input.SetFocus )
             
         
     
@@ -2463,7 +2466,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         if page_key == self._page_key:
             
-            self._url_input.SetFocus()
+            wx.CallAfter( self._url_input.SetFocus )
             
         
     
@@ -3262,8 +3265,10 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if page_key == self._page_key:
             
-            try: self._searchbox.SetFocus() # there's a chance this doesn't exist!
-            except: self._controller.pub( 'set_media_focus' )
+            if self._search_enabled:
+                
+                wx.CallAfter( self._searchbox.SetFocus )
+                
             
         
     

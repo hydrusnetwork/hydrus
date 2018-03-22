@@ -1797,11 +1797,13 @@ class MenuButton( BetterButton ):
     
 class NetworkContextButton( BetterButton ):
     
-    def __init__( self, parent, network_context ):
+    def __init__( self, parent, network_context, limited_types = None, allow_default = True ):
         
         BetterButton.__init__( self, parent, network_context.ToUnicode(), self._Edit )
         
         self._network_context = network_context
+        self._limited_types = limited_types
+        self._allow_default = allow_default
         
     
     def _Edit( self ):
@@ -1811,7 +1813,7 @@ class NetworkContextButton( BetterButton ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit network context' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, self._network_context )
+            panel = ClientGUIScrolledPanelsEdit.EditNetworkContextPanel( dlg, self._network_context, limited_types = self._limited_types, allow_default = self._allow_default )
             
             dlg.SetPanel( panel )
             
@@ -1855,11 +1857,19 @@ class NoneableSpinCtrl( wx.Panel ):
         self._checkbox.Bind( wx.EVT_CHECKBOX, self.EventCheckBox )
         self._checkbox.SetLabelText( none_phrase )
         
-        self._one = wx.SpinCtrl( self, min = min, max = max, size = ( 60, -1 ) )
+        self._one = wx.SpinCtrl( self, min = min, max = max )
+        
+        width = ClientData.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 2 )
+        
+        self._one.SetInitialSize( ( width, -1 ) )
         
         if num_dimensions == 2:
             
-            self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max, size = ( 60, -1 ) )
+            self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max )
+            
+            width = ClientData.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 2 )
+            
+            self._two.SetInitialSize( ( width, -1 ) )
             
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )

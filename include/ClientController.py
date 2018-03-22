@@ -1,3 +1,16 @@
+import os
+import wx
+
+wx_first_num = int( wx.__version__[0] )
+
+if wx_first_num < 4:
+    
+    wx_error = 'Unfortunately, hydrus now requires the new Phoenix (4.x) version of wx.'
+    wx_error += os.linesep * 2
+    wx_error += 'Please check the \'running from source\' page in the html help for more details.'
+    
+    raise Exception( wx_error )
+    
 import ClientCaches
 import ClientData
 import ClientDaemons
@@ -26,27 +39,14 @@ import ClientGUIDialogs
 import ClientGUIScrolledPanelsManagement
 import ClientGUITopLevelWindows
 import gc
-import os
 import psutil
 import threading
 import time
 import traceback
-import wx
 
 if not HG.twisted_is_broke:
     
     from twisted.internet import reactor, defer
-    
-
-wx_first_num = int( wx.__version__[0] )
-
-if wx_first_num < 4:
-    
-    wx_error = 'Unfortunately, hydrus now requires the new Phoenix (4.x) version of wx.'
-    wx_error += os.linesep * 2
-    wx_error += 'The good news is that you can get the new version via pip. If you still need the old version of wx, Phoenix works a lot better with virtual environments.'
-    
-    raise Exception( wx_error )
     
 class Controller( HydrusController.HydrusController ):
     

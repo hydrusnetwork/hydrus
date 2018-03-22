@@ -36,7 +36,10 @@ def EfficientlyResizeNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     ( im_y, im_x, depth ) = numpy_image.shape
     
-    if target_x >= im_x and target_y >= im_y: return numpy_image
+    if target_x >= im_x and target_y >= im_y:
+        
+        return numpy_image
+        
     
     # this seems to slow things down a lot, at least for cv!
     #if im_x > 2 * target_x and im_y > 2 * target_y: result = cv2.resize( numpy_image, ( 2 * target_x, 2 * target_y ), interpolation = cv2.INTER_NEAREST )
@@ -47,7 +50,10 @@ def EfficientlyThumbnailNumpyImage( numpy_image, ( target_x, target_y ) ):
     
     ( im_y, im_x, depth ) = numpy_image.shape
     
-    if target_x >= im_x and target_y >= im_y: return numpy_image
+    if target_x >= im_x and target_y >= im_y:
+        
+        return numpy_image
+        
     
     ( target_x, target_y ) = HydrusImageHandling.GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) )
     
