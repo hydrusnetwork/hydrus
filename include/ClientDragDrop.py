@@ -1,8 +1,123 @@
 import ClientGUICommon
 import HydrusGlobals as HG
+import HydrusPaths
 import json
+import os
 import wx
 
+def DoFileExportDragDrop( window, page_key, media, cmd_down ):
+    
+    drop_source = wx.DropSource( window )
+    
+    data_object = wx.DataObjectComposite()
+    
+    #
+    
+    hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
+    
+    hashes = [ m.GetHash() for m in media ]
+    
+    if page_key is None:
+        
+        encoded_page_key = None
+        
+    else:
+        
+        encoded_page_key = page_key.encode( 'hex' )
+        
+    
+    data = ( encoded_page_key, [ hash.encode( 'hex' ) for hash in hashes ] )
+    
+    data = json.dumps( data )
+    
+    hydrus_media_data_object.SetData( data )
+    
+    data_object.Add( hydrus_media_data_object, True )
+    
+    #
+    
+    file_data_object = wx.FileDataObject()
+    
+    client_files_manager = HG.client_controller.client_files_manager
+    
+    original_paths = []
+    
+    for m in media:
+        
+        hash = m.GetHash()
+        mime = m.GetMime()
+        
+        original_path = client_files_manager.GetFilePath( hash, mime )
+        
+        original_paths.append( original_path )
+        
+    
+    #
+    
+    do_temp_dnd = False
+    
+    new_options = HG.client_controller.new_options
+    
+    if new_options.GetBoolean( 'discord_dnd_fix' ):
+        
+        if len( original_paths ) <= 10 and sum( ( os.path.getsize( path ) for path in original_paths ) ) < 50 * 1048576:
+            
+            do_temp_dnd = True
+            
+        
+    
+    temp_dir = HG.client_controller.temp_dir
+    
+    if do_temp_dnd and os.path.exists( temp_dir ):
+        
+        dnd_paths = []
+        
+        for original_path in original_paths:
+            
+            filename = os.path.basename( original_path )
+            
+            dnd_path = os.path.join( temp_dir, filename )
+            
+            if not os.path.exists( dnd_path ):
+                
+                HydrusPaths.MirrorFile( original_path, dnd_path )
+                
+            
+            dnd_paths.append( dnd_path )
+            
+        
+        flags = wx.Drag_AllowMove
+        
+    else:
+        
+        dnd_paths = original_paths
+        
+        if cmd_down:
+            
+            # secret dangerous discord compat mode
+            flags = wx.Drag_AllowMove
+            
+        else:
+            
+            flags = wx.Drag_CopyOnly
+            
+        
+    
+    for path in dnd_paths:
+        
+        file_data_object.AddFile( path )
+        
+    
+    data_object.Add( file_data_object )
+    
+    #
+    
+    drop_source.SetData( data_object )
+    
+    result = drop_source.DoDragDrop( flags )
+    
+    return result
+    
 class FileDropTarget( wx.DropTarget ):
     
     def __init__( self, parent, filenames_callable = None, url_callable = None, media_callable = None, page_callable = None ):
@@ -74,10 +189,13 @@ class FileDropTarget( wx.DropTarget ):
                     
                     ( encoded_page_key, encoded_hashes ) = json.loads( data )
                     
-                    page_key = encoded_page_key.decode( 'hex' )
-                    hashes = [ encoded_hash.decode( 'hex' ) for encoded_hash in encoded_hashes ]
-                    
-                    wx.CallAfter( self._media_callable, page_key, hashes ) # callafter so we can terminate dnd event now
+                    if encoded_page_key is not None:
+                        
+                        page_key = encoded_page_key.decode( 'hex' )
+                        hashes = [ encoded_hash.decode( 'hex' ) for encoded_hash in encoded_hashes ]
+                        
+                        wx.CallAfter( self._media_callable, page_key, hashes ) # callafter so we can terminate dnd event now
+                        
                     
                     result = wx.DragMove
                     

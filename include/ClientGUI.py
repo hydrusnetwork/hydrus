@@ -1035,11 +1035,41 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _ForceLayoutAllTLWs( self ):
+    def _ForceFitAllNonGUITLWs( self ):
         
         tlws = wx.GetTopLevelWindows()
         
         for tlw in tlws:
+            
+            if isinstance( tlw, FrameGUI ):
+                
+                continue
+                
+            
+            size = tlw.GetSize()
+            
+            HydrusData.ShowText( 'TLW ' + repr( tlw ) + ': pre size/pos - ' + repr( tuple( tlw.GetSize() ) ) + ' ' + repr( tuple( tlw.GetPosition() ) ) )
+            
+            tlw.Fit()
+            
+            tlw.SetSize( size )
+            
+            tlw.Layout()
+            
+            HydrusData.ShowText( 'TLW ' + repr( tlw ) + ': post size/pos - ' + repr( tuple( tlw.GetSize() ) ) + ' ' + repr( tuple( tlw.GetPosition() ) ) )
+            
+        
+    
+    def _ForceLayoutAllNonGUITLWs( self ):
+        
+        tlws = wx.GetTopLevelWindows()
+        
+        for tlw in tlws:
+            
+            if isinstance( tlw, FrameGUI ):
+                
+                continue
+                
             
             HydrusData.ShowText( 'TLW ' + repr( tlw ) + ': pre size/pos - ' + repr( tuple( tlw.GetSize() ) ) + ' ' + repr( tuple( tlw.GetPosition() ) ) )
             
@@ -1797,7 +1827,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'force a layout for all tlws now', 'Tell all frames to relayout--useful to test some layout issues.', self._ForceLayoutAllTLWs )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'force a layout for all non-gui tlws now', 'Tell all sub-frames to relayout--useful to test some layout issues.', self._ForceLayoutAllNonGUITLWs )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'force a fit for all non-gui tlws now', 'Tell all sub-frames to refit--useful to test some layout issues.', self._ForceFitAllNonGUITLWs )
             ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
             ClientGUIMenus.AppendMenuItem( self, debug, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
@@ -2217,6 +2248,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.gui.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
         self._controller.pub( 'notify_new_colourset' )
+        self._controller.pub( 'notify_new_favourite_tags' )
         
     
     def _ManageParsers( self ):
@@ -3726,7 +3758,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             ( predicate_type, value, inclusive ) = predicate.GetInfo()
             
-            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
+            if value is None and predicate_type in [ HC.PREDICATE_TYPE_SYSTEM_NUM_TAGS, HC.PREDICATE_TYPE_SYSTEM_LIMIT, HC.PREDICATE_TYPE_SYSTEM_SIZE, HC.PREDICATE_TYPE_SYSTEM_DIMENSIONS, HC.PREDICATE_TYPE_SYSTEM_AGE, HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, HC.PREDICATE_TYPE_SYSTEM_HASH, HC.PREDICATE_TYPE_SYSTEM_DURATION, HC.PREDICATE_TYPE_SYSTEM_NUM_WORDS, HC.PREDICATE_TYPE_SYSTEM_MIME, HC.PREDICATE_TYPE_SYSTEM_RATING, HC.PREDICATE_TYPE_SYSTEM_SIMILAR_TO, HC.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, HC.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS ]:
                 
                 with ClientGUIDialogs.DialogInputFileSystemPredicates( self, predicate_type ) as dlg:
                     

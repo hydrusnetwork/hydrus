@@ -897,6 +897,19 @@ class ServiceRestricted( ServiceRemote ):
                 
                 do_it = HydrusData.TimeHasPassed( self._next_account_sync )
                 
+                try:
+                    
+                    self._CheckFunctional( ignore_account = True )
+                    
+                except:
+                    
+                    do_it = False
+                    
+                    self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
+                    
+                    self._SetDirty()
+                    
+                
             
         
         if do_it:
@@ -1601,7 +1614,7 @@ class ServiceIPFS( ServiceRemote ):
             
             import ClientGUIDialogs
             
-            with ClientGUIDialogs.DialogSelectFromURLTree( None, url_tree ) as dlg:
+            with ClientGUIDialogs.DialogSelectFromURLTree( HG.client_controller.gui, url_tree ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     

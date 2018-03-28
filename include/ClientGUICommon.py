@@ -1859,7 +1859,7 @@ class NoneableSpinCtrl( wx.Panel ):
         
         self._one = wx.SpinCtrl( self, min = min, max = max )
         
-        width = ClientData.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 2 )
+        width = ClientData.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
         
         self._one.SetInitialSize( ( width, -1 ) )
         
@@ -1867,7 +1867,7 @@ class NoneableSpinCtrl( wx.Panel ):
             
             self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max )
             
-            width = ClientData.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 2 )
+            width = ClientData.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
             
             self._two.SetInitialSize( ( width, -1 ) )
             

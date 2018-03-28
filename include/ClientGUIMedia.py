@@ -2,6 +2,7 @@ import HydrusConstants as HC
 import ClientConstants as CC
 import ClientCaches
 import ClientData
+import ClientDragDrop
 import ClientFiles
 import ClientGUICanvas
 import ClientGUICommon
@@ -11,6 +12,7 @@ import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIScrolledPanelsManagement
+import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientMedia
@@ -519,12 +521,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
             
-            with ClientGUIDialogs.DialogSetupExport( None, flat_media ) as dlg:
-                
-                dlg.ShowModal()
-                
+            frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'export files' )
             
-            self.SetFocus()
+            panel = ClientGUIScrolledPanelsReview.ReviewExportFilesPanel( frame, flat_media )
+            
+            frame.SetPanel( panel )
             
         
     
@@ -745,22 +746,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         # this now always delivers sorted results
         
-        flat_media = []
+        sorted_selected_media = []
         
         for media in self._sorted_media:
             
             if media in self._selected_media:
                 
-                if media.IsCollection():
-                    
-                    flat_media.extend( media.GetFlatMedia() )
-                    
-                else:
-                    
-                    flat_media.append( media )
-                    
+                sorted_selected_media.append( media )
                 
             
+        
+        flat_media = ClientMedia.FlattenMedia( sorted_selected_media )
         
         flat_media = [ media for media in flat_media if media.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ) ]
         
@@ -1000,7 +996,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 flat_media = self._GetSelectedFlatMedia()
                 
-                with ClientGUIDialogsManage.DialogManageRatings( None, flat_media ) as dlg:
+                with ClientGUIDialogsManage.DialogManageRatings( self, flat_media ) as dlg:
                     
                     dlg.ShowModal()
                     
@@ -1386,7 +1382,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if dlg.ShowModal() != wx.ID_YES:
                     
-                    return
+                    return False
                     
                 
             
@@ -1420,8 +1416,12 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                     HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
                     
+                    return True
+                    
                 
             
+        
+        return False
         
     
     def _SetDuplicatesCustom( self ):
@@ -1856,6 +1856,15 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             self._RemoveMediaByHashes( hashes )
             
+        
+    
+    def SetDuplicateStatusForAll( self, duplicate_type ):
+        
+        flat_media = ClientMedia.FlattenMedia( self._sorted_media )
+        
+        media_pairs = list( itertools.combinations( flat_media, 2 ) )
+        
+        return self._SetDuplicates( duplicate_type, media_pairs = media_pairs )
         
     
     def SetFocussedMedia( self, page_key, media ):
@@ -2563,107 +2572,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( media ) > 0:
                     
-                    self._drag_init_coordinates = None
+                    cmd_down = event.CmdDown()
                     
-                    drop_source = wx.DropSource( self )
-                    
-                    data_object = wx.DataObjectComposite()
-                    
-                    #
-                    
-                    hydrus_media_data_object = wx.CustomDataObject( 'application/hydrus-media' )
-                    
-                    hashes = [ m.GetHash() for m in media ]
-                    
-                    data = ( self._page_key.encode( 'hex' ), [ hash.encode( 'hex' ) for hash in hashes ] )
-                    
-                    data = json.dumps( data )
-                    
-                    hydrus_media_data_object.SetData( data )
-                    
-                    data_object.Add( hydrus_media_data_object, True )
-                    
-                    #
-                    
-                    file_data_object = wx.FileDataObject()
-                    
-                    client_files_manager = HG.client_controller.client_files_manager
-                    
-                    original_paths = []
-                    
-                    for m in media:
-                        
-                        hash = m.GetHash()
-                        mime = m.GetMime()
-                        
-                        original_path = client_files_manager.GetFilePath( hash, mime )
-                        
-                        original_paths.append( original_path )
-                        
-                    
-                    #
-                    
-                    do_temp_dnd = False
-                    
-                    new_options = HG.client_controller.new_options
-                    
-                    if new_options.GetBoolean( 'discord_dnd_fix' ):
-                        
-                        if len( original_paths ) <= 10 and sum( ( os.path.getsize( path ) for path in original_paths ) ) < 50 * 1048576:
-                            
-                            do_temp_dnd = True
-                            
-                        
-                    
-                    temp_dir = HG.client_controller.temp_dir
-                    
-                    if do_temp_dnd and os.path.exists( temp_dir ):
-                        
-                        dnd_paths = []
-                        
-                        for original_path in original_paths:
-                            
-                            filename = os.path.basename( original_path )
-                            
-                            dnd_path = os.path.join( temp_dir, filename )
-                            
-                            if not os.path.exists( dnd_path ):
-                                
-                                HydrusPaths.MirrorFile( original_path, dnd_path )
-                                
-                            
-                            dnd_paths.append( dnd_path )
-                            
-                        
-                        flags = wx.Drag_AllowMove
-                        
-                    else:
-                        
-                        dnd_paths = original_paths
-                        
-                        if event.CmdDown():
-                            
-                            # secret dangerous discord compat mode
-                            flags = wx.Drag_AllowMove
-                            
-                        else:
-                            
-                            flags = wx.Drag_CopyOnly
-                            
-                        
-                    
-                    for path in dnd_paths:
-                        
-                        file_data_object.AddFile( path )
-                        
-                    
-                    data_object.Add( file_data_object )
-                    
-                    #
-                    
-                    drop_source.SetData( data_object )
-                    
-                    result = drop_source.DoDragDrop( flags )
+                    result = ClientDragDrop.DoFileExportDragDrop( self, self._page_key, media, cmd_down )
                     
                     if result not in ( wx.DragError, wx.DragNone ):
                         

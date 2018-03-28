@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientData
+import ClientDragDrop
 import ClientGUICanvas
 import ClientGUICommon
 import ClientGUIDialogs
@@ -356,6 +357,10 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         open_externally = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.open_externally, HG.client_controller.pub, 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'open_file_in_external_program' ), self._canvas_key )
         open_externally.SetToolTip( 'open externally' )
         
+        drag_button = wx.BitmapButton( self, bitmap = CC.GlobalBMPs.drag )
+        drag_button.SetToolTip( 'drag from here to export file' )
+        drag_button.Bind( wx.EVT_LEFT_DOWN, self.EventDragButton )
+        
         close = ClientGUICommon.BetterButton( self, 'X', HG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.SetToolTip( 'close' )
         
@@ -366,6 +371,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         self._top_hbox.Add( shortcuts, CC.FLAGS_VCENTER )
         self._top_hbox.Add( fullscreen_switch, CC.FLAGS_VCENTER )
         self._top_hbox.Add( open_externally, CC.FLAGS_VCENTER )
+        self._top_hbox.Add( drag_button, CC.FLAGS_VCENTER )
         self._top_hbox.Add( close, CC.FLAGS_VCENTER )
         
     
@@ -479,6 +485,29 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
                 
                 new_options.SetStringList( 'default_media_viewer_custom_shortcuts', new_default_media_viewer_custom_shortcuts )
                 
+            
+        
+    
+    def EventDragButton( self, event ):
+        
+        if self._current_media is None:
+            
+            event.Skip()
+            
+            return
+            
+        
+        page_key = None
+        
+        media = [ self._current_media ]
+        
+        cmd_down = event.CmdDown()
+        
+        result = ClientDragDrop.DoFileExportDragDrop( self, page_key, media, cmd_down )
+        
+        if result not in ( wx.DragError, wx.DragNone ):
+            
+            HG.client_controller.pub( 'canvas_application_command', ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'pause_media' ), self._canvas_key )
             
         
     

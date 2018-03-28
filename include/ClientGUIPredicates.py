@@ -9,6 +9,7 @@ import datetime
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
+import re
 import string
 import wx
 import wx.adv
@@ -349,6 +350,212 @@ class PanelPredicateSystemHeight( PanelPredicateSystem ):
         info = ( self._sign.GetStringSelection(), self._height.GetValue() )
         
         return info
+        
+    
+class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.Append( 'has', True )
+        self._operator.Append( 'does not have', False )
+        
+        self._exact_url = wx.TextCtrl( self, size = ( 250, -1 ) )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._operator, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'exact url:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._exact_url, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        operator = self._operator.GetChoice()
+        
+        if operator:
+            
+            operator_description = 'has this url: '
+            
+        else:
+            
+            operator_description = 'does not have this url: '
+            
+        
+        rule_type = 'regex'
+        
+        exact_url = self._exact_url.GetValue()
+        
+        rule = re.escape( exact_url )
+        
+        description = operator_description + exact_url
+        
+        return ( operator, rule_type, rule, description )
+        
+    
+class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.Append( 'has', True )
+        self._operator.Append( 'does not have', False )
+        
+        self._domain = wx.TextCtrl( self, size = ( 250, -1 ) )
+        
+        self._domain.SetValue( 'example.com' )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._operator, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'a url with domain:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._domain, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        operator = self._operator.GetChoice()
+        
+        if operator:
+            
+            operator_description = 'has a url with domain: '
+            
+        else:
+            
+            operator_description = 'does not have a url with domain: '
+            
+        
+        rule_type = 'regex'
+        
+        domain = self._domain.GetValue()
+        
+        rule = 'https?\\:\\/\\/(www\\.)?' + re.escape( domain ) + '\\/.*'
+        
+        description = operator_description + domain
+        
+        return ( operator, rule_type, rule, description )
+        
+    
+class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.Append( 'has', True )
+        self._operator.Append( 'does not have', False )
+        
+        self._regex = wx.TextCtrl( self, size = ( 250, -1 ) )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._operator, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'a url that matches this regex:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._regex, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        operator = self._operator.GetChoice()
+        
+        if operator:
+            
+            operator_description = 'has a url matching regex: '
+            
+        else:
+            
+            operator_description = 'does not have a url matching regex: '
+            
+        
+        rule_type = 'regex'
+        
+        regex = self._regex.GetValue()
+        
+        rule = regex
+        
+        description = operator_description + regex
+        
+        return ( operator, rule_type, rule, description )
+        
+    
+class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
+    
+    PREDICATE_TYPE = HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS
+    
+    def __init__( self, parent ):
+        
+        PanelPredicateSystem.__init__( self, parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.Append( 'has', True )
+        self._operator.Append( 'does not have', False )
+        
+        self._url_matches = ClientGUICommon.BetterChoice( self )
+        
+        for url_match in HG.client_controller.network_engine.domain_manager.GetURLMatches():
+            
+            if url_match.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+                
+                self._url_matches.Append( url_match.GetName(), url_match )
+                
+            
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'system:known url' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._operator, CC.FLAGS_VCENTER )
+        hbox.Add( ClientGUICommon.BetterStaticText( self, 'url matching this class:' ), CC.FLAGS_VCENTER )
+        hbox.Add( self._url_matches, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def GetInfo( self ):
+        
+        operator = self._operator.GetChoice()
+        
+        if operator:
+            
+            operator_description = 'has '
+            
+        else:
+            
+            operator_description = 'does not have '
+            
+        
+        rule_type = 'url_match'
+        
+        url_match = self._url_matches.GetChoice()
+        
+        rule = url_match
+        
+        description = operator_description + url_match.GetName() + ' url'
+        
+        return ( operator, rule_type, rule, description )
         
     
 class PanelPredicateSystemLimit( PanelPredicateSystem ):

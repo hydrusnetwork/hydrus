@@ -36,6 +36,7 @@ import HydrusPaths
 import HydrusSerialisable
 import HydrusTagArchive
 import HydrusTags
+import HydrusText
 import itertools
 import multipart
 import os
@@ -3584,8 +3585,14 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'set_search_focus': self._SetSearchFocus()
-            else: event.Skip()
+            if command == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -3648,13 +3655,34 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             self._pairs_to_reasons = {}
             
+            self._original_statuses_to_pairs = {}
+            self._current_statuses_to_pairs = {}
+            
             self._show_all = wx.CheckBox( self )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self, 'tag_parents', 30, 25, [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
-            self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 30, 25, [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            
+            listctrl_panel.SetListCtrl( self._tag_parents )
             
             self._tag_parents.Sort( 2 )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'from clipboard', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            
+            listctrl_panel.AddMenuButton( 'import', menu_items )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'to clipboard', 'Save selected parents to your clipboard.', self._ExportToClipboard ) )
+            menu_items.append( ( 'normal', 'to .txt file', 'Save selected parents to a .txt file.', self._ExportToTXT ) )
+            
+            listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
@@ -3693,7 +3721,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._tag_parents, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.Add( tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3702,13 +3730,30 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             #
             
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_parents.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            
             self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
             self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
-        def _AddPairs( self, children, parent ):
+        def _AddFlatPairs( self, pairs, add_only = False ):
+            
+            parents_to_children = HydrusData.BuildKeyToSetDict( ( ( parent, child ) for ( child, parent ) in pairs ) )
+            
+            for ( parent, children ) in parents_to_children.items():
+                
+                self._AddPairs( children, parent, add_only = add_only )
+                
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def _AddPairs( self, children, parent, add_only = False ):
             
             new_pairs = []
             current_pairs = []
@@ -3721,7 +3766,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 
                 if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
-                    pending_pairs.append( pair )
+                    if not add_only:
+                        
+                        pending_pairs.append( pair )
+                        
                     
                 elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
@@ -3729,7 +3777,10 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                     
                 elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                     
-                    current_pairs.append( pair )
+                    if not add_only:
+                        
+                        current_pairs.append( pair )
+                        
                     
                 elif self._CanAdd( pair ):
                     
@@ -3956,26 +4007,6 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             return True
             
         
-        def _ListCtrlActivated( self ):
-            
-            parents_to_children = collections.defaultdict( set )
-            
-            pairs = self._tag_parents.GetData( only_selected = True )
-            
-            for ( child, parent ) in pairs:
-                
-                parents_to_children[ parent ].add( child )
-                
-            
-            if len( parents_to_children ) > 0:
-                
-                for ( parent, children ) in parents_to_children.items():
-                    
-                    self._AddPairs( children, parent )
-                    
-                
-            
-        
         def _ConvertPairToListCtrlTuples( self, pair ):
             
             ( child, parent ) = pair
@@ -4001,6 +4032,120 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             sort_tuple = ( status, child, parent )
             
             return ( display_tuple, sort_tuple )
+            
+        
+        def _DeserialiseImportString( self, import_string ):
+            
+            tags = HydrusText.DeserialiseNewlinedTexts( import_string )
+            
+            if len( tags ) % 2 == 1:
+                
+                raise Exception( 'Uneven number of tags found!' )
+                
+            
+            pairs = []
+            
+            for i in range( len( tags ) / 2 ):
+                
+                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                
+                pairs.append( pair )
+                
+            
+            return pairs
+            
+        
+        def _ExportToClipboard( self ):
+            
+            export_string = self._GetExportString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            
+        
+        def _ExportToTXT( self ):
+            
+            export_string = self._GetExportString()
+            
+            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', style = wx.FD_SAVE ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    path = dlg.GetPath()
+                    
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( HydrusData.ToByteString( export_string ) )
+                        
+                    
+                
+            
+        
+        def _GetExportString( self ):
+            
+            tags = []
+            
+            for ( a, b ) in self._tag_parents.GetData( only_selected = True ):
+                
+                tags.append( a )
+                tags.append( b )
+                
+            
+            export_string = os.linesep.join( tags )
+            
+            return export_string
+            
+        
+        def _ImportFromClipboard( self, add_only = False ):
+            
+            import_string = HG.client_controller.GetClipboardText()
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ImportFromTXT( self, add_only = False ):
+            
+            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_OK:
+                    
+                    return
+                    
+                else:
+                    
+                    path = dlg.GetPath()
+                    
+                
+            
+            with open( path, 'rb' ) as f:
+                
+                import_string = f.read()
+                
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ListCtrlActivated( self ):
+            
+            parents_to_children = collections.defaultdict( set )
+            
+            pairs = self._tag_parents.GetData( only_selected = True )
+            
+            for ( child, parent ) in pairs:
+                
+                parents_to_children[ parent ].add( child )
+                
+            
+            if len( parents_to_children ) > 0:
+                
+                for ( parent, children ) in parents_to_children.items():
+                    
+                    self._AddPairs( children, parent )
+                    
+                
             
         
         def _SetButtonStatus( self ):
@@ -4116,6 +4261,8 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
         def EventItemSelected( self, event ):
             
             self._SetButtonStatus()
+            
+            event.Skip()
             
         
         def EventListBoxChanged( self, event ):
@@ -4288,8 +4435,14 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             ( command, data ) = action
             
-            if command == 'set_search_focus': self._SetSearchFocus()
-            else: event.Skip()
+            if command == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                event.Skip()
+                
             
         
     
@@ -4347,17 +4500,38 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._service = HG.client_controller.services_manager.GetService( service_key )
                 
             
+            self._original_statuses_to_pairs = {}
+            self._current_statuses_to_pairs = {}
+            
             self._pairs_to_reasons = {}
             
             self._current_new = None
             
             self._show_all = wx.CheckBox( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self, 'tag_siblings', 30, 40, [ ( '', 4 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
-            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
-            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+            
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 30, 40, [ ( '', 4 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            
+            listctrl_panel.SetListCtrl( self._tag_siblings )
             
             self._tag_siblings.Sort( 2 )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            
+            listctrl_panel.AddMenuButton( 'import', menu_items )
+            
+            menu_items = []
+            
+            menu_items.append( ( 'normal', 'to clipboard', 'Save selected siblings to your clipboard.', self._ExportToClipboard ) )
+            menu_items.append( ( 'normal', 'to .txt file', 'Save selected siblings to a .txt file.', self._ExportToTXT ) )
+            
+            listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, show_sibling_text = False )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
@@ -4400,7 +4574,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( self._tag_siblings, CC.FLAGS_EXPAND_BOTH_WAYS )
+            vbox.Add( listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             vbox.Add( self._add, CC.FLAGS_LONE_BUTTON )
             vbox.Add( text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.Add( input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -4409,13 +4583,32 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             #
             
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
+            self._tag_siblings.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
+            
             self._show_all.Bind( wx.EVT_CHECKBOX, self.EventShowAll )
             self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventListBoxChanged )
             
             HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
-        def _AddPairs( self, olds, new, remove_only = False, default_reason = None ):
+        def _AddFlatPairs( self, pairs, add_only = False ):
+            
+            news_to_olds = HydrusData.BuildKeyToSetDict( ( ( new, old ) for ( old, new ) in pairs ) )
+            
+            for ( new, olds ) in news_to_olds.items():
+                
+                self._AutoPetitionConflicts( olds, new )
+                
+                self._AddPairs( olds, new, add_only = add_only )
+                
+            
+            self._UpdateListCtrlData()
+            
+            self._SetButtonStatus()
+            
+        
+        def _AddPairs( self, olds, new, add_only = False, remove_only = False, default_reason = None ):
             
             new_pairs = []
             current_pairs = []
@@ -4428,7 +4621,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
-                    pending_pairs.append( pair )
+                    if not add_only:
+                        
+                        pending_pairs.append( pair )
+                        
                     
                 elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
@@ -4439,7 +4635,10 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                     
                 elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                     
-                    current_pairs.append( pair )
+                    if not add_only:
+                        
+                        current_pairs.append( pair )
+                        
                     
                 elif not remove_only and self._CanAdd( pair ):
                     
@@ -4610,6 +4809,28 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
             
         
+        def _AutoPetitionConflicts( self, olds, new ):
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
+            olds_to_news = dict( current_pairs )
+            
+            current_olds = { current_old for ( current_old, current_new ) in current_pairs }
+            
+            for old in olds:
+                
+                if old in current_olds:
+                    
+                    conflicting_new = olds_to_news[ old ]
+                    
+                    if conflicting_new != new:
+                        
+                        self._AddPairs( [ old ], conflicting_new, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + new )
+                        
+                    
+                
+            
+        
         def _CanAdd( self, potential_pair ):
             
             ( potential_old, potential_new ) = potential_pair
@@ -4649,28 +4870,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
             
             return True
-            
-        
-        def _ListCtrlActivated( self ):
-            
-            news_to_olds = collections.defaultdict( set )
-            
-            pairs = self._tag_siblings.GetData( only_selected = True )
-            
-            for ( old, new ) in pairs:
-                
-                news_to_olds[ new ].add( old )
-                
-            
-            if len( news_to_olds ) > 0:
-                
-                for ( new, olds ) in news_to_olds.items():
-                    
-                    self._AddPairs( olds, new )
-                    
-                
-            
-            self._UpdateListCtrlData()
             
         
         def _ConvertPairToListCtrlTuples( self, pair ):
@@ -4714,6 +4913,122 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             sort_tuple = ( status, old, new, note )
             
             return ( display_tuple, sort_tuple )
+            
+        
+        def _DeserialiseImportString( self, import_string ):
+            
+            tags = HydrusText.DeserialiseNewlinedTexts( import_string )
+            
+            if len( tags ) % 2 == 1:
+                
+                raise Exception( 'Uneven number of tags found!' )
+                
+            
+            pairs = []
+            
+            for i in range( len( tags ) / 2 ):
+                
+                pair = ( tags[ 2 * i ], tags[ ( 2 * i ) + 1 ] )
+                
+                pairs.append( pair )
+                
+            
+            return pairs
+            
+        
+        def _ExportToClipboard( self ):
+            
+            export_string = self._GetExportString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            
+        
+        def _ExportToTXT( self ):
+            
+            export_string = self._GetExportString()
+            
+            with wx.FileDialog( self, 'Set the export path.', defaultFile = 'parents.txt', style = wx.FD_SAVE ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    path = dlg.GetPath()
+                    
+                    with open( path, 'wb' ) as f:
+                        
+                        f.write( HydrusData.ToByteString( export_string ) )
+                        
+                    
+                
+            
+        
+        def _GetExportString( self ):
+            
+            tags = []
+            
+            for ( a, b ) in self._tag_siblings.GetData( only_selected = True ):
+                
+                tags.append( a )
+                tags.append( b )
+                
+            
+            export_string = os.linesep.join( tags )
+            
+            return export_string
+            
+        
+        def _ImportFromClipboard( self, add_only = False ):
+            
+            import_string = HG.client_controller.GetClipboardText()
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ImportFromTXT( self, add_only = False ):
+            
+            with wx.FileDialog( self, 'Select the file to import.', style = wx.FD_OPEN ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_OK:
+                    
+                    return
+                    
+                else:
+                    
+                    path = dlg.GetPath()
+                    
+                
+            
+            with open( path, 'rb' ) as f:
+                
+                import_string = f.read()
+                
+            
+            pairs = self._DeserialiseImportString( import_string )
+            
+            self._AddFlatPairs( pairs, add_only )
+            
+        
+        def _ListCtrlActivated( self ):
+            
+            news_to_olds = collections.defaultdict( set )
+            
+            pairs = self._tag_siblings.GetData( only_selected = True )
+            
+            for ( old, new ) in pairs:
+                
+                news_to_olds[ new ].add( old )
+                
+            
+            if len( news_to_olds ) > 0:
+                
+                for ( new, olds ) in news_to_olds.items():
+                    
+                    self._AddPairs( olds, new )
+                    
+                
+            
+            self._UpdateListCtrlData()
             
         
         def _SetButtonStatus( self ):
@@ -4802,30 +5117,9 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             if self._current_new is not None and len( self._old_siblings.GetTags() ) > 0:
                 
-                # let's eliminate conflicts first
-                
                 olds = self._old_siblings.GetTags()
                 
-                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-                olds_to_news = dict( current_pairs )
-                
-                current_olds = { current_old for ( current_old, current_new ) in current_pairs }
-                
-                for old in olds:
-                    
-                    if old in current_olds:
-                        
-                        conflicting_new = olds_to_news[ old ]
-                        
-                        if conflicting_new != self._current_new:
-                            
-                            self._AddPairs( [ old ], conflicting_new, remove_only = True, default_reason = 'AUTO-PETITION TO REASSIGN TO: ' + self._current_new )
-                            
-                        
-                    
-                
-                #
+                self._AutoPetitionConflicts( olds, self._current_new )
                 
                 self._AddPairs( olds, self._current_new )
                 
@@ -4841,6 +5135,8 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
         def EventItemSelected( self, event ):
             
             self._SetButtonStatus()
+            
+            event.Skip()
             
         
         def EventListBoxChanged( self, event ):
@@ -4955,7 +5251,6 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 
                 self._old_input.Enable()
                 self._new_input.Enable()
-                
                 
                 if tags is None:
                     

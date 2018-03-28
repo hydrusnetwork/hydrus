@@ -1,10 +1,12 @@
 import ClientConstants as CC
 import ClientData
 import ClientDefaults
+import ClientExporting
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIFrames
+import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
@@ -23,6 +25,7 @@ import HydrusGlobals as HG
 import HydrusNATPunch
 import HydrusPaths
 import os
+import stat
 import sys
 import threading
 import time
@@ -575,6 +578,369 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             frame.SetPanel( panel )
             
+        
+    
+class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, flat_media ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        new_options = HG.client_controller.new_options
+        
+        self._tags_box = ClientGUICommon.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
+        
+        services_manager = HG.client_controller.services_manager
+        
+        self._neighbouring_txt_tag_service_keys = services_manager.FilterValidServiceKeys( new_options.GetKeyList( 'default_neighbouring_txt_tag_service_keys' ) )
+        
+        t = ClientGUIListBoxes.ListBoxTagsSelection( self._tags_box, include_counts = True, collapse_siblings = True )
+        
+        self._tags_box.SetTagsBox( t )
+        
+        self._tags_box.SetMinSize( ( 220, 300 ) )
+        
+        self._paths = ClientGUIListCtrl.SaneListCtrl( self, 120, [ ( 'number', 60 ), ( 'mime', 110 ), ( 'expected path', -1 ) ], delete_key_callback = self.DeletePaths )
+        self._paths.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventSelectPath )
+        self._paths.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventSelectPath )
+        
+        self._paths.SetMinSize( ( 580, 120 ) )
+        
+        self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
+        
+        self._directory_picker = wx.DirPickerCtrl( self._export_path_box )
+        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventRecalcPaths )
+        
+        self._open_location = wx.Button( self._export_path_box, label = 'open this location' )
+        self._open_location.Bind( wx.EVT_BUTTON, self.EventOpenLocation )
+        
+        self._filenames_box = ClientGUICommon.StaticBox( self, 'filenames' )
+        
+        self._pattern = wx.TextCtrl( self._filenames_box )
+        
+        self._update = wx.Button( self._filenames_box, label = 'update' )
+        self._update.Bind( wx.EVT_BUTTON, self.EventRecalcPaths )
+        
+        self._examples = ClientGUICommon.ExportPatternButton( self._filenames_box )
+        
+        text = 'This will export all the files\' tags, newline separated, into .txts beside the files themselves.'
+        
+        self._export_tag_txts = wx.CheckBox( self, label = 'export tags to .txt files?' )
+        self._export_tag_txts.SetToolTip( text )
+        self._export_tag_txts.Bind( wx.EVT_CHECKBOX, self.EventExportTagTxtsChanged )
+        
+        self._export = wx.Button( self, label = 'export' )
+        self._export.Bind( wx.EVT_BUTTON, self.EventExport )
+        
+        #
+        
+        for ( i, media ) in enumerate( flat_media ):
+            
+            mime = media.GetMime()
+            
+            display_tuple = ( str( i + 1 ), HC.mime_string_lookup[ mime ], '' )
+            sort_tuple = ( ( i, media ), mime, '' )
+            
+            self._paths.Append( display_tuple, sort_tuple )
+            
+        
+        export_path = ClientExporting.GetExportPath()
+        
+        self._directory_picker.SetPath( export_path )
+        
+        phrase = new_options.GetString( 'export_phrase' )
+        
+        self._pattern.SetValue( phrase )
+        
+        if len( self._neighbouring_txt_tag_service_keys ) > 0:
+            
+            self._export_tag_txts.SetValue( True )
+            
+        
+        #
+        
+        top_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        top_hbox.Add( self._tags_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        top_hbox.Add( self._paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._directory_picker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._open_location, CC.FLAGS_VCENTER )
+        
+        self._export_path_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._pattern, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._update, CC.FLAGS_VCENTER )
+        hbox.Add( self._examples, CC.FLAGS_VCENTER )
+        
+        self._filenames_box.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( top_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        vbox.Add( self._export_path_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._filenames_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._export_tag_txts, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( self._export, CC.FLAGS_LONE_BUTTON )
+        
+        self.SetSizer( vbox )
+        
+        wx.CallAfter( self.EventSelectPath, None )
+        wx.CallAfter( self.EventRecalcPaths, None )
+        
+        wx.CallAfter( self._export.SetFocus )
+        
+    
+    def _GetPath( self, media, terms ):
+        
+        directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
+        
+        filename = ClientExporting.GenerateExportFilename( directory, media, terms )
+        
+        return os.path.join( directory, filename )
+        
+    
+    def _RecalcPaths( self ):
+        
+        pattern = self._pattern.GetValue()
+        
+        terms = ClientExporting.ParseExportPhrase( pattern )
+        
+        all_paths = set()
+        
+        for ( index, ( ( ordering_index, media ), mime, old_path ) ) in enumerate( self._paths.GetClientData() ):
+            
+            path = self._GetPath( media, terms )
+            
+            if path in all_paths:
+                
+                i = 1
+                
+                while self._GetPath( media, terms + [ ( 'string', str( i ) ) ] ) in all_paths: i += 1
+                
+                path = self._GetPath( media, terms + [ ( 'string', str( i ) ) ] )
+                
+            
+            all_paths.add( path )
+            
+            if path != old_path:
+                
+                mime = media.GetMime()
+                
+                self._paths.UpdateRow( index, ( str( ordering_index + 1 ), HC.mime_string_lookup[ mime ], path ), ( ( ordering_index, media ), mime, path ) )
+                
+            
+        
+    
+    def DeletePaths( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._paths.RemoveAllSelected()
+                
+                self._RecalcPaths()
+                
+            
+        
+    
+    def EventExport( self, event ):
+        
+        self._RecalcPaths()
+        
+        export_tag_txts = self._export_tag_txts.GetValue()
+        
+        directory = self._directory_picker.GetPath()
+        
+        HydrusPaths.MakeSureDirectoryExists( directory )
+        
+        pattern = self._pattern.GetValue()
+        
+        new_options = HG.client_controller.new_options
+        
+        new_options.SetKeyList( 'default_neighbouring_txt_tag_service_keys', self._neighbouring_txt_tag_service_keys )
+        
+        new_options.SetString( 'export_phrase', pattern )
+        
+        terms = ClientExporting.ParseExportPhrase( pattern )
+        
+        client_files_manager = HG.client_controller.client_files_manager
+        
+        self._export.Disable()
+        
+        to_do = self._paths.GetClientData()
+        
+        num_to_do = len( to_do )
+        
+        def wx_update_label( text ):
+            
+            if not self or not self._export:
+                
+                return
+                
+            
+            self._export.SetLabel( text )
+            
+        
+        def wx_done():
+            
+            if not self or not self._export:
+                
+                return
+                
+            
+            self._export.Enable()
+            
+        
+        def do_it( neighbouring_txt_tag_service_keys ):
+            
+            for ( index, ( ( ordering_index, media ), mime, path ) ) in enumerate( to_do ):
+                
+                try:
+                    
+                    wx.CallAfter( wx_update_label, HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do ) )
+                    
+                    hash = media.GetHash()
+                    
+                    if export_tag_txts:
+                        
+                        tags_manager = media.GetTagsManager()
+                        
+                        tags = set()
+                        
+                        siblings_manager = HG.controller.GetManager( 'tag_siblings' )
+                        
+                        tag_censorship_manager = HG.client_controller.GetManager( 'tag_censorship' )
+                        
+                        for service_key in neighbouring_txt_tag_service_keys:
+                            
+                            current_tags = tags_manager.GetCurrent( service_key )
+                            
+                            current_tags = siblings_manager.CollapseTags( service_key, current_tags )
+                            
+                            current_tags = tag_censorship_manager.FilterTags( service_key, current_tags )
+                            
+                            tags.update( current_tags )
+                            
+                        
+                        tags = list( tags )
+                        
+                        tags.sort()
+                        
+                        txt_path = path + '.txt'
+                        
+                        with open( txt_path, 'wb' ) as f:
+                            
+                            f.write( HydrusData.ToByteString( os.linesep.join( tags ) ) )
+                            
+                        
+                    
+                    source_path = client_files_manager.GetFilePath( hash, mime )
+                    
+                    HydrusPaths.MirrorFile( source_path, path )
+                    
+                    try: os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
+                    except: pass
+                    
+                except:
+                    
+                    wx.CallAfter( wx.MessageBox, 'Encountered a problem while attempting to export file with index ' + str( ordering_index + 1 ) + ':' + os.linesep * 2 + traceback.format_exc() )
+                    
+                    break
+                    
+                
+            
+            wx.CallAfter( wx_update_label, 'done!' )
+            
+            time.sleep( 1 )
+            
+            wx.CallAfter( wx_update_label, 'export' )
+            
+            wx.CallAfter( wx_done )
+            
+        
+        HG.client_controller.CallToThread( do_it, self._neighbouring_txt_tag_service_keys )
+        
+    
+    def EventExportTagTxtsChanged( self, event ):
+        
+        services_manager = HG.client_controller.services_manager
+        
+        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+        
+        list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+        
+        list_of_tuples.sort()
+        
+        with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._neighbouring_txt_tag_service_keys = dlg.GetChecked()
+                
+                if len( self._neighbouring_txt_tag_service_keys ) == 0:
+                    
+                    self._export_tag_txts.SetValue( False )
+                    
+                else:
+                    
+                    self._export_tag_txts.SetValue( True )
+                    
+                
+            else:
+                
+                self._export_tag_txts.SetValue( False )
+                
+            
+        
+    
+    def EventOpenLocation( self, event ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        if directory is not None and directory != '':
+            
+            try:
+                
+                HydrusPaths.LaunchDirectory( directory )
+                
+            except:
+                
+                wx.MessageBox( 'Could not open that location!' )
+                
+            
+        
+    
+    def EventRecalcPaths( self, event ):
+        
+        pattern = self._pattern.GetValue()
+        
+        new_options = HG.client_controller.new_options
+        
+        new_options.SetString( 'export_phrase', pattern )
+        
+        self._RecalcPaths()
+        
+    
+    def EventSelectPath( self, event ):
+        
+        indices = self._paths.GetAllSelected()
+        
+        if len( indices ) == 0:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in self._paths.GetClientData() ]
+            
+        else:
+            
+            all_media = [ media for ( ( ordering_index, media ), mime, old_path ) in [ self._paths.GetClientData( index ) for index in indices ] ]
+            
+        
+        self._tags_box.SetTagsByMedia( all_media )
         
     
 class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):

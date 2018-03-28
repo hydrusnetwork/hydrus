@@ -8,6 +8,34 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 300</h3></li>
+				<ul>
+					<li>wrote system:known url to find files that have--or do not have--certain types of urls. it works but is still a little slow--I can optimise it later!</li>
+					<li>added exact match, domain, regex, and url class search types for system:known url</li>
+					<li>added a button to the top media viewer hover window that will start a file export drag and drop event if dragged from</li>
+					<li>moved the autocomplete dropdown results list down into a paged notebook</li>
+					<li>wrote a new 'favourites' page tab for the autocomplete dropdown results</li>
+					<li>hitting left or right arrow keys on an empty text input will move between the results tabs</li>
+					<li>hitting arrow up/down/page up/down/home/page or passing mouse scroll events will now go to the current selected page</li>
+					<li>typing regular search text into the input will automatically return the current page to the search results list</li>
+					<li>moved the 'tag suggestions' part of the 'tags' options page to a new page</li>
+					<li>added 'tag favourites' to the 'tags' options page to edit which tags show in this new tab</li>
+					<li>added import/export buttons to the tag siblings and parents dialogs. they'll export to clipboard or .txt file, and import from the same with an additional option to add_only (i.e. to not delete/petition conflicts with the existing list)</li>
+					<li>added some quick-and-dirty 'set as alternates/same/notdupes' buttons to the duplicate filter, which will quickly apply that status to the dupes and show some more dupes</li>
+					<li>sped up db loading time of tag siblings and parents significantly</li>
+					<li>added a short delay check to tag siblings/parents regeneration so rapid regenerations (such as when processing certain admin-side petitions) can be merged</li>
+					<li>fixed an issue where similar_to searches could return results not in the current file domain</li>
+					<li>fixed some spinctrls that were sizing to thin</li>
+					<li>fixed a bug in the manage server services dialog that was incorrectly dealing with port conflicts on edit service dialog ok</li>
+					<li>added a clientside and serverside assertion to test that all the services on a serverside modify services call have unique ports</li>
+					<li>fixed an issue where hydrus network services without access keys would sometimes try to sync their accounts (this was messing up some admin server setup)</li>
+					<li>fixed some misc dialog window structure</li>
+					<li>messed around a little with how the autocomplete dropdown hides and shows when in float mode--I _think_ it will now be less flickery and will otherwise position itself and receieve focus better</li>
+					<li>converted the 'export files' dialog to the new sizing system and also made it non-modal (i.e. you can now interact with the rest of the program while it is open)</li>
+					<li>wrote a more rigorous force-fit-all-tlws command to the debug menu</li>
+					<li>misc fixes</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 299</h3></li>
 				<ul>
 					<li>wrote ui to review and even edit session cookies by network context. it is still a bit rough but will help with future development.</li>

@@ -1694,6 +1694,16 @@ class Canvas( wx.Window ):
         self._MediaFocusWentToExternalProgram()
         
     
+    def _PauseCurrentMedia( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        self._media_container.Pause()
+        
+    
     def _PrefetchNeighbours( self ):
         
         pass
@@ -2208,6 +2218,10 @@ class Canvas( wx.Window ):
             elif action == 'pan_right':
                 
                 self._DoManualPan( 1, 0 )
+                
+            elif action == 'pause_media':
+                
+                self._PauseCurrentMedia()
                 
             elif action == 'move_animation_to_previous_frame':
                 

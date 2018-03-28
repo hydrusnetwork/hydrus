@@ -33,7 +33,7 @@ class AutoCompleteDropdown( wx.Panel ):
         self._intercept_key_events = True
         
         self._last_search_text = ''
-        self._next_updatelist_is_probably_fast = False
+        self._next_search_is_probably_fast = False
         
         tlp = self.GetTopLevelParent()
         
@@ -90,14 +90,10 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_window.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
             
-            self._dropdown_window.SetSize( ( 0, 0 ) )
-            
             if self._text_ctrl.IsShown():
                 
                 self._dropdown_window.SetPosition( self._text_ctrl.ClientToScreen( ( 0, 0 ) ) )
                 
-            
-            self._dropdown_window.Show()
             
             self._dropdown_window.Bind( wx.EVT_CLOSE, self.EventCloseDropdown )
             
@@ -112,7 +108,21 @@ class AutoCompleteDropdown( wx.Panel ):
             self._list_height = 125
             
         
-        self._dropdown_list = self._InitDropDownList()
+        self._dropdown_notebook = wx.Notebook( self._dropdown_window )
+        
+        #
+        
+        self._search_results_list = self._InitSearchResultsList()
+        
+        self._dropdown_notebook.AddPage( self._search_results_list, 'results', True )
+        
+        self._favourites_list = self._InitFavouritesList()
+        
+        self.RefreshFavouriteTags()
+        
+        self._dropdown_notebook.AddPage( self._favourites_list, 'favourites', False )
+        
+        #
         
         if not self._float_mode:
             
@@ -156,6 +166,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
         
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
         
         self._refresh_list_job = None
         
@@ -229,13 +240,18 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if not self._dropdown_hidden:
             
-            self._dropdown_window.SetSize( ( 0, 0 ) )
+            self._dropdown_window.Hide()
             
             self._dropdown_hidden = True
             
         
     
-    def _InitDropDownList( self ):
+    def _InitSearchResultsList( self ):
+        
+        raise NotImplementedError()
+        
+    
+    def _InitFavouritesList( self ):
         
         raise NotImplementedError()
         
@@ -288,7 +304,7 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._CancelScheduledListRefresh()
             
-            self._refresh_list_job = HG.client_controller.CallLaterWXSafe( self, delay, self._UpdateList )
+            self._refresh_list_job = HG.client_controller.CallLaterWXSafe( self, delay, self._UpdateSearchResultsList )
             
         
     
@@ -359,25 +375,20 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._dropdown_hidden:
             
-            show_and_fit_needed = True
+            self._dropdown_window.Show()
             
-        else:
-            
-            if text_width != self._last_attempted_dropdown_width:
-                
-                show_and_fit_needed = True
-                
+            self._dropdown_hidden = False
             
         
-        if show_and_fit_needed:
+        if text_width != self._last_attempted_dropdown_width:
+            
+            show_and_fit_needed = True
             
             self._dropdown_window.Fit()
             
             self._dropdown_window.SetSize( ( text_width, -1 ) )
             
             self._dropdown_window.Layout()
-            
-            self._dropdown_hidden = False
             
             self._last_attempted_dropdown_width = text_width
             
@@ -402,7 +413,7 @@ class AutoCompleteDropdown( wx.Panel ):
         self._text_ctrl.Refresh()
         
     
-    def _UpdateList( self ):
+    def _UpdateSearchResultsList( self ):
         
         pass
         
@@ -430,6 +441,14 @@ class AutoCompleteDropdown( wx.Panel ):
             
         elif self._intercept_key_events:
             
+            send_input_to_current_list = False
+            
+            current_results_list = self._dropdown_notebook.GetCurrentPage()
+            
+            current_list_is_empty = len( current_results_list ) == 0
+            
+            input_is_empty = self._text_ctrl.GetValue() == ''
+            
             if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == wx.ACCEL_CTRL:
                 
                 event.Skip()
@@ -438,36 +457,61 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 self._TakeResponsibilityForEnter()
                 
-            elif key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+            elif input_is_empty: # maybe we should be sending a 'move' event to a different place
                 
-                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP, wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ) and current_list_is_empty:
                     
-                    new_event = SelectUpEvent( -1 )
+                    if key in ( wx.WXK_UP, wx.WXK_NUMPAD_UP ):
+                        
+                        new_event = SelectUpEvent( -1 )
+                        
+                    elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                        
+                        new_event = SelectDownEvent( -1 )
+                        
                     
-                elif key in ( wx.WXK_DOWN, wx.WXK_NUMPAD_DOWN ):
+                    wx.QueueEvent( self.GetEventHandler(), new_event )
                     
-                    new_event = SelectDownEvent( -1 )
+                elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and current_list_is_empty:
                     
-                
-                wx.QueueEvent( self.GetEventHandler(), new_event )
-                
-            elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN, wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ) and self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
-                
-                if key in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                    if key in ( wx.WXK_PAGEUP, wx.WXK_NUMPAD_PAGEUP ):
+                        
+                        new_event = ShowPreviousEvent( -1 )
+                        
+                    elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                        
+                        new_event = ShowNextEvent( -1 )
+                        
                     
-                    new_event = ShowPreviousEvent( -1 )
+                    wx.QueueEvent( self.GetEventHandler(), new_event )
                     
-                elif key in ( wx.WXK_PAGEDOWN, wx.WXK_NUMPAD_PAGEDOWN ):
+                elif key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT, wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ):
                     
-                    new_event = ShowNextEvent( -1 )
+                    if key in ( wx.WXK_LEFT, wx.WXK_NUMPAD_LEFT ):
+                        
+                        direction = -1
+                        
+                    elif key in ( wx.WXK_RIGHT, wx.WXK_NUMPAD_RIGHT ):
+                        
+                        direction = 1
+                        
                     
-                
-                wx.QueueEvent( self.GetEventHandler(), new_event )
+                    self.MoveNotebookPageFocus( direction = direction )
+                    
+                else:
+                    
+                    send_input_to_current_list = True
+                    
                 
             else:
                 
+                send_input_to_current_list = True
+                
+            
+            if send_input_to_current_list:
+                
                 # Don't say QueueEvent here--it duplicates the event processing at higher levels, leading to 2 x F9, for instance
-                self._dropdown_list.EventCharHook( event ) # this typically skips the event, letting the text ctrl take it
+                current_results_list.EventCharHook( event ) # ultimately, this typically skips the event, letting the text ctrl take it
                 
             
         else:
@@ -493,7 +537,9 @@ class AutoCompleteDropdown( wx.Panel ):
     
     def EventMouseWheel( self, event ):
         
-        if self._text_ctrl.GetValue() == '' and len( self._dropdown_list ) == 0:
+        current_results_list = self._dropdown_notebook.GetCurrentPage()
+        
+        if self._text_ctrl.GetValue() == '' and len( current_results_list ) == 0:
             
             if event.GetWheelRotation() > 0:
                 
@@ -512,11 +558,11 @@ class AutoCompleteDropdown( wx.Panel ):
                 
                 if event.GetWheelRotation() > 0:
                     
-                    self._dropdown_list.MoveSelectionUp()
+                    current_results_list.MoveSelectionUp()
                     
                 else:
                     
-                    self._dropdown_list.MoveSelectionDown()
+                    current_results_list.MoveSelectionDown()
                     
                 
             else:
@@ -524,15 +570,27 @@ class AutoCompleteDropdown( wx.Panel ):
                 # for some reason, the scrolledwindow list doesn't process scroll events properly when in a popupwindow
                 # so let's just tell it to scroll manually
                 
-                ( start_x, start_y ) = self._dropdown_list.GetViewStart()
+                ( start_x, start_y ) = current_results_list.GetViewStart()
                 
-                if event.GetWheelRotation() > 0: self._dropdown_list.Scroll( -1, start_y - 3 )
-                else: self._dropdown_list.Scroll( -1, start_y + 3 )
+                if event.GetWheelRotation() > 0:
+                    
+                    current_results_list.Scroll( -1, start_y - 3 )
+                    
+                else:
+                    
+                    current_results_list.Scroll( -1, start_y + 3 )
+                    
                 
-                if event.GetWheelRotation() > 0: command_type = wx.wxEVT_SCROLLWIN_LINEUP
-                else: command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
+                if event.GetWheelRotation() > 0:
+                    
+                    command_type = wx.wxEVT_SCROLLWIN_LINEUP
+                    
+                else:
+                    
+                    command_type = wx.wxEVT_SCROLLWIN_LINEDOWN
+                    
                 
-                wx.QueueEvent( self._dropdown_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
+                wx.QueueEvent( current_results_list.GetEventHandler(), wx.ScrollWinEvent( command_type ) )
                 
             
         
@@ -562,23 +620,31 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._ScheduleListRefresh( 0.0 )
             
-        elif HC.options[ 'fetch_ac_results_automatically' ]:
+        else:
             
-            ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+            if HC.options[ 'fetch_ac_results_automatically' ]:
+                
+                ( char_limit, long_wait, short_wait ) = HC.options[ 'ac_timings' ]
+                
+                self._next_search_is_probably_fast = self._next_search_is_probably_fast and num_chars > len( self._last_search_text )
+                
+                if self._next_search_is_probably_fast:
+                    
+                    self._ScheduleListRefresh( 0.0 )
+                    
+                elif num_chars < char_limit:
+                    
+                    self._ScheduleListRefresh( long_wait / 1000.0 )
+                    
+                else:
+                    
+                    self._ScheduleListRefresh( short_wait / 1000.0 )
+                    
+                
             
-            self._next_updatelist_is_probably_fast = self._next_updatelist_is_probably_fast and num_chars > len( self._last_search_text )
-            
-            if self._next_updatelist_is_probably_fast:
+            if self._dropdown_notebook.GetCurrentPage() != self._search_results_list:
                 
-                self._ScheduleListRefresh( 0.0 )
-                
-            elif num_chars < char_limit:
-                
-                self._ScheduleListRefresh( long_wait / 1000.0 )
-                
-            else:
-                
-                self._ScheduleListRefresh( short_wait / 1000.0 )
+                self.MoveNotebookPageFocus( index = 0 )
                 
             
         
@@ -589,6 +655,45 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._DropdownHideShow()
             
+        
+    
+    def MoveNotebookPageFocus( self, index = None, direction = None ):
+        
+        new_index = None
+        
+        if index is not None:
+            
+            new_index = index
+            
+        elif direction is not None:
+            
+            current_index = self._dropdown_notebook.GetSelection()
+            
+            if current_index is not None and current_index != wx.NOT_FOUND:
+                
+                number_of_pages = self._dropdown_notebook.GetPageCount()
+                
+                new_index = ( current_index + direction ) % number_of_pages # does wraparound
+                
+            
+        
+        if new_index is not None:
+            
+            self._dropdown_notebook.ChangeSelection( new_index )
+            
+            self._text_ctrl.SetFocus()
+            
+        
+    
+    def RefreshFavouriteTags( self ):
+        
+        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+        
+        favourite_tags.sort()
+        
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
+        
+        self._favourites_list.SetPredicates( predicates )
         
     
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
@@ -640,7 +745,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._tag_service_key = tag_service_key
         
-        self._dropdown_list.SetTagService( self._tag_service_key )
+        self._search_results_list.SetTagService( self._tag_service_key )
         
         tag_service = tag_service = HG.client_controller.services_manager.GetService( self._tag_service_key )
         
@@ -653,7 +758,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetListDirty()
         
     
-    def _UpdateList( self ):
+    def _UpdateSearchResultsList( self ):
         
         self._refresh_list_job = None
         
@@ -663,7 +768,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._initial_matches_fetched = True
         
-        self._dropdown_list.SetPredicates( matches )
+        self._search_results_list.SetPredicates( matches )
         
         self._current_matches = matches
         
@@ -774,7 +879,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         vbox.Add( button_hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._synchronised, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( button_hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._dropdown_window.SetSizer( vbox )
         
@@ -832,9 +937,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         HG.client_controller.pub( 'refresh_query', self._page_key )
         
     
-    def _InitDropDownList( self ):
+    def _InitFavouritesList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_window, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        
+        return favs_list
+        
+    
+    def _InitSearchResultsList( self ):
+        
+        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
         
     
     def _ParseSearchText( self ):
@@ -889,7 +1001,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        self._next_updatelist_is_probably_fast = False
+        self._next_search_is_probably_fast = False
         
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
@@ -975,7 +1087,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         
                         predicates = self._cached_results
                         
-                        self._next_updatelist_is_probably_fast = True
+                        self._next_search_is_probably_fast = True
                         
                     
                 else:
@@ -1034,7 +1146,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                         predicates = ClientData.MergePredicates( predicates, add_namespaceless = True )
                         
                     
-                    self._next_updatelist_is_probably_fast = True
+                    self._next_search_is_probably_fast = True
                     
                 
                 matches = ClientSearch.FilterPredicatesBySearchText( self._tag_service_key, search_text, predicates )
@@ -1155,7 +1267,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         hbox.Add( self._tag_repo_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( self._dropdown_list, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._dropdown_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._dropdown_window.SetSizer( vbox )
         
@@ -1228,7 +1340,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _GenerateMatches( self ):
         
-        self._next_updatelist_is_probably_fast = False
+        self._next_search_is_probably_fast = False
         
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
@@ -1263,7 +1375,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
                 
                 predicates = self._cached_results
                 
-                self._next_updatelist_is_probably_fast = True
+                self._next_search_is_probably_fast = True
                 
             
             matches = ClientSearch.FilterPredicatesBySearchText( self._tag_service_key, search_text, predicates )
@@ -1288,9 +1400,16 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return matches
         
     
-    def _InitDropDownList( self ):
+    def _InitFavouritesList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_window, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        
+        return favs_list
+        
+    
+    def _InitSearchResultsList( self ):
+        
+        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):
@@ -1317,16 +1436,16 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         p1 = self._text_ctrl.GetValue() != '' and self._last_search_text == ''
         
-        # when the text ctrl is empty and we want to push a None to the parent dialog
+        # when the text ctrl is empty, we are looking at search results, and we want to push a None to the parent dialog
         
-        p2 = self._text_ctrl.GetValue() == ''
+        p2 = self._text_ctrl.GetValue() == '' and self._dropdown_notebook.GetCurrentPage() == self._search_results_list
         
         return p1 or p2
         
     
     def _TakeResponsibilityForEnter( self ):
         
-        if self._text_ctrl.GetValue() == '':
+        if self._text_ctrl.GetValue() == '' and self._dropdown_notebook.GetCurrentPage() == self._search_results_list:
             
             if self._null_entry_callable is not None:
                 

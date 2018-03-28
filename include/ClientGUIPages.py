@@ -693,7 +693,7 @@ class Page( wx.SplitterWindow ):
     
     def SetSearchFocus( self ):
         
-        self._controller.pub( 'set_search_focus', self._page_key )
+        self._management_panel.SetSearchFocus()
         
     
     def SetSplitterPositions( self, hpos, vpos ):
@@ -2075,7 +2075,11 @@ class PagesNotebook( wx.Notebook ):
         self._controller.pub( 'notify_new_pages' )
         
         wx.CallAfter( page.Start )
-        wx.CallAfter( page.SetSearchFocus )
+        
+        if select_page:
+            
+            wx.CallAfter( page.SetSearchFocus )
+            
         
         return page
         

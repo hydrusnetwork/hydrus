@@ -450,6 +450,18 @@ class FileSystemPredicates( object ):
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
             
+            if predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+                
+                ( operator, rule_type, rule, description ) = value
+                
+                if 'known_url_rules' not in self._common_info:
+                    
+                    self._common_info[ 'known_url_rules' ] = []
+                    
+                
+                self._common_info[ 'known_url_rules' ].append( ( operator, rule_type, rule ) )
+                
+            
             if predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
                 
                 ( hash, hash_type ) = value
@@ -730,7 +742,10 @@ class FileSystemPredicates( object ):
     
     def GetFileServiceInfo( self ): return ( self._file_services_to_include_current, self._file_services_to_include_pending, self._file_services_to_exclude_current, self._file_services_to_exclude_pending )
     
-    def GetSimpleInfo( self ): return self._common_info
+    def GetSimpleInfo( self ):
+        
+        return self._common_info
+        
     
     def GetLimit( self ): return self._limit
     
@@ -806,6 +821,21 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_value = ( hash.encode( 'hex' ), max_hamming )
             
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+            
+            ( operator, rule_type, rule, description ) = self._value
+            
+            if rule_type == 'url_match':
+                
+                serialisable_rule = rule.GetSerialisableTuple()
+                
+            else:
+                
+                serialisable_rule = rule
+                
+            
+            serialisable_value = ( operator, rule_type, serialisable_rule, description )
+            
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
             ( hash, hash_type ) = self._value
@@ -835,6 +865,21 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             ( serialisable_hash, max_hamming ) = serialisable_value
             
             self._value = ( serialisable_hash.decode( 'hex' ), max_hamming )
+            
+        elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+            
+            ( operator, rule_type, serialisable_rule, description ) = serialisable_value
+            
+            if rule_type == 'url_match':
+                
+                rule = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rule )
+                
+            else:
+                
+                rule = serialisable_rule
+                
+            
+            self._value = ( operator, rule_type, rule, description )
             
         elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:
             
@@ -1172,6 +1217,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     ( operator, num_pixels, unit ) = self._value
                     
                     base += u' ' + operator + u' ' + str( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
+                    
+                
+            elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
+                
+                base = 'known url'
+                
+                if self._value is not None:
+                    
+                    ( operator, rule_type, rule, description ) = self._value
+                    
+                    base = description
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_HASH:

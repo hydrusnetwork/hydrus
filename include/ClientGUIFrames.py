@@ -68,13 +68,16 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         filename = 'keys.txt'
         
-        with wx.FileDialog( None, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
+        with wx.FileDialog( self, style=wx.FD_SAVE, defaultFile = filename ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
                 path = HydrusData.ToUnicode( dlg.GetPath() )
                 
-                with open( path, 'wb' ) as f: f.write( HydrusData.ToByteString( self._text ) )
+                with open( path, 'wb' ) as f:
+                    
+                    f.write( HydrusData.ToByteString( self._text ) )
+                    
                 
             
         

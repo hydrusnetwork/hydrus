@@ -2415,6 +2415,8 @@ class TagParentsManager( object ):
         
         self._controller = controller
         
+        self._dirty = False
+        
         self._service_keys_to_children_to_parents = collections.defaultdict( HydrusData.default_dict_list )
         
         self._RefreshParents()
@@ -2542,11 +2544,26 @@ class TagParentsManager( object ):
             
         
     
-    def RefreshParents( self ):
+    def NotifyNewParents( self ):
         
         with self._lock:
             
-            self._RefreshParents()
+            self._dirty = True
+            
+            self._controller.CallLater( 1.0, self.RefreshParentsIfDirty )
+            
+        
+    
+    def RefreshParentsIfDirty( self ):
+        
+        with self._lock:
+            
+            if self._dirty:
+                
+                self._RefreshParents()
+                
+                self._dirty = False
+                
             
         
     
@@ -2556,6 +2573,8 @@ class TagSiblingsManager( object ):
         
         self._controller = controller
         
+        self._dirty = False
+        
         self._service_keys_to_siblings = collections.defaultdict( dict )
         self._service_keys_to_reverse_lookup = collections.defaultdict( dict )
         
@@ -2563,7 +2582,7 @@ class TagSiblingsManager( object ):
         
         self._lock = threading.Lock()
         
-        self._controller.sub( self, 'RefreshSiblings', 'notify_new_siblings_data' )
+        self._controller.sub( self, 'NotifyNewSiblings', 'notify_new_siblings_data' )
         
     
     def _CollapseTags( self, service_key, tags ):
@@ -2625,120 +2644,6 @@ class TagSiblingsManager( object ):
         self._service_keys_to_reverse_lookup[ CC.COMBINED_TAG_SERVICE_KEY ] = combined_reverse_lookup
         
         self._controller.pub( 'new_siblings_gui' )
-        
-    
-    def GetAutocompleteSiblings( self, service_key, search_text, exact_match = False ):
-        
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
-            
-            if exact_match:
-                
-                key_based_matching_values = set()
-                
-                if search_text in siblings:
-                    
-                    key_based_matching_values = { siblings[ search_text ] }
-                    
-                else:
-                    
-                    key_based_matching_values = set()
-                    
-                
-                value_based_matching_values = { value for value in siblings.values() if value == search_text }
-                
-            else:
-                
-                matching_keys = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.keys(), search_siblings = False )
-                
-                key_based_matching_values = { siblings[ key ] for key in matching_keys }
-                
-                value_based_matching_values = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.values(), search_siblings = False )
-                
-            
-            matching_values = key_based_matching_values.union( value_based_matching_values )
-            
-            # all the matching values have a matching sibling somewhere in their network
-            # so now fetch the networks
-            
-            lists_of_matching_keys = [ reverse_lookup[ value ] for value in matching_values ]
-            
-            matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
-            
-            matches = matching_values.union( matching_keys )
-            
-            return matches
-            
-        
-    
-    def GetSibling( self, service_key, tag ):
-        
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            
-            if tag in siblings:
-                
-                return siblings[ tag ]
-                
-            else:
-                
-                return None
-                
-            
-        
-    
-    def GetAllSiblings( self, service_key, tag ):
-        
-        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
-            
-            service_key = CC.COMBINED_TAG_SERVICE_KEY
-            
-        
-        with self._lock:
-            
-            siblings = self._service_keys_to_siblings[ service_key ]
-            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
-            
-            if tag in siblings:
-                
-                best_tag = siblings[ tag ]
-                
-            elif tag in reverse_lookup:
-                
-                best_tag = tag
-                
-            else:
-                
-                return [ tag ]
-                
-            
-            all_siblings = list( reverse_lookup[ best_tag ] )
-            
-            all_siblings.append( best_tag )
-            
-            return all_siblings
-            
-        
-    
-    def RefreshSiblings( self ):
-        
-        with self._lock:
-            
-            self._RefreshSiblings()
-            
         
     
     def CollapsePredicates( self, service_key, predicates ):
@@ -2911,6 +2816,135 @@ class TagSiblingsManager( object ):
                 
             
             return results
+            
+        
+    
+    def GetAutocompleteSiblings( self, service_key, search_text, exact_match = False ):
+        
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
+            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
+            
+            if exact_match:
+                
+                key_based_matching_values = set()
+                
+                if search_text in siblings:
+                    
+                    key_based_matching_values = { siblings[ search_text ] }
+                    
+                else:
+                    
+                    key_based_matching_values = set()
+                    
+                
+                value_based_matching_values = { value for value in siblings.values() if value == search_text }
+                
+            else:
+                
+                matching_keys = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.keys(), search_siblings = False )
+                
+                key_based_matching_values = { siblings[ key ] for key in matching_keys }
+                
+                value_based_matching_values = ClientSearch.FilterTagsBySearchText( service_key, search_text, siblings.values(), search_siblings = False )
+                
+            
+            matching_values = key_based_matching_values.union( value_based_matching_values )
+            
+            # all the matching values have a matching sibling somewhere in their network
+            # so now fetch the networks
+            
+            lists_of_matching_keys = [ reverse_lookup[ value ] for value in matching_values ]
+            
+            matching_keys = itertools.chain.from_iterable( lists_of_matching_keys )
+            
+            matches = matching_values.union( matching_keys )
+            
+            return matches
+            
+        
+    
+    def GetSibling( self, service_key, tag ):
+        
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
+            
+            if tag in siblings:
+                
+                return siblings[ tag ]
+                
+            else:
+                
+                return None
+                
+            
+        
+    
+    def GetAllSiblings( self, service_key, tag ):
+        
+        if self._controller.new_options.GetBoolean( 'apply_all_siblings_to_all_services' ):
+            
+            service_key = CC.COMBINED_TAG_SERVICE_KEY
+            
+        
+        with self._lock:
+            
+            siblings = self._service_keys_to_siblings[ service_key ]
+            reverse_lookup = self._service_keys_to_reverse_lookup[ service_key ]
+            
+            if tag in siblings:
+                
+                best_tag = siblings[ tag ]
+                
+            elif tag in reverse_lookup:
+                
+                best_tag = tag
+                
+            else:
+                
+                return [ tag ]
+                
+            
+            all_siblings = list( reverse_lookup[ best_tag ] )
+            
+            all_siblings.append( best_tag )
+            
+            return all_siblings
+            
+        
+    
+    def NotifyNewSiblings( self ):
+        
+        with self._lock:
+            
+            self._dirty = True
+            
+            self._controller.CallLater( 1.0, self.RefreshSiblingsIfDirty )
+            
+        
+    
+    def RefreshSiblingsIfDirty( self ):
+        
+        with self._lock:
+            
+            if self._dirty:
+                
+                self._RefreshSiblings()
+                
+                self._dirty = False
+                
             
         
     

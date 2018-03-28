@@ -519,6 +519,8 @@ class GlobalBMPs( object ):
         GlobalBMPs.link = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'link.png' ) )
         GlobalBMPs.link_break = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'link_break.png' ) )
         
+        GlobalBMPs.drag = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'drag.png' ) )
+        
         GlobalBMPs.transparent = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'transparent.png' ) )
         GlobalBMPs.downloading = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'downloading.png' ) )
         GlobalBMPs.file_repository = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'file_repository_small.png' ) )

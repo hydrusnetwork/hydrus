@@ -239,7 +239,7 @@ class BytesControl( wx.Panel ):
         
         self._spin = wx.SpinCtrl( self, min = 0, max = 1048576 )
         
-        width = ClientData.ConvertTextToPixelWidth( self._spin, 9 )
+        width = ClientData.ConvertTextToPixelWidth( self._spin, 12 )
         
         self._spin.SetSize( ( width, -1 ) )
         

@@ -1161,6 +1161,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'string_list' ] = {}
         
         self._dictionary[ 'string_list' ][ 'default_media_viewer_custom_shortcuts' ] = []
+        self._dictionary[ 'string_list' ][ 'favourite_tags' ] = []
         
         #
         
@@ -2088,7 +2089,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._dictionary[ 'string_list' ][ name ] = value
+            self._dictionary[ 'string_list' ][ name ] = list( value )
             
         
     

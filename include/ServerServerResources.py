@@ -433,6 +433,18 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
         
         services = request.hydrus_args[ 'services' ]
         
+        unique_ports = { service.GetPort() for service in services }
+        
+        if len( unique_ports ) < len( services ):
+            
+            raise HydrusExceptions.PermissionException( 'It looks like some of those services share ports! Please give them unique ports!' )
+            
+        
+        if len( unique_ports ) < services:
+            
+            pass
+            
+        
         with HG.dirty_object_lock:
             
             service_keys_to_access_keys = HG.server_controller.WriteSynchronous( 'services', request.hydrus_account, services )

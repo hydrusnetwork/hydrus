@@ -771,7 +771,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
         pass
         
@@ -862,8 +862,14 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._num_better_duplicates.SetToolTip( 'If this stays at 0, it is likely because your \'worse\' files are being deleted and so are leaving this file domain!' )
         self._num_same_quality_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
         self._num_alternate_duplicates = ClientGUICommon.BetterStaticText( self._filtering_panel )
-        self._show_some_dupes = ClientGUICommon.BetterButton( self._filtering_panel, 'show some random pairs', self._ShowSomeDupes )
         self._launch_filter = ClientGUICommon.BetterButton( self._filtering_panel, 'launch the filter', self._LaunchFilter )
+        
+        random_filtering_panel = ClientGUICommon.StaticBox( self._filtering_panel, 'quick and dirty filtering' )
+        
+        self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential pairs', self._ShowSomeDupes )
+        self._set_random_as_alternates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all alternates', self._SetCurrentMediaAs, HC.DUPLICATE_ALTERNATE )
+        self._set_random_as_same_quality_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as all same quality', self._SetCurrentMediaAs, HC.DUPLICATE_SAME_QUALITY )
+        self._set_random_as_not_duplicates_button = ClientGUICommon.BetterButton( random_filtering_panel, 'set current media as not duplicates', self._SetCurrentMediaAs, HC.DUPLICATE_NOT_DUPLICATE )
         
         #
         
@@ -913,13 +919,18 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         #
         
+        random_filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_alternates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_same_quality_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        random_filtering_panel.Add( self._set_random_as_not_duplicates_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         self._filtering_panel.Add( self._file_domain_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_unknown_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_better_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_same_quality_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._num_alternate_duplicates, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._filtering_panel.Add( self._show_some_dupes, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._filtering_panel.Add( self._launch_filter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1031,6 +1042,20 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         self._controller.pub( 'modal_message', job_key )
         
         self._controller.CallToThread( self._THREADWaitOnJob, job_key )
+        
+    
+    def _SetCurrentMediaAs( self, duplicate_type ):
+        
+        media_panel = self._page.GetMediaPanel()
+        
+        change_made = media_panel.SetDuplicateStatusForAll( duplicate_type )
+        
+        if change_made:
+            
+            self._RefreshAndUpdateStatus()
+            
+            self._ShowSomeDupes()
+            
         
     
     def _SetFileDomain( self, service_key ):
@@ -1582,12 +1607,14 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
-        if page_key == self._page_key:
+        if page_key is not None and page_key != self._page_key:
             
-            wx.CallAfter( self._query_input.SetFocus )
+            return
             
+        
+        wx.CallAfter( self._query_input.SetFocus )
         
     
     def Start( self ):
@@ -1976,12 +2003,14 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
-        if page_key == self._page_key:
+        if page_key is not None and page_key != self._page_key:
             
-            wx.CallAfter( self._page_url_input.SetFocus )
+            return
             
+        
+        wx.CallAfter( self._page_url_input.SetFocus )
         
     
     def Start( self ):
@@ -2297,12 +2326,14 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
-        if page_key == self._page_key and self._thread_input.IsEditable():
+        if page_key is not None and page_key != self._page_key:
             
-            wx.CallAfter( self._thread_input.SetFocus )
+            return
             
+        
+        wx.CallAfter( self._thread_input.SetFocus )
         
     
     def Start( self ):
@@ -2462,12 +2493,14 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
-        if page_key == self._page_key:
+        if page_key is not None and page_key != self._page_key:
             
-            wx.CallAfter( self._url_input.SetFocus )
+            return
             
+        
+        wx.CallAfter( self._url_input.SetFocus )
         
     
     def Start( self ):
@@ -3261,14 +3294,16 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def SetSearchFocus( self, page_key ):
+    def SetSearchFocus( self, page_key = None ):
         
-        if page_key == self._page_key:
+        if page_key is not None and page_key != self._page_key:
             
-            if self._search_enabled:
-                
-                wx.CallAfter( self._searchbox.SetFocus )
-                
+            return
+            
+        
+        if self._search_enabled:
+            
+            wx.CallAfter( self._searchbox.SetFocus )
             
         
     

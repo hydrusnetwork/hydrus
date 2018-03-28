@@ -1336,6 +1336,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag summaries', 'tag summaries', self._TagSummariesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tags', 'tags', self._TagsPanel( self._listbook, self._new_options ) )
         
@@ -2231,56 +2232,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             system_predicates[ 'width' ] = self._file_system_predicate_width.GetInfo()
             
             HC.options[ 'file_system_predicates' ] = system_predicates
-            
-        
-    
-    class _TagSummariesPanel( wx.Panel ):
-        
-        def __init__( self, parent, new_options ):
-            
-            wx.Panel.__init__( self, parent )
-            
-            self._new_options = new_options
-            
-            #
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
-            
-            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
-            
-            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
-            
-            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
-            
-            # file export favourites
-            # file dnd
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'On thumbnail top:', self._thumbnail_top ) )
-            rows.append( ( 'On thumbnail bottom-right:', self._thumbnail_bottom_right ) )
-            rows.append( ( 'On media viewer top:', self._media_viewer_top ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            self.SetSizer( vbox )
-            
-        
-        def UpdateOptions( self ):
-            
-            self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
-            self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
-            self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
             
         
     
@@ -3421,6 +3372,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = new_options
             
+            #
+            
             general_panel = ClientGUICommon.StaticBox( self, 'general tag options' )
             
             self._default_tag_sort = wx.Choice( general_panel )
@@ -3456,6 +3409,140 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._namespace_connector = wx.TextCtrl( render_panel )
             
             #
+            
+            favourites_panel = ClientGUICommon.StaticBox( self, 'favourite tags' )
+            
+            desc = 'These tags will appear in your tag autocomplete results area, under the \'favourites\' tab.'
+            
+            favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
+            favourites_st.Wrap( 400 )
+            
+            expand_parents = False
+            
+            self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel )
+            self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, expand_parents, CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_TAG_SERVICE_KEY )
+            
+            #
+            
+            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._default_tag_sort.Select( 2 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 4 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 5 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC: self._default_tag_sort.Select( 6 )
+            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC: self._default_tag_sort.Select( 7 )
+            
+            self._default_tag_service_search_page.Append( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
+            
+            services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
+            
+            for service in services:
+                
+                self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
+                
+                self._default_tag_service_search_page.Append( service.GetName(), service.GetServiceKey() )
+                
+            
+            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
+            
+            self._default_tag_repository.SelectClientData( default_tag_repository_key )
+            
+            self._default_tag_service_search_page.SelectClientData( new_options.GetKey( 'default_tag_service_search_page' ) )
+            
+            self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
+            self._ac_select_first_with_count.SetValue( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
+            
+            self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
+            self._apply_all_siblings_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_siblings_to_all_services' ) )
+            
+            #
+            
+            self._show_namespaces.SetValue( new_options.GetBoolean( 'show_namespaces' ) )
+            self._namespace_connector.SetValue( new_options.GetString( 'namespace_connector' ) )
+            
+            #
+            
+            self._favourites.SetTags( new_options.GetStringList( 'favourite_tags' ) )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            rows = []
+            
+            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
+            rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
+            rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
+            rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
+            rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
+            rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
+            rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
+            
+            general_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.Add( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
+            rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
+            
+            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            favourites_panel.Add( favourites_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            favourites_panel.Add( self._favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
+            favourites_panel.Add( self._favourites_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            vbox.Add( favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
+            HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
+            HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
+            
+            self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.GetValue() )
+            
+            self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetChoice() )
+            
+            self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
+            self._new_options.SetBoolean( 'apply_all_siblings_to_all_services', self._apply_all_siblings_to_all_services.GetValue() )
+            
+            #
+            
+            self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
+            self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
+            
+            #
+            
+            self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            
+        
+    
+    class _TagSuggestionsPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
             
             suggested_tags_panel = ClientGUICommon.StaticBox( self, 'suggested tags' )
             
@@ -3530,45 +3617,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            if HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_ASC: self._default_tag_sort.Select( 0 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_DESC: self._default_tag_sort.Select( 1 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC: self._default_tag_sort.Select( 2 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC: self._default_tag_sort.Select( 3 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_DESC: self._default_tag_sort.Select( 4 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_ASC: self._default_tag_sort.Select( 5 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_DESC: self._default_tag_sort.Select( 6 )
-            elif HC.options[ 'default_tag_sort' ] == CC.SORT_BY_INCIDENCE_NAMESPACE_ASC: self._default_tag_sort.Select( 7 )
-            
-            self._default_tag_service_search_page.Append( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
-            
-            services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
-            
-            for service in services:
-                
-                self._default_tag_repository.Append( service.GetName(), service.GetServiceKey() )
-                
-                self._default_tag_service_search_page.Append( service.GetName(), service.GetServiceKey() )
-                
-            
-            default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-            
-            self._default_tag_repository.SelectClientData( default_tag_repository_key )
-            
-            self._default_tag_service_search_page.SelectClientData( new_options.GetKey( 'default_tag_service_search_page' ) )
-            
-            self._show_all_tags_in_autocomplete.SetValue( HC.options[ 'show_all_tags_in_autocomplete' ] )
-            self._ac_select_first_with_count.SetValue( self._new_options.GetBoolean( 'ac_select_first_with_count' ) )
-            
-            self._apply_all_parents_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_parents_to_all_services' ) )
-            self._apply_all_siblings_to_all_services.SetValue( self._new_options.GetBoolean( 'apply_all_siblings_to_all_services' ) )
-            
-            #
-            
-            self._show_namespaces.SetValue( new_options.GetBoolean( 'show_namespaces' ) )
-            self._namespace_connector.SetValue( new_options.GetString( 'namespace_connector' ) )
-            
-            #
-            
             self._suggested_tags_width.SetValue( self._new_options.GetInteger( 'suggested_tags_width' ) )
             
             self._suggested_tags_layout.SelectClientData( self._new_options.GetNoneableString( 'suggested_tags_layout' ) )
@@ -3586,40 +3634,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._favourite_file_lookup_script.SelectClientData( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
             
             self._num_recent_tags.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags' ) )
-            
-            #
-            
-            vbox = wx.BoxSizer( wx.VERTICAL )
-            
-            rows = []
-            
-            rows.append( ( 'Default tag service in manage tag dialogs: ', self._default_tag_repository ) )
-            rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
-            rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
-            rows.append( ( 'By default, search non-local tags in write-autocomplete: ', self._show_all_tags_in_autocomplete ) )
-            rows.append( ( 'By default, select the first tag result with actual count in write-autocomplete: ', self._ac_select_first_with_count ) )
-            rows.append( ( 'Suggest all parents for all services: ', self._apply_all_parents_to_all_services ) )
-            rows.append( ( 'Apply all siblings to all services (local siblings have precedence): ', self._apply_all_siblings_to_all_services ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( general_panel, rows )
-            
-            general_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.Add( general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
-            
-            rows = []
-            
-            rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
-            rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
-            
-            render_panel.Add( render_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            render_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            vbox.Add( render_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -3644,6 +3658,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
+            desc = 'This will search the database for statistically related tags based on what your focused file already has.'
+            
+            panel_vbox.Add( ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
             panel_vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             suggested_tags_related_panel.SetSizer( panel_vbox )
@@ -3687,12 +3704,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_panel, rows )
             
+            desc = 'The manage tags dialog can provide several kinds of tag suggestions. For simplicity, most are turned off by default.'
+            
+            suggested_tags_panel.Add( ClientGUICommon.BetterStaticText( suggested_tags_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             suggested_tags_panel.Add( suggest_tags_panel_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            vbox.Add( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
             #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( suggested_tags_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
             
@@ -3733,22 +3755,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_tag_repository' ] = self._default_tag_repository.GetChoice()
-            HC.options[ 'default_tag_sort' ] = self._default_tag_sort.GetClientData( self._default_tag_sort.GetSelection() )
-            HC.options[ 'show_all_tags_in_autocomplete' ] = self._show_all_tags_in_autocomplete.GetValue()
-            
-            self._new_options.SetBoolean( 'ac_select_first_with_count', self._ac_select_first_with_count.GetValue() )
-            
-            self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetChoice() )
-            
             self._new_options.SetInteger( 'suggested_tags_width', self._suggested_tags_width.GetValue() )
             self._new_options.SetNoneableString( 'suggested_tags_layout', self._suggested_tags_layout.GetChoice() )
-            
-            self._new_options.SetBoolean( 'apply_all_parents_to_all_services', self._apply_all_parents_to_all_services.GetValue() )
-            self._new_options.SetBoolean( 'apply_all_siblings_to_all_services', self._apply_all_siblings_to_all_services.GetValue() )
-            
-            self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.GetValue() )
-            self._new_options.SetString( 'namespace_connector', self._namespace_connector.GetValue() )
             
             self._SaveCurrentSuggestedFavourites()
             
@@ -3770,6 +3778,56 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _TagSummariesPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_top' )
+            
+            self._thumbnail_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'thumbnail_bottom_right' )
+            
+            self._thumbnail_bottom_right = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            tag_summary_generator = self._new_options.GetTagSummaryGenerator( 'media_viewer_top' )
+            
+            self._media_viewer_top = ClientGUIScrolledPanelsEdit.TagSummaryGeneratorButton( self, tag_summary_generator )
+            
+            # file export favourites
+            # file dnd
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'On thumbnail top:', self._thumbnail_top ) )
+            rows.append( ( 'On thumbnail bottom-right:', self._thumbnail_bottom_right ) )
+            rows.append( ( 'On media viewer top:', self._media_viewer_top ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_top', self._thumbnail_top.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'thumbnail_bottom_right', self._thumbnail_bottom_right.GetValue() )
+            self._new_options.SetTagSummaryGenerator( 'media_viewer_top', self._media_viewer_top.GetValue() )
+            
+        
+    
     def CommitChanges( self ):
         
         for page in self._listbook.GetActivePages():
@@ -3788,7 +3846,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             wx.MessageBox( traceback.format_exc() )
             
         
-
+    
 class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, service_key ):
@@ -3982,13 +4040,20 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             next_port = self._GetNextPort()
             
-            service.SetPort( next_port )
+            new_service.SetPort( next_port )
             
         
     
     def CommitChanges( self ):
         
         services = self._services_listctrl.GetObjects()
+        
+        unique_ports = { service.GetPort() for service in services }
+        
+        if len( unique_ports ) < len( services ):
+            
+            raise HydrusExceptions.VetoException( 'It looks like some of those services share ports! Please give them unique ports!' )
+            
         
         response = self._clientside_admin_service.Request( HC.POST, 'services', { 'services' : services } )
         

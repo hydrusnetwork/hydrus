@@ -139,6 +139,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     message = 'Service has had a recent error or is otherwise not functional! Specific error was:'
                     message += os.linesep * 2
                     message += HydrusData.ToUnicode( e )
+                    message += os.linesep * 2
                     message += 'You might like to try refreshing its account in \'review services\'.'
                     
                     raise HydrusExceptions.LoginException( message )
