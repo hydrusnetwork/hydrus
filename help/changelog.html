@@ -8,6 +8,33 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 301</h3></li>
+				<ul>
+					<li>after discussions with Sankaku Complex about their recent bandwidth problems, added a new 64MB/day default bandwidth rule for sankakucomplex.com--please check the release post for more information</li>
+					<li>the 'page of images downloader' is now called the 'simple downloader' that uses the new parsing system (particularly, a single formula to parse urls)</li>
+					<li>the simple downloader supports multiple named parsers--currently defaulting to: html 4chan and 8chan threads, all images, gfycat mp4, gfycat webm, imgur image, imgur video, and twitter images (which fetches the :orig and also works on galleries!)</li>
+					<li>there is some basic editing of these parsing formulae, but it isn't pretty or easy to import/export yet</li>
+					<li>the new parsing test panel now has a 'link' button that lets you fetch test data straight from a URL</li>
+					<li>added a 'gather to this page of pages->dead thread watchers' menu to the page of pages right-click menu--it searches for all 404/DEAD thread watchers in the current page structure and puts them in the clicked page of pages!</li>
+					<li>cleaned up some page tab right-click menu layout and order</li>
+					<li>fixed tag parents, which I previously broke while optimising their load time fugg</li>
+					<li>the new favourites list now presents parents in 'write' tag contexts, like manage tags--see if you like it (maybe this is better if hidden?)</li>
+					<li>sped up known_url searches for most situations</li>
+					<li>fixed an unusual error when drag-and-dropping a focused collection thumbnail to a new page</li>
+					<li>fixed a problem that was marking collected thumbnails' media as not eligible for the archive/delete filter</li>
+					<li>wrote a 'subscription report mode' that will say some things about subscriptions and their internal test states as they try (and potentially fail) to run</li>
+					<li>if a subscription query fails to find any files on its first sync, it will give a better text popup notification</li>
+					<li>if a subscription query finds files in its initial sync but does not have bandwidth to download them, a FYI text popup notification will explain what happened and how to review estimated wait time</li>
+					<li>delete key now deletes from file import status lists</li>
+					<li>default downloader tag import options will now inherit the fetch_tags_even_if_url_known_and_file_already_in_db value more reliably from 'parent' default options objects (like 'general boorus'->'specific booru')</li>
+					<li>the db maintenance routine 'clear file orphans' will now move files to a chosen location as it finds them (previously, it waited until the end of the search to do the move). if the user chooses to delete, this will still be put off until the end of the search (so a mid-search cancel event in this case remains harmless)</li>
+					<li>the migrate database panel should now launch ok even if a location does not exist (it will also notify you about this)</li>
+					<li>brushed up some help (and updated a screenshot) about tag import options</li>
+					<li>fixed a problem that stopped some old manage parsing scripts ui (to content links) from opening correctly</li>
+					<li>improved some parsing test code so it can't hang the client on certain network problems</li>
+					<li>misc ui code updates</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 300</h3></li>
 				<ul>
 					<li>wrote system:known url to find files that have--or do not have--certain types of urls. it works but is still a little slow--I can optimise it later!</li>
