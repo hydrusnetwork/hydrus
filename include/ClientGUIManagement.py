@@ -18,12 +18,15 @@ import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIMedia
 import ClientGUIMenus
+import ClientGUIParsing
+import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUISeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientMedia
+import ClientParsing
 import ClientRendering
 import ClientSearch
 import ClientThreading
@@ -50,7 +53,7 @@ ID_TIMER_DUMP = wx.NewId()
 
 MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_GALLERY = 1
-MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES = 2
+MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER = 2
 MANAGEMENT_TYPE_IMPORT_HDD = 3
 MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER = 4
 MANAGEMENT_TYPE_PETITIONS = 5
@@ -97,13 +100,13 @@ def CreateManagementControllerImportGallery( gallery_identifier ):
     
     return management_controller
     
-def CreateManagementControllerImportPageOfImages():
+def CreateManagementControllerImportSimpleDownloader():
     
-    management_controller = CreateManagementController( 'page download', MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES )
+    management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER )
     
-    page_of_images_import = ClientImporting.PageOfImagesImport()
+    simple_downloader_import = ClientImporting.SimpleDownloaderImport()
     
-    management_controller.SetVariable( 'page_of_images_import', page_of_images_import )
+    management_controller.SetVariable( 'simple_downloader_import', simple_downloader_import )
     
     return management_controller
     
@@ -538,7 +541,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self, page_name = 'page' ):
         
@@ -576,7 +579,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._page_name, self._management_type, serialisable_keys, serialisable_simples, serialisables ) = serialisable_info
+        ( self._page_name, self._management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = serialisable_info
         
         self._InitialiseDefaults()
         
@@ -592,7 +595,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         self._simples.update( dict( serialisable_simples ) )
         
-        self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisables.items() } )
+        self._serialisables.update( { name : HydrusSerialisable.CreateFromSerialisableTuple( value ) for ( name, value ) in serialisable_serialisables.items() } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -653,6 +656,22 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if 'page_of_images_import' in serialisable_serialisables:
+                
+                serialisable_serialisables[ 'simple_downloader_import' ] = serialisable_serialisables[ 'page_of_images_import' ]
+                
+                del serialisable_serialisables[ 'page_of_images_import' ]
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def GetKey( self, name ):
         
@@ -686,9 +705,19 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return name in self._simples or name in self._serialisables
         
     
+    def IsDeadThreadWatcher( self ):
+        
+        if self._management_type == MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER:
+            
+            thread_watcher_import = self.GetVariable( 'thread_watcher_import' )
+            
+            return thread_watcher_import.IsDead()
+            
+        
+    
     def IsImporter( self ):
         
-        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES, MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
         
     
     def SetKey( self, name, key ):
@@ -1742,17 +1771,17 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImporterHDD
 
-class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
+class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
-        self._page_of_images_panel = ClientGUICommon.StaticBox( self, 'page of images downloader' )
+        self._simple_downloader_panel = ClientGUICommon.StaticBox( self, 'simple downloader' )
         
         #
         
-        self._import_queue_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'imports' )
+        self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
         self._pause_files_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_files_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
@@ -1763,41 +1792,43 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         #
         
-        self._pending_page_urls_panel = ClientGUICommon.StaticBox( self._page_of_images_panel, 'pending page urls' )
+        self._pending_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'pending urls' )
         
-        self._pause_queue_button = wx.BitmapButton( self._pending_page_urls_panel, bitmap = CC.GlobalBMPs.pause )
+        self._pause_queue_button = wx.BitmapButton( self._pending_jobs_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_queue_button.Bind( wx.EVT_BUTTON, self.EventPauseQueue )
         
-        self._parser_status = ClientGUICommon.BetterStaticText( self._pending_page_urls_panel )
+        self._parser_status = ClientGUICommon.BetterStaticText( self._pending_jobs_panel )
         
-        self._page_download_control = ClientGUIControls.NetworkJobControl( self._pending_page_urls_panel )
+        self._page_download_control = ClientGUIControls.NetworkJobControl( self._pending_jobs_panel )
         
-        self._pending_page_urls_listbox = wx.ListBox( self._pending_page_urls_panel, size = ( -1, 100 ) )
+        self._pending_jobs_listbox = wx.ListBox( self._pending_jobs_panel, size = ( -1, 100 ) )
         
-        self._advance_button = wx.Button( self._pending_page_urls_panel, label = u'\u2191' )
+        self._advance_button = wx.Button( self._pending_jobs_panel, label = u'\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
         
-        self._delete_button = wx.Button( self._pending_page_urls_panel, label = 'X' )
+        self._delete_button = wx.Button( self._pending_jobs_panel, label = 'X' )
         self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
         
-        self._delay_button = wx.Button( self._pending_page_urls_panel, label = u'\u2193' )
+        self._delay_button = wx.Button( self._pending_jobs_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._page_url_input = ClientGUICommon.TextAndPasteCtrl( self._pending_page_urls_panel, self._PendPageURLs )
+        self._page_url_input = ClientGUICommon.TextAndPasteCtrl( self._pending_jobs_panel, self._PendPageURLs )
         
-        self._download_image_links = wx.CheckBox( self._page_of_images_panel, label = 'download image links' )
-        self._download_image_links.Bind( wx.EVT_CHECKBOX, self.EventDownloadImageLinks )
-        self._download_image_links.SetToolTip( 'i.e. download the href url of an <a> tag if there is an <img> tag nested beneath it' )
+        self._formulae = ClientGUICommon.BetterChoice( self._pending_jobs_panel )
         
-        self._download_unlinked_images = wx.CheckBox( self._page_of_images_panel, label = 'download unlinked images' )
-        self._download_unlinked_images.Bind( wx.EVT_CHECKBOX, self.EventDownloadUnlinkedImages )
-        self._download_unlinked_images.SetToolTip( 'i.e. download the src url of an <img> tag if there is no parent <a> tag' )
+        menu_items = []
         
-        self._page_of_images_import = self._management_controller.GetVariable( 'page_of_images_import' )
+        menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        ( file_import_options, download_image_links, download_unlinked_images ) = self._page_of_images_import.GetOptions()
+        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._pending_jobs_panel, CC.GlobalBMPs.cog, menu_items )
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._page_of_images_panel, file_import_options, self._page_of_images_import.SetFileImportOptions )
+        self._RefreshFormulae()
+        
+        self._simple_downloader_import = self._management_controller.GetVariable( 'simple_downloader_import' )
+        
+        file_import_options = self._simple_downloader_import.GetFileImportOptions()
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._simple_downloader_panel, file_import_options, self._simple_downloader_import.SetFileImportOptions )
         
         #
         
@@ -1814,22 +1845,26 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        queue_hbox.Add( self._pending_page_urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        queue_hbox.Add( self._pending_jobs_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         queue_hbox.Add( queue_buttons_vbox, CC.FLAGS_VCENTER )
         
-        self._pending_page_urls_panel.Add( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_page_urls_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_page_urls_panel.Add( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
+        formulae_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        formulae_hbox.Add( self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
+        formulae_hbox.Add( self._formula_cog, CC.FLAGS_VCENTER )
+        
+        self._pending_jobs_panel.Add( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_jobs_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_jobs_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._pending_jobs_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_jobs_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._pending_jobs_panel.Add( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
-        self._page_of_images_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.Add( self._pending_page_urls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.Add( self._download_image_links, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.Add( self._download_unlinked_images, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._page_of_images_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_downloader_panel.Add( self._pending_jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1839,7 +1874,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         self._collect_by.Hide()
         
-        vbox.Add( self._page_of_images_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._simple_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -1847,34 +1882,154 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
         
         #
         
-        seed_cache = self._page_of_images_import.GetSeedCache()
+        seed_cache = self._simple_downloader_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
         
-        self._page_of_images_import.SetDownloadControlFile( self._file_download_control )
-        self._page_of_images_import.SetDownloadControlPage( self._page_download_control )
-        
-        self._download_image_links.SetValue( download_image_links )
-        self._download_unlinked_images.SetValue( download_unlinked_images )
+        self._simple_downloader_import.SetDownloadControlFile( self._file_download_control )
+        self._simple_downloader_import.SetDownloadControlPage( self._page_download_control )
         
         self._UpdateStatus()
+        
+    
+    def _EditFormulae( self ):
+        
+        def data_to_pretty_callable( data ):
+            
+            ( formula_name, formula ) = data
+            
+            return formula_name
+            
+        
+        def edit_callable( data ):
+            
+            ( formula_name, formula ) = data
+            
+            with ClientGUIDialogs.DialogTextEntry( dlg, 'edit name', default = formula_name ) as dlg_2:
+                
+                if dlg_2.ShowModal() == wx.ID_OK:
+                    
+                    formula_name = dlg_2.GetValue()
+                    
+                else:
+                    
+                    return ( False, None )
+                    
+                
+            
+            with ClientGUITopLevelWindows.DialogEdit( dlg, 'edit formula' ) as dlg_3:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_3 )
+                
+                control = ClientGUIParsing.EditFormulaPanel( panel, formula, lambda: ( {}, '' ) )
+                
+                panel.SetControl( control )
+                
+                dlg_3.SetPanel( panel )
+                
+                if dlg_3.ShowModal() == wx.ID_OK:
+                    
+                    formula = control.GetValue()
+                    
+                    data = ( formula_name, formula )
+                    
+                    return ( True, data )
+                    
+                else:
+                    
+                    return ( False, None )
+                    
+                
+            
+        
+        def add_callable():
+            
+            formula_name = 'new formula'
+            
+            formula = ClientParsing.ParseFormulaHTML()
+            
+            data = ( formula_name, formula )
+            
+            return edit_callable( data )
+            
+        
+        formulae = list( self._controller.new_options.GetSimpleDownloaderFormulae() )
+        
+        formulae.sort()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit simple downloader formulae' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            height_num_chars = 20
+            
+            control = ClientGUIListBoxes.AddEditDeleteListBox( panel, height_num_chars, data_to_pretty_callable, add_callable, edit_callable )
+            
+            control.AddDatas( formulae )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                formulae = control.GetData()
+                
+                self._controller.new_options.SetSimpleDownloaderFormulae( formulae )
+                
+            
+        
+        self._RefreshFormulae()
         
     
     def _PendPageURLs( self, urls ):
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
         
+        ( formula_name, formula ) = self._formulae.GetChoice()
+        
+        self._controller.new_options.SetString( 'favourite_simple_downloader_formula', formula_name )
+        
         for url in urls:
             
-            self._page_of_images_import.PendPageURL( url )
+            job = ( url, formula_name, formula )
+            
+            self._simple_downloader_import.PendJob( job )
             
         
         self._UpdateStatus()
         
     
+    def _RefreshFormulae( self ):
+        
+        self._formulae.Clear()
+        
+        favourite = None
+        favourite_name = self._controller.new_options.GetString( 'favourite_simple_downloader_formula' )
+        
+        formulae = list( self._controller.new_options.GetSimpleDownloaderFormulae() )
+        
+        formulae.sort()
+        
+        for ( i, ( formula_name, formula ) ) in enumerate( formulae ):
+            
+            self._formulae.Append( formula_name, ( formula_name, formula ) )
+            
+            if formula_name == favourite_name:
+                
+                favourite = i
+                
+            
+        
+        if favourite is not None:
+            
+            self._formulae.Select( favourite )
+            
+        
+    
     def _SeedCache( self ):
         
-        seed_cache = self._page_of_images_import.GetSeedCache()
+        seed_cache = self._simple_downloader_import.GetSeedCache()
         
         title = 'file import status'
         frame_key = 'file_import_status'
@@ -1888,19 +2043,30 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def _UpdateStatus( self ):
         
-        ( pending_page_urls, parser_status, current_action, queue_paused, files_paused ) = self._page_of_images_import.GetStatus()
+        ( pending_jobs, parser_status, current_action, queue_paused, files_paused ) = self._simple_downloader_import.GetStatus()
         
-        if self._pending_page_urls_listbox.GetStrings() != pending_page_urls:
+        current_pending_jobs = [ self._pending_jobs_listbox.GetClientData( i ) for i in range( self._pending_jobs_listbox.GetCount() ) ]
+        
+        if current_pending_jobs != pending_jobs:
             
-            selected_string = self._pending_page_urls_listbox.GetStringSelection()
+            selected_string = self._pending_jobs_listbox.GetStringSelection()
             
-            self._pending_page_urls_listbox.SetItems( pending_page_urls )
+            self._pending_jobs_listbox.Clear()
             
-            selection_index = self._pending_page_urls_listbox.FindString( selected_string )
+            for job in pending_jobs:
+                
+                ( url, formula_name, formula ) = job
+                
+                pretty_job = formula_name + ': ' + url
+                
+                self._pending_jobs_listbox.Append( pretty_job, job )
+                
+            
+            selection_index = self._pending_jobs_listbox.FindString( selected_string )
             
             if selection_index != wx.NOT_FOUND:
                 
-                self._pending_page_urls_listbox.Select( selection_index )
+                self._pending_jobs_listbox.Select( selection_index )
                 
             
         
@@ -1939,13 +2105,13 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def EventAdvance( self, event ):
         
-        selection = self._pending_page_urls_listbox.GetSelection()
+        selection = self._pending_jobs_listbox.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            page_url = self._pending_page_urls_listbox.GetString( selection )
+            job = self._pending_jobs_listbox.GetClientData( selection )
             
-            self._page_of_images_import.AdvancePageURL( page_url )
+            self._simple_downloader_import.AdvanceJob( job )
             
             self._UpdateStatus()
             
@@ -1953,13 +2119,13 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def EventDelay( self, event ):
         
-        selection = self._pending_page_urls_listbox.GetSelection()
+        selection = self._pending_jobs_listbox.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            page_url = self._pending_page_urls_listbox.GetString( selection )
+            job = self._pending_jobs_listbox.GetClientData( selection )
             
-            self._page_of_images_import.DelayPageURL( page_url )
+            self._simple_downloader_import.DelayJob( job )
             
             self._UpdateStatus()
             
@@ -1967,38 +2133,28 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def EventDelete( self, event ):
         
-        selection = self._pending_page_urls_listbox.GetSelection()
+        selection = self._pending_jobs_listbox.GetSelection()
         
         if selection != wx.NOT_FOUND:
             
-            page_url = self._pending_page_urls_listbox.GetString( selection )
+            job = self._pending_jobs_listbox.GetClientData( selection )
             
-            self._page_of_images_import.DeletePageURL( page_url )
+            self._simple_downloader_import.DeleteJob( job )
             
             self._UpdateStatus()
             
         
     
-    def EventDownloadImageLinks( self, event ):
-        
-        self._page_of_images_import.SetDownloadImageLinks( self._download_image_links.GetValue() )
-        
-    
-    def EventDownloadUnlinkedImages( self, event ):
-        
-        self._page_of_images_import.SetDownloadUnlinkedImages( self._download_unlinked_images.GetValue() )
-        
-    
     def EventPauseQueue( self, event ):
         
-        self._page_of_images_import.PausePlayQueue()
+        self._simple_downloader_import.PausePlayQueue()
         
         self._UpdateStatus()
         
     
     def EventPauseFiles( self, event ):
         
-        self._page_of_images_import.PausePlayFiles()
+        self._simple_downloader_import.PausePlayFiles()
         
         self._UpdateStatus()
         
@@ -2015,12 +2171,12 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
     
     def Start( self ):
         
-        self._page_of_images_import.Start( self._page_key )
+        self._simple_downloader_import.Start( self._page_key )
         
     
     def TestAbleToClose( self ):
         
-        if self._page_of_images_import.CurrentlyWorking():
+        if self._simple_downloader_import.CurrentlyWorking():
             
             with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
                 
@@ -2032,7 +2188,7 @@ class ManagementPanelImporterPageOfImages( ManagementPanelImporter ):
             
         
     
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_PAGE_OF_IMAGES ] = ManagementPanelImporterPageOfImages
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER ] = ManagementPanelImporterSimpleDownloader
 
 class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     

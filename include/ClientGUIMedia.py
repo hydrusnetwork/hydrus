@@ -1503,7 +1503,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         self._focussed_media = media
         
-        HG.client_controller.pub( 'preview_changed', self._page_key, media )
+        if self._focussed_media is None:
+            
+            publish_media = None
+            
+        else:
+            
+            publish_media = self._focussed_media.GetDisplayMedia()
+            
+        
+        HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
         
     
     def _ShareOnLocalBooru( self ):
@@ -1680,7 +1689,16 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def PageShown( self ):
         
-        HG.client_controller.pub( 'preview_changed', self._page_key, self._focussed_media )
+        if self._focussed_media is None:
+            
+            publish_media = None
+            
+        else:
+            
+            publish_media = self._focussed_media.GetDisplayMedia()
+            
+        
+        HG.client_controller.pub( 'preview_changed', self._page_key, publish_media )
         
         self._PublishSelectionChange()
         

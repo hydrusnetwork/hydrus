@@ -322,13 +322,14 @@ class DialogFinishFiltering( Dialog ):
         
         Dialog.__init__( self, parent, 'are you sure?', position = 'center' )
         
-        self._commit = wx.Button( self, id = wx.ID_YES, label = 'commit' )
+        self._commit = ClientGUICommon.BetterButton( self, 'commit', self.EndModal, wx.ID_YES )
         self._commit.SetForegroundColour( ( 0, 128, 0 ) )
         
-        self._forget = wx.Button( self, id = wx.ID_NO, label = 'forget' )
+        self._forget = ClientGUICommon.BetterButton( self, 'forget', self.EndModal, wx.ID_NO )
         self._forget.SetForegroundColour( ( 128, 0, 0 ) )
         
-        self._back = wx.Button( self, id = wx.ID_CANCEL, label = 'back to filtering' )
+        self._back = ClientGUICommon.BetterButton( self, 'back to filtering', self.EndModal, wx.ID_CANCEL )
+        self._back.SetId( wx.ID_CANCEL )
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         

@@ -1367,7 +1367,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._notebook.NewPageImportURLs, on_deepest_notebook = True )
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher, on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'webpage of images', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportPageOfImages, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportSimpleDownloader, on_deepest_notebook = True )
             
             gallery_menu = wx.Menu()
             
@@ -1819,6 +1819,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
+            ClientGUIMenus.AppendMenuCheckItem( self, report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
             
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
@@ -3002,6 +3003,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'shortcut_report_mode':
             
             HG.shortcut_report_mode = not HG.shortcut_report_mode
+            
+        elif name == 'subscription_report_mode':
+            
+            HG.subscription_report_mode = not HG.subscription_report_mode
             
         elif name == 'pubsub_profile_mode':
             

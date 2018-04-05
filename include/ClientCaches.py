@@ -792,6 +792,19 @@ class ClientFilesManager( object ):
                 
                 if is_an_orphan:
                     
+                    if move_location is not None:
+                        
+                        ( source_dir, filename ) = os.path.split( path )
+                        
+                        dest = os.path.join( move_location, filename )
+                        
+                        dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
+                        
+                        HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
+                        
+                        HydrusPaths.MergeFile( path, dest )
+                        
+                    
                     orphan_paths.append( path )
                     
                 
@@ -839,65 +852,30 @@ class ClientFilesManager( object ):
             
             time.sleep( 2 )
             
-            if len( orphan_paths ) > 0:
+            if move_location is None and len( orphan_paths ) > 0:
                 
-                if move_location is None:
+                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
+                
+                job_key.SetVariable( 'popup_text_1', status )
+                
+                time.sleep( 5 )
+                
+                for path in orphan_paths:
                     
-                    status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
                     
-                    job_key.SetVariable( 'popup_text_1', status )
-                    
-                    time.sleep( 5 )
-                    
-                    for path in orphan_paths:
+                    if should_quit:
                         
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if should_quit:
-                            
-                            return
-                            
-                        
-                        HydrusData.Print( 'Deleting the orphan ' + path )
-                        
-                        status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                        
-                        job_key.SetVariable( 'popup_text_1', status )
-                        
-                        HydrusPaths.DeletePath( path )
+                        return
                         
                     
-                else:
+                    HydrusData.Print( 'Deleting the orphan ' + path )
                     
-                    status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now moving to ' + move_location
+                    status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
                     
                     job_key.SetVariable( 'popup_text_1', status )
                     
-                    time.sleep( 5 )
-                    
-                    for path in orphan_paths:
-                        
-                        ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                        
-                        if should_quit:
-                            
-                            return
-                            
-                        
-                        ( source_dir, filename ) = os.path.split( path )
-                        
-                        dest = os.path.join( move_location, filename )
-                        
-                        dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
-                        
-                        HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
-                        
-                        status = 'moving orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                        
-                        job_key.SetVariable( 'popup_text_1', status )
-                        
-                        HydrusPaths.MergeFile( path, dest )
-                        
+                    HydrusPaths.DeletePath( path )
                     
                 
             

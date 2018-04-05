@@ -317,6 +317,11 @@ def DAEMONSynchroniseRepositories( controller ):
 
 def DAEMONSynchroniseSubscriptions( controller ):
     
+    if HG.subscription_report_mode:
+        
+        HydrusData.ShowText( 'Subscription daemon started a run.' )
+        
+    
     subscription_names = list( controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION ) )
     
     if controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
@@ -336,6 +341,11 @@ def DAEMONSynchroniseSubscriptions( controller ):
             
             p1 = controller.options[ 'pause_subs_sync' ]
             p2 = HydrusThreading.IsThreadShuttingDown()
+            
+            if HG.subscription_report_mode:
+                
+                HydrusData.ShowText( 'Subscription "' + name + '" about to start. Global sub pause is ' + str( p1 ) + ' and thread shutdown status is ' + str( p2 ) + '.' )
+                
             
             if p1 or p2:
                 

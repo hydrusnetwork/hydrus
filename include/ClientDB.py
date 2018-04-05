@@ -4204,19 +4204,6 @@ class DB( HydrusDB.HydrusDB ):
             query_hash_ids = update_qhi( query_hash_ids, similar_hash_ids )
             
         
-        if 'known_url_rules' in simple_preds:
-            
-            for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
-                
-                if operator: # inclusive
-                    
-                    url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule )
-                    
-                    query_hash_ids = update_qhi( query_hash_ids, url_hash_ids )
-                    
-                
-            
-        
         # now the simple preds and typical ways to populate query_hash_ids
         
         if 'min_size' in simple_preds: files_info_predicates.append( 'size > ' + str( simple_preds[ 'min_size' ] ) )
@@ -4463,19 +4450,6 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        if 'known_url_rules' in simple_preds:
-            
-            for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
-                
-                if not operator: # exclusive
-                    
-                    url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule )
-                    
-                    query_hash_ids.difference_update( url_hash_ids )
-                    
-                
-            
-        
         ( file_services_to_include_current, file_services_to_include_pending, file_services_to_exclude_current, file_services_to_exclude_pending ) = system_predicates.GetFileServiceInfo()
         
         for service_key in file_services_to_include_current:
@@ -4617,6 +4591,25 @@ class DB( HydrusDB.HydrusDB ):
         elif must_be_archive:
             
             query_hash_ids.difference_update( self._inbox_hash_ids )
+            
+        
+        #
+        
+        if 'known_url_rules' in simple_preds:
+            
+            for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
+                
+                url_hash_ids = self._GetHashIdsFromURLRule( rule_type, rule, hash_ids = query_hash_ids )
+                
+                if operator: # inclusive
+                    
+                    query_hash_ids.intersection_update( url_hash_ids )
+                    
+                else:
+                    
+                    query_hash_ids.difference_update( url_hash_ids )
+                    
+                
             
         
         #
@@ -4903,29 +4896,38 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromURLRule( self, rule_type, rule ):
+    def _GetHashIdsFromURLRule( self, rule_type, rule, hash_ids = None ):
         
-        hash_ids = set()
+        if hash_ids is None:
+            
+            query = self._c.execute( 'SELECT hash_id, url FROM urls;' )
+            
+        else:
+            
+            query = self._SelectFromList( 'SELECT hash_id, url FROM urls WHERE hash_id in %s;', hash_ids )
+            
         
-        for ( hash_id, url ) in self._c.execute( 'SELECT hash_id, url FROM urls;' ):
+        result_hash_ids = set()
+        
+        for ( hash_id, url ) in query:
             
             if rule_type == 'url_match':
                 
                 if rule.Matches( url ):
                     
-                    hash_ids.add( hash_id )
+                    result_hash_ids.add( hash_id )
                     
                 
             else:
                 
                 if re.search( rule, url ) is not None:
                     
-                    hash_ids.add( hash_id )
+                    result_hash_ids.add( hash_id )
                     
                 
             
         
-        return hash_ids
+        return result_hash_ids
         
     
     def _GetHashIdsFromWildcard( self, file_service_key, tag_service_key, wildcard, include_current_tags, include_pending_tags ):
@@ -6412,7 +6414,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if service_key is None:
             
-            service_ids_to_statuses_and_pair_ids = HydrusData.BuildKeyToListDict( ( ( service_id, ( status, child_tag_id, parent_tag_id ) ) for ( service_id, child_tag_id, parent_tag_id, status ) in self._c.execute( 'SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parents UNION SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parent_petitions;' ) ) )
+            service_ids_to_statuses_and_pair_ids = HydrusData.BuildKeyToListDict( ( ( service_id, ( status, child_tag_id, parent_tag_id ) ) for ( service_id, status, child_tag_id, parent_tag_id ) in self._c.execute( 'SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parents UNION SELECT service_id, status, child_tag_id, parent_tag_id FROM tag_parent_petitions;' ) ) )
             
             service_keys_to_statuses_to_pairs = collections.defaultdict( HydrusData.default_dict_set )
             
@@ -9860,6 +9862,42 @@ class DB( HydrusDB.HydrusDB ):
             dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.LOCAL_NOTES )
             
             self._AddService( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, CC.LOCAL_NOTES_SERVICE_KEY, dictionary )
+            
+        
+        if version == 300:
+            
+            try:
+                
+                sank_nc = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+                
+                bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
+                
+                rules = bandwidth_manager.GetRules( sank_nc )
+                
+                rules = rules.Duplicate()
+                
+                rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1024 * 1024 ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
+                
+                bandwidth_manager.SetRules( sank_nc, rules )
+                
+                self._SetJSONDump( bandwidth_manager )
+                
+                message = 'Sankaku Complex have mentioned to me, Hydrus Dev, that they have recently been running into bandwidth problems. They were respectful in reaching out to me and I am sympathetic to their problem. After some discussion, rather than removing hydrus support for Sankaku entirely, I am in this version adding a new restrictive default bandwidth rule for the sankakucomplex.com domain of 64MB/day.'
+                
+                self.pub_initial_message( message )
+                
+                message = 'If you are a heavy Sankaku downloader, please bear with this limit until we can come up with a better solution. They told me they have plans for API upgrades and will be rolling out a subscription service in the coming months that may relieve this problem. I also expect to write some way to embed \'Here is how to support this source: (LINK)\' links into the downloader ui of my new downloader engine for those who can and wish to help out with bandwidth costs. Please check my release post if you would like to read more, and feel free to contact me directly to discuss it further.'
+                
+                self.pub_initial_message( message )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Attempting to add a new rule to sankaku\'s domain failed. The error has been printed to your log file--please let hydrus dev know the details.'
+                
+                self.pub_initial_message( message )
+                
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

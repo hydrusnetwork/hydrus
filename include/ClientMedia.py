@@ -958,7 +958,9 @@ class MediaList( object ):
             
             if media.IsCollection():
                 
-                media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, selected_media = selected_media, unrated = unrated, for_media_viewer = True ) )
+                # don't include selected_media here as it is not valid at the deeper collection level
+                
+                media_results.extend( media.GenerateMediaResults( has_location = has_location, discriminant = discriminant, unrated = unrated, for_media_viewer = True ) )
                 
             else:
                 
@@ -1489,68 +1491,6 @@ class MediaSingleton( Media ):
         return self._media_result.GetHash()
         
     
-    def MatchesDiscriminant( self, has_location = None, discriminant = None, not_uploaded_to = None ):
-        
-        if discriminant is not None:
-            
-            inbox = self._media_result.GetInbox()
-            
-            locations_manager = self._media_result.GetLocationsManager()
-            
-            if discriminant == CC.DISCRIMINANT_INBOX:
-                
-                p = inbox
-                
-            elif discriminant == CC.DISCRIMINANT_ARCHIVE:
-                
-                p = not inbox
-                
-            elif discriminant == CC.DISCRIMINANT_LOCAL:
-                
-                p = locations_manager.IsLocal()
-                
-            elif discriminant == CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH:
-                
-                p = locations_manager.IsLocal() and not locations_manager.IsTrashed()
-                
-            elif discriminant == CC.DISCRIMINANT_NOT_LOCAL:
-                
-                p = not locations_manager.IsLocal()
-                
-            elif discriminant == CC.DISCRIMINANT_DOWNLOADING:
-                
-                p = locations_manager.IsDownloading()
-                
-            
-            if not p:
-                
-                return False
-                
-            
-        
-        if has_location is not None:
-            
-            locations_manager = self._media_result.GetLocationsManager()
-            
-            if has_location not in locations_manager.GetCurrent():
-                
-                return False
-                
-            
-        
-        if not_uploaded_to is not None:
-            
-            locations_manager = self._media_result.GetLocationsManager()
-            
-            if not_uploaded_to in locations_manager.GetCurrentRemote():
-                
-                return False
-                
-            
-        
-        return True
-        
-    
     def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
         
         if self.MatchesDiscriminant( has_location = has_location, discriminant = discriminant, not_uploaded_to = not_uploaded_to ):
@@ -1729,6 +1669,68 @@ class MediaSingleton( Media ):
     def IsNoisy( self ): return self._media_result.GetMime() in HC.NOISY_MIMES
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
+    
+    def MatchesDiscriminant( self, has_location = None, discriminant = None, not_uploaded_to = None ):
+        
+        if discriminant is not None:
+            
+            inbox = self._media_result.GetInbox()
+            
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if discriminant == CC.DISCRIMINANT_INBOX:
+                
+                p = inbox
+                
+            elif discriminant == CC.DISCRIMINANT_ARCHIVE:
+                
+                p = not inbox
+                
+            elif discriminant == CC.DISCRIMINANT_LOCAL:
+                
+                p = locations_manager.IsLocal()
+                
+            elif discriminant == CC.DISCRIMINANT_LOCAL_BUT_NOT_IN_TRASH:
+                
+                p = locations_manager.IsLocal() and not locations_manager.IsTrashed()
+                
+            elif discriminant == CC.DISCRIMINANT_NOT_LOCAL:
+                
+                p = not locations_manager.IsLocal()
+                
+            elif discriminant == CC.DISCRIMINANT_DOWNLOADING:
+                
+                p = locations_manager.IsDownloading()
+                
+            
+            if not p:
+                
+                return False
+                
+            
+        
+        if has_location is not None:
+            
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if has_location not in locations_manager.GetCurrent():
+                
+                return False
+                
+            
+        
+        if not_uploaded_to is not None:
+            
+            locations_manager = self._media_result.GetLocationsManager()
+            
+            if not_uploaded_to in locations_manager.GetCurrentRemote():
+                
+                return False
+                
+            
+        
+        return True
+        
     
     def RefreshFileInfo( self ):
         

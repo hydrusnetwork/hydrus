@@ -92,6 +92,8 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # keep this in there so subs can know better when to stop running (the files come from a subdomain, which causes a pain for bandwidth calcs)
     
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
+    
     bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
     
 def SetDefaultDomainManagerData( domain_manager ):
@@ -808,6 +810,118 @@ def GetDefaultShortcuts():
     shortcuts.append( media_viewer )
     
     return shortcuts
+    
+def GetDefaultSimpleDownloaderFormulae():
+    
+    import ClientParsing
+    
+    formulae = []
+    
+    #
+    
+    formula_name = 'all images'
+    
+    tag_rules = [ ( 'img', {}, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'src'
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = '4chan thread (html)'
+    
+    tag_rules = [ ( 'div', { 'class' : 'fileText' }, None ), ( 'a', {}, 0 ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'href'
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = '8chan thread (html)'
+    
+    tag_rules = [ ( 'p', { 'class' : 'fileinfo' }, None ), ( 'a', {}, 0 ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'href'
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = 'twitter image'
+    
+    tag_rules = [ ( 'div', { 'class' : 'permalink-tweet' }, 0 ), ( 'div', { 'class' : 'AdaptiveMedia-container' }, None ), ( 'img', {}, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'src'
+    
+    string_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ':orig' ) ], example_string = 'https://pbs.twimg.com/media/DZoQ2SdXcAIrFkm.jpg' )
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_converter = string_converter )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = 'gfycat webm'
+    
+    tag_rules = [ ( 'video', {}, None ), ( 'source', {}, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'src'
+    
+    string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = '\\.webm$', example_string = 'https://giant.gfycat.com/HatefulBleakBluegill.webm' )
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_match = string_match )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = 'gfycat mp4'
+    
+    tag_rules = [ ( 'video', {}, None ), ( 'source', {}, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'src'
+    
+    string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = '\\.mp4$', example_string = 'https://giant.gfycat.com/HatefulBleakBluegill.mp4' )
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_match = string_match )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = 'imgur video'
+    
+    tag_rules = [ ( 'meta', { 'property' : 'og:video' }, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'content'
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    formula_name = 'imgur image'
+    
+    tag_rules = [ ( 'link', { 'rel' : 'image_src' }, None ) ]
+    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
+    attribute_to_fetch = 'href'
+    
+    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
+    
+    formulae.append( ( formula_name, formula ) )
+    
+    #
+    
+    return formulae
     
 def GetDefaultURLMatches():
     

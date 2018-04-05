@@ -2203,18 +2203,12 @@ The formula should attempt to parse full or relative urls. If the url is relativ
     
     def EventTestParse( self, event ):
         
-        node = self.GetValue()
-        
-        try:
+        def wx_code( parsed_urls ):
             
-            stop_time = HydrusData.GetNow() + 30
-            
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
-            
-            data = self._example_data.GetValue()
-            referral_url = self._referral_url
-            
-            parsed_urls = node.ParseURLs( job_key, data, referral_url )
+            if not self:
+                
+                return
+                
             
             if len( parsed_urls ) > 0:
                 
@@ -2232,14 +2226,39 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             self._results.SetValue( results_text )
             
-        except Exception as e:
+        
+        def do_it( node, data, referral_url ):
             
-            HydrusData.ShowException( e )
+            try:
+                
+                stop_time = HydrusData.GetNow() + 30
+                
+                job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+                
+                parsed_urls = node.ParseURLs( job_key, data, referral_url )
+                
+                wx.CallAfter( wx_code, parsed_urls )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                message = 'Could not parse!'
+                
+                wx.CallAfter( wx.MessageBox, message )
+                
             
-            message = 'Could not parse!'
-            
-            wx.MessageBox( message )
-            
+        
+        node = self.GetValue()
+        data = self._example_data.GetValue()
+        referral_url = self._referral_url
+        
+        HG.client_controller.CallToThread( do_it, node, data, referral_url )
+        
+    
+    def GetExampleData( self ):
+        
+        return self._example_data.GetValue()
         
     
     def GetExampleURL( self ):
@@ -3100,19 +3119,12 @@ And pass that html to a number of 'parsing children' that will each look through
     
     def EventTestParse( self, event ):
         
-        script = self.GetValue()
-        
-        try:
+        def wx_code( results ):
             
-            stop_time = HydrusData.GetNow() + 30
-            
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
-            
-            self._test_script_management.SetJobKey( job_key )
-            
-            data = self._example_data.GetValue()
-            
-            results = script.Parse( job_key, data )
+            if not self:
+                
+                return
+                
             
             result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
             
@@ -3124,18 +3136,40 @@ And pass that html to a number of 'parsing children' that will each look through
             
             self._results.SetValue( results_text )
             
-        except Exception as e:
+        
+        def do_it( script, job_key, data ):
             
-            HydrusData.ShowException( e )
+            try:
+                
+                results = script.Parse( job_key, data )
+                
+                wx.CallAfter( wx_code, results )
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+                message = 'Could not parse!'
+                
+                wx.CallAfter( wx.MessageBox, message )
+                
+            finally:
+                
+                job_key.Finish()
+                
             
-            message = 'Could not parse!'
-            
-            wx.MessageBox( message )
-            
-        finally:
-            
-            job_key.Finish()
-            
+        
+        script = self.GetValue()
+        
+        stop_time = HydrusData.GetNow() + 30
+        
+        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+        
+        self._test_script_management.SetJobKey( job_key )
+        
+        data = self._example_data.GetValue()
+        
+        HG.client_controller.CallToThread( do_it, script, job_key, data )
         
     
     def GetExampleData( self ):
@@ -4414,6 +4448,9 @@ class TestPanel( wx.Panel ):
         self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.copy, self._Copy )
         self._copy_button.SetToolTip( 'Copy the current example data to the clipboard.' )
         
+        self._fetch_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.link, self._FetchFromURL )
+        self._fetch_button.SetToolTip( 'Fetch data from a URL.' )
+        
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
         self._paste_button.SetToolTip( 'Paste the current clipboard data into here.' )
         
@@ -4446,6 +4483,7 @@ class TestPanel( wx.Panel ):
         buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         buttons_hbox.Add( self._copy_button, CC.FLAGS_VCENTER )
+        buttons_hbox.Add( self._fetch_button, CC.FLAGS_VCENTER )
         buttons_hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
         
         desc_hbox = wx.BoxSizer( wx.HORIZONTAL )
@@ -4467,6 +4505,54 @@ class TestPanel( wx.Panel ):
     def _Copy( self ):
         
         HG.client_controller.pub( 'clipboard', 'text', self._example_data )
+        
+    
+    def _FetchFromURL( self ):
+        
+        def wx_code( example_data ):
+            
+            self._SetExampleData( example_data )
+            
+        
+        def do_it( url ):
+            
+            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            
+            network_job.OverrideBandwidth()
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            try:
+                
+                network_job.WaitUntilDone()
+                
+                example_data = network_job.GetContent()
+                
+            except HydrusExceptions.CancelledException:
+                
+                example_data = 'fetch cancelled'
+                
+            except Exception as e:
+                
+                example_data = 'fetch failed:' + os.linesep * 2 + HydrusData.ToUnicode( e )
+                
+                HydrusData.ShowException( e )
+                
+            
+            wx.CallAfter( wx_code, example_data )
+            
+        
+        message = 'Enter URL to fetch data for.'
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, default = 'enter url', allow_blank = False) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                url = dlg.GetValue()
+                
+                HG.client_controller.CallToThread( do_it, url )
+                
+            
         
     
     def _Paste( self ):

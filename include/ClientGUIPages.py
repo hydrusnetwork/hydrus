@@ -117,9 +117,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             button.SetLabelText( text )
             
-        elif entry_type == 'page_import_page_of_images':
+        elif entry_type == 'page_import_simple_downloader':
             
-            button.SetLabelText( 'page of images' )
+            button.SetLabelText( 'simple downloader' )
             
         elif entry_type == 'page_import_thread_watcher':
             
@@ -200,9 +200,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier ) )
                     
-                elif entry_type == 'page_import_page_of_images':
+                elif entry_type == 'page_import_simple_downloader':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportPageOfImages() )
+                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportSimpleDownloader() )
                     
                 elif entry_type == 'page_import_thread_watcher':
                     
@@ -261,7 +261,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             entries.append( ( 'page_import_urls', None ) )
             entries.append( ( 'page_import_thread_watcher', None ) )
             entries.append( ( 'menu', 'gallery' ) )
-            entries.append( ( 'page_import_page_of_images', None ) )
+            entries.append( ( 'page_import_simple_downloader', None ) )
             
         elif menu_keyword == 'gallery':
             
@@ -963,6 +963,15 @@ class PagesNotebook( wx.Notebook ):
             
         
     
+    def _GatherDeadThreadWatchers( self, insertion_page ):
+        
+        top_notebook = self._GetTopNotebook()
+        
+        gathered_pages = top_notebook.GetGatherPages( 'dead_thread_watchers' )
+        
+        self._MovePages( gathered_pages, insertion_page )
+        
+    
     def _GetDefaultPageInsertionIndex( self ):
         
         new_options = self._controller.new_options
@@ -1118,6 +1127,22 @@ class PagesNotebook( wx.Notebook ):
         return None
         
     
+    def _GetTopNotebook( self ):
+        
+        top_notebook = self
+        
+        parent = top_notebook.GetParent()
+        
+        while isinstance( parent, PagesNotebook ):
+            
+            top_notebook = parent
+            
+            parent = top_notebook.GetParent()
+            
+        
+        return top_notebook
+        
+    
     def _MovePage( self, page, dest_notebook, insertion_tab_index, follow_dropped_page = False ):
         
         source_notebook = page.GetParent()
@@ -1149,6 +1174,21 @@ class PagesNotebook( wx.Notebook ):
             
         
         self._controller.pub( 'refresh_page_name', page.GetPageKey() )
+        
+    
+    def _MovePages( self, pages, dest_notebook ):
+        
+        insertion_tab_index = dest_notebook.GetNumPages( only_my_level = True )
+        
+        for page in pages:
+            
+            if page.GetParent() != dest_notebook:
+                
+                self._MovePage( page, dest_notebook, insertion_tab_index )
+                
+                insertion_tab_index += 1
+                
+            
         
     
     def _ShiftPage( self, page_index, delta = None, new_index = None ):
@@ -1289,13 +1329,16 @@ class PagesNotebook( wx.Notebook ):
         
         num_pages = self.GetPageCount()
         
+        end_index = num_pages - 1
+        
         more_than_one_tab = num_pages > 1
         
         click_over_tab = tab_index != -1
         
-        click_over_page_of_pages = False
+        can_go_left = tab_index > 0
+        can_go_right = tab_index < end_index
         
-        end_index = num_pages - 1
+        click_over_page_of_pages = False
         
         existing_session_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION )
         
@@ -1308,9 +1351,6 @@ class PagesNotebook( wx.Notebook ):
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'close page', 'Close this page.', self._ClosePage, tab_index )
-            
-            can_go_left = tab_index > 0
-            can_go_right = tab_index < end_index
             
             if num_pages > 1:
                 
@@ -1329,57 +1369,14 @@ class PagesNotebook( wx.Notebook ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
-            
-            if can_go_right:
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
-                
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
             ClientGUIMenus.AppendMenuItem( self, menu, 'rename page', 'Rename this page.', self._RenamePage, tab_index )
             
         
         ClientGUIMenus.AppendMenuItem( self, menu, 'new page', 'Choose a new page.', self._ChooseNewPage )
         
-        if click_over_page_of_pages or len( existing_session_names ) > 0:
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-        
-        if len( existing_session_names ) > 0:
-            
-            submenu = wx.Menu()
-            
-            for name in existing_session_names:
-                
-                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Load this session here.', self.AppendGUISession, name )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'append session' )
-            
-        
         if click_over_tab:
             
-            if click_over_page_of_pages:
-                
-                submenu = wx.Menu()
-                
-                for name in existing_session_names:
-                    
-                    if name == 'last session':
-                        
-                        continue
-                        
-                    
-                    ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
-                    
-                
-                ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetDisplayName() )
-                
-                ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
-                
+            ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
             
             if more_than_one_tab:
                 
@@ -1389,10 +1386,6 @@ class PagesNotebook( wx.Notebook ):
                 can_move_left = tab_index > 0
                 can_move_right = tab_index < end_index
                 can_end = tab_index < end_index - 1
-                
-                ClientGUIMenus.AppendMenuItem( self, menu, 'new page here', 'Choose a new page.', self._ChooseNewPage, tab_index )
-                
-                ClientGUIMenus.AppendSeparator( menu )
                 
                 if can_home:
                     
@@ -1415,12 +1408,68 @@ class PagesNotebook( wx.Notebook ):
                     
                 
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'send this page down to a new page of pages', 'Make a new page of pages and put this page in it.', self._SendPageToNewNotebook, tab_index )
+            
+            if can_go_right:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
+                
+            
             if click_over_page_of_pages and page.GetPageCount() > 0:
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'refresh all this page\'s pages', 'Command every page below this one to refresh.', page.RefreshAllPages )
                 
+            
+        
+        if click_over_page_of_pages:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'dead thread watchers', 'Find all currently open dead thread watchers and move them to this page of pages.', self._GatherDeadThreadWatchers, page )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'gather on this page of pages' )
+            
+        
+        if len( existing_session_names ) > 0 or click_over_page_of_pages:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+        
+        if len( existing_session_names ) > 0:
+            
+            submenu = wx.Menu()
+            
+            for name in existing_session_names:
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Load this session here.', self.AppendGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'append session' )
+            
+        
+        if click_over_page_of_pages:
+            
+            submenu = wx.Menu()
+            
+            for name in existing_session_names:
+                
+                if name == 'last session':
+                    
+                    continue
+                    
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, name, 'Save this page of pages to the session.', page.SaveGUISession, name )
+                
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'create a new session', 'Save this page of pages to the session.', page.SaveGUISession, suggested_name = page.GetDisplayName() )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'save this page of pages to a session' )
             
         
         self._controller.PopupMenu( self, menu )
@@ -1751,6 +1800,35 @@ class PagesNotebook( wx.Notebook ):
             
             return self._name
             
+        
+    
+    def GetGatherPages( self, gather_type ):
+        
+        if gather_type == 'dead_thread_watchers':
+            
+            def test( page ):
+                
+                management_controller = page.GetManagementController()
+                
+                return management_controller.IsDeadThreadWatcher()
+                
+            
+        else:
+            
+            raise NotImplementedError()
+            
+        
+        gathered_pages = []
+        
+        for page in self.GetMediaPages():
+            
+            if test( page ):
+                
+                gathered_pages.append( page )
+                
+            
+        
+        return gathered_pages
         
     
     def GetMediaPages( self, only_my_level = False ):
@@ -2111,9 +2189,9 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportPageOfImages( self, on_deepest_notebook = False ):
+    def NewPageImportSimpleDownloader( self, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
+        management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         

@@ -1908,8 +1908,23 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_portable = 'no'
             
         
-        free_space = HydrusPaths.GetFreeSpace( location )
-        pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
+        try:
+            
+            free_space = HydrusPaths.GetFreeSpace( location )
+            pretty_free_space = HydrusData.ConvertIntToBytes( free_space )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            message = 'There was a problem finding the free space for "' + location + '"! Perhaps this location does not exist?'
+            
+            wx.MessageBox( message )
+            HydrusData.ShowText( message )
+            
+            free_space = 0
+            pretty_free_space = 'problem finding free space'
+            
         
         fp = locations_to_file_weights[ location ] / 256.0
         tp = locations_to_fs_thumb_weights[ location ] / 256.0

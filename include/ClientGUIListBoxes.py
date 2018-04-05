@@ -188,6 +188,11 @@ class AddEditDeleteListBox( wx.Panel ):
         return datas
         
     
+    def GetValue( self ):
+        
+        return self.GetData()
+        
+    
 class QueueListBox( wx.Panel ):
     
     def __init__( self, parent, height_num_chars, data_to_pretty_callable, add_callable = None, edit_callable = None ):

@@ -1458,3 +1458,18 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
+    def RefreshFavouriteTags( self ):
+        
+        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+        
+        favourite_tags.sort()
+        
+        predicates = [ ClientSearch.Predicate( HC.PREDICATE_TYPE_TAG, tag ) for tag in favourite_tags ]
+        
+        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        
+        predicates = parents_manager.ExpandPredicates( CC.COMBINED_TAG_SERVICE_KEY, predicates )
+        
+        self._favourites_list.SetPredicates( predicates )
+        
+    

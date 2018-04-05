@@ -662,7 +662,7 @@ class TestClientDB( unittest.TestCase ):
             
             #
             
-            management_controller = ClientGUIManagement.CreateManagementControllerImportPageOfImages()
+            management_controller = ClientGUIManagement.CreateManagementControllerImportSimpleDownloader()
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
@@ -744,7 +744,7 @@ class TestClientDB( unittest.TestCase ):
                     
                 
             
-            self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'page download', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
+            self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'thread watcher', u'simple downloader', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
             
         finally:
             

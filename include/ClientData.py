@@ -1142,6 +1142,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
         self._dictionary[ 'noneable_strings' ] = {}
         
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
@@ -1157,6 +1161,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
+        self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all images'
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -1626,10 +1631,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                         guidance_tag_import_options = default_tag_import_options[ default_gallery_identifier ]
                         
                     
+                    fetch_tags_even_if_url_known_and_file_already_in_db = False
+                    
                     service_keys_to_namespaces = {}
                     service_keys_to_explicit_tags = {}
                     
                     if guidance_tag_import_options is not None:
+                        
+                        fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
                         
                         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
                         
@@ -1652,7 +1661,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     import ClientImporting
                     
-                    tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+                    tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
                     
                 
                 return tag_import_options
@@ -1824,6 +1833,22 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             return preview_show_action
+            
+        
+    
+    def GetSimpleDownloaderFormulae( self ):
+        
+        with self._lock:
+            
+            if len( self._dictionary[ 'simple_downloader_formulae' ] ) == 0:
+                
+                for ( formula_name, formula ) in ClientDefaults.GetDefaultSimpleDownloaderFormulae():
+                    
+                    self._dictionary[ 'simple_downloader_formulae' ][ formula_name ] = formula
+                    
+                
+            
+            return self._dictionary[ 'simple_downloader_formulae' ].items()
             
         
     
@@ -2064,6 +2089,19 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
+            
+        
+    
+    def SetSimpleDownloaderFormulae( self, formulae ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableDictionary()
+            
+            for ( formula_name, formula ) in formulae:
+                
+                self._dictionary[ 'simple_downloader_formulae' ][ formula_name ] = formula
+                
             
         
     

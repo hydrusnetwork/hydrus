@@ -3520,8 +3520,14 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
                 
-                if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
-                elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
+                if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS:
+                    
+                    self._Delete()
+                    
+                elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS:
+                    
+                    self._Undelete()
+                    
                 else:
                     
                     CanvasWithHovers.EventCharHook( self, event )
@@ -4067,8 +4073,15 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                     if result == wx.ID_CANCEL:
                         
-                        if self._current_media in self._kept: self._kept.remove( self._current_media )
-                        if self._current_media in self._deleted: self._deleted.remove( self._current_media )
+                        if self._current_media in self._kept:
+                            
+                            self._kept.remove( self._current_media )
+                            
+                        
+                        if self._current_media in self._deleted:
+                            
+                            self._deleted.remove( self._current_media )
+                            
                         
                         return
                         
