@@ -505,7 +505,17 @@ class ServiceRemote( Service ):
         return 3600 * 4
         
     
-    def _CheckFunctional( self ):
+    def _CheckFunctional( self, including_external_communication = True ):
+        
+        if including_external_communication:
+            
+            self._CheckCanCommunicateExternally()
+            
+        
+        Service._CheckFunctional( self )
+        
+    
+    def _CheckCanCommunicateExternally( self ):
         
         if not HydrusData.TimeHasPassed( self._no_requests_until ):
             
@@ -520,8 +530,6 @@ class ServiceRemote( Service ):
             
             raise HydrusExceptions.BandwidthException( 'bandwidth exceeded' )
             
-        
-        Service._CheckFunctional( self )
         
     
     def _GetSerialisableDictionary( self ):
@@ -634,19 +642,25 @@ class ServiceRestricted( ServiceRemote ):
             
         
     
-    def _CheckFunctional( self, ignore_account = False ):
+    def _CheckFunctional( self, including_external_communication = True, including_account = True ):
+        
+        if including_account:
+            
+            self._account.CheckFunctional()
+            
+        
+        ServiceRemote._CheckFunctional( self, including_external_communication = including_external_communication )
+        
+    
+    def _CheckCanCommunicateExternally( self ):
         
         if not self._credentials.HasAccessKey():
             
             raise HydrusExceptions.PermissionException( 'this service has no access key set' )
             
         
-        if not ignore_account:
-            
-            self._account.CheckFunctional()
-            
+        ServiceRemote._CheckCanCommunicateExternally( self )
         
-        ServiceRemote._CheckFunctional( self )
         
     
     def _GetSerialisableDictionary( self ):
@@ -667,11 +681,11 @@ class ServiceRestricted( ServiceRemote ):
         self._next_account_sync = dictionary[ 'next_account_sync' ]
         
     
-    def CheckFunctional( self, ignore_account = False ):
+    def CheckFunctional( self, including_external_communication = True, including_account = True ):
         
         with self._lock:
             
-            self._CheckFunctional( ignore_account = ignore_account )
+            self._CheckFunctional( including_external_communication = including_external_communication, including_account = including_account )
             
         
     
@@ -706,13 +720,13 @@ class ServiceRestricted( ServiceRemote ):
         return self._account.IsDirty()
         
     
-    def IsFunctional( self, ignore_account = False ):
+    def IsFunctional( self, including_external_communication = True, including_account = True ):
         
         with self._lock:
             
             try:
                 
-                self._CheckFunctional( ignore_account = ignore_account )
+                self._CheckFunctional( including_external_communication = including_external_communication, including_account = including_account )
                 
                 return True
                 
@@ -897,17 +911,20 @@ class ServiceRestricted( ServiceRemote ):
                 
                 do_it = HydrusData.TimeHasPassed( self._next_account_sync )
                 
-                try:
+                if do_it:
                     
-                    self._CheckFunctional( ignore_account = True )
-                    
-                except:
-                    
-                    do_it = False
-                    
-                    self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
-                    
-                    self._SetDirty()
+                    try:
+                        
+                        self._CheckFunctional( including_account = False )
+                        
+                    except:
+                        
+                        do_it = False
+                        
+                        self._next_account_sync = HydrusData.GetNow() + HC.UPDATE_DURATION
+                        
+                        self._SetDirty()
+                        
                     
                 
             
@@ -968,28 +985,47 @@ class ServiceRestricted( ServiceRemote ):
     
 class ServiceRepository( ServiceRestricted ):
     
-    def _CanSync( self ):
-        
-        if self._paused:
-            
-            return False
-            
-        
-        if HG.client_controller.options[ 'pause_repo_sync' ]:
-            
-            return False
-            
+    def _CanSyncDownload( self ):
         
         try:
             
             self._CheckFunctional()
+            
+            return True
             
         except:
             
             return False
             
         
-        return True
+    
+    def _CanSyncProcess( self ):
+        
+        try:
+            
+            self._CheckFunctional( including_external_communication = False, including_account = False )
+            
+            return True
+            
+        except:
+            
+            return False
+            
+        
+    
+    def _CheckFunctional( self, including_external_communication = True, including_account = True ):
+        
+        if self._paused:
+            
+            raise HydrusExceptions.PermissionException( 'Repository is paused!' )
+            
+        
+        if HG.client_controller.options[ 'pause_repo_sync' ]:
+            
+            raise HydrusExceptions.PermissionException( 'All repositories are paused!' )
+            
+        
+        ServiceRestricted._CheckFunctional( self, including_external_communication = including_external_communication, including_account = including_account )
         
     
     def _GetSerialisableDictionary( self ):
@@ -1016,7 +1052,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            if not self._CanSync():
+            if not self._CanSyncProcess():
                 
                 return False
                 
@@ -1131,7 +1167,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            if not self._CanSync():
+            if not self._CanSyncDownload():
                 
                 return
                 
@@ -1162,7 +1198,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     with self._lock:
                         
-                        if not self._CanSync():
+                        if not self._CanSyncDownload():
                             
                             return
                             
@@ -1313,7 +1349,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            if not self._CanSync():
+            if not self._CanSyncDownload():
                 
                 return
                 
@@ -1359,7 +1395,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            if not self._CanSync():
+            if not self._CanSyncProcess():
                 
                 return
                 
@@ -1410,7 +1446,7 @@ class ServiceRepository( ServiceRestricted ):
         
         with self._lock:
             
-            if not self._CanSync():
+            if not self._CanSyncDownload():
                 
                 return
                 
@@ -1445,7 +1481,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     with self._lock:
                         
-                        if not self._CanSync():
+                        if not self._CanSyncDownload():
                             
                             break
                             

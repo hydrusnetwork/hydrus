@@ -398,6 +398,11 @@ class NewDialog( wx.Dialog ):
                 
             
         
+        if not self.IsModal(): # in some rare cases (including spammy AutoHotkey, looks like), this can be fired before the dialog can clean itself up
+            
+            return
+            
+        
         self.EndModal( event_id )
         
     

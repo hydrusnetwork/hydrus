@@ -1492,7 +1492,7 @@ class DialogInputNewFormField( Dialog ):
     
 class DialogInputTags( Dialog ):
     
-    def __init__( self, parent, service_key, tags ):
+    def __init__( self, parent, service_key, tags, message = '' ):
         
         Dialog.__init__( self, parent, 'input tags' )
         
@@ -1522,6 +1522,11 @@ class DialogInputTags( Dialog ):
         b_box.Add( self._cancel, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        if message != '':
+            
+            vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         vbox.Add( self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )

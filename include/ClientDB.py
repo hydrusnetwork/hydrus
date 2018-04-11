@@ -2925,6 +2925,8 @@ class DB( HydrusDB.HydrusDB ):
         
         new_options = ClientData.ClientOptions( self._db_dir )
         
+        new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
+        
         self._SetJSONDump( new_options )
         
         list_of_shortcuts = ClientDefaults.GetDefaultShortcuts()
@@ -3292,7 +3294,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusData.DebugPrint( message )
         
-        wx.SafeShowMessage( message )
+        wx.SafeShowMessage( 'hydrus db failed', message )
         
     
     def _ExportToTagArchive( self, path, service_key, hash_type, hashes = None ):
@@ -9895,6 +9897,26 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Attempting to add a new rule to sankaku\'s domain failed. The error has been printed to your log file--please let hydrus dev know the details.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 301:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to set now simple downloader parsers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

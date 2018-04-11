@@ -203,7 +203,7 @@ class EditChooseMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         datas = []
         
-        for index in self._checkboxes.GetChecked():
+        for index in self._checkboxes.GetCheckedItems():
             
             datas.append( self._checkboxes.GetClientData( index ) )
             
@@ -1093,11 +1093,8 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._media_scale_up.Append( text, scale_action )
             self._preview_scale_up.Append( text, scale_action )
             
-            if scale_action != CC.MEDIA_VIEWER_SCALE_100:
-                
-                self._media_scale_down.Append( text, scale_action )
-                self._preview_scale_down.Append( text, scale_action )
-                
+            self._media_scale_down.Append( text, scale_action )
+            self._preview_scale_down.Append( text, scale_action )
             
         
         self._exact_zooms_only = wx.CheckBox( self, label = 'only permit half and double zooms' )
@@ -3661,7 +3658,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._service_keys_to_checkbox_info = {}
-        self._service_keys_to_explicit_button_info = {}
+        self._service_keys_to_additional_button_info = {}
         
         #
         
@@ -3705,23 +3702,25 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.SetSizer( vbox )
         
     
-    def _DoExplicitTags( self, service_key ):
+    def _DoAdditionalTags( self, service_key ):
         
-        ( explicit_tags, explicit_button ) = self._service_keys_to_explicit_button_info[ service_key ]
+        ( additional_tags, additional_button ) = self._service_keys_to_additional_button_info[ service_key ]
         
-        with ClientGUIDialogs.DialogInputTags( self, service_key, explicit_tags ) as dlg:
+        message = 'Any tags you enter here will be applied to every file that passes through this import context.'
+        
+        with ClientGUIDialogs.DialogInputTags( self, service_key, additional_tags, message = message ) as dlg:
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                explicit_tags = dlg.GetTags()
+                additional_tags = dlg.GetTags()
                 
             
         
-        button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+        button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
         
-        explicit_button.SetLabelText( button_label )
+        additional_button.SetLabelText( button_label )
         
-        self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+        self._service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
         
     
     def _InitialiseNamespaces( self, namespaces ):
@@ -3762,15 +3761,15 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     panel.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
                     
                 
-                explicit_tags = set()
+                additional_tags = set()
                 
-                button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+                button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
                 
-                explicit_button = ClientGUICommon.BetterButton( panel, button_label, self._DoExplicitTags, service_key )
+                additional_button = ClientGUICommon.BetterButton( panel, button_label, self._DoAdditionalTags, service_key )
                 
-                self._service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+                self._service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
                 
-                panel.Add( explicit_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                panel.Add( additional_button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 self._services_vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
@@ -3815,31 +3814,31 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        service_keys_to_explicit_tags = tag_import_options.GetServiceKeysToExplicitTags()
+        service_keys_to_additional_tags = tag_import_options.GetServiceKeysToAdditionalTags()
         
-        new_service_keys_to_explicit_button_info = {}
+        new_service_keys_to_additional_button_info = {}
         
-        for ( service_key, button_info ) in self._service_keys_to_explicit_button_info.items():
+        for ( service_key, button_info ) in self._service_keys_to_additional_button_info.items():
             
-            if service_key in service_keys_to_explicit_tags:
+            if service_key in service_keys_to_additional_tags:
                 
-                explicit_tags = service_keys_to_explicit_tags[ service_key ]
+                additional_tags = service_keys_to_additional_tags[ service_key ]
                 
             else:
                 
-                explicit_tags = set()
+                additional_tags = set()
                 
             
-            ( old_explicit_tags, explicit_button ) = button_info
+            ( old_additional_tags, additional_button ) = button_info
             
-            button_label = HydrusData.ConvertIntToPrettyString( len( explicit_tags ) ) + ' explicit tags'
+            button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
             
-            explicit_button.SetLabelText( button_label )
+            additional_button.SetLabelText( button_label )
             
-            new_service_keys_to_explicit_button_info[ service_key ] = ( explicit_tags, explicit_button )
+            new_service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
             
         
-        self._service_keys_to_explicit_button_info = new_service_keys_to_explicit_button_info
+        self._service_keys_to_additional_button_info = new_service_keys_to_additional_button_info
         
     
     def _ShowHelp( self ):
@@ -3874,9 +3873,9 @@ Please note that you can set up 'default' values for these tag import options in
             service_keys_to_namespaces[ service_key ] = namespaces
             
         
-        service_keys_to_explicit_tags = { service_key : explicit_tags for ( service_key, ( explicit_tags, explicit_button ) ) in self._service_keys_to_explicit_button_info.items() }
+        service_keys_to_additional_tags = { service_key : additional_tags for ( service_key, ( additional_tags, additional_button ) ) in self._service_keys_to_additional_button_info.items() }
         
-        tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+        tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
         
         return tag_import_options
         
@@ -4612,7 +4611,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddURLMatch( self, url_match ):
         
-        ClientGUIListCtrl.SetNonDupeName( url_match, self._GetExistingNames() )
+        HydrusSerialisable.SetNonDupeName( url_match, self._GetExistingNames() )
         
         url_match.RegenMatchKey()
         
@@ -4662,7 +4661,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     url_match = panel.GetValue()
                     
-                    ClientGUIListCtrl.SetNonDupeName( url_match, self._GetExistingNames() )
+                    HydrusSerialisable.SetNonDupeName( url_match, self._GetExistingNames() )
                     
                     self._list_ctrl.AddDatas( ( url_match, ) )
                     

@@ -1,12 +1,13 @@
 import bs4
 import ClientData
 import ClientNetworking
+import ClientParsing
 import HydrusConstants as HC
 import HydrusExceptions
 import HydrusPaths
 import HydrusSerialisable
+import HydrusTags
 import json
-import lxml # to force import for later bs4 stuff
 import os
 import pafy
 import re
@@ -139,7 +140,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
                     
                     thread_html = network_job.GetContent()
                     
-                    soup = GetSoup( thread_html )
+                    soup = ClientParsing.GetSoup( thread_html )
                     
                     file_infos = soup.find_all( 'p', class_ = "fileinfo" )
                     
@@ -190,10 +191,6 @@ def GetImageboardThreadJSONURL( thread_url ):
         return 'https://8ch.net/' + board + '/res/' + thread_id + '.json'
         
     
-def GetSoup( html ):
-    
-    return bs4.BeautifulSoup( html, 'lxml' )
-    
 def GetYoutubeFormats( youtube_url ):
     
     try:
@@ -211,7 +208,7 @@ def GetYoutubeFormats( youtube_url ):
     
 def Parse4chanPostScreen( html ):
     
-    soup = GetSoup( html )
+    soup = ClientParsing.GetSoup( html )
     
     title_tag = soup.find( 'title' )
     
@@ -422,7 +419,7 @@ def ParseImageboardThreadURL( thread_url ):
     
 def ParsePageForURLs( html, starting_url ):
     
-    soup = GetSoup( html )
+    soup = ClientParsing.GetSoup( html )
     
     all_links = soup.find_all( 'a' )
     
@@ -694,7 +691,7 @@ class GalleryBooru( Gallery ):
         urls_set = set()
         urls = []
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         # this catches 'post-preview' along with 'post-preview not-approved' sort of bullshit
         def starts_with_classname( classname ):
@@ -811,7 +808,7 @@ class GalleryBooru( Gallery ):
         
         ( search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces ) = self._booru.GetData()
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         image_url = None
         
@@ -965,7 +962,10 @@ class GalleryBooru( Gallery ):
                 
                 links = tag_list_entry.find_all( 'a' )
                 
-                if tag_list_entry.name == 'a': links.append( tag_list_entry )
+                if tag_list_entry.name == 'a':
+                    
+                    links.append( tag_list_entry )
+                    
                 
                 for link in links:
                     
@@ -974,10 +974,26 @@ class GalleryBooru( Gallery ):
                         continue
                         
                     
-                    if link.string not in ( '?', '-', '+' ):
+                    try:
                         
-                        if namespace == '': tags.append( link.string )
-                        else: tags.append( namespace + ':' + link.string )
+                        tag_string = HydrusData.ToUnicode( link.string )
+                        
+                        tag_string = HydrusTags.CleanTag( tag_string )
+                        
+                        if tag_string in ( '?', '-', '+', u'\xe2\x80\x93', u'\u2013' ): # last two are a couple of amusing encodings of en-dash '-' from danbooru
+                            
+                            continue
+                            
+                        
+                        tag = HydrusTags.CombineTag( namespace, tag_string )
+                        
+                        tags.append( tag )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.Print( 'Could not parse tag "' + repr( link.string ) + '":' )
+                        
+                        HydrusData.PrintException( e )
                         
                     
                 
@@ -1031,7 +1047,7 @@ class GalleryDeviantArt( Gallery ):
         
         urls_and_tags = []
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         thumbs_container = soup.find( 'div', class_ = 'torpedo-container' )
         
@@ -1069,7 +1085,7 @@ class GalleryDeviantArt( Gallery ):
         
         img_url = None
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         download_button = soup.find( 'a', class_ = 'dev-page-download' )
         
@@ -1176,7 +1192,7 @@ class GalleryHentaiFoundry( Gallery ):
         
         urls_set = set()
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         def correct_url( href ):
             
@@ -1247,7 +1263,7 @@ class GalleryHentaiFoundry( Gallery ):
         
         try:
             
-            image_soup = GetSoup( html )
+            image_soup = ClientParsing.GetSoup( html )
             
             image_html = unicode( image_soup.find( 'section', id = 'picBox' ) )
             
@@ -1272,7 +1288,7 @@ class GalleryHentaiFoundry( Gallery ):
             raise Exception( 'Could not parse image url!' + os.linesep + HydrusData.ToUnicode( e ) )
             
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         tags = []
         
@@ -1366,7 +1382,7 @@ class GalleryNewgrounds( Gallery ):
     
     def _ParseGalleryPage( self, html, url_base ):
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         fatcol = soup.find( 'div', class_ = 'fatcol' )
         
@@ -1404,7 +1420,7 @@ class GalleryNewgrounds( Gallery ):
     
     def _ParseImagePage( self, html, url_base ):
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         tags = set()
         
@@ -1518,7 +1534,7 @@ class GalleryPixiv( Gallery ):
         
         urls = []
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         manga_links = soup.find_all( class_ = 'manga' )
         thumbnail_links = soup.find_all( class_ = 'work' )
@@ -1564,7 +1580,7 @@ class GalleryPixiv( Gallery ):
             raise HydrusExceptions.MimeException( page_url + ' was ugoira, not a single image, so could not be downloaded.' )
             
         
-        soup = GetSoup( html )
+        soup = ClientParsing.GetSoup( html )
         
         #
         
@@ -1803,7 +1819,7 @@ class GalleryTumblr( Gallery ):
                         
                         try:
                             
-                            vp_soup = GetSoup( video_player_html )
+                            vp_soup = ClientParsing.GetSoup( video_player_html )
                             
                             vp_source = vp_soup.find( 'source' )
                             

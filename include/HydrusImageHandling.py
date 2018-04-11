@@ -34,6 +34,9 @@ if not hasattr( PILImage, 'DecompressionBombWarning' ):
 
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 
+OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
+PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
+
 def ConvertToPngIfBmp( path ):
     
     with open( path, 'rb' ) as f:
@@ -335,17 +338,21 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
     
 def IsDecompressionBomb( path ):
     
+    PILImage.MAX_IMAGE_PIXELS = OLD_PIL_MAX_IMAGE_PIXELS
+    
     warnings.simplefilter( 'error', PILImage.DecompressionBombWarning )
     
     try:
         
         GeneratePILImage( path )
         
-    except PILImage.DecompressionBombWarning:
+    except ( PILImage.DecompressionBombWarning, PILImage.DecompressionBombError ):
         
         return True
         
     finally:
+        
+        PILImage.MAX_IMAGE_PIXELS = None
         
         warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
         

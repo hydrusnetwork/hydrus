@@ -477,9 +477,9 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( my_panel )
         
-        ( width, height ) = ClientData.ConvertTextToPixels( self._formula_description, ( 60, 8 ) )
+        ( width, height ) = ClientData.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
         
-        self._formula_description.SetInitialSize( ( -1, height ) )
+        self._formula_description.SetInitialSize( ( width, height ) )
         
         self._formula_description.Disable()
         
@@ -639,25 +639,50 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, rule ):
+    def __init__( self, parent, tag_rule ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        ( name, attrs, index ) = rule
+        ( rule_type, tag_name, tag_attributes, tag_index, tag_depth ) = tag_rule.ToTuple()
         
-        self._name = wx.TextCtrl( self )
+        if tag_name is None:
+            
+            tag_name = ''
+            
         
-        self._attrs = ClientGUIControls.EditStringToStringDictControl( self, attrs )
+        if tag_attributes is None:
+            
+            tag_attributes = {}
+            
         
-        message = 'index to fetch'
+        if tag_depth is None:
+            
+            tag_depth = 1
+            
         
-        self._index = ClientGUICommon.NoneableSpinCtrl( self, message, none_phrase = 'get all', min = 0, max = 255 )
+        self._current_description = ClientGUICommon.BetterStaticText( self )
+        
+        self._rule_type = ClientGUICommon.BetterChoice( self )
+        
+        self._rule_type.Append( 'search descendents', ClientParsing.HTML_RULE_TYPE_DESCENDING )
+        self._rule_type.Append( 'walk back up ancestors', ClientParsing.HTML_RULE_TYPE_ASCENDING )
+        
+        self._tag_name = wx.TextCtrl( self )
+        
+        self._tag_attributes = ClientGUIControls.EditStringToStringDictControl( self, tag_attributes )
+        
+        self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = 0, max = 255 )
+        
+        self._tag_depth = wx.SpinCtrl( self, min = 1, max = 255 )
         
         #
         
-        self._name.SetValue( name )
+        self._rule_type.SelectClientData( rule_type )
+        self._tag_name.SetValue( tag_name )
+        self._tag_index.SetValue( tag_index )
+        self._tag_depth.SetValue( tag_depth )
         
-        self._index.SetValue( index )
+        self._UpdateTypeControls()
         
         #
         
@@ -665,24 +690,106 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'tag name: ', self._name ) )
+        rows.append( ( 'rule type: ', self._rule_type ) )
+        rows.append( ( 'tag name: ', self._tag_name ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
         
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._attrs, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._index, CC.FLAGS_EXPAND_PERPENDICULAR )
+        rows = []
+        
+        rows.append( ( 'index to fetch: ', self._tag_index ) )
+        rows.append( ( 'depth to climb: ', self._tag_depth ) )
+        
+        gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox.Add( self._current_description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        vbox.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._tag_attributes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        #
+        
+        self._rule_type.Bind( wx.EVT_CHOICE, self.EventTypeChanged )
+        self._tag_name.Bind( wx.EVT_TEXT, self.EventVariableChanged )
+        self._tag_attributes.Bind( ClientGUIListCtrl.EVT_LIST_CTRL, self.EventVariableChanged)
+        self._tag_index.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
+        self._tag_depth.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
+        
+    
+    def _UpdateTypeControls( self ):
+        
+        rule_type = self._rule_type.GetChoice()
+        
+        if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
+            
+            self._tag_attributes.Enable()
+            self._tag_index.Enable()
+            
+            self._tag_depth.Disable()
+            
+        else:
+            
+            self._tag_attributes.Disable()
+            self._tag_index.Disable()
+            
+            self._tag_depth.Enable()
+            
+        
+        self._UpdateDescription()
+        
+    
+    def _UpdateDescription( self ):
+        
+        tag_rule = self.GetValue()
+        
+        label = tag_rule.ToString()
+        
+        self._current_description.SetLabelText( label )
+        
+    
+    def EventVariableChanged( self, event ):
+        
+        self._UpdateDescription()
+        
+        event.Skip()
+        
+    
+    def EventTypeChanged( self, event ):
+        
+        self._UpdateTypeControls()
+        
+        event.Skip()
         
     
     def GetValue( self ):
         
-        name = self._name.GetValue()
-        attrs = self._attrs.GetValue()
-        index = self._index.GetValue()
+        rule_type = self._rule_type.GetChoice()
         
-        return ( name, attrs, index )
+        tag_name = self._tag_name.GetValue()
+        
+        if tag_name == '':
+            
+            tag_name = None
+            
+        
+        if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
+            
+            tag_attributes = self._tag_attributes.GetValue()
+            tag_index = self._tag_index.GetValue()
+            
+            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_attributes = tag_attributes, tag_index = tag_index )
+            
+        elif rule_type == ClientParsing.HTML_RULE_TYPE_ASCENDING:
+            
+            tag_depth = self._tag_depth.GetValue()
+            
+            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_depth = tag_depth )
+            
+        
+        return tag_rule
         
     
 class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -750,7 +857,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for rule in tag_rules:
             
-            pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
+            pretty_rule = rule.ToString()
             
             self._tag_rules.Append( pretty_rule, rule )
             
@@ -831,7 +938,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            new_rule = ( 'a', {}, None )
+            new_rule = ClientParsing.ParseRuleHTML()
             
             panel = EditHTMLTagRulePanel( dlg, new_rule )
             
@@ -841,7 +948,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 rule = panel.GetValue()
                 
-                pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
+                pretty_rule = rule.ToString()
                 
                 self._tag_rules.Append( pretty_rule, rule )
                 
@@ -878,7 +985,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     rule = panel.GetValue()
                     
-                    pretty_rule = ClientParsing.RenderHTMLTagRule( rule )
+                    pretty_rule = rule.ToString()
                     
                     self._tag_rules.SetString( selection, pretty_rule )
                     self._tag_rules.SetClientData( selection, rule )
@@ -1682,7 +1789,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
     def _AddContentParser( self, content_parser ):
         
-        ClientGUIListCtrl.SetNonDupeName( content_parser, self._GetExistingNames() )
+        HydrusSerialisable.SetNonDupeName( content_parser, self._GetExistingNames() )
         
         self._content_parsers.AddDatas( ( content_parser, ) )
         
@@ -1736,7 +1843,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
                     
                     self._content_parsers.DeleteDatas( ( content_parser, ) )
                     
-                    ClientGUIListCtrl.SetNonDupeName( edited_content_parser, self._GetExistingNames() )
+                    HydrusSerialisable.SetNonDupeName( edited_content_parser, self._GetExistingNames() )
                     
                     self._content_parsers.AddDatas( ( edited_content_parser, ) )
                     
@@ -2546,7 +2653,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddSubPageParser( self ):
         
-        formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ( 'div', { 'class' : 'thumb' }, None ) ], content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
+        formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'div', tag_attributes = { 'class' : 'thumb' } ) ], content_to_fetch = ClientParsing.HTML_CONTENT_HTML )
         page_parser = ClientParsing.PageParser( 'new sub page parser' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
@@ -2791,7 +2898,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddParser( self, parser ):
         
-        ClientGUIListCtrl.SetNonDupeName( parser, self._GetExistingNames() )
+        HydrusSerialisable.SetNonDupeName( parser, self._GetExistingNames() )
         
         parser.RegenerateParserKey()
         
@@ -2849,7 +2956,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._parsers.DeleteDatas( ( parser, ) )
                     
-                    ClientGUIListCtrl.SetNonDupeName( edited_parser, self._GetExistingNames() )
+                    HydrusSerialisable.SetNonDupeName( edited_parser, self._GetExistingNames() )
                     
                     self._parsers.AddDatas( ( edited_parser, ) )
                     
@@ -2930,8 +3037,6 @@ class EditParsingScriptFileLookupPanel( ClientGUIScrolledPanels.EditPanel ):
         test_panel = wx.Panel( notebook )
         
         test_panel.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
-        
-        self._example_data = ''
         
         self._test_script_management = ScriptManagementControl( test_panel )
         

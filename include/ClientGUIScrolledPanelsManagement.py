@@ -306,7 +306,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 new_service = panel.GetValue()
                 
-                ClientGUIListCtrl.SetNonDupeName( new_service, self._GetExistingNames() )
+                HydrusSerialisable.SetNonDupeName( new_service, self._GetExistingNames() )
                 
                 self._listctrl.AddDatas( ( new_service, ) )
                 
@@ -382,7 +382,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         edited_service = panel.GetValue()
                         
-                        ClientGUIListCtrl.SetNonDupeName( edited_service, self._GetExistingNames() )
+                        HydrusSerialisable.SetNonDupeName( edited_service, self._GetExistingNames() )
                         
                         self._listctrl.AddDatas( ( edited_service, ) )
                         
@@ -1703,6 +1703,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
             
+            self._max_simultaneous_subscriptions = wx.SpinCtrl( subscriptions, min = 1, max = 100 )
+            
             self._process_subs_in_random_order = wx.CheckBox( subscriptions )
             self._process_subs_in_random_order.SetToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
             
@@ -1722,6 +1724,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
@@ -1740,6 +1743,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Maximum number of subscriptions that can sync simultaneously:', self._max_simultaneous_subscriptions ) )
             rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
             
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
@@ -1776,6 +1780,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             
+            self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
             
             self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )

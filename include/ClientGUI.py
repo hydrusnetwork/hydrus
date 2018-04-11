@@ -200,6 +200,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             library_versions.append( ( 'Pillow', PIL.PILLOW_VERSION ) )
             
         
+        import ClientParsing
+        
+        library_versions.append( ( 'html5lib present: ', str( ClientParsing.HTML5LIB_IS_OK ) ) )
+        library_versions.append( ( 'lxml present: ', str( ClientParsing.LXML_IS_OK ) ) )
+        
         # 2.7.12 (v2.7.12:d33e0cf91556, Jun 27 2016, 15:24:40) [MSC v.1500 64 bit (AMD64)]
         v = sys.version
         

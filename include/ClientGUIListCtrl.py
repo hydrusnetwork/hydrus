@@ -10,21 +10,7 @@ import os
 import wx
 from wx.lib.mixins.listctrl import ListCtrlAutoWidthMixin
 
-def SetNonDupeName( obj, disallowed_names ):
-    
-    i = 1
-    
-    original_name = obj.GetName()
-    new_name = original_name
-    
-    while new_name in disallowed_names:
-        
-        new_name = original_name + ' (' + str( i ) + ')'
-        
-        i += 1
-        
-    
-    obj.SetName( new_name )
+( ListCtrlEvent, EVT_LIST_CTRL ) = wx.lib.newevent.NewCommandEvent()
 
 # This used to be ColumnSorterMixin, but it was crashing on sort-click on clients with many pages open
 # I've disabled it for now because it was still catching people. The transition to BetterListCtrl will nuke the whole thing eventually.
@@ -393,25 +379,9 @@ class SaneListCtrlForSingleObject( SaneListCtrl ):
         
         # when column population is handled here, we can tuck this into normal append/update calls internally
         
-        name = obj.GetName()
-        
         current_names = { o.GetName() for o in self.GetObjects() if o is not obj }
         
-        if name in current_names:
-            
-            i = 1
-            
-            original_name = name
-            
-            while name in current_names:
-                
-                name = original_name + ' (' + str( i ) + ')'
-                
-                i += 1
-                
-            
-            obj.SetName( name )
-            
+        HydrusSerialisable.SetNonDupeName( obj, current_names )
         
     
     def UpdateRow( self, index, display_tuple, sort_tuple, obj ):
@@ -686,6 +656,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
             
         
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        
     
     def DeleteDatas( self, datas ):
         
@@ -704,6 +676,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._RecalculateIndicesAfterDelete()
         
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
     
     def DeleteSelected( self ):
@@ -724,6 +697,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
         self._RecalculateIndicesAfterDelete()
+        
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
     
     def EventBeginColDrag( self, event ):
@@ -894,6 +869,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         self._SortAndRefreshRows()
         
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        
     
     def Sort( self, col = None, asc = None ):
         
@@ -908,6 +885,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
         self._SortAndRefreshRows()
+        
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
     
     def UpdateDatas( self, datas = None ):
@@ -932,6 +911,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 self._UpdateRow( index, display_tuple )
                 
             
+        
+        wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
         
 
 class BetterListCtrlPanel( wx.Panel ):
@@ -1158,7 +1139,6 @@ class BetterListCtrlPanel( wx.Panel ):
         
     
     def _ImportObject( self, obj ):
-        
         
         bad_object_types = set()
         

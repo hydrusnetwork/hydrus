@@ -672,7 +672,7 @@ class HydrusBitmap( object ):
             
             bitmap = wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
             
-            image = wx.ImageFromBitmap( bitmap )
+            image = bitmap.ConvertToImage()
             
             bitmap.Destroy()
             

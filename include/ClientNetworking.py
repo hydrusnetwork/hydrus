@@ -998,6 +998,7 @@ class NetworkJob( object ):
         self._is_done = False
         self._is_cancelled = False
         self._bandwidth_manual_override = False
+        self._bandwidth_manual_override_delayed_timestamp = None
         
         self._last_time_ongoing_bandwidth_failed = 0
         
@@ -1129,7 +1130,27 @@ class NetworkJob( object ):
     
     def _ObeysBandwidth( self ):
         
-        return not ( self._method == 'POST' or self._bandwidth_manual_override or self._for_login )
+        if self._bandwidth_manual_override:
+            
+            return False
+            
+        
+        if self._bandwidth_manual_override_delayed_timestamp is not None and HydrusData.TimeHasPassed( self._bandwidth_manual_override_delayed_timestamp ):
+            
+            return False
+            
+        
+        if self._method == 'POST':
+            
+            return False
+            
+        
+        if self._for_login:
+            
+            return False
+            
+        
+        return True
         
     
     def _OngoingBandwidthOK( self ):
@@ -1501,13 +1522,22 @@ class NetworkJob( object ):
         return self._ObeysBandwidth()
         
     
-    def OverrideBandwidth( self ):
+    def OverrideBandwidth( self, delay = None ):
         
         with self._lock:
             
-            self._bandwidth_manual_override = True
-            
-            self._wake_time = 0
+            if delay is None:
+                
+                self._bandwidth_manual_override = True
+                
+                self._wake_time = 0
+                
+            else:
+                
+                self._bandwidth_manual_override_delayed_timestamp = HydrusData.GetNow() + delay
+                
+                self._wake_time = min( self._wake_time, self._bandwidth_manual_override_delayed_timestamp + 1 )
+                
             
         
     
@@ -1639,7 +1669,7 @@ class NetworkJob( object ):
                     
                     time.sleep( 3 )
                     
-                except requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout:
+                except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
                     
                     self._current_connection_attempt_number += 1
                     

@@ -516,7 +516,7 @@ class BetterCheckListBox( wx.CheckListBox ):
     
     def GetChecked( self ):
         
-        result = [ self.GetClientData( index ) for index in wx.CheckListBox.GetChecked( self ) ]
+        result = [ self.GetClientData( index ) for index in self.GetCheckedItems() ]
         
         return result
         
@@ -811,7 +811,7 @@ class CheckboxCollect( wx.ComboCtrl ):
                 
                 collect_by = []
                 
-                for index in self.GetChecked():
+                for index in self.GetCheckedItems():
                     
                     collect_by.append( self.GetClientData( index ) )
                     
@@ -1914,12 +1914,20 @@ class NoneableSpinCtrl( wx.Panel ):
         if self._checkbox.GetValue():
             
             self._one.Disable()
-            if self._num_dimensions == 2: self._two.Disable()
+            
+            if self._num_dimensions == 2:
+                
+                self._two.Disable()
+                
             
         else:
             
             self._one.Enable()
-            if self._num_dimensions == 2: self._two.Enable()
+            
+            if self._num_dimensions == 2:
+                
+                self._two.Enable()
+                
             
         
     

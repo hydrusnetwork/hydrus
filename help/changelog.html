@@ -8,6 +8,37 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 302</h3></li>
+				<ul>
+					<li>improved how simple downloader parsing formulae are stored and passed around</li>
+					<li>the edit simple downloader parsing formulae panel now has an 'add defaults' menu button</li>
+					<li>the simple downloader formula edit panel handles its buttons better and can now do import from/export to clipboard/png and reimport from the defaults, and fixes duplicate names automatically</li>
+					<li>simple downloaders now remember their current parser through a session save/load</li>
+					<li>simple downloaders will set a new default parser selection for new simple downloader pages on any choice event</li>
+					<li>renamed all the default simple downloader parsers to more clearly explain what they do</li>
+					<li>added 'all files linked by images in page' to the simple downloader, which does the old page of images' behaviour, and is hence pretty decent for most imageboards</li>
+					<li>added a simple mewch thread html parse formula to the simple downloader</li>
+					<li>added a very simple webmshare parse formula to the simple downloader</li>
+					<li>added 'imgur image album' to the simple downloader, which will fetch the first 'page' of results from an image album. full parsing will have to wait for the gallery downloader update</li>
+					<li>subscriptions can now run simultaneously! you can set the max number at options->downloading page--the default remains 1, so default behaviour will not change</li>
+					<li>if subscriptions guess they can eat some bandwidth in the next 30s but it turns out they can't, they will bandwidth-override that last job after the 30s expires. this will stop some edge cases from causing subs to potentially hang for hours just on one last request</li>
+					<li>'explicit tags' are now renamed to 'additional tags'</li>
+					<li>you can now set media to initially scale to 100% even when it is larger than the media or preview canvas</li>
+					<li>the html parsing formula can now 'ascend' as well as search down the DOM tree--so, for instance, you can find all 'img' below an 'a' and then jump back up to the 'a' to fetch the 'href' of that image link!</li>
+					<li>html parsing formulae can now search without a tag name--so, for instance, 'find all tags with class = "whatever"' is doable, without having to specify div or span etc..</li>
+					<li>the html parsing formula rule panel is hence a bit richer. it also presents a preview of the rule's string as you edit</li>
+					<li>the client no longer needs lxml to boot, and if html5lib is present, it will prefer that for html parsing. if both libraries are missing and html parsing is requested, it will raise an exception explaining the error</li>
+					<li>the builds now include html5lib, which is better at recovering from some bad markup than lxml, and as a result some parsing jobs that formerly did not work (such as 'akaiha_(akaihasugk)' on danbooru) now do</li>
+					<li>rewrote how services test their functional status to better account for different states. the logic here should be a bit better now--repositories will still be able to process if their network side is down, but everything will pause if any pause is set, and it should all propagate up to higher levels of error catching and status reporting better</li>
+					<li>hydrus can now deal with really big decompression bombs (>~180 megapixel)</li>
+					<li>filtered out en-dashes (as an alternative to standard hyphens in a "? + -" link-prefix) from booru tag parsing</li>
+					<li>fixed a string generation issue that was stopping date decode string transformations from summarising themselves</li>
+					<li>fixed some catastrophic boot failure gui reporting</li>
+					<li>cleaned up a double-exit error on dialogs that could occur when spamming exit events with a script like AutoHotkey</li>
+					<li>improved some dead cpu thread clearout code</li>
+					<li>updated misc old code</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 301</h3></li>
 				<ul>
 					<li>after discussions with Sankaku Complex about their recent bandwidth problems, added a new 64MB/day default bandwidth rule for sankakucomplex.com--please check the release post for more information</li>

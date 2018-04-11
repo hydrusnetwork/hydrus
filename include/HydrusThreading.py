@@ -9,10 +9,36 @@ import HydrusData
 import HydrusGlobals as HG
 import os
 
+NEXT_THREAD_CLEAROUT = 0
+
 THREADS_TO_THREAD_INFO = {}
 THREAD_INFO_LOCK = threading.Lock()
 
+def ClearOutDeadThreads():
+    
+    with THREAD_INFO_LOCK:
+        
+        all_threads = list( THREADS_TO_THREAD_INFO.keys() )
+        
+        for thread in all_threads:
+            
+            if not thread.is_alive():
+                
+                del THREADS_TO_THREAD_INFO[ thread ]
+                
+            
+        
+    
 def GetThreadInfo( thread = None ):
+    
+    global NEXT_THREAD_CLEAROUT
+    
+    if HydrusData.TimeHasPassed( NEXT_THREAD_CLEAROUT ):
+        
+        ClearOutDeadThreads()
+        
+        NEXT_THREAD_CLEAROUT = HydrusData.GetNow() + 600
+        
     
     if thread is None:
         

@@ -1,8 +1,8 @@
 import ClientConstants as CC
 import ClientDefaults
-import ClientDownloading
 import ClientNetworking
 import ClientNetworkingDomain
+import ClientParsing
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusData
@@ -132,7 +132,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    service.CheckFunctional( ignore_account = True )
+                    service.CheckFunctional( including_account = False )
                     
                 except Exception as e:
                     
@@ -313,7 +313,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 break
                 
-            except requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout:
+            except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
                 
                 if num_attempts < 3:
                     
@@ -361,7 +361,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         response = session.get( 'https://accounts.pixiv.net/login' )
         
-        soup = ClientDownloading.GetSoup( response.content )
+        soup = ClientParsing.GetSoup( response.content )
         
         # some whocking 20kb bit of json tucked inside a hidden form input wew lad
         i = soup.find( 'input', id = 'init-config' )
@@ -407,7 +407,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         response = session.get( 'https://accounts.pixiv.net/login' )
         
-        soup = ClientDownloading.GetSoup( response.content )
+        soup = ClientParsing.GetSoup( response.content )
         
         # some whocking 20kb bit of json tucked inside a hidden form input wew lad
         i = soup.find( 'input', id = 'init-config' )

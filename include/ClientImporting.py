@@ -2386,7 +2386,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         downloaded_tags = []
                         
-                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, downloaded_tags ) # explicit tags
+                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( hash, downloaded_tags ) # additional tags
                         
                         if len( service_keys_to_content_updates ) > 0:
                             
@@ -2514,14 +2514,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( path, mimes, serialisable_file_import_options, action_pairs, action_location_pairs, period, open_popup, tag, serialisable_seed_cache, last_checked, paused ) = old_serialisable_info
             
-            service_keys_to_explicit_tags = {}
+            service_keys_to_additional_tags = {}
             
             if tag is not None:
                 
-                service_keys_to_explicit_tags[ CC.LOCAL_TAG_SERVICE_KEY ] = { tag }
+                service_keys_to_additional_tags[ CC.LOCAL_TAG_SERVICE_KEY ] = { tag }
                 
             
-            tag_import_options = TagImportOptions( service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+            tag_import_options = TagImportOptions( service_keys_to_additional_tags = service_keys_to_additional_tags )
             
             serialisable_tag_import_options = tag_import_options.GetSerialisableTuple()
             
@@ -3527,7 +3527,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_IMPORT
     SERIALISABLE_NAME = 'Simple Downloader Import'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     def __init__( self ):
         
@@ -3538,6 +3538,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._pending_jobs = []
         self._seed_cache = SeedCache()
         self._file_import_options = file_import_options
+        self._formula_name = 'all files linked by images in page'
         self._queue_paused = False
         self._files_paused = False
         
@@ -3557,19 +3558,19 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_pending_jobs = [ ( url, formula_name, formula.GetSerialisableTuple() ) for ( url, formula_name, formula ) in self._pending_jobs ]
+        serialisable_pending_jobs = [ ( url, simple_downloader_formula.GetSerialisableTuple() ) for ( url, simple_downloader_formula ) in self._pending_jobs ]
         
         serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         
-        return ( serialisable_pending_jobs, serialisable_seed_cache, serialisable_file_options, self._queue_paused, self._files_paused )
+        return ( serialisable_pending_jobs, serialisable_seed_cache, serialisable_file_options, self._formula_name, self._queue_paused, self._files_paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_pending_jobs, serialisable_seed_cache, serialisable_file_options, self._queue_paused, self._files_paused ) = serialisable_info
+        ( serialisable_pending_jobs, serialisable_seed_cache, serialisable_file_options, self._formula_name, self._queue_paused, self._files_paused ) = serialisable_info
         
-        self._pending_jobs = [ ( url, formula_name, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula ) ) for ( url, formula_name, serialisable_formula ) in serialisable_pending_jobs ]
+        self._pending_jobs = [ ( url, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_simple_downloader_formula ) ) for ( url, serialisable_simple_downloader_formula ) in serialisable_pending_jobs ]
         
         self._seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_seed_cache )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
@@ -3598,6 +3599,19 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( pending_jobs, serialisable_seed_cache, serialisable_file_options, queue_paused, files_paused )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( pending_jobs, serialisable_seed_cache, serialisable_file_options, queue_paused, files_paused ) = old_serialisable_info
+            
+            pending_jobs = []
+            
+            formula_name = 'all files linked by images in page'
+            
+            new_serialisable_info = ( pending_jobs, serialisable_seed_cache, serialisable_file_options, formula_name, queue_paused, files_paused )
+            
+            return ( 4, new_serialisable_info )
             
         
     
@@ -3790,7 +3804,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                ( url, formula_name, formula ) = self._pending_jobs.pop( 0 )
+                ( url, simple_downloader_formula ) = self._pending_jobs.pop( 0 )
                 
                 self._parser_status = 'checking ' + url
                 
@@ -3833,7 +3847,9 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 parsing_context[ 'url' ] = url
                 
-                file_urls = [ urlparse.urljoin( url, parsed_text ) for parsed_text in formula.Parse( parsing_context, data ) ]
+                parsing_formula = simple_downloader_formula.GetFormula()
+                
+                file_urls = [ urlparse.urljoin( url, parsed_text ) for parsed_text in parsing_formula.Parse( parsing_context, data ) ]
                 
                 seeds = [ Seed( SEED_TYPE_URL, file_url ) for file_url in file_urls ]
                 
@@ -4019,7 +4035,10 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     def GetSeedCache( self ):
         
-        return self._seed_cache
+        with self._lock:
+            
+            return self._seed_cache
+            
         
     
     def GetFileImportOptions( self ):
@@ -4027,6 +4046,14 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._file_import_options
+            
+        
+    
+    def GetFormulaName( self ):
+        
+        with self._lock:
+            
+            return self._formula_name
             
         
     
@@ -4094,6 +4121,14 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._file_import_options = file_import_options
+            
+        
+    
+    def SetFormulaName( self, formula_name ):
+        
+        with self._lock:
+            
+            self._formula_name = formula_name
             
         
     
@@ -4242,7 +4277,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if HG.subscription_report_mode:
             
-            HydrusData.ShowText( 'Query "' + query.GetQueryText() + '" pre-work Bandwidth test. Bandwidth ok: ' + str( result ) + '.' )
+            HydrusData.ShowText( 'Query "' + query.GetQueryText() + '" pre-work bandwidth test. Bandwidth ok: ' + str( result ) + '.' )
             
         
         return result
@@ -4354,6 +4389,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             def network_job_factory( method, url, **kwargs ):
                 
                 network_job = ClientNetworking.NetworkJobSubscriptionTemporary( self._GetNetworkJobSubscriptionKey( query ), method, url, **kwargs )
+                
+                network_job.OverrideBandwidth( 30 )
                 
                 job_key.SetVariable( 'popup_network_job', network_job )
                 
@@ -4855,7 +4892,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if not self._QueryBandwidthIsOK( query ) and not have_made_an_initial_sync_bandwidth_notification:
                         
-                        HydrusData.ShowText( 'FYI: The query "' + query_text + '" for subscription "' + self._name + '" performed its initial sync ok, but that domain is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they be the same.' )
+                        HydrusData.ShowText( 'FYI: The query "' + query_text + '" for subscription "' + self._name + '" performed its initial sync ok, but that domain is short on bandwidth right now, so no files will be downloaded yet. The subscription will catch up in future as bandwidth becomes available. You can review the estimated time until bandwidth is available under the manage subscriptions dialog. If more queries are performing initial syncs in this run, they may be the same.' )
                         
                         have_made_an_initial_sync_bandwidth_notification = True
                         
@@ -5372,7 +5409,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Tag Import Options'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, service_keys_to_namespaces = None, service_keys_to_explicit_tags = None ):
+    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, service_keys_to_namespaces = None, service_keys_to_additional_tags = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -5381,14 +5418,14 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             service_keys_to_namespaces = {}
             
         
-        if service_keys_to_explicit_tags is None:
+        if service_keys_to_additional_tags is None:
             
-            service_keys_to_explicit_tags = {}
+            service_keys_to_additional_tags = {}
             
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db
         self._service_keys_to_namespaces = service_keys_to_namespaces
-        self._service_keys_to_explicit_tags = service_keys_to_explicit_tags
+        self._service_keys_to_additional_tags = service_keys_to_additional_tags
         
     
     def _GetSerialisableInfo( self ):
@@ -5408,17 +5445,17 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
         safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() if test_func( service_key ) }
-        safe_service_keys_to_explicit_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_explicit_tags.items() if test_func( service_key ) }
+        safe_service_keys_to_additional_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_additional_tags.items() if test_func( service_key ) }
         
-        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
+        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags ) = serialisable_info
+        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = serialisable_info
         
         self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
-        self._service_keys_to_explicit_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_explicit_tags.items() }
+        self._service_keys_to_additional_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_additional_tags.items() }
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -5427,20 +5464,20 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             safe_service_keys_to_namespaces = old_serialisable_info
             
-            safe_service_keys_to_explicit_tags = {}
+            safe_service_keys_to_additional_tags = {}
             
-            new_serialisable_info = ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
+            new_serialisable_info = ( safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags ) = old_serialisable_info
+            ( safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = old_serialisable_info
             
             fetch_tags_even_if_url_known_and_file_already_in_db = False
             
-            new_serialisable_info = ( fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_explicit_tags )
+            new_serialisable_info = ( fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
             
             return ( 3, new_serialisable_info )
             
@@ -5451,9 +5488,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._fetch_tags_even_if_url_known_and_file_already_in_db
         
     
-    def GetServiceKeysToExplicitTags( self ):
+    def GetServiceKeysToAdditionalTags( self ):
         
-        return dict( self._service_keys_to_explicit_tags )
+        return dict( self._service_keys_to_additional_tags )
         
     
     def GetServiceKeysToNamespaces( self ):
@@ -5494,9 +5531,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        for ( service_key, explicit_tags ) in self._service_keys_to_explicit_tags.items():
+        for ( service_key, additional_tags ) in self._service_keys_to_additional_tags.items():
             
-            tags_to_add_here = HydrusTags.CleanTags( explicit_tags )
+            tags_to_add_here = HydrusTags.CleanTags( additional_tags )
             
             if len( tags_to_add_here ) > 0:
                 
@@ -5516,7 +5553,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         statements = []
         
-        service_keys_to_do = set( self._service_keys_to_explicit_tags.keys() ).union( self._service_keys_to_namespaces.keys() )
+        service_keys_to_do = set( self._service_keys_to_additional_tags.keys() ).union( self._service_keys_to_namespaces.keys() )
         
         service_keys_to_do = list( service_keys_to_do )
         
@@ -5540,15 +5577,15 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            if service_key in self._service_keys_to_explicit_tags:
+            if service_key in self._service_keys_to_additional_tags:
                 
-                explicit_tags = list( self._service_keys_to_explicit_tags[ service_key ] )
+                additional_tags = list( self._service_keys_to_additional_tags[ service_key ] )
                 
-                if len( explicit_tags ) > 0:
+                if len( additional_tags ) > 0:
                     
-                    explicit_tags.sort()
+                    additional_tags.sort()
                     
-                    sub_statements.append( 'explicit tags: ' + ', '.join( explicit_tags ) )
+                    sub_statements.append( 'additional tags: ' + ', '.join( additional_tags ) )
                     
                 
             

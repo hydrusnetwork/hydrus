@@ -1113,6 +1113,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
         
+        self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -1142,7 +1144,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableDictionary()
+        self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList()
         
         #
         
@@ -1161,7 +1163,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
         self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
-        self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all images'
+        self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -1373,7 +1375,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         for ( key, value ) in loaded_dictionary.items():
             
-            if isinstance( value, dict ):
+            if isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
                 
                 self._dictionary[ key ].update( value )
                 
@@ -1634,7 +1636,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     fetch_tags_even_if_url_known_and_file_already_in_db = False
                     
                     service_keys_to_namespaces = {}
-                    service_keys_to_explicit_tags = {}
+                    service_keys_to_additional_tags = {}
                     
                     if guidance_tag_import_options is not None:
                         
@@ -1656,12 +1658,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                                 
                             
                         
-                        service_keys_to_explicit_tags = guidance_tag_import_options.GetServiceKeysToExplicitTags()
+                        service_keys_to_additional_tags = guidance_tag_import_options.GetServiceKeysToAdditionalTags()
                         
                     
                     import ClientImporting
                     
-                    tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_explicit_tags = service_keys_to_explicit_tags )
+                    tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
                     
                 
                 return tag_import_options
@@ -1840,15 +1842,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._dictionary[ 'simple_downloader_formulae' ] ) == 0:
-                
-                for ( formula_name, formula ) in ClientDefaults.GetDefaultSimpleDownloaderFormulae():
-                    
-                    self._dictionary[ 'simple_downloader_formulae' ][ formula_name ] = formula
-                    
-                
-            
-            return self._dictionary[ 'simple_downloader_formulae' ].items()
+            return self._dictionary[ 'simple_downloader_formulae' ]
             
         
     
@@ -2092,16 +2086,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetSimpleDownloaderFormulae( self, formulae ):
+    def SetSimpleDownloaderFormulae( self, simple_downloader_formulae ):
         
         with self._lock:
             
-            self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableDictionary()
-            
-            for ( formula_name, formula ) in formulae:
-                
-                self._dictionary[ 'simple_downloader_formulae' ][ formula_name ] = formula
-                
+            self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList( simple_downloader_formulae )
             
         
     

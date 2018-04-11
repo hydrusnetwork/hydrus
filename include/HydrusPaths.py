@@ -444,7 +444,20 @@ def LaunchFile( path, launch_path = None ):
                 
                 process.wait()
                 
-                process.communicate()
+                ( stdout, stderr ) = process.communicate()
+                
+                if HG.callto_report_mode:
+                    
+                    if stdout is not None:
+                        
+                        HydrusData.ShowText( stdout )
+                        
+                    
+                    if stderr is not None:
+                        
+                        HydrusData.ShowText( stderr )
+                        
+                    
                 
             except Exception as e:
                 

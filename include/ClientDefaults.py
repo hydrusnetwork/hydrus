@@ -635,52 +635,11 @@ def GetDefaultImageboards():
     
 def GetDefaultParsers():
     
-    parser_dir = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
+    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )
     
-    if not os.path.exists( parser_dir ):
-        
-        return []
-        
-    
-    parsers = []
-    
-    import ClientSerialisable
     import ClientParsing
     
-    for filename in os.listdir( parser_dir ):
-        
-        path = os.path.join( parser_dir, filename )
-        
-        try:
-            
-            payload = ClientSerialisable.LoadFromPng( path )
-            
-            obj = HydrusSerialisable.CreateFromNetworkString( payload )
-            
-            if isinstance( obj, HydrusSerialisable.SerialisableList ):
-                
-                objs = obj
-                
-            else:
-                
-                objs = [ obj ]
-                
-            
-            for obj in objs:
-                
-                if isinstance( obj, ClientParsing.PageParser ):
-                    
-                    parsers.append( obj )
-                    
-                
-            
-        except:
-            
-            pass
-            
-        
-    
-    return parsers
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.PageParser, ) )
     
 def GetDefaultScriptRows():
     
@@ -813,133 +772,34 @@ def GetDefaultShortcuts():
     
 def GetDefaultSimpleDownloaderFormulae():
     
+    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'simple_downloader_formulae' )
+    
     import ClientParsing
     
-    formulae = []
-    
-    #
-    
-    formula_name = 'all images'
-    
-    tag_rules = [ ( 'img', {}, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'src'
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = '4chan thread (html)'
-    
-    tag_rules = [ ( 'div', { 'class' : 'fileText' }, None ), ( 'a', {}, 0 ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'href'
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = '8chan thread (html)'
-    
-    tag_rules = [ ( 'p', { 'class' : 'fileinfo' }, None ), ( 'a', {}, 0 ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'href'
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = 'twitter image'
-    
-    tag_rules = [ ( 'div', { 'class' : 'permalink-tweet' }, 0 ), ( 'div', { 'class' : 'AdaptiveMedia-container' }, None ), ( 'img', {}, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'src'
-    
-    string_converter = ClientParsing.StringConverter( transformations = [ ( ClientParsing.STRING_TRANSFORMATION_APPEND_TEXT, ':orig' ) ], example_string = 'https://pbs.twimg.com/media/DZoQ2SdXcAIrFkm.jpg' )
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_converter = string_converter )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = 'gfycat webm'
-    
-    tag_rules = [ ( 'video', {}, None ), ( 'source', {}, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'src'
-    
-    string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = '\\.webm$', example_string = 'https://giant.gfycat.com/HatefulBleakBluegill.webm' )
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_match = string_match )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = 'gfycat mp4'
-    
-    tag_rules = [ ( 'video', {}, None ), ( 'source', {}, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'src'
-    
-    string_match = ClientParsing.StringMatch( match_type = ClientParsing.STRING_MATCH_REGEX, match_value = '\\.mp4$', example_string = 'https://giant.gfycat.com/HatefulBleakBluegill.mp4' )
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch, string_match = string_match )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = 'imgur video'
-    
-    tag_rules = [ ( 'meta', { 'property' : 'og:video' }, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'content'
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    formula_name = 'imgur image'
-    
-    tag_rules = [ ( 'link', { 'rel' : 'image_src' }, None ) ]
-    content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE
-    attribute_to_fetch = 'href'
-    
-    formula = ClientParsing.ParseFormulaHTML( tag_rules = tag_rules, content_to_fetch = content_to_fetch, attribute_to_fetch = attribute_to_fetch )
-    
-    formulae.append( ( formula_name, formula ) )
-    
-    #
-    
-    return formulae
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientParsing.SimpleDownloaderParsingFormula, ) )
     
 def GetDefaultURLMatches():
     
-    url_match_dir = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
+    dir_path = os.path.join( HC.STATIC_DIR, 'default', 'url_classes' )
     
-    if not os.path.exists( url_match_dir ):
+    import ClientNetworkingDomain
+    
+    return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingDomain.URLMatch, ) )
+    
+def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
+    
+    if not os.path.exists( dir_path ):
         
         return []
         
     
-    url_matches = []
+    default_objects = []
     
-    import ClientNetworkingDomain
     import ClientSerialisable
     
-    for filename in os.listdir( url_match_dir ):
+    for filename in os.listdir( dir_path ):
         
-        path = os.path.join( url_match_dir, filename )
+        path = os.path.join( dir_path, filename )
         
         try:
             
@@ -958,9 +818,9 @@ def GetDefaultURLMatches():
             
             for obj in objs:
                 
-                if isinstance( obj, ClientNetworkingDomain.URLMatch ):
+                if isinstance( obj, allowed_object_types ):
                     
-                    url_matches.append( obj )
+                    default_objects.append( obj )
                     
                 
             
@@ -970,5 +830,5 @@ def GetDefaultURLMatches():
             
         
     
-    return url_matches
+    return default_objects
     

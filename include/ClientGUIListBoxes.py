@@ -4,12 +4,14 @@ import ClientData
 import ClientGUICommon
 import ClientGUIMenus
 import ClientSearch
+import ClientSerialisable
 import ClientTags
 import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
+import HydrusSerialisable
 import HydrusTags
 import os
 import wx
@@ -32,18 +34,22 @@ class AddEditDeleteListBox( wx.Panel ):
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )
         self._delete_button = ClientGUICommon.BetterButton( self, 'delete', self._Delete )
         
+        self._enabled_only_on_selection_buttons = []
+        
+        self._permitted_object_types = []
+        
         #
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        self._buttons_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        buttons_hbox.Add( self._delete_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._buttons_hbox.Add( self._add_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._buttons_hbox.Add( self._edit_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._buttons_hbox.Add( self._delete_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox.Add( self._listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._buttons_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -54,6 +60,8 @@ class AddEditDeleteListBox( wx.Panel ):
         self._listbox.SetInitialSize( ( width, height ) )
         
         #
+        
+        self._ShowHideButtons()
         
         self._listbox.Bind( wx.EVT_LISTBOX, self.EventSelection )
         self._listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventEdit )
@@ -69,11 +77,47 @@ class AddEditDeleteListBox( wx.Panel ):
             
         
     
+    def _AddAllDefaults( self, defaults_callable ):
+        
+        defaults = defaults_callable()
+        
+        for default in defaults:
+            
+            self._AddData( default )
+            
+        
+    
     def _AddData( self, data ):
+        
+        self._SetNoneDupeName( data )
         
         pretty_data = self._data_to_pretty_callable( data )
         
         self._listbox.Append( pretty_data, data )
+        
+    
+    def _AddSomeDefaults( self, defaults_callable ):
+        
+        defaults = defaults_callable()
+        
+        selected = False
+        
+        choice_tuples = [ ( self._data_to_pretty_callable( default ), default, selected ) for default in defaults ]
+        
+        import ClientGUIDialogs
+        
+        with ClientGUIDialogs.DialogCheckFromList( self, 'select the defaults to add', choice_tuples ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                defaults_to_add = dlg.GetChecked()
+                
+                for default in defaults_to_add:
+                    
+                    self._AddData( default )
+                    
+                
+            
         
     
     def _Delete( self ):
@@ -120,6 +164,8 @@ class AddEditDeleteListBox( wx.Panel ):
                 
                 self._listbox.Delete( i )
                 
+                self._SetNoneDupeName( new_data )
+                
                 pretty_new_data = self._data_to_pretty_callable( new_data )
                 
                 self._listbox.Insert( pretty_new_data, i, new_data )
@@ -133,6 +179,223 @@ class AddEditDeleteListBox( wx.Panel ):
         wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
         
     
+    def _Duplicate( self ):
+        
+        dupe_data = self._GetExportObject()
+        
+        if dupe_data is not None:
+            
+            dupe_data = dupe_data.Duplicate()
+            
+            self._ImportObject( dupe_data )
+            
+        
+    
+    def _ExportToClipboard( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            json = export_object.DumpToString()
+            
+            HG.client_controller.pub( 'clipboard', 'text', json )
+            
+        
+    
+    def _ExportToPng( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is not None:
+            
+            import ClientGUITopLevelWindows
+            import ClientGUISerialisable
+            
+            with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+                
+                panel = ClientGUISerialisable.PngExportPanel( dlg, export_object )
+                
+                dlg.SetPanel( panel )
+                
+                dlg.ShowModal()
+                
+            
+        
+    
+    def _ExportToPngs( self ):
+        
+        export_object = self._GetExportObject()
+        
+        if export_object is None:
+            
+            return
+            
+        
+        if not isinstance( export_object, HydrusSerialisable.SerialisableList ):
+            
+            self._ExportToPng()
+            
+            return
+            
+        
+        import ClientGUITopLevelWindows
+        import ClientGUISerialisable
+        
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+            
+            panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
+            
+            dlg.SetPanel( panel )
+            
+            dlg.ShowModal()
+            
+        
+        
+    
+    def _GetExportObject( self ):
+        
+        to_export = HydrusSerialisable.SerialisableList()
+        
+        for obj in self.GetData( only_selected = True ):
+            
+            to_export.append( obj )
+            
+        
+        if len( to_export ) == 0:
+            
+            return None
+            
+        elif len( to_export ) == 1:
+            
+            return to_export[0]
+            
+        else:
+            
+            return to_export
+            
+        
+    
+    def _ImportFromClipboard( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text )
+            
+            self._ImportObject( obj )
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+        
+    
+    def _ImportFromPng( self ):
+        
+        with wx.FileDialog( self, 'select the png or pngs with the encoded data', style = wx.FD_OPEN | wx.FD_MULTIPLE, wildcard = 'PNG (*.png)|*.png' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                for path in dlg.GetPaths():
+                    
+                    path = HydrusData.ToUnicode( path )
+                    
+                    try:
+                        
+                        payload = ClientSerialisable.LoadFromPng( path )
+                        
+                    except Exception as e:
+                        
+                        wx.MessageBox( HydrusData.ToUnicode( e ) )
+                        
+                        return
+                        
+                    
+                    try:
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                        
+                        self._ImportObject( obj )
+                        
+                    except:
+                        
+                        wx.MessageBox( 'I could not understand what was encoded in the png!' )
+                        
+                        return
+                        
+                    
+                
+            
+        
+    
+    def _ImportObject( self, obj ):
+        
+        bad_object_types = set()
+        
+        if isinstance( obj, HydrusSerialisable.SerialisableList ):
+            
+            for sub_obj in obj:
+                
+                self._ImportObject( sub_obj )
+                
+            
+        else:
+            
+            if isinstance( obj, self._permitted_object_types ):
+                
+                self._AddData( obj )
+                
+            else:
+                
+                bad_object_types.add( type( obj ).__name__ )
+                
+            
+        
+        if len( bad_object_types ) > 0:
+            
+            message = 'The imported objects included these types:'
+            message += os.linesep * 2
+            message += os.linesep.join( bad_object_types )
+            message += os.linesep * 2
+            message += 'Whereas this control only allows:'
+            message += os.linesep * 2
+            message += os.linesep.join( ( o.__name__ for o in self._permitted_object_types ) )
+            
+            wx.MessageBox( message )
+            
+        
+    
+    def _SetNoneDupeName( self, obj ):
+        
+        pass
+        
+    
+    def _ShowHideButtons( self ):
+        
+        if len( self._listbox.GetSelections() ) == 0:
+            
+            self._edit_button.Disable()
+            self._delete_button.Disable()
+            
+            for button in self._enabled_only_on_selection_buttons:
+                
+                button.Disable()
+                
+            
+        else:
+            
+            self._edit_button.Enable()
+            self._delete_button.Enable()
+            
+            for button in self._enabled_only_on_selection_buttons:
+                
+                button.Enable()
+                
+            
+        
+    
     def AddDatas( self, datas ):
         
         for data in datas:
@@ -141,6 +404,61 @@ class AddEditDeleteListBox( wx.Panel ):
             
         
         wx.QueueEvent( self.GetEventHandler(), ListBoxEvent( -1 ) )
+        
+    
+    def AddDefaultsButton( self, defaults_callable ):
+        
+        import_menu_items = []
+        
+        all_call = HydrusData.Call( self._AddAllDefaults, defaults_callable )
+        some_call = HydrusData.Call( self._AddSomeDefaults, defaults_callable )
+        
+        import_menu_items.append( ( 'normal', 'add them all', 'Load all the defaults.', all_call ) )
+        import_menu_items.append( ( 'normal', 'select from a list', 'Load some of the defaults.', some_call ) )
+        
+        button = ClientGUICommon.MenuButton( self, 'add defaults', import_menu_items )
+        
+        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        
+    
+    def AddImportExportButtons( self, permitted_object_types ):
+        
+        self._permitted_object_types = permitted_object_types
+        
+        export_menu_items = []
+        
+        export_menu_items.append( ( 'normal', 'to clipboard', 'Serialise the selected data and put it on your clipboard.', self._ExportToClipboard ) )
+        export_menu_items.append( ( 'normal', 'to png', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPng ) )
+        
+        all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
+        
+        if all_objs_are_named:
+            
+            export_menu_items.append( ( 'normal', 'to pngs', 'Serialise the selected data and encode it to multiple image files you can easily share with other hydrus users.', self._ExportToPngs ) )
+            
+        
+        import_menu_items = []
+        
+        import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
+        import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        
+        button = ClientGUICommon.MenuButton( self, 'export', export_menu_items )
+        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        self._enabled_only_on_selection_buttons.append( button )
+        
+        button = ClientGUICommon.MenuButton( self, 'import', import_menu_items )
+        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        
+        button = ClientGUICommon.BetterButton( self, 'duplicate', self._Duplicate )
+        self._buttons_hbox.Add( button, CC.FLAGS_VCENTER )
+        self._enabled_only_on_selection_buttons.append( button )
+        
+        self._ShowHideButtons()
+        
+    
+    def AddSeparator( self ):
+        
+        self._buttons_hbox.Add( ( 20, 20 ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
     
     def Bind( self, event, handler ):
@@ -155,16 +473,7 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def EventSelection( self, event ):
         
-        if len( self._listbox.GetSelections() ) == 0:
-            
-            self._edit_button.Disable()
-            self._delete_button.Disable()
-            
-        else:
-            
-            self._edit_button.Enable()
-            self._delete_button.Enable()
-            
+        self._ShowHideButtons()
         
         event.Skip()
         
@@ -180,6 +489,11 @@ class AddEditDeleteListBox( wx.Panel ):
         
         for i in range( self._listbox.GetCount() ):
             
+            if only_selected and not self._listbox.IsSelected( i ):
+                
+                continue
+                
+            
             data = self._listbox.GetClientData( i )
             
             datas.append( data )
@@ -191,6 +505,15 @@ class AddEditDeleteListBox( wx.Panel ):
     def GetValue( self ):
         
         return self.GetData()
+        
+    
+class AddEditDeleteListBoxUniqueNamedObjects( AddEditDeleteListBox ):
+    
+    def _SetNoneDupeName( self, obj ):
+        
+        disallowed_names = { o.GetName() for o in self.GetData() }
+        
+        HydrusSerialisable.SetNonDupeName( obj, disallowed_names )
         
     
 class QueueListBox( wx.Panel ):

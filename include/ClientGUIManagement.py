@@ -106,6 +106,10 @@ def CreateManagementControllerImportSimpleDownloader():
     
     simple_downloader_import = ClientImporting.SimpleDownloaderImport()
     
+    formula_name = HG.client_controller.new_options.GetString( 'favourite_simple_downloader_formula' )
+    
+    simple_downloader_import.SetFormulaName( formula_name )
+    
     management_controller.SetVariable( 'simple_downloader_import', simple_downloader_import )
     
     return management_controller
@@ -1777,6 +1781,10 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
+        self._simple_downloader_import = self._management_controller.GetVariable( 'simple_downloader_import' )
+        
+        #
+        
         self._simple_downloader_panel = ClientGUICommon.StaticBox( self, 'simple downloader' )
         
         #
@@ -1823,8 +1831,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._formula_cog = ClientGUICommon.MenuBitmapButton( self._pending_jobs_panel, CC.GlobalBMPs.cog, menu_items )
         
         self._RefreshFormulae()
-        
-        self._simple_downloader_import = self._management_controller.GetVariable( 'simple_downloader_import' )
         
         file_import_options = self._simple_downloader_import.GetFileImportOptions()
         
@@ -1882,6 +1888,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         #
         
+        self._formulae.Bind( wx.EVT_CHOICE, self.EventFormulaChanged )
+        
         seed_cache = self._simple_downloader_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
@@ -1896,20 +1904,22 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         def data_to_pretty_callable( data ):
             
-            ( formula_name, formula ) = data
+            simple_downloader_formula = data
             
-            return formula_name
+            return simple_downloader_formula.GetName()
             
         
         def edit_callable( data ):
             
-            ( formula_name, formula ) = data
+            simple_downloader_formula = data
             
-            with ClientGUIDialogs.DialogTextEntry( dlg, 'edit name', default = formula_name ) as dlg_2:
+            name = simple_downloader_formula.GetName()
+            
+            with ClientGUIDialogs.DialogTextEntry( dlg, 'edit name', default = name ) as dlg_2:
                 
                 if dlg_2.ShowModal() == wx.ID_OK:
                     
-                    formula_name = dlg_2.GetValue()
+                    name = dlg_2.GetValue()
                     
                 else:
                     
@@ -1921,6 +1931,8 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_3 )
                 
+                formula = simple_downloader_formula.GetFormula()
+                
                 control = ClientGUIParsing.EditFormulaPanel( panel, formula, lambda: ( {}, '' ) )
                 
                 panel.SetControl( control )
@@ -1931,9 +1943,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
                     
                     formula = control.GetValue()
                     
-                    data = ( formula_name, formula )
+                    simple_downloader_formula = ClientParsing.SimpleDownloaderParsingFormula( name = name, formula = formula )
                     
-                    return ( True, data )
+                    return ( True, simple_downloader_formula )
                     
                 else:
                     
@@ -1944,18 +1956,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         def add_callable():
             
-            formula_name = 'new formula'
-            
-            formula = ClientParsing.ParseFormulaHTML()
-            
-            data = ( formula_name, formula )
+            data = ClientParsing.SimpleDownloaderParsingFormula()
             
             return edit_callable( data )
             
         
         formulae = list( self._controller.new_options.GetSimpleDownloaderFormulae() )
         
-        formulae.sort()
+        formulae.sort( key = lambda o: o.GetName() )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit simple downloader formulae' ) as dlg:
             
@@ -1963,7 +1971,12 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             height_num_chars = 20
             
-            control = ClientGUIListBoxes.AddEditDeleteListBox( panel, height_num_chars, data_to_pretty_callable, add_callable, edit_callable )
+            control = ClientGUIListBoxes.AddEditDeleteListBoxUniqueNamedObjects( panel, height_num_chars, data_to_pretty_callable, add_callable, edit_callable )
+            
+            control.AddSeparator()
+            control.AddImportExportButtons( ( ClientParsing.SimpleDownloaderParsingFormula, ) )
+            control.AddSeparator()
+            control.AddDefaultsButton( ClientDefaults.GetDefaultSimpleDownloaderFormulae )
             
             control.AddDatas( formulae )
             
@@ -1986,13 +1999,11 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         urls = [ url for url in urls if url.startswith( 'http' ) ]
         
-        ( formula_name, formula ) = self._formulae.GetChoice()
-        
-        self._controller.new_options.SetString( 'favourite_simple_downloader_formula', formula_name )
+        simple_downloader_formula = self._formulae.GetChoice()
         
         for url in urls:
             
-            job = ( url, formula_name, formula )
+            job = ( url, simple_downloader_formula )
             
             self._simple_downloader_import.PendJob( job )
             
@@ -2004,26 +2015,29 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._formulae.Clear()
         
-        favourite = None
-        favourite_name = self._controller.new_options.GetString( 'favourite_simple_downloader_formula' )
+        to_select = None
         
-        formulae = list( self._controller.new_options.GetSimpleDownloaderFormulae() )
+        select_name = self._simple_downloader_import.GetFormulaName()
         
-        formulae.sort()
+        simple_downloader_formulae = list( self._controller.new_options.GetSimpleDownloaderFormulae() )
         
-        for ( i, ( formula_name, formula ) ) in enumerate( formulae ):
+        simple_downloader_formulae.sort( key = lambda o: o.GetName() )
+        
+        for ( i, simple_downloader_formula ) in enumerate( simple_downloader_formulae ):
             
-            self._formulae.Append( formula_name, ( formula_name, formula ) )
+            name = simple_downloader_formula.GetName()
             
-            if formula_name == favourite_name:
+            self._formulae.Append( name, simple_downloader_formula )
+            
+            if name == select_name:
                 
-                favourite = i
+                to_select = i
                 
             
         
-        if favourite is not None:
+        if to_select is not None:
             
-            self._formulae.Select( favourite )
+            self._formulae.Select( to_select )
             
         
     
@@ -2055,9 +2069,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             for job in pending_jobs:
                 
-                ( url, formula_name, formula ) = job
+                ( url, simple_downloader_formula ) = job
                 
-                pretty_job = formula_name + ': ' + url
+                pretty_job = simple_downloader_formula.GetName() + ': ' + url
                 
                 self._pending_jobs_listbox.Append( pretty_job, job )
                 
@@ -2143,6 +2157,18 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             self._UpdateStatus()
             
+        
+    
+    def EventFormulaChanged( self, event ):
+        
+        formula = self._formulae.GetChoice()
+        
+        formula_name = formula.GetName()
+        
+        self._simple_downloader_import.SetFormulaName( formula_name )
+        self._controller.new_options.SetString( 'favourite_simple_downloader_formula', formula_name )
+        
+        event.Skip()
         
     
     def EventPauseQueue( self, event ):

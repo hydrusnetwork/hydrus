@@ -76,6 +76,8 @@ SERIALISABLE_TYPE_PAGE_PARSER = 58
 SERIALISABLE_TYPE_PARSE_FORMULA_COMPOUND = 59
 SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE = 60
 SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR = 61
+SERIALISABLE_TYPE_PARSE_RULE_HTML = 62
+SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA = 63
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
@@ -124,6 +126,27 @@ def CreateFromSerialisableTuple( obj_tuple ):
     
     return obj
     
+def GetNonDupeName( original_name, disallowed_names ):
+    
+    i = 1
+    
+    non_dupe_name = original_name
+    
+    while non_dupe_name in disallowed_names:
+        
+        non_dupe_name = original_name + ' (' + str( i ) + ')'
+        
+        i += 1
+        
+    
+    return non_dupe_name
+    
+def SetNonDupeName( obj, disallowed_names ):
+    
+    non_dupe_name = GetNonDupeName( obj.GetName(), disallowed_names )
+    
+    obj.SetName( non_dupe_name )
+
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
@@ -202,19 +225,7 @@ class SerialisableBaseNamed( SerialisableBase ):
     
     def SetNonDupeName( self, disallowed_names ):
         
-        i = 1
-        
-        new_name = self._name
-        original_name = self._name
-        
-        while new_name in disallowed_names:
-            
-            new_name = original_name + ' (' + str( i ) + ')'
-            
-            i += 1
-            
-        
-        self._name = new_name
+        self._name = GetNonDupeName( self._name, disallowed_names )
         
     
 class SerialisableDictionary( SerialisableBase, dict ):

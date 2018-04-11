@@ -11,6 +11,7 @@ import HydrusSerialisable
 import HydrusThreading
 import ClientConstants as CC
 import random
+import threading
 import time
 import wx
 
@@ -315,7 +316,108 @@ def DAEMONSynchroniseRepositories( controller ):
         
     
 
+class SubscriptionJob( object ):
+    
+    def __init__( self, controller, name ):
+        
+        self._controller = controller
+        self._name = name
+        self._job_done = threading.Event()
+        
+    
+    def _DoWork( self ):
+        
+        if HG.subscription_report_mode:
+            
+            HydrusData.ShowText( 'Subscription "' + self._name + '" about to start.' )
+            
+        
+        subscription = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, self._name )
+        
+        subscription.Sync()
+        
+    
+    def IsDone( self ):
+        
+        return self._job_done.is_set()
+        
+    
+    def Work( self ):
+        
+        try:
+            
+            self._DoWork()
+            
+        finally:
+            
+            self._job_done.set()
+            
+        
+    
 def DAEMONSynchroniseSubscriptions( controller ):
+    
+    def filter_finished_jobs( subs_jobs ):
+        
+        done_indices = [ i for ( i, ( thread, job ) ) in enumerate( subs_jobs ) if job.IsDone() ]
+        
+        done_indices.reverse()
+        
+        for i in done_indices:
+            
+            del subs_jobs[ i ]
+            
+        
+    
+    def wait_for_free_slot( controller, subs_jobs, max_simultaneous_subscriptions ):
+        
+        while True:
+            
+            p1 = controller.options[ 'pause_subs_sync' ]
+            p2 = HydrusThreading.IsThreadShuttingDown()
+            
+            if p1 or p2:
+                
+                if HG.subscription_report_mode:
+                    
+                    HydrusData.ShowText( 'Subscriptions cancelling. Global sub pause is ' + str( p1 ) + ' and sub daemon thread shutdown status is ' + str( p2 ) + '.' )
+                    
+                
+                if p2:
+                    
+                    for ( thread, job ) in subs_jobs:
+                        
+                        HydrusThreading.ShutdownThread( thread )
+                        
+                    
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            filter_finished_jobs( subs_jobs )
+            
+            time.sleep( 1.0 )
+            
+            if len( subs_jobs ) < max_simultaneous_subscriptions:
+                
+                return
+                
+            
+        
+    
+    def wait_for_all_finished( subs_jobs ):
+        
+        while True:
+            
+            filter_finished_jobs( subs_jobs )
+            
+            if len( subs_jobs ) == 0:
+                
+                return
+                
+            
+            time.sleep( 1.0 )
+            
+        
     
     if HG.subscription_report_mode:
         
@@ -335,27 +437,33 @@ def DAEMONSynchroniseSubscriptions( controller ):
     
     HG.subscriptions_running = True
     
+    subs_jobs = []
+    
     try:
         
         for name in subscription_names:
             
-            p1 = controller.options[ 'pause_subs_sync' ]
-            p2 = HydrusThreading.IsThreadShuttingDown()
+            max_simultaneous_subscriptions = controller.new_options.GetInteger( 'max_simultaneous_subscriptions' )
             
-            if HG.subscription_report_mode:
+            try:
                 
-                HydrusData.ShowText( 'Subscription "' + name + '" about to start. Global sub pause is ' + str( p1 ) + ' and thread shutdown status is ' + str( p2 ) + '.' )
+                wait_for_free_slot( controller, subs_jobs, max_simultaneous_subscriptions )
                 
-            
-            if p1 or p2:
+            except HydrusExceptions.CancelledException:
                 
-                return
+                break
                 
             
-            subscription = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+            job = SubscriptionJob( controller, name )
             
-            subscription.Sync()
+            thread = threading.Thread( target = job.Work, name = 'subscription thread' )
             
+            thread.start()
+            
+            subs_jobs.append( ( thread, job ) )
+            
+        
+        wait_for_all_finished( subs_jobs )
         
     finally:
         

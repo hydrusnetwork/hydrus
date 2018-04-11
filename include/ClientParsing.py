@@ -14,6 +14,26 @@ import re
 import time
 import urlparse
 
+try:
+    
+    import html5lib
+    
+    HTML5LIB_IS_OK = True
+    
+except ImportError:
+    
+    HTML5LIB_IS_OK = False
+    
+try:
+    
+    import lxml
+    
+    LXML_IS_OK = True
+    
+except ImportError:
+    
+    LXML_IS_OK = False
+    
 def ConvertParseResultToPrettyString( result ):
     
     ( ( name, content_type, additional_info ), parsed_text ) = result
@@ -207,6 +227,25 @@ def GetHashesFromParseResults( results ):
     
     return hash_results
     
+def GetSoup( html ):
+    
+    if HTML5LIB_IS_OK:
+        
+        parser = 'html5lib'
+        
+    elif LXML_IS_OK:
+        
+        parser = 'lxml'
+        
+    else:
+        
+        message = 'This client does not have access to either lxml or html5lib, and so it cannot parse html. Please install one of these parsing libraries and restart the client.'
+        
+        raise HydrusExceptions.ParseException( message )
+        
+    
+    return bs4.BeautifulSoup( html, parser )
+    
 def GetTagsFromParseResults( results ):
     
     tag_results = []
@@ -356,30 +395,6 @@ def RenderJSONParseRule( parse_rule ):
     else:
         
         s = 'get the "' + HydrusData.ToUnicode( parse_rule ) + '" entry'
-        
-    
-    return s
-    
-def RenderHTMLTagRule( ( name, attrs, index ) ):
-    
-    s = ''
-    
-    if index is None:
-        
-        s += 'get every'
-        
-    else:
-        
-        num = index + 1
-        
-        s += 'get the ' + HydrusData.ConvertIntToPrettyOrdinalString( num )
-        
-    
-    s += ' <' + name + '> tag'
-    
-    if len( attrs ) > 0:
-        
-        s += ' with attributes ' + ', '.join( key + '=' + value for ( key, value ) in attrs.items() )
         
     
     return s
@@ -676,7 +691,7 @@ class ParseFormulaHTML( ParseFormula ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML
     SERIALISABLE_NAME = 'HTML Parsing Formula'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self, tag_rules = None, content_to_fetch = None, attribute_to_fetch = None, string_match = None, string_converter = None ):
         
@@ -684,7 +699,9 @@ class ParseFormulaHTML( ParseFormula ):
         
         if tag_rules is None:
             
-            tag_rules = [ ( 'a', {}, None ) ]
+            tag_rules = HydrusSerialisable.SerialisableList()
+            
+            tag_rules.append( ParseRuleHTML() )
             
         
         if content_to_fetch is None:
@@ -697,7 +714,7 @@ class ParseFormulaHTML( ParseFormula ):
             attribute_to_fetch = 'href'
             
         
-        self._tag_rules = tag_rules
+        self._tag_rules = HydrusSerialisable.SerialisableList( tag_rules )
         
         self._content_to_fetch = content_to_fetch
         
@@ -708,30 +725,9 @@ class ParseFormulaHTML( ParseFormula ):
         
         tags = ( root, )
         
-        for ( name, attrs, index ) in self._tag_rules:
+        for tag_rule in self._tag_rules:
             
-            next_tags = []
-            
-            for tag in tags:
-                
-                found_tags = tag.find_all( name = name, attrs = attrs )
-                
-                if index is not None:
-                    
-                    if len( found_tags ) < index + 1:
-                        
-                        found_tags = []
-                        
-                    else:
-                        
-                        found_tags = [ found_tags[ index ] ]
-                        
-                    
-                
-                next_tags.extend( found_tags )
-                
-            
-            tags = next_tags
+            tags = tag_rule.GetNodes( tags )
             
         
         return tags
@@ -828,15 +824,19 @@ class ParseFormulaHTML( ParseFormula ):
     
     def _GetSerialisableInfo( self ):
         
+        serialisable_tag_rules = self._tag_rules.GetSerialisableTuple()
+        
         serialisable_string_match = self._string_match.GetSerialisableTuple()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        return ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
+        return ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = serialisable_info
+        
+        self._tag_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_rules )
         
         self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match )
         self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter )
@@ -846,7 +846,7 @@ class ParseFormulaHTML( ParseFormula ):
         
         try:
             
-            root = bs4.BeautifulSoup( data, 'lxml' )
+            root = GetSoup( data )
             
         except Exception as e:
             
@@ -950,6 +950,26 @@ class ParseFormulaHTML( ParseFormula ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
+            
+            new_tag_rules = HydrusSerialisable.SerialisableList()
+            
+            for ( name, attrs, index ) in tag_rules:
+                
+                tag_rule = ParseRuleHTML( rule_type = HTML_RULE_TYPE_DESCENDING, tag_name = name, tag_attributes = attrs, tag_index = index )
+                
+                new_tag_rules.append( tag_rule )
+                
+            
+            serialisable_new_tag_rules = new_tag_rules.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_new_tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_match, serialisable_string_converter )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def ParsesSeparatedContent( self ):
         
@@ -963,7 +983,7 @@ class ParseFormulaHTML( ParseFormula ):
     
     def ToPrettyMultilineString( self ):
         
-        pretty_strings = [ RenderHTMLTagRule( t_r ) for t_r in self._tag_rules ]
+        pretty_strings = [ t_r.ToString() for t_r in self._tag_rules ]
         
         if self._content_to_fetch == HTML_CONTENT_ATTRIBUTE:
             
@@ -993,6 +1013,184 @@ class ParseFormulaHTML( ParseFormula ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML ] = ParseFormulaHTML
+
+HTML_RULE_TYPE_DESCENDING = 0
+HTML_RULE_TYPE_ASCENDING = 1
+
+class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML
+    SERIALISABLE_NAME = 'HTML Parsing Rule'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, rule_type = None, tag_name = None, tag_attributes = None, tag_index = None, tag_depth = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if rule_type is None:
+            
+            rule_type = HTML_RULE_TYPE_DESCENDING
+            
+            if tag_name is None:
+                
+                tag_name = 'a'
+                
+            
+        
+        if rule_type == HTML_RULE_TYPE_DESCENDING:
+            
+            if tag_attributes is None:
+                
+                tag_attributes = {}
+                
+            
+        elif rule_type == HTML_RULE_TYPE_ASCENDING:
+            
+            if tag_depth is None:
+                
+                tag_depth = 1
+                
+            
+        
+        self._rule_type = rule_type
+        self._tag_name = tag_name
+        self._tag_attributes = tag_attributes
+        self._tag_index = tag_index
+        self._tag_depth = tag_depth
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth ) = serialisable_info
+        
+    
+    def GetNodes( self, nodes ):
+        
+        new_nodes = []
+        
+        for node in nodes:
+            
+            if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+                
+                kwargs = { 'attrs' : self._tag_attributes }
+                
+                if self._tag_name is not None:
+                    
+                    kwargs[ 'name' ] = self._tag_name
+                    
+                
+                found_nodes = node.find_all( **kwargs )
+                
+                if self._tag_index is not None:
+                    
+                    if len( found_nodes ) < self._tag_index + 1:
+                        
+                        found_nodes = []
+                        
+                    else:
+                        
+                        found_nodes = [ found_nodes[ self._tag_index ] ]
+                        
+                    
+                
+            elif self._rule_type == HTML_RULE_TYPE_ASCENDING:
+                
+                found_nodes = []
+                
+                still_in_tree = lambda node: isinstance( node, bs4.element.Tag ) # if we go one above html, we get the BS document itself
+                
+                num_found = 0
+                
+                potential_parent = node.parent
+                
+                while still_in_tree( potential_parent ):
+                    
+                    if self._tag_name is None:
+                        
+                        num_found += 1
+                        
+                    else:
+                        
+                        if potential_parent.name == self._tag_name:
+                            
+                            num_found += 1
+                            
+                        
+                    
+                    if num_found == self._tag_depth:
+                        
+                        found_nodes = [ potential_parent ]
+                        
+                        break
+                        
+                    
+                    potential_parent = potential_parent.parent
+                    
+                
+            
+            new_nodes.extend( found_nodes )
+            
+        
+        return new_nodes
+        
+    
+    def ToString( self ):
+        
+        if self._rule_type == HTML_RULE_TYPE_DESCENDING:
+            
+            s = 'search descendents for'
+            
+            if self._tag_index is None:
+                
+                s += ' every'
+                
+            else:
+                
+                num = self._tag_index + 1
+                
+                s += ' the ' + HydrusData.ConvertIntToPrettyOrdinalString( num )
+                
+            
+            if self._tag_name is not None:
+                
+                s += ' <' + self._tag_name + '>'
+                
+            
+            s += ' tag'
+            
+            if len( self._tag_attributes ) > 0:
+                
+                s += ' with attributes ' + ', '.join( key + '=' + value for ( key, value ) in self._tag_attributes.items() )
+                
+            
+        elif self._rule_type == HTML_RULE_TYPE_ASCENDING:
+            
+            s = 'walk back up ancestors'
+            
+            if self._tag_name is None:
+                
+                s += ' ' + HydrusData.ConvertIntToPrettyString( self._tag_depth ) + ' tag levels'
+                
+            else:
+                
+                s += ' to the ' + HydrusData.ConvertIntToPrettyOrdinalString( self._tag_depth ) + ' <' + self._tag_name + '> tag'
+                
+            
+        
+        return s
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML ] = ParseRuleHTML
 
 JSON_CONTENT_STRING = 0
 JSON_CONTENT_JSON = 1
@@ -1184,6 +1382,50 @@ class ParseFormulaJSON( ParseFormula ):
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON ] = ParseFormulaJSON
+
+class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA
+    SERIALISABLE_NAME = 'Simple Downloader Parsing Formula'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, name = None, formula = None ):
+        
+        if name is None:
+            
+            name = 'new parsing formula'
+            
+        
+        if formula is None:
+            
+            formula = ParseFormulaHTML()
+            
+        
+        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        
+        self._formula = formula
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_formula = self._formula.GetSerialisableTuple()
+        
+        return serialisable_formula
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        serialisable_formula = serialisable_info
+        
+        self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
+        
+    
+    def GetFormula( self ):
+        
+        return self._formula
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA ] = SimpleDownloaderParsingFormula
 
 class ContentParser( HydrusSerialisable.SerialisableBase ):
     
@@ -1464,6 +1706,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             return ( 2, new_serialisable_info )
             
         
+    
     def GetContentParsers( self ):
         
         return ( self._sub_page_parsers, self._content_parsers )
@@ -2304,6 +2547,14 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         elif transformation_type == STRING_TRANSFORMATION_REGEX_SUB:
             
             return 'regex substitution: ' + HydrusData.ToUnicode( data )
+            
+        elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
+            
+            return 'date decode: ' + repr( data )
+            
+        else:
+            
+            return 'unknown transformation'
             
         
     
