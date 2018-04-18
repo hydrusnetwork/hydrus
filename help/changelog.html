@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 303</h3></li>
+				<ul>
+					<li>file post url classes can now be linked to parsers!</li>
+					<li>the 'raw url' downloader is now just the 'url' downloader. if a dropped url is matched as a 'file post' url and links to a parser, it will download it with that parser and default tag import options</li>
+					<li>url drag and drop now recognises file post urls that have linked parsers and will send them on to a url import page, just like 'raw' urls! they will use the new parsing system to parse tags and known urls and all that</li>
+					<li>wrote a way for the new download system to store and edit default tag import options--this can now be found under network->manage default tag import options, although it does not do much yet. eventually the old options will be transferred here, and the different downloaders will consult it more</li>
+					<li>refactored and cleaned up how some default tag import option calculation is done</li>
+					<li>the fixed 5 second wait time between gallery page fetches is now editable for downloader pages and subscriptions under options->downloading. subscriptions default remains 5s, gallery default is now 15s</li>
+					<li>the gallery downloader will present its 'x urls found so far' string in a more uniform and reactive way. it will also count down until the next page fetch</li>
+					<li>subscriptions will now similarly react quicker while the gallery parse step is ongoing, and it will count down to the next page fetch</li>
+					<li>the manage subscriptions dialog will now note in BIG RED TEXT if subscriptions are currently globally paused</li>
+					<li>subscriptions now consume less parallel-timeslot overhead, meaning they sync much faster when they have no work to do (which is most of the time)</li>
+					<li>separating subscriptions is now more sophisticated--if you wish, you can now choose just to separate a subset of the large subs's queries, and if you do so, you can decide whether to merge the extracted subs into a new larger sub or just have them as individuals. also, you will be asked for name/base_name for what to name the new subs</li>
+					<li>since separating subs is more complicated, the button is only enabled when a single large sub is selected. please do your separating one sub at a time!</li>
+					<li>merging subs will now ask if you want to rename the merged subs as it goes</li>
+					<li>refactored a giant heap of duplicate import code into single locations in the new file import object--things like applying tags and generating pre-import status are all now done in one place. a number of weird behaviours (like not applying known url associations in certain circumstances) should now be a lot better and unified</li>
+					<li>the way the db and other import testers handle whether a pending import is new or unknown is simplified</li>
+					<li>optimised the way the importers figure out whether to display a new import</li>
+					<li>the 'has the client seen this url before?' test used to figure out whether to download a file now explicitly ignores anything it isn't certain is a single-file File URL or Post URL (according to current url classes). associating 'gallery' known urls is no longer catastrophic to this system</li>
+					<li>the simple downloader now associates the entered url with the files subsequently imported</li>
+					<li>file import objects working in the new parsing system are aware of the new 'should this url be associated' option and will be given gallery urls to hold on to as appropriate</li>
+					<li>url classes now have an explicit option as to whether they should be associated with files imported from them, which is not appropriate for dynamic CDN File URLs but is appropriate for multi-image tweet links (which will likely be Gallery URLs in the new system), for instance</li>
+					<li>general importer code cleanup across the board</li>
+					<li>threw together some early ui to show current jobs in the network engine under network->review network jobs</li>
+					<li>popup messages will now try to set a max width of roughly 56 characters wide rather than 400 pixels. this value is editable under options->gui</li>
+					<li>updated the listctrl in the export files frame and the way this frame generates and stores export filenames. let's see if linux users who had crashes with this have better luck</li>
+					<li>refactored stuff out of the bloated ClientImporting file into seperate new files</li>
+					<li>refactored client network bandwidth and session code out to their own files as well</li>
+					<li>refactored client network objects to its own file</li>
+					<li>cleaned up some open externally debug code linked to callto report mode</li>
+					<li>a common grid layout used across the program will copy control tooltips to the string on the left</li>
+					<li>removed the 'downloader' network context type, which was never fully introduced and wasn't turning out to offer much in the new bandwidth tracking system</li>
+				</ul>
 				<li><h3>version 302</h3></li>
 				<ul>
 					<li>improved how simple downloader parsing formulae are stored and passed around</li>
