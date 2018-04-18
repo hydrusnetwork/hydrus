@@ -4,6 +4,7 @@ import ClientData
 import ClientDefaults
 import ClientDownloading
 import ClientImporting
+import ClientImportOptions
 import ClientMedia
 import ClientRatings
 import ClientSearch
@@ -493,8 +494,8 @@ class TestSerialisables( unittest.TestCase ):
         periodic_file_limit = 50
         paused = False
         
-        file_import_options = ClientImporting.FileImportOptions()
-        tag_import_options = ClientImporting.TagImportOptions( service_keys_to_namespaces = { HydrusData.GenerateKey() : { 'series', '' } }, service_keys_to_additional_tags = { HydrusData.GenerateKey() : { 'test additional tag', 'and another' } } )
+        file_import_options = ClientImportOptions.FileImportOptions()
+        tag_import_options = ClientImportOptions.TagImportOptions( service_keys_to_namespaces = { HydrusData.GenerateKey() : { 'series', '' } }, service_keys_to_additional_tags = { HydrusData.GenerateKey() : { 'test additional tag', 'and another' } } )
         
         no_work_until = HydrusData.GetNow() - 86400 * 20
         

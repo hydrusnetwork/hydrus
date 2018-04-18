@@ -25,7 +25,7 @@ class TestDaemons( unittest.TestCase ):
         
         try:
             
-            HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_NEW, None, '' ) )
+            HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
             
             HydrusPaths.MakeSureDirectoryExists( test_dir )
             

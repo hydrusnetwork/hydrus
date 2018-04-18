@@ -18,8 +18,10 @@ import ClientDefaults
 import ClientGUICommon
 import ClientGUIMenus
 import ClientNetworking
+import ClientNetworkingBandwidth
 import ClientNetworkingDomain
 import ClientNetworkingLogin
+import ClientNetworkingSessions
 import ClientThreading
 import hashlib
 import HydrusConstants as HC
@@ -555,7 +557,7 @@ class Controller( HydrusController.HydrusController ):
         
         if bandwidth_manager is None:
             
-            bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
             ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
             
@@ -568,7 +570,7 @@ class Controller( HydrusController.HydrusController ):
         
         if session_manager is None:
             
-            session_manager = ClientNetworking.NetworkSessionManager()
+            session_manager = ClientNetworkingSessions.NetworkSessionManager()
             
             session_manager._dirty = True
             

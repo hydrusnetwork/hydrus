@@ -1,6 +1,7 @@
 import ClientConstants as CC
 import ClientData
 import ClientImporting
+import ClientImportOptions
 import HydrusConstants as HC
 import HydrusExceptions
 import os
@@ -177,7 +178,7 @@ class TestData( unittest.TestCase ):
     
     def test_file_import_options( self ):
         
-        file_import_options = ClientImporting.FileImportOptions()
+        file_import_options = ClientImportOptions.FileImportOptions()
         
         exclude_deleted = False
         allow_decompression_bombs = False

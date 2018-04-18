@@ -15,7 +15,8 @@ import ClientGUISeedCache
 import ClientGUISerialisable
 import ClientGUITime
 import ClientGUITopLevelWindows
-import ClientNetworking
+import ClientImportOptions
+import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientParsing
 import ClientSerialisable
@@ -152,13 +153,22 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, bandwidth_rules ):
+    def __init__( self, parent, bandwidth_rules, summary = '' ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._bandwidth_rules_ctrl = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        if summary != '':
+            
+            st = ClientGUICommon.BetterStaticText( self, summary )
+            
+            st.Wrap( 250 )
+            
+            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         vbox.Add( self._bandwidth_rules_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -300,6 +310,176 @@ class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
         expires = self._expires
         
         return ( name, value, domain, path, expires )
+        
+    
+class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, url_matches, parsers, url_match_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._url_matches = url_matches
+        self._parsers = parsers
+        self._url_match_keys_to_parser_keys = url_match_keys_to_parser_keys
+        self._parser_keys_to_parsers = { parser.GetParserKey() : parser for parser in self._parsers }
+        
+        self._url_match_keys_to_tag_import_options = dict( url_match_keys_to_tag_import_options )
+        
+        #
+        
+        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [ 'all namespaces' ], file_post_default_tag_import_options )
+        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [ 'all namespaces' ], watchable_default_tag_import_options )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'default_tag_import_options', 15, 36, [ ( 'url class', -1 ), ( 'url type', 12 ), ( 'defaults set?', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
+        
+        #
+        
+        eligible_url_matches = [ url_match for url_match in url_matches if url_match.GetURLType() in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and url_match.GetMatchKey() in self._url_match_keys_to_parser_keys ]
+        
+        self._list_ctrl.AddDatas( eligible_url_matches )
+        
+        self._list_ctrl.Sort( 1 )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'default for file posts: ', self._file_post_default_tag_import_options_button ) )
+        rows.append( ( 'default for watchable urls: ', self._watchable_default_tag_import_options_button ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+    
+    def _ConvertDataToListCtrlTuples( self, url_match ):
+        
+        url_match_key = url_match.GetMatchKey()
+        
+        name = url_match.GetName()
+        url_type = url_match.GetURLType()
+        defaults_set = url_match_key in self._url_match_keys_to_tag_import_options
+        
+        pretty_name = name
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
+        
+        if defaults_set:
+            
+            pretty_default_set = 'yes'
+            
+        else:
+            
+            pretty_default_set = ''
+            
+        
+        display_tuple = ( pretty_name, pretty_url_type, pretty_default_set )
+        sort_tuple = ( name, pretty_url_type, defaults_set )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _Clear( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Clear default tag import options for all selected?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                url_matches_to_clear = self._list_ctrl.GetData( only_selected = True )
+                
+                for url_match in url_matches_to_clear:
+                    
+                    url_match_key = url_match.GetMatchKey()
+                    
+                    if url_match_key in self._url_match_keys_to_tag_import_options:
+                        
+                        del self._url_match_keys_to_tag_import_options[ url_match_key ]
+                        
+                    
+                
+                self._list_ctrl.UpdateDatas( url_matches_to_clear )
+                
+            
+        
+    
+    def _Edit( self ):
+        
+        url_matches_to_edit = self._list_ctrl.GetData( only_selected = True )
+        
+        for url_match in url_matches_to_edit:
+            
+            with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+                
+                ( namespaces, tag_import_options ) = self._GetNamespacesAndDefaultTagImportOptions( url_match )
+                
+                panel = EditTagImportOptionsPanel( dlg, namespaces, tag_import_options )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    url_match_key = url_match.GetMatchKey()
+                    
+                    tag_import_options = panel.GetValue()
+                    
+                    self._url_match_keys_to_tag_import_options[ url_match_key ] = tag_import_options
+                    
+                else:
+                    
+                    break
+                    
+                
+            
+        
+        self._list_ctrl.UpdateDatas( url_matches_to_edit )
+        
+    
+    def _GetNamespacesAndDefaultTagImportOptions( self, url_match ):
+        
+        parser_key = self._url_match_keys_to_parser_keys[ url_match.GetMatchKey() ]
+        
+        parser = self._parser_keys_to_parsers[ parser_key ]
+        
+        namespaces = parser.GetNamespaces()
+        
+        url_match_key = url_match.GetMatchKey()
+        
+        if url_match_key in self._url_match_keys_to_tag_import_options:
+            
+            tag_import_options = self._url_match_keys_to_tag_import_options[ url_match_key ]
+            
+        else:
+            
+            url_types_to_guidance_tag_import_options = {}
+            
+            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_POST ] = self._file_post_default_tag_import_options_button.GetValue()
+            url_types_to_guidance_tag_import_options[ HC.URL_TYPE_WATCHABLE ] = self._watchable_default_tag_import_options_button.GetValue()
+            
+            namespaces = parser.GetNamespaces()
+            
+            tag_import_options = ClientNetworkingDomain.DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_tag_import_options, url_match )
+            
+        
+        return ( namespaces, tag_import_options )
+        
+    
+    def GetValue( self ):
+        
+        file_post_default_tag_import_options = self._file_post_default_tag_import_options_button.GetValue()
+        watchable_default_tag_import_options = self._watchable_default_tag_import_options_button.GetValue()
+        
+        return ( file_post_default_tag_import_options, watchable_default_tag_import_options, self._url_match_keys_to_tag_import_options )
         
     
 class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -949,7 +1129,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         present_already_in_inbox_files = self._present_already_in_inbox_files.GetValue()
         present_already_in_archive_files = self._present_already_in_archive_files.GetValue()
         
-        file_import_options = ClientImporting.FileImportOptions()
+        file_import_options = ClientImportOptions.FileImportOptions()
         
         file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         file_import_options.SetPostImportOptions( automatic_archive )
@@ -1241,7 +1421,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if limited_types is None:
             
-            limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD )
+            limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE )
             
         
         self._context_type = ClientGUICommon.BetterChoice( self )
@@ -1261,10 +1441,6 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._context_data_services.Append( service.GetName(), service.GetServiceKey() )
             
-        
-        self._context_data_downloaders = ClientGUICommon.BetterChoice( self )
-        
-        self._context_data_downloaders.Append( 'downloaders are not ready yet!', '' )
         
         self._context_data_subscriptions = ClientGUICommon.BetterChoice( self )
         
@@ -1304,11 +1480,6 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._context_data_services.SelectClientData( network_context.context_data )
                 
-            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
-                
-                pass
-                #self._context_data_downloaders.SelectClientData( network_context.context_data )
-                
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
                 self._context_data_subscriptions.SelectClientData( network_context.context_data )
@@ -1323,7 +1494,6 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( self._context_type_info, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._context_data_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._context_data_services, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._context_data_downloaders, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._context_data_subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._context_data_none, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1342,10 +1512,9 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._context_data_text.Disable()
         self._context_data_services.Disable()
-        self._context_data_downloaders.Disable()
         self._context_data_subscriptions.Disable()
         
-        if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_QUERY, CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ):
+        if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE ):
             
             self._context_data_none.SetValue( True )
             
@@ -1360,10 +1529,6 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
             elif context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
                 self._context_data_services.Enable()
-                
-            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
-                
-                self._context_data_downloaders.Enable()
                 
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
@@ -1395,18 +1560,13 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 context_data = self._context_data_services.GetChoice()
                 
-            elif context_type == CC.NETWORK_CONTEXT_DOWNLOADER:
-                
-                raise HydrusExceptions.VetoException( 'Downloaders do not work yet!' )
-                #context_data = self._context_data_downloaders.GetChoice()
-                
             elif context_type == CC.NETWORK_CONTEXT_SUBSCRIPTION:
                 
                 context_data = self._context_data_subscriptions.GetChoice()
                 
             
         
-        return ClientNetworking.NetworkContext( context_type, context_data )
+        return ClientNetworkingContexts.NetworkContext( context_type, context_data )
         
     
 class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1450,7 +1610,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Add( self ):
         
-        network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hostname.com' )
+        network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hostname.com' )
         key = 'Authorization'
         value = 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
         approved = ClientNetworkingDomain.VALID_APPROVED
@@ -2702,7 +2862,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, subscriptions ):
+    def __init__( self, parent, subscriptions, subs_are_globally_paused = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -2772,6 +2932,17 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        if subs_are_globally_paused:
+            
+            message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
+            
+            st = ClientGUICommon.BetterStaticText( self, message )
+            st.SetForegroundColour( ( 127, 0, 0 ) )
+            
+            vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         vbox.Add( subscriptions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
@@ -2824,12 +2995,16 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
-        for subscription in subscriptions:
+        if len( subscriptions ) != 1:
             
-            if len( subscription.GetQueries() ) > 1:
-                
-                return True
-                
+            return False
+            
+        
+        subscription = subscriptions[0]
+        
+        if len( subscription.GetQueries() ) > 1:
+            
+            return True
             
         
         return False
@@ -3235,7 +3410,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'This is a big operation, so if it does not do what you expect, hit cancel afterwards!'
         message += os.linesep * 2
-        message += 'Please note that all other subscription settings settings (like name and paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings after the merge.'
+        message += 'Please note that all other subscription settings settings (like paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings afterwards.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -3255,13 +3430,40 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     unmerged_subs = primary_sub.Merge( to_be_merged_subs )
                     
+                    num_merged = len( to_be_merged_subs ) - len( unmerged_subs )
+                    
+                    if num_merged > 0:
+                        
+                        primary_sub_name = primary_sub.GetName()
+                        
+                        message = primary_sub_name + ' was able to merge ' + HydrusData.ConvertIntToPrettyString( num_merged ) + ' other subscriptions. Would you like to give the merged subscription a new name?'
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
+                            
+                            if dlg.ShowModal() == wx.ID_OK:
+                                
+                                name = dlg.GetValue()
+                                
+                                primary_sub.SetName( name )
+                                
+                            
+                            # we cannot break safely here, so just do a 'don't rename' on cancel
+                            
+                        
+                    
                     merged_subs.append( primary_sub )
                     
                     to_be_merged_subs = unmerged_subs
                     
                 
-                self._subscriptions.AddDatas( merged_subs )
                 self._subscriptions.AddDatas( to_be_merged_subs )
+                
+                for merged_sub in merged_subs:
+                    
+                    merged_sub.SetNonDupeName( self._GetExistingNames() )
+                    
+                    self._subscriptions.AddDatas( ( merged_sub, ) )
+                    
                 
                 self._subscriptions.Sort()
                 
@@ -3353,31 +3555,153 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Separate( self ):
         
-        message = 'Are you sure you want to separate the selected subscriptions? This will cause all the subscriptions with multiple queries to be split into duplicates that each only have one query.'
+        subscriptions = self._subscriptions.GetData( only_selected = True )
         
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+        if len( subscriptions ) != 1:
             
-            if dlg.ShowModal() == wx.ID_YES:
+            wx.MessageBox( 'Separate only works if one subscription is selected!' )
+            
+            return
+            
+        
+        subscription = subscriptions[0]
+        
+        num_queries = len( subscription.GetQueries() )
+        
+        if num_queries <= 1:
+            
+            wx.MessageBox( 'Separate only works if the selected subscription has more than one query!' )
+            
+            return
+            
+        
+        if num_queries > 2:
+            
+            message = 'Are you sure you want to separate the selected subscriptions? Separating breaks merged subscriptions apart into smaller pieces.'
+            yes_tuples = [ ( 'break the whole subscription up into single-query subscriptions', 'whole' ), ( 'only extract some of the subscription', 'part' ) ]
+            
+            with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
                 
-                to_be_separate_subs = self._subscriptions.GetData( only_selected = True )
-                
-                self._subscriptions.DeleteDatas( to_be_separate_subs )
-                
-                for subscription in to_be_separate_subs:
+                if dlg.ShowModal() == wx.ID_YES:
                     
-                    separate_subs = subscription.Separate()
+                    action = dlg.GetValue()
                     
-                    for separate_subscription in separate_subs:
-                        
-                        separate_subscription.SetNonDupeName( self._GetExistingNames() )
-                        
-                        self._subscriptions.AddDatas( ( separate_subscription, ) )
-                        
+                else:
                     
-                
-                self._subscriptions.Sort()
+                    return
+                    
                 
             
+        else:
+            
+            action = 'whole'
+            
+        
+        want_post_merge = False
+        
+        if action == 'part':
+            
+            queries = subscription.GetQueries()
+            
+            choice_tuples = [ ( query.GetQueryText(), query, False ) for query in queries ]
+            
+            with ClientGUIDialogs.DialogCheckFromList( self, 'select the queries to extract', choice_tuples ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_OK:
+                    
+                    queries_to_extract = dlg.GetChecked()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+            if len( queries_to_extract ) == num_queries: # the madman selected them all
+                
+                action = 'whole'
+                
+            elif len( queries_to_extract ) > 1:
+                
+                yes_tuples = [ ( 'one new merged subscription', True ), ( 'many subscriptions with only one query', False ) ]
+                
+                message = 'Do you want the extracted queries to be a new merged subscription, or many subscriptions with only one query?'
+                
+                with ClientGUIDialogs.DialogYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                    
+                    if dlg.ShowModal() == wx.ID_YES:
+                        
+                        want_post_merge = dlg.GetValue()
+                        
+                    else:
+                        
+                        return
+                        
+                    
+                
+            
+        
+        if want_post_merge:
+            
+            message = 'Please enter the name for the new subscription.'
+            
+        else:
+            
+            message = 'Please enter the base name for the new subscriptions. They will be named \'[NAME]: query\'.'
+            
+        
+        with ClientGUIDialogs.DialogTextEntry( self, message, default = subscription.GetName() ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                name = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        # ok, let's do it
+        
+        final_subscriptions = []
+        
+        self._subscriptions.DeleteDatas( ( subscription, ) )
+        
+        if action == 'whole':
+            
+            final_subscriptions.extend( subscription.Separate( name ) )
+            
+        else:
+            
+            extracted_subscriptions = list( subscription.Separate( name, queries_to_extract ) )
+            
+            if want_post_merge:
+                
+                primary_sub = extracted_subscriptions.pop()
+                
+                primary_sub.Merge( extracted_subscriptions )
+                
+                primary_sub.SetName( name )
+                
+                final_subscriptions.append( primary_sub )
+                
+            else:
+                
+                final_subscriptions.extend( extracted_subscriptions )
+                
+            
+            final_subscriptions.append( subscription )
+            
+        
+        for final_subscription in final_subscriptions:
+            
+            final_subscription.SetNonDupeName( self._GetExistingNames() )
+            
+            self._subscriptions.AddDatas( ( final_subscription, ) )
+            
+        
+        self._subscriptions.Sort()
         
     
     def SetCheckerOptions( self ):
@@ -3875,7 +4199,7 @@ Please note that you can set up 'default' values for these tag import options in
         
         service_keys_to_additional_tags = { service_key : additional_tags for ( service_key, ( additional_tags, additional_button ) ) in self._service_keys_to_additional_button_info.items() }
         
-        tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
         
         return tag_import_options
         
@@ -4128,6 +4452,13 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._keep_subdomains= wx.CheckBox( self )
         self._allow_subdomains = wx.CheckBox( self )
+        self._should_be_associated_with_files = wx.CheckBox( self )
+        
+        tt = 'If checked, the client will try to remember this url with any files it ends up importing. Then, if the client sees this URL again, it can skip the download since it knows it already has (or has already deleted) the file once before.'
+        tt += os.linesep * 2
+        tt += 'This is only useful if the URL is non-ephemeral (i.e. the URL will produce the same file in six months\' time). It is usually not appropriate for gallery or thread urls, which alter regularly, but is for static File Post URLs.'
+        
+        self._should_be_associated_with_files.SetToolTip( tt )
         
         #
         
@@ -4157,7 +4488,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._normalised_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
-        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, api_lookup_converter, example_url ) = url_match.ToTuple()
+        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, api_lookup_converter, should_be_associated_with_files, example_url ) = url_match.ToTuple()
         
         self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
         
@@ -4177,6 +4508,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._allow_subdomains.SetValue( allow_subdomains )
         self._keep_subdomains.SetValue( keep_subdomains )
+        self._should_be_associated_with_files.SetValue( should_be_associated_with_files )
         
         self._path_components.AddDatas( path_components )
         
@@ -4210,6 +4542,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'network location: ', self._netloc ) )
         rows.append( ( 'allow subdomains?: ', self._allow_subdomains ) )
         rows.append( ( 'keep subdomains?: ', self._keep_subdomains ) )
+        rows.append( ( 'should associate a \'known url\' with resulting files: ', self._should_be_associated_with_files ) )
         
         gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -4239,8 +4572,9 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
         self._example_url.Bind( wx.EVT_TEXT, self.EventUpdate )
         self.Bind( ClientGUIListBoxes.EVT_LIST_BOX, self.EventUpdate )
-        self._url_type.Bind( wx.EVT_CHOICE, self.EventUpdate )
+        self._url_type.Bind( wx.EVT_CHOICE, self.EventURLTypeUpdate )
         self._api_lookup_converter.Bind( ClientGUIParsing.EVT_STRING_CONVERTER, self.EventUpdate )
+        self._should_be_associated_with_files.Bind( wx.EVT_CHECKBOX, self.EventAssociationUpdate )
         
     
     def _AddParameters( self ):
@@ -4515,7 +4849,47 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def EventAssociationUpdate( self, event ):
+        
+        if self._should_be_associated_with_files.GetValue() == True:
+            
+            if self._url_type.GetChoice() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
+                
+                message = 'Please note that it is only appropriate to associate a gallery or watchable URL with a file if that URL is non-ephemeral. It is only appropriate if tf the exact same URL will definitely give the same files in six months\' time (like a tweet or a fixed doujin chapter gallery).'
+                message += os.linesep * 2
+                message += 'If you are not sure what this means, turn this back off.'
+                
+                wx.MessageBox( message )
+                
+            
+        else:
+            
+            if self._url_type.GetChoice() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+                
+                message = 'Hydrus uses these file associations to make sure not to re-download the same file when it comes across the same URL in future. It is only appropriate to not associate a file or post url with a file if that url is particularly ephemeral. It is only appropriate if the URL has a non-removable random key or will otherwise become invalid after a very short time.'
+                message += os.linesep * 2
+                message += 'If you are not sure what this means, turn this back on.'
+                
+                wx.MessageBox( message )
+                
+            
+        
+    
     def EventUpdate( self, event ):
+        
+        self._UpdateControls()
+        
+    
+    def EventURLTypeUpdate( self, event ):
+        
+        if self._url_type.GetChoice() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+            
+            self._should_be_associated_with_files.SetValue( True )
+            
+        else:
+            
+            self._should_be_associated_with_files.SetValue( False )
+            
         
         self._UpdateControls()
         
@@ -4769,7 +5143,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
                 continue
                 
             
-            if not url_match.IsWatchableURL(): # only starting with the thread watcher atm
+            if not ( url_match.IsWatchableURL() or url_match.IsPostURL() ):
                 
                 continue
                 

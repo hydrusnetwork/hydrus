@@ -448,14 +448,23 @@ def LaunchFile( path, launch_path = None ):
                 
                 if HG.callto_report_mode:
                     
+                    message = 'Attempted to launch ' + path + ' using command ' + repr( cmd ) + '.'
+                    
+                    HydrusData.ShowText( message )
+                    
+                    if stdout is None and stderr is None:
+                        
+                        HydrusData.ShowText( 'No stdout or stderr came back.' )
+                        
+                    
                     if stdout is not None:
                         
-                        HydrusData.ShowText( stdout )
+                        HydrusData.ShowText( 'stdout: ' + repr( stdout ) )
                         
                     
                     if stderr is not None:
                         
-                        HydrusData.ShowText( stderr )
+                        HydrusData.ShowText( 'stderr: ' + repr( stderr ) )
                         
                     
                 

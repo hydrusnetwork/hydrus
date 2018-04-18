@@ -1,5 +1,6 @@
 import ClientData
 import ClientImporting
+import ClientImportOptions
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
@@ -138,7 +139,7 @@ def DAEMONDownloadFiles( controller ):
                                 max_resolution = None
                                 automatic_archive = False
                                 
-                                file_import_options = ClientImporting.FileImportOptions()
+                                file_import_options = ClientImportOptions.FileImportOptions()
                                 
                                 file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                                 file_import_options.SetPostImportOptions( automatic_archive )
@@ -370,6 +371,8 @@ def DAEMONSynchroniseSubscriptions( controller ):
     
     def wait_for_free_slot( controller, subs_jobs, max_simultaneous_subscriptions ):
         
+        time.sleep( 0.1 )
+        
         while True:
             
             p1 = controller.options[ 'pause_subs_sync' ]
@@ -395,12 +398,12 @@ def DAEMONSynchroniseSubscriptions( controller ):
             
             filter_finished_jobs( subs_jobs )
             
-            time.sleep( 1.0 )
-            
             if len( subs_jobs ) < max_simultaneous_subscriptions:
                 
                 return
                 
+            
+            time.sleep( 1.0 )
             
         
     

@@ -266,9 +266,9 @@ NETWORK_CONTEXT_GLOBAL = 0
 NETWORK_CONTEXT_HYDRUS = 1
 NETWORK_CONTEXT_DOMAIN = 2
 NETWORK_CONTEXT_DOWNLOADER = 3
-NETWORK_CONTEXT_DOWNLOADER_QUERY = 4
+NETWORK_CONTEXT_DOWNLOADER_PAGE = 4
 NETWORK_CONTEXT_SUBSCRIPTION = 5
-NETWORK_CONTEXT_THREAD_WATCHER_THREAD = 6
+NETWORK_CONTEXT_THREAD_WATCHER_PAGE = 6
 
 network_context_type_string_lookup = {}
 
@@ -276,19 +276,19 @@ network_context_type_string_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'global'
 network_context_type_string_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'hydrus service'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'web domain'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'downloader'
-network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'downloader query instance'
+network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'downloader page'
 network_context_type_string_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'subscription'
-network_context_type_string_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_THREAD ] = 'thread watcher thread instance'
+network_context_type_string_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_PAGE ] = 'watcher page'
 
 network_context_type_description_lookup = {}
 
 network_context_type_description_lookup[ NETWORK_CONTEXT_GLOBAL ] = 'All network traffic, no matter the source or destination.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'Network traffic going to or from this hydrus service.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network traffic going to or from this domain (or a subdomain).'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through this downloader.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_QUERY ] = 'Network traffic going through this single downloader query (you probably shouldn\'t be able to see this!)'
-network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through this subscription.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_THREAD ] = 'Network traffic going through this single thread watch (you probably shouldn\'t be able to see this!)'
+network_context_type_description_lookup[ NETWORK_CONTEXT_HYDRUS ] = 'Network traffic going to or from a hydrus service.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network traffic going to or from a web domain (or a subdomain).'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through a downloader. This is no longer used.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'Network traffic going through a single downloader page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual downloader pages so they give the db and other import pages time to do work.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through a subscription query. Each query gets its own network context, named \'[subscription name]: [query text]\'.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_PAGE ] = 'Network traffic going through a single watcher page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual watcher pages so they give the db and other import pages time to do work.'
 
 PAGE_FILE_COUNT_DISPLAY_ALL = 0
 PAGE_FILE_COUNT_DISPLAY_NONE = 1

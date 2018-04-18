@@ -1,7 +1,8 @@
 import ClientConstants as CC
 import ClientDownloading
 import ClientImporting
-import ClientNetworking
+import ClientNetworkingContexts
+import ClientNetworkingJobs
 import ClientRatings
 import ClientThreading
 import hashlib
@@ -470,7 +471,7 @@ class ServiceRemote( Service ):
         
         Service.__init__( self, service_key, service_type, name, dictionary = dictionary )
         
-        self.network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
+        self.network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
         
     
     def _DelayFutureRequests( self, reason, duration = None ):
@@ -522,7 +523,7 @@ class ServiceRemote( Service ):
             raise HydrusExceptions.PermissionException( self._no_requests_reason + ' - next request ' + HydrusData.ConvertTimestampToPrettyPending( self._no_requests_until ) )
             
         
-        example_nj = ClientNetworking.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
+        example_nj = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
         
         can_start = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts() )
         
@@ -794,7 +795,7 @@ class ServiceRestricted( ServiceRemote ):
                 method = 'POST'
                 
             
-            network_job = ClientNetworking.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path )
+            network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path )
             
             if command in ( '', 'access_key', 'access_key_verification' ):
                 
@@ -1550,7 +1551,7 @@ class ServiceIPFS( ServiceRemote ):
         
         links_url = api_base_url + 'object/links/' + multihash
         
-        network_job = ClientNetworking.NetworkJob( 'GET', links_url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', links_url )
         
         network_job.OverrideBandwidth()
         
@@ -1621,7 +1622,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'version'
         
-        network_job = ClientNetworking.NetworkJob( 'GET', url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
         
         network_job.OverrideBandwidth()
         
@@ -1747,7 +1748,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'object/new?arg=unixfs-dir'
             
-            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
             network_job.OverrideBandwidth()
             
@@ -1777,7 +1778,7 @@ class ServiceIPFS( ServiceRemote ):
                 
                 url = api_base_url + 'object/patch/add-link?arg=' + object_multihash + '&arg=' + filename + '&arg=' + multihash
                 
-                network_job = ClientNetworking.NetworkJob( 'GET', url )
+                network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
                 
                 network_job.OverrideBandwidth()
                 
@@ -1794,7 +1795,7 @@ class ServiceIPFS( ServiceRemote ):
             
             url = api_base_url + 'pin/add?arg=' + directory_multihash
             
-            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
             network_job.OverrideBandwidth()
             
@@ -1850,7 +1851,7 @@ class ServiceIPFS( ServiceRemote ):
         
         files = { 'path' : ( hash.encode( 'hex' ), open( path, 'rb' ), mime_string ) }
         
-        network_job = ClientNetworking.NetworkJob( 'GET', url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
         
         network_job.SetFiles( files )
         
@@ -1888,7 +1889,7 @@ class ServiceIPFS( ServiceRemote ):
         
         url = api_base_url + 'pin/rm/' + multihash
         
-        network_job = ClientNetworking.NetworkJob( 'GET', url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
         
         network_job.OverrideBandwidth()
         
@@ -1912,7 +1913,7 @@ class ServiceIPFS( ServiceRemote ):
         
         try:
             
-            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
             network_job.OverrideBandwidth()
             

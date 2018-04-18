@@ -1,7 +1,8 @@
 import ClientConstants as CC
 import ClientDefaults
-import ClientNetworking
+import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientNetworkingJobs
 import ClientParsing
 import HydrusConstants as HC
 import HydrusGlobals as HG
@@ -247,13 +248,13 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if name == 'hentai foundry':
                 
-                network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
+                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
                 
                 required_cookies = [ 'PHPSESSID', 'YII_CSRF_TOKEN' ]
                 
             elif name == 'pixiv':
                 
-                network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
+                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
                 
                 required_cookies = [ 'PHPSESSID' ]
                 
@@ -560,7 +561,7 @@ class LoginScriptHydrus( object ):
         
         access_key = service.GetCredentials().GetAccessKey()
         
-        network_job = ClientNetworking.NetworkJobHydrus( service_key, 'GET', url )
+        network_job = ClientNetworkingJobs.NetworkJobHydrus( service_key, 'GET', url )
         
         network_job.SetForLogin( True )
         

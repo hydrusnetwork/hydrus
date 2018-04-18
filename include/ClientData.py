@@ -1115,6 +1115,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
         
+        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_pages' ] = 15
+        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_subscriptions' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -1249,9 +1254,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = False
         present_already_in_archive_files = False
         
-        import ClientImporting
+        import ClientImportOptions
         
-        quiet_file_import_options = ClientImporting.FileImportOptions()
+        quiet_file_import_options = ClientImportOptions.FileImportOptions()
         
         quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         quiet_file_import_options.SetPostImportOptions( automatic_archive )
@@ -1263,7 +1268,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         present_already_in_inbox_files = True
         present_already_in_archive_files = True
         
-        loud_file_import_options = ClientImporting.FileImportOptions()
+        loud_file_import_options = ClientImportOptions.FileImportOptions()
         
         loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         loud_file_import_options.SetPostImportOptions( automatic_archive )
@@ -1611,9 +1616,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     if site_type == HC.SITE_TYPE_THREAD_WATCHER:
                         
-                        import ClientImporting
+                        import ClientImportOptions
                         
-                        return ClientImporting.TagImportOptions() # if nothing set, do nothing in this special case
+                        return ClientImportOptions.TagImportOptions() # if nothing set, do nothing in this special case
                         
                     
                     if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_tag_import_options:
@@ -1661,9 +1666,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                         service_keys_to_additional_tags = guidance_tag_import_options.GetServiceKeysToAdditionalTags()
                         
                     
-                    import ClientImporting
+                    import ClientImportOptions
                     
-                    tag_import_options = ClientImporting.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
                     
                 
                 return tag_import_options

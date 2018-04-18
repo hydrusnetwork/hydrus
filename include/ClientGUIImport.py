@@ -7,6 +7,7 @@ import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUITopLevelWindows
 import ClientImporting
+import ClientImportOptions
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -82,7 +83,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             # pull from an options default
             
-            filename_tagging_options = ClientImporting.FilenameTaggingOptions()
+            filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
             
         
         wx.Panel.__init__( self, parent )
@@ -108,7 +109,7 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
     
     def GetFilenameTaggingOptions( self ):
         
-        filename_tagging_options = ClientImporting.FilenameTaggingOptions()
+        filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
         
         self._advanced_panel.UpdateFilenameTaggingOptions( filename_tagging_options )
         self._simple_panel.UpdateFilenameTaggingOptions( filename_tagging_options )

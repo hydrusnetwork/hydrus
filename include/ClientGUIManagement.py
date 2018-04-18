@@ -25,6 +25,7 @@ import ClientGUISeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
+import ClientImportOptions
 import ClientMedia
 import ClientParsing
 import ClientRendering
@@ -627,7 +628,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 automatic_archive = advanced_import_options[ 'automatic_archive' ]
                 
-                file_import_options = ClientImporting.FileImportOptions()
+                file_import_options = ClientImportOptions.FileImportOptions()
                 
                 file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                 file_import_options.SetPostImportOptions( automatic_archive )
@@ -2553,7 +2554,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        self._url_panel = ClientGUICommon.StaticBox( self, 'raw url downloader' )
+        self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader' )
         
         self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
@@ -2605,7 +2606,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._UpdateStatus()
         
-        HG.client_controller.sub( self, 'PendURL', 'pend_raw_url' )
+        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
         
     
     def _PendURLs( self, urls ):

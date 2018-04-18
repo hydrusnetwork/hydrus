@@ -1,6 +1,7 @@
 import bs4
 import calendar
-import ClientNetworking
+import ClientNetworkingDomain
+import ClientNetworkingJobs
 import collections
 import HydrusConstants as HC
 import HydrusData
@@ -226,6 +227,14 @@ def GetHashesFromParseResults( results ):
         
     
     return hash_results
+    
+def GetNamespacesFromParsableContent( parsable_content ):
+    
+    content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( content_type, additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
+    
+    namespaces = content_type_to_additional_infos[ HC.CONTENT_TYPE_MAPPINGS ] # additional_infos is a set of namespaces
+    
+    return namespaces
     
 def GetSoup( html ):
     
@@ -1551,6 +1560,16 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         parsed_texts = self._formula.Parse( parsing_context, data )
         
+        if self._content_type == HC.CONTENT_TYPE_URLS:
+            
+            if 'url' in parsing_context:
+                
+                base_url = parsing_context[ 'url' ]
+                
+                parsed_texts = [ urlparse.urljoin( base_url, parsed_text ) for parsed_text in parsed_texts ]
+                
+            
+        
         if self._content_type == HC.CONTENT_TYPE_VETO:
             
             ( veto_if_matches_found, string_match ) = self._additional_info
@@ -1720,6 +1739,17 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     def GetExampleURLs( self ):
         
         return self._example_urls
+        
+    
+    def GetNamespaces( self ):
+        
+        # this in future could expand to be more granular like:
+        # 'I want the artist tags, but not the user-submitted.'
+        # 'I want the title here, but not the title there.'
+        # 'I want the original filename, but not the UNIX timestamp filename.'
+        # which the parser could present with its sub-parsing element names
+        
+        return GetNamespacesFromParsableContent( self.GetParsableContent() )
         
     
     def GetParsableContent( self ):
@@ -1924,7 +1954,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             job_key.SetVariable( 'script_status', 'fetching ' + search_url )
             
-            network_job = ClientNetworking.NetworkJob( 'GET', search_url, referral_url = referral_url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', search_url, referral_url = referral_url )
             
             network_job.OverrideBandwidth()
             
@@ -2167,13 +2197,13 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'Cannot have a file as an argument on a GET query!' )
                 
             
-            full_request_url = ClientNetworking.CombineGETURLWithParameters( self._url, request_args )
+            full_request_url = ClientNetworkingDomain.CombineGETURLWithParameters( self._url, request_args )
             
             job_key.SetVariable( 'script_status', 'fetching ' + full_request_url )
             
             job_key.AddURL( full_request_url )
             
-            network_job = ClientNetworking.NetworkJob( 'GET', full_request_url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', full_request_url )
             
         elif self._query_type == HC.POST:
             
@@ -2192,7 +2222,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 files = None
                 
             
-            network_job = ClientNetworking.NetworkJob( 'POST', self._url, body = request_args )
+            network_job = ClientNetworkingJobs.NetworkJob( 'POST', self._url, body = request_args )
             
             network_job.SetFiles( files )
             

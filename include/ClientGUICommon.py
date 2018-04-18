@@ -443,6 +443,8 @@ def WrapInGrid( parent, rows, expand_text = False ):
     
     for ( text, control ) in rows:
         
+        st = BetterStaticText( parent, text )
+        
         if isinstance( control, wx.Sizer ):
             
             cflags = sizer_flags
@@ -451,8 +453,11 @@ def WrapInGrid( parent, rows, expand_text = False ):
             
             cflags = control_flags
             
-        
-        st = BetterStaticText( parent, text )
+            if control.GetToolTipText() != '':
+                
+                st.SetToolTip( control.GetToolTipText() )
+                
+            
         
         gridbox.Add( st, text_flags )
         gridbox.Add( control, cflags )

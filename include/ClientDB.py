@@ -2,8 +2,10 @@ import ClientData
 import ClientDefaults
 import ClientImageHandling
 import ClientMedia
-import ClientNetworking
+import ClientNetworkingBandwidth
+import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientNetworkingSessions
 import ClientRatings
 import ClientSearch
 import ClientServices
@@ -2936,7 +2938,7 @@ class DB( HydrusDB.HydrusDB ):
             self._SetJSONDump( shortcuts )
             
         
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         
         ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager )
         
@@ -2948,7 +2950,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._SetJSONDump( domain_manager )
         
-        session_manager = ClientNetworking.NetworkSessionManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         
         self._SetJSONDump( session_manager )
         
@@ -5190,7 +5192,7 @@ class DB( HydrusDB.HydrusDB ):
             return ( CC.STATUS_REDUNDANT, hash, note )
             
         
-        return ( CC.STATUS_NEW, None, '' )
+        return ( CC.STATUS_UNKNOWN, None, '' )
         
     
     def _GetHashStatus( self, hash_type, hash ):
@@ -5199,7 +5201,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if not self._HashExists( hash ):
                 
-                return ( CC.STATUS_NEW, hash, '' )
+                return ( CC.STATUS_UNKNOWN, hash, '' )
                 
             else:
                 
@@ -5225,7 +5227,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if result is None:
                 
-                return ( CC.STATUS_NEW, None, '' )
+                return ( CC.STATUS_UNKNOWN, None, '' )
                 
             else:
                 
@@ -6625,7 +6627,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return ( CC.STATUS_NEW, None, '' )
+        return ( CC.STATUS_UNKNOWN, None, '' )
         
     
     def _GetYAMLDump( self, dump_type, dump_name = None ):
@@ -9259,13 +9261,13 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
             ClientDefaults.SetDefaultBandwidthManagerRules( bandwidth_manager ) 
             
             self._SetJSONDump( bandwidth_manager )
             
-            session_manager = ClientNetworking.NetworkSessionManager()
+            session_manager = ClientNetworkingSessions.NetworkSessionManager()
             
             self._SetJSONDump( session_manager )
             
@@ -9334,7 +9336,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 264:
             
-            default_bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
+            default_bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
             ClientDefaults.SetDefaultBandwidthManagerRules( default_bandwidth_manager )
             
@@ -9445,7 +9447,7 @@ class DB( HydrusDB.HydrusDB ):
             
             rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
             
-            bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
+            bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
             
             self._SetJSONDump( bandwidth_manager )
             
@@ -9496,7 +9498,7 @@ class DB( HydrusDB.HydrusDB ):
             
             rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * 1048576 ) # don't sync a giant db in one day
             
-            bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
+            bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
             
             self._SetJSONDump( bandwidth_manager )
             
@@ -9730,7 +9732,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # sank changed again, wew
                 
-                sank_network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+                sank_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
                 
                 if sank_network_context in network_contexts_to_custom_header_dicts:
                     
@@ -9749,9 +9751,9 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                if ClientNetworking.GLOBAL_NETWORK_CONTEXT in network_contexts_to_custom_header_dicts:
+                if ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT in network_contexts_to_custom_header_dicts:
                     
-                    custom_header_dict = network_contexts_to_custom_header_dicts[ ClientNetworking.GLOBAL_NETWORK_CONTEXT ]
+                    custom_header_dict = network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
                     
                     if 'User-Agent' in custom_header_dict:
                         
@@ -9870,7 +9872,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                sank_nc = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+                sank_nc = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
                 
                 bandwidth_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
                 

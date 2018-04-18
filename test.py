@@ -10,8 +10,10 @@ from include import ClientConstants as CC
 from include import HydrusGlobals as HG
 from include import ClientDefaults
 from include import ClientNetworking
+from include import ClientNetworkingBandwidth
 from include import ClientNetworkingDomain
 from include import ClientNetworkingLogin
+from include import ClientNetworkingSessions
 from include import ClientServices
 from include import ClientThreading
 from include import HydrusExceptions
@@ -141,8 +143,8 @@ class Controller( object ):
         self.services_manager = ClientCaches.ServicesManager( self )
         self.client_files_manager = ClientCaches.ClientFilesManager( self )
         
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         

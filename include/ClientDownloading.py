@@ -1,6 +1,6 @@
 import bs4
 import ClientData
-import ClientNetworking
+import ClientNetworkingJobs
 import ClientParsing
 import HydrusConstants as HC
 import HydrusExceptions
@@ -130,7 +130,7 @@ def GetImageboardFileURL( thread_url, filename, ext ):
                     
                     html_url = 'https://8ch.net/' + board + '/res/' + thread_id + '.html'
                     
-                    network_job = ClientNetworking.NetworkJob( 'GET', html_url )
+                    network_job = ClientNetworkingJobs.NetworkJob( 'GET', html_url )
                     
                     network_job.OverrideBandwidth()
                     
@@ -515,7 +515,7 @@ class Gallery( object ):
     
     def _DefaultNetworkJobFactory( self, method, url, **kwargs ):
         
-        return ClientNetworking.NetworkJob( method, url, **kwargs )
+        return ClientNetworkingJobs.NetworkJob( method, url, **kwargs )
         
     
     def _EnsureLoggedIn( self ):

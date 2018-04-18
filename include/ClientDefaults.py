@@ -9,7 +9,7 @@ import wx
 
 def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
-    import ClientNetworking
+    import ClientNetworkingContexts
     
     KB = 1024
     MB = 1024 ** 2
@@ -24,7 +24,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
     
-    bandwidth_manager.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, rules )
     
     #
     
@@ -34,7 +34,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # don't go nuts on a site in a single day
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
     
     #
     
@@ -42,13 +42,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
     
     #
     
@@ -59,7 +53,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_QUERY ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE ), rules )
     
     #
     
@@ -70,7 +64,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
     
     #
     
@@ -80,7 +74,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_THREAD ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE ), rules )
     
     #
     
@@ -94,7 +88,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
     
-    bandwidth_manager.SetRules( ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
     
 def SetDefaultDomainManagerData( domain_manager ):
     
@@ -102,14 +96,14 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    import ClientNetworking
+    import ClientNetworkingContexts
     import ClientNetworkingDomain
     
     custom_header_dict = {}
     
     custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (compatible; Hydrus Client)', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
     
-    network_contexts_to_custom_header_dicts[ ClientNetworking.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
+    network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
     
     #
     
@@ -117,7 +111,7 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku have unusual User-Agent rules on certain requests. Setting this User-Agent allows the sankaku downloader to work.' )
     
-    network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+    network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
     
     network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
     

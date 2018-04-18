@@ -17,7 +17,8 @@ import ClientGUISerialisable
 import ClientGUIShortcuts
 import ClientGUITagSuggestions
 import ClientGUITopLevelWindows
-import ClientNetworking
+import ClientNetworkingContexts
+import ClientNetworkingJobs
 import ClientImporting
 import ClientMedia
 import ClientRatings
@@ -716,7 +717,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 url = scheme + host + ':' + str( port ) + '/' + request
                 
-                network_job = ClientNetworking.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
                 
                 network_job.OverrideBandwidth()
                 
@@ -830,7 +831,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         url = 'https://' + host + ':' + str( port ) + '/access_key?registration_key=' + registration_key.encode( 'hex' )
                         
-                        network_job = ClientNetworking.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
+                        network_job = ClientNetworkingJobs.NetworkJobHydrus( CC.TEST_SERVICE_KEY, 'GET', url )
                         
                         network_job.OverrideBandwidth()
                         
@@ -1020,7 +1021,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     dictionary_part[ 'account' ] = HydrusNetwork.Account.GenerateSerialisableTupleFromAccount( account )
                     
-                    network_context = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
+                    network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key )
                     
                     HG.client_controller.network_engine.session_manager.ClearSession( network_context )
                     
@@ -1697,12 +1698,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
             
-            self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, 'by default, stop searching once this many files are found', none_phrase = 'no limit', min = 1, max = 1000000 )
+            self._gallery_page_wait_period_pages = wx.SpinCtrl( gallery_downloader, min = 1, max = 120 )
+            self._gallery_file_limit = ClientGUICommon.NoneableSpinCtrl( gallery_downloader, none_phrase = 'no limit', min = 1, max = 1000000 )
             
             #
             
             subscriptions = ClientGUICommon.StaticBox( self, 'subscriptions' )
             
+            self._gallery_page_wait_period_subscriptions = wx.SpinCtrl( subscriptions, min = 1, max = 30 )
             self._max_simultaneous_subscriptions = wx.SpinCtrl( subscriptions, min = 1, max = 100 )
             
             self._process_subs_in_random_order = wx.CheckBox( subscriptions )
@@ -1724,10 +1727,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._gallery_page_wait_period_pages.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_pages' ) )
+            self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
+            
+            self._gallery_page_wait_period_subscriptions.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
-            
-            self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
             self._permit_watchers_to_name_their_pages.SetValue( self._new_options.GetBoolean( 'permit_watchers_to_name_their_pages' ) )
             
@@ -1737,12 +1742,20 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            gallery_downloader.Add( self._gallery_file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows = []
+            
+            rows.append( ( 'Fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
+            rows.append( ( 'By default, stop searching once this many files are found:', self._gallery_file_limit ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( gallery_downloader, rows )
+            
+            gallery_downloader.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
             rows = []
             
+            rows.append( ( 'Fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_subscriptions ) )
             rows.append( ( 'Maximum number of subscriptions that can sync simultaneously:', self._max_simultaneous_subscriptions ) )
             rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
             
@@ -1778,8 +1791,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
+            self._new_options.SetInteger( 'gallery_page_wait_period_pages', self._gallery_page_wait_period_pages.GetValue() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
             
+            self._new_options.SetInteger( 'gallery_page_wait_period_subscriptions', self._gallery_page_wait_period_subscriptions.GetValue() )
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
             
@@ -2441,6 +2456,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._hide_preview = wx.CheckBox( self )
             
+            self._popup_message_character_width = wx.SpinCtrl( self, min = 16, max = 256 )
+            
             self._thumbnail_fill = wx.CheckBox( self )
             
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
@@ -2516,6 +2533,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
             
+            self._popup_message_character_width.SetValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
+            
             self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
             
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
@@ -2555,8 +2574,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
-            rows.append( ( 'Zoom thumbnails so they \'fill\' their space (experimental): ', self._thumbnail_fill ) )
+            rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
+            rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: Always show media viewer hover windows: ', self._always_show_hover_windows ) )
             rows.append( ( 'BUGFIX: Hide the popup message manager when the main gui is minimised: ', self._hide_message_manager_on_gui_iconise ) )
@@ -2631,6 +2651,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
+            
+            self._new_options.SetInteger( 'popup_message_character_width', self._popup_message_character_width.GetValue() )
             
             title = self._main_gui_title.GetValue()
             

@@ -11,7 +11,7 @@ import ClientGUIListCtrl
 import ClientGUIScrolledPanels
 import ClientGUISerialisable
 import ClientGUITopLevelWindows
-import ClientNetworking
+import ClientNetworkingJobs
 import ClientParsing
 import ClientSerialisable
 import ClientThreading
@@ -2273,7 +2273,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         # this should be published to a job key panel or something so user can see it and cancel if needed
         
-        network_job = ClientNetworking.NetworkJob( 'GET', self._my_example_url, referral_url = self._referral_url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', self._my_example_url, referral_url = self._referral_url )
         
         network_job.OverrideBandwidth()
         
@@ -2802,7 +2802,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             referral_url = None
             
         
-        network_job = ClientNetworking.NetworkJob( 'GET', url, referral_url = referral_url )
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url, referral_url = referral_url )
         
         self._test_network_job_control.SetNetworkJob( network_job )
         
@@ -4621,7 +4621,7 @@ class TestPanel( wx.Panel ):
         
         def do_it( url ):
             
-            network_job = ClientNetworking.NetworkJob( 'GET', url )
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
             network_job.OverrideBandwidth()
             

@@ -20,6 +20,7 @@ import ClientGUISeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
+import ClientImportOptions
 import ClientMedia
 import ClientRatings
 import ClientSearch
@@ -2662,7 +2663,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
-            filename_tagging_options = ClientImporting.FilenameTaggingOptions()
+            filename_tagging_options = ClientImportOptions.FilenameTaggingOptions()
             
             panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
             

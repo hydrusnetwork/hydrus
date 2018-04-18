@@ -127,7 +127,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
         elif entry_type == 'page_import_urls':
             
-            button.SetLabelText( 'raw urls' )
+            button.SetLabelText( 'urls' )
             
         
         button.Show()
@@ -322,7 +322,10 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             entries = entries[:9]
             
         
-        for entry in entries: self._AddEntry( potential_buttons.pop( 0 ), entry )
+        for entry in entries:
+            
+            self._AddEntry( potential_buttons.pop( 0 ), entry )
+            
         
         unused_buttons = potential_buttons
         

@@ -74,7 +74,6 @@ class PopupDismissAll( PopupWindow ):
 class PopupMessage( PopupWindow ):
     
     TEXT_CUTOFF = 1024
-    WRAP_WIDTH = 400
     
     def __init__( self, parent, job_key ):
         
@@ -85,29 +84,35 @@ class PopupMessage( PopupWindow ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         self._title = ClientGUICommon.FitResistantStaticText( self, style = wx.ALIGN_CENTER )
+        
+        popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+        
+        wrap_width = ClientData.ConvertTextToPixelWidth( self._title, popup_message_character_width )
+        
+        self._title.Wrap( wrap_width )
         self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._title.Hide()
         
         self._text_1 = ClientGUICommon.FitResistantStaticText( self )
-        self._text_1.Wrap( self.WRAP_WIDTH )
+        self._text_1.Wrap( wrap_width )
         self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_1.Hide()
         
-        self._gauge_1 = ClientGUICommon.Gauge( self, size = ( self.WRAP_WIDTH, -1 ) )
+        self._gauge_1 = ClientGUICommon.Gauge( self, size = ( wrap_width, -1 ) )
         self._gauge_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_1.Hide()
         
         self._text_2 = ClientGUICommon.FitResistantStaticText( self )
-        self._text_2.Wrap( self.WRAP_WIDTH )
+        self._text_2.Wrap( wrap_width )
         self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_2.Hide()
         
-        self._gauge_2 = ClientGUICommon.Gauge( self, size = ( self.WRAP_WIDTH, -1 ) )
+        self._gauge_2 = ClientGUICommon.Gauge( self, size = ( wrap_width, -1 ) )
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
         self._text_yes_no = ClientGUICommon.FitResistantStaticText( self )
-        self._text_yes_no.Wrap( self.WRAP_WIDTH )
+        self._text_yes_no.Wrap( wrap_width )
         self._text_yes_no.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_yes_no.Hide()
         
@@ -133,7 +138,7 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.Hide()
         
         self._tb_text = ClientGUICommon.FitResistantStaticText( self )
-        self._tb_text.Wrap( self.WRAP_WIDTH )
+        self._tb_text.Wrap( wrap_width )
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()
         

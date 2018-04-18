@@ -8,6 +8,7 @@ import ClientFiles
 import ClientGUIManagement
 import ClientGUIPages
 import ClientImporting
+import ClientImportOptions
 import ClientRatings
 import ClientSearch
 import ClientServices
@@ -70,7 +71,7 @@ class TestClientDB( unittest.TestCase ):
         
         cls._db = ClientDB.DB( HG.test_controller, TestConstants.DB_DIR, 'client' )
         
-        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_NEW, None, '' ) )
+        HG.test_controller.SetRead( 'hash_status', ( CC.STATUS_UNKNOWN, None, '' ) )
         
     
     @classmethod
@@ -644,7 +645,7 @@ class TestClientDB( unittest.TestCase ):
             
             service_keys_to_tags = { HydrusData.GenerateKey() : [ 'some', 'tags' ] }
             
-            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImporting.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
+            management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
             
             management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
             
@@ -901,7 +902,7 @@ class TestClientDB( unittest.TestCase ):
         
         result = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( result, ( CC.STATUS_NEW, None, '' ) )
+        self.assertEqual( result, ( CC.STATUS_UNKNOWN, None, '' ) )
         
         #
         

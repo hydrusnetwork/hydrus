@@ -21,7 +21,7 @@ import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
-import ClientNetworking
+import ClientNetworkingContexts
 import ClientSearch
 import ClientServices
 import ClientThreading
@@ -1370,7 +1370,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some raw urls.', self._notebook.NewPageImportURLs, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some separate urls.', self._notebook.NewPageImportURLs, on_deepest_notebook = True )
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher, on_deepest_notebook = True )
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportSimpleDownloader, on_deepest_notebook = True )
             
@@ -1596,6 +1596,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
             
+            ClientGUIMenus.AppendMenuItem( self, menu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
             ClientGUIMenus.AppendMenuItem( self, menu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1617,6 +1618,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
             ClientGUIMenus.AppendMenuLabel( menu, 'manage downloaders', 'Manage the client\' downloaders, which convert search terms into URLs.' )
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -1624,8 +1626,8 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: reset login' )
             
@@ -2083,6 +2085,34 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         with ClientGUIDialogsManage.DialogManageBoorus( self ) as dlg: dlg.ShowModal()
         
     
+    def _ManageDefaultTagImportOptions( self ):
+        
+        title = 'manage default tag import options'
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, title ) as dlg:
+            
+            domain_manager = self._controller.network_engine.domain_manager
+            
+            ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ) = domain_manager.GetDefaultTagImportOptions()
+            
+            url_matches = domain_manager.GetURLMatches()
+            parsers = domain_manager.GetParsers()
+            
+            ( url_match_keys_to_display, url_match_keys_to_parser_keys ) = domain_manager.GetURLMatchLinks()
+            
+            panel = ClientGUIScrolledPanelsEdit.EditDefaultTagImportOptionsPanel( dlg, url_matches, parsers, url_match_keys_to_parser_keys, file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options ) = panel.GetValue()
+                
+                domain_manager.SetDefaultTagImportOptions( file_post_default_tag_import_options, watchable_default_tag_import_options, url_match_keys_to_tag_import_options )
+                
+            
+        
+    
     def _ManageExportFolders( self ):
         
         def wx_do_it():
@@ -2352,7 +2382,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _ManageSubscriptions( self ):
         
-        def wx_do_it( subscriptions ):
+        def wx_do_it( subscriptions, original_pause_status ):
             
             if not self:
                 
@@ -2364,7 +2394,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, subscriptions )
+                panel = ClientGUIScrolledPanelsEdit.EditSubscriptionsPanel( dlg, subscriptions, original_pause_status )
                 
                 dlg.SetPanel( panel )
                 
@@ -2415,7 +2445,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
                     
-                    controller.CallBlockingToWx( wx_do_it, subscriptions )
+                    controller.CallBlockingToWx( wx_do_it, subscriptions, original_pause_status )
                     
                 finally:
                     
@@ -2735,6 +2765,15 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review bandwidth' )
         
         panel = ClientGUIScrolledPanelsReview.ReviewAllBandwidthPanel( frame, self._controller )
+        
+        frame.SetPanel( panel )
+        
+    
+    def _ReviewNetworkJobs( self ):
+        
+        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, 'review network jobs' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewNetworkJobs( frame, self._controller )
         
         frame.SetPanel( panel )
         
@@ -3558,7 +3597,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def TIMEREventBandwidth( self, event ):
         
-        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT )
+        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
         
         boot_time = self._controller.GetBootTime()
         
@@ -3845,7 +3884,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ( url_type, match_name, can_parse ) = domain_manager.GetURLParseCapability( url )
         
-        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE ):
+        if url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and not can_parse:
+            
+            message = 'This URL was recognised as a "' + match_name + '" but this URL class does not yet have a parsing script linked to it!'
+            message += os.linesep * 2
+            message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
+            
+            wx.MessageBox( message )
+            
+            return
+            
+        
+        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
             
             page = self._notebook.GetOrMakeURLImportPage()
             
@@ -3855,28 +3905,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 page_key = page.GetPageKey()
                 
-                HG.client_controller.pub( 'pend_raw_url', page_key, url )
+                HG.client_controller.pub( 'pend_url', page_key, url )
                 
             
         else:
             
-            # url was recognised as a gallery, page, or watchable url
-            
-            if not can_parse:
-                
-                message = 'This URL was recognised as a "' + match_name + '" but this URL class does not yet have a parsing script linked to it!'
-                message += os.linesep * 2
-                message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
-                
-                wx.MessageBox( message )
-                
-                return
-                
-            
             # watchable url (thread url) -> open new watcher, set it
                 # at some point, append it to existing multiple-thread-supporting-page
             # gallery url -> open gallery page for the respective parser for import options, but no query input stuff, queue up gallery page to be parsed for page urls
-            # page url -> open gallery page for the respective parser for import options, but no query input stuff (maybe no gallery stuff, but this is prob overkill), queue up file page to be parsed for tags and file
             
             if url_type == HC.URL_TYPE_WATCHABLE:
                 

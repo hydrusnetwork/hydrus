@@ -1,7 +1,11 @@
 import ClientConstants as CC
 import ClientNetworking
+import ClientNetworkingBandwidth
+import ClientNetworkingContexts
 import ClientNetworkingDomain
+import ClientNetworkingJobs
 import ClientNetworkingLogin
+import ClientNetworkingSessions
 import ClientServices
 import collections
 import HydrusConstants as HC
@@ -83,12 +87,12 @@ class TestBandwidthManager( unittest.TestCase ):
         
         RESTRICTIVE_REQUEST_RULES.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, None, 1 )
         
-        DOMAIN_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
-        SUBDOMAIN_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_SUBDOMAIN )
+        DOMAIN_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
+        SUBDOMAIN_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_SUBDOMAIN )
         
-        GLOBAL_NETWORK_CONTEXTS = [ ClientNetworking.GLOBAL_NETWORK_CONTEXT ]
-        DOMAIN_NETWORK_CONTEXTS = [ ClientNetworking.GLOBAL_NETWORK_CONTEXT, DOMAIN_NETWORK_CONTEXT ]
-        SUBDOMAIN_NETWORK_CONTEXTS = [ ClientNetworking.GLOBAL_NETWORK_CONTEXT, DOMAIN_NETWORK_CONTEXT, SUBDOMAIN_NETWORK_CONTEXT ]
+        GLOBAL_NETWORK_CONTEXTS = [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
+        DOMAIN_NETWORK_CONTEXTS = [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, DOMAIN_NETWORK_CONTEXT ]
+        SUBDOMAIN_NETWORK_CONTEXTS = [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, DOMAIN_NETWORK_CONTEXT, SUBDOMAIN_NETWORK_CONTEXT ]
         
         #
         
@@ -96,7 +100,7 @@ class TestBandwidthManager( unittest.TestCase ):
         
         with patch.object( HydrusData, 'GetNow', return_value = fast_forward ):
             
-            bm = ClientNetworking.NetworkBandwidthManager()
+            bm = ClientNetworkingBandwidth.NetworkBandwidthManager()
             
             self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
             self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
@@ -115,7 +119,7 @@ class TestBandwidthManager( unittest.TestCase ):
             
             #
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, EMPTY_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, EMPTY_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             
@@ -123,7 +127,7 @@ class TestBandwidthManager( unittest.TestCase ):
             self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
             self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, PERMISSIVE_DATA_RULES )
             
@@ -131,7 +135,7 @@ class TestBandwidthManager( unittest.TestCase ):
             self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
             self.assertTrue( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             bm.SetRules( SUBDOMAIN_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
@@ -181,19 +185,19 @@ class TestBandwidthManager( unittest.TestCase ):
             
             #
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
             
             self.assertFalse( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
             self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
             self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             
             self.assertFalse( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
             self.assertFalse( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
             self.assertFalse( bm.CanStartRequest( SUBDOMAIN_NETWORK_CONTEXTS ) )
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, PERMISSIVE_REQUEST_RULES )
             
             self.assertTrue( bm.CanStartRequest( GLOBAL_NETWORK_CONTEXTS ) )
             self.assertTrue( bm.CanStartRequest( DOMAIN_NETWORK_CONTEXTS ) )
@@ -201,7 +205,7 @@ class TestBandwidthManager( unittest.TestCase ):
             
             #
             
-            bm.SetRules( ClientNetworking.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
+            bm.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, RESTRICTIVE_DATA_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, RESTRICTIVE_REQUEST_RULES )
             bm.SetRules( DOMAIN_NETWORK_CONTEXT, EMPTY_RULES )
             
@@ -221,8 +225,8 @@ class TestNetworkingEngine( unittest.TestCase ):
     def test_engine_shutdown_app( self ):
         
         mock_controller = TestConstants.MockController()
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
@@ -251,8 +255,8 @@ class TestNetworkingEngine( unittest.TestCase ):
     def test_engine_shutdown_manual( self ):
         
         mock_controller = TestConstants.MockController()
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
@@ -279,8 +283,8 @@ class TestNetworkingEngine( unittest.TestCase ):
     def test_engine_simple_job( self ):
         
         mock_controller = TestConstants.MockController()
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
@@ -297,7 +301,7 @@ class TestNetworkingEngine( unittest.TestCase ):
             
             with HTTMock( catch_wew_ok ):
                 
-                job = ClientNetworking.NetworkJob( 'GET', MOCK_URL )
+                job = ClientNetworkingJobs.NetworkJob( 'GET', MOCK_URL )
                 
                 engine.AddJob( job )
                 
@@ -310,10 +314,11 @@ class TestNetworkingEngine( unittest.TestCase ):
                 
                 time.sleep( 0.1 )
                 
-                self.assertEqual( len( engine._jobs_bandwidth_throttled ), 0 )
-                self.assertEqual( len( engine._jobs_login_throttled ), 0 )
-                self.assertEqual( len( engine._jobs_ready_to_start ), 0 )
-                self.assertEqual( len( engine._jobs_downloading ), 0 )
+                self.assertEqual( len( engine._jobs_awaiting_validity ), 0 )
+                self.assertEqual( len( engine._jobs_awaiting_bandwidth ), 0 )
+                self.assertEqual( len( engine._jobs_awaiting_login ), 0 )
+                self.assertEqual( len( engine._jobs_awaiting_slot ), 0 )
+                self.assertEqual( len( engine._jobs_running ), 0 )
                 
             
         
@@ -326,13 +331,13 @@ class TestNetworkingJob( unittest.TestCase ):
     
     def _GetJob( self, for_login = False ):
         
-        job = ClientNetworking.NetworkJob( 'GET', MOCK_URL )
+        job = ClientNetworkingJobs.NetworkJob( 'GET', MOCK_URL )
         
         job.SetForLogin( for_login )
         
         mock_controller = TestConstants.MockController()
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
@@ -393,7 +398,7 @@ class TestNetworkingJob( unittest.TestCase ):
         
         RESTRICTIVE_DATA_RULES.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 10 )
         
-        DOMAIN_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
+        DOMAIN_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
         
         #
         
@@ -426,7 +431,7 @@ class TestNetworkingJob( unittest.TestCase ):
         
         PERMISSIVE_DATA_RULES.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 1048576 )
         
-        DOMAIN_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
+        DOMAIN_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, MOCK_DOMAIN )
         
         #
         
@@ -467,7 +472,7 @@ class TestNetworkingJob( unittest.TestCase ):
                 
                 bm = job.engine.bandwidth_manager
                 
-                tracker = bm.GetTracker( ClientNetworking.GLOBAL_NETWORK_CONTEXT )
+                tracker = bm.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
                 
                 self.assertTrue( tracker.GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None ), 1 )
                 self.assertTrue( tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, None ), 256 )
@@ -535,7 +540,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
     
     def _GetJob( self, for_login = False ):
         
-        job = ClientNetworking.NetworkJobHydrus( MOCK_HYDRUS_SERVICE_KEY, 'GET', MOCK_HYDRUS_URL )
+        job = ClientNetworkingJobs.NetworkJobHydrus( MOCK_HYDRUS_SERVICE_KEY, 'GET', MOCK_HYDRUS_URL )
         
         job.SetForLogin( for_login )
         
@@ -547,8 +552,8 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         mock_controller.services_manager = mock_services_manager
         
-        bandwidth_manager = ClientNetworking.NetworkBandwidthManager()
-        session_manager = ClientNetworking.NetworkSessionManager()
+        bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
+        session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
@@ -565,7 +570,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         RESTRICTIVE_DATA_RULES.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 10 )
         
-        HYDRUS_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, MOCK_HYDRUS_SERVICE_KEY )
+        HYDRUS_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, MOCK_HYDRUS_SERVICE_KEY )
         
         #
         
@@ -598,7 +603,7 @@ class TestNetworkingJobHydrus( unittest.TestCase ):
         
         PERMISSIVE_DATA_RULES.AddRule( HC.BANDWIDTH_TYPE_DATA, None, 1048576 )
         
-        HYDRUS_NETWORK_CONTEXT = ClientNetworking.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, MOCK_HYDRUS_SERVICE_KEY )
+        HYDRUS_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, MOCK_HYDRUS_SERVICE_KEY )
         
         #
         
