@@ -323,7 +323,7 @@ class TestClientDB( unittest.TestCase ):
         
         written_result = self._write( 'import_file', file_import_job )
         
-        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
+        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_AND_NEW )
         self.assertEqual( file_import_job.GetHash(), hash )
         
         time.sleep( 1 )
@@ -782,7 +782,7 @@ class TestClientDB( unittest.TestCase ):
             
             written_result = self._write( 'import_file', file_import_job )
             
-            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL )
+            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_AND_NEW )
             self.assertEqual( file_import_job.GetHash(), hash )
             
             file_import_job = ClientImporting.FileImportJob( path )
@@ -793,7 +793,7 @@ class TestClientDB( unittest.TestCase ):
             
             written_result = self._write( 'import_file', file_import_job )
             
-            self.assertEqual( written_result, CC.STATUS_REDUNDANT )
+            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
             self.assertEqual( file_import_job.GetHash(), hash )
             
             written_hash = file_import_job.GetHash()
@@ -918,7 +918,7 @@ class TestClientDB( unittest.TestCase ):
         
         ( status, hash, note ) = self._read( 'hash_status', 'md5', md5 )
         
-        self.assertEqual( ( status, hash ), ( CC.STATUS_REDUNDANT, hash ) )
+        self.assertEqual( ( status, hash ), ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash ) )
         
         #
         

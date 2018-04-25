@@ -455,7 +455,7 @@ def GetDefaultBoorus():
     boorus[ 'furry@booru.org' ] = ClientData.Booru( name, search_url, search_separator, advance_by_page_num, thumb_classname, image_id, image_data, tag_classnames_to_namespaces )
     
     name = 'xbooru'
-    search_url = 'http://xbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
+    search_url = 'https://xbooru.com/index.php?page=post&s=list&tags=%tags%&pid=%index%'
     search_separator = '+'
     advance_by_page_num = False
     thumb_classname = 'thumb'

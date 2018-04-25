@@ -209,10 +209,10 @@ class TestData( unittest.TestCase ):
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
         
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
         self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_DELETED, False ) )
         
@@ -338,10 +338,10 @@ class TestData( unittest.TestCase ):
         
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
         #
         
@@ -350,10 +350,10 @@ class TestData( unittest.TestCase ):
         
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         
         #
         
@@ -362,8 +362,8 @@ class TestData( unittest.TestCase ):
         
         file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
         
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL, True ) )
-        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, False ) )
-        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_REDUNDANT, True ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_AND_NEW, True ) )
+        self.assertFalse( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, False ) )
+        self.assertTrue( file_import_options.ShouldPresent( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, True ) )
         

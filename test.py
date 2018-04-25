@@ -143,6 +143,8 @@ class Controller( object ):
         self.services_manager = ClientCaches.ServicesManager( self )
         self.client_files_manager = ClientCaches.ClientFilesManager( self )
         
+        self.parsing_cache = ClientCaches.ParsingCache()
+        
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()
         domain_manager = ClientNetworkingDomain.NetworkDomainManager()
@@ -530,7 +532,7 @@ class Controller( object ):
                 
             else:
                 
-                return CC.STATUS_SUCCESSFUL
+                return CC.STATUS_SUCCESSFUL_AND_NEW
                 
             
         

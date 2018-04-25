@@ -1326,7 +1326,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self._notebook.ChooseNewPageForDeepestNotebook )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page' ) )
             
             #
             
@@ -1370,9 +1370,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             download_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some separate urls.', self._notebook.NewPageImportURLs, on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.', self._notebook.NewPageImportThreadWatcher, on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self._notebook.NewPageImportSimpleDownloader, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
             
             gallery_menu = wx.Menu()
             
@@ -1424,8 +1424,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             special_menu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self._notebook.NewPagesNotebook, on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self._notebook.NewPageDuplicateFilter, on_deepest_notebook = True )
+            
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_page_of_pages' ) )
+            ClientGUIMenus.AppendMenuItem( self, special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_duplicate_filter_page' ) )
             
             ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
             
@@ -3559,36 +3560,50 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def TIMEREventAnimationUpdate( self, event ):
         
-        for window in list( self._animation_update_windows ):
+        try:
             
-            if not window:
+            windows = list( self._animation_update_windows )
+            
+            for window in windows:
                 
-                self._animation_update_windows.discard( window )
+                if not window:
+                    
+                    self._animation_update_windows.discard( window )
+                    
+                    continue
+                    
                 
-                continue
+                try:
+                    
+                    if HG.ui_timer_profile_mode:
+                        
+                        summary = 'Profiling animation timer: ' + repr( window )
+                        
+                        HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3 )
+                        
+                    else:
+                        
+                        window.TIMERAnimationUpdate()
+                        
+                    
+                except Exception as e:
+                    
+                    self._animation_update_windows.discard( window )
+                    
                 
             
-            try:
-                
-                if HG.ui_timer_profile_mode:
-                    
-                    summary = 'Profiling animation timer: ' + repr( window )
-                    
-                    HydrusData.Profile( summary, 'window.TIMERAnimationUpdate()', globals(), locals(), min_duration_ms = 3 )
-                    
-                else:
-                    
-                    window.TIMERAnimationUpdate()
-                    
-                
-            except Exception as e:
-                
-                self._animation_update_windows.discard( window )
-                
-                HydrusData.ShowException( e )
-                
+        except:
             
-        
+            # unusual error catch here, just to experiment. user was getting wxAssertionError on m_window failed, no GetSize() without window
+            # I figured at the time that this is some window manager being unhappy with doing animation on a hidden window,
+            # but it could also be a half-dead window trying to draw to a dead bmp or something, and then getting stuck somehow
+            # traceback was on the for loop list iteration line,
+            # which I think was just the C++/wxAssertionError having trouble making the right trace wew
+            
+            self._animation_update_windows = set()
+            
+            windows = []
+            
         if len( self._animation_update_windows ) == 0:
             
             self._animation_update_timer.Stop()
@@ -4081,6 +4096,26 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == 'new_page':
                 
                 self._notebook.ChooseNewPageForDeepestNotebook()
+                
+            elif action == 'new_page_of_pages':
+                
+                self._notebook.NewPagesNotebook( on_deepest_notebook = True )
+                
+            elif action == 'new_duplicate_filter_page':
+                
+                self._notebook.NewPageDuplicateFilter( on_deepest_notebook = True )
+                
+            elif action == 'new_simple_downloader_page':
+                
+                self._notebook.NewPageImportSimpleDownloader( on_deepest_notebook = True )
+                
+            elif action == 'new_url_downloader_page':
+                
+                self._notebook.NewPageImportURLs( on_deepest_notebook = True )
+                
+            elif action == 'new_watcher_downloader_page':
+                
+                self._notebook.NewPageImportThreadWatcher( on_deepest_notebook = True )
                 
             elif action == 'close_page':
                 

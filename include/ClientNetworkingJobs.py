@@ -352,7 +352,7 @@ class NetworkJob( object ):
         
         if self._num_bytes_to_read is not None and self._num_bytes_read < self._num_bytes_to_read * 0.8:
             
-            raise HydrusExceptions.NetworkException( 'Did not read enough data! Was expecting ' + HydrusData.ConvertIntToBytes( self._num_bytes_to_read ) + ' but only got ' + HydrusData.ConvertIntToBytes( self._num_bytes_read ) + '.' )
+            raise HydrusExceptions.ShouldReattemptNetworkException( 'Was expecting ' + HydrusData.ConvertIntToBytes( self._num_bytes_to_read ) + ' but only got ' + HydrusData.ConvertIntToBytes( self._num_bytes_read ) + '.' )
             
         
     
@@ -787,6 +787,22 @@ class NetworkJob( object ):
                         
                     
                     request_completed = True
+                    
+                except HydrusExceptions.ShouldReattemptNetworkException as e:
+                    
+                    self._current_connection_attempt_number += 1
+                    
+                    if not self._CanReattemptRequest():
+                        
+                        raise HydrusExceptions.NetworkException( 'Ran out of reattempts on this error: ' + HydrusData.ToUnicode( e ) )
+                        
+                    
+                    with self._lock:
+                        
+                        self._status_text = HydrusData.ToUnicode( e ) + '--retrying'
+                        
+                    
+                    time.sleep( 3 )
                     
                 except requests.exceptions.ChunkedEncodingError:
                     

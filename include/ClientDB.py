@@ -5189,7 +5189,7 @@ class DB( HydrusDB.HydrusDB ):
             
             note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
             
-            return ( CC.STATUS_REDUNDANT, hash, note )
+            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, note )
             
         
         return ( CC.STATUS_UNKNOWN, None, '' )
@@ -6611,23 +6611,22 @@ class DB( HydrusDB.HydrusDB ):
         return self._GetHashes( hash_ids )
         
     
-    def _GetURLStatus( self, url ):
+    def _GetURLStatuses( self, url ):
         
-        search_urls = ClientData.GetSearchURLs( url )
+        search_urls = ClientNetworkingDomain.GetSearchURLs( url )
+        
+        hash_ids = set()
         
         for search_url in search_urls:
             
-            result = self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( search_url, ) ).fetchone()
+            results = self._STS( self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( search_url, ) ) )
             
-            if result is not None:
-                
-                ( hash_id, ) = result
-                
-                return self._GetHashIdStatus( hash_id )
-                
+            hash_ids.update( results )
             
         
-        return ( CC.STATUS_UNKNOWN, None, '' )
+        results = [ self._GetHashIdStatus( hash_id ) for hash_id in hash_ids ]
+        
+        return results
         
     
     def _GetYAMLDump( self, dump_type, dump_name = None ):
@@ -6706,7 +6705,7 @@ class DB( HydrusDB.HydrusDB ):
         
         ( status, status_hash, note ) = self._GetHashIdStatus( hash_id )
         
-        if status != CC.STATUS_REDUNDANT:
+        if status != CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
             
             ( size, mime, width, height, duration, num_frames, num_words ) = file_import_job.GetFileInfo()
             
@@ -6744,7 +6743,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._InboxFiles( ( hash_id, ) )
                 
             
-            status = CC.STATUS_SUCCESSFUL
+            status = CC.STATUS_SUCCESSFUL_AND_NEW
             
         
         tag_services = self._GetServices( HC.TAG_SERVICES )
@@ -8354,7 +8353,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_censorship': result = self._GetTagCensorship( *args, **kwargs )
         elif action == 'tag_parents': result = self._GetTagParents( *args, **kwargs )
         elif action == 'tag_siblings': result = self._GetTagSiblings( *args, **kwargs )
-        elif action == 'url_status': result = self._GetURLStatus( *args, **kwargs )
+        elif action == 'url_statuses': result = self._GetURLStatuses( *args, **kwargs )
         else: raise Exception( 'db received an unknown read command: ' + action )
         
         return result
@@ -9918,7 +9917,116 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.PrintException( e )
                 
-                message = 'Trying to set now simple downloader parsers failed! Please let hydrus dev know!'
+                message = 'Trying to set new simple downloader parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 303:
+            
+            try:
+                
+                new_options = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                default_sdf = ClientDefaults.GetDefaultSimpleDownloaderFormulae()
+                
+                new_yiff_sdf = [ sdf for sdf in default_sdf if 'yiff' in sdf.GetName() ]
+                
+                existing_sdf = new_options.GetSimpleDownloaderFormulae()
+                
+                existing_sdf.extend( new_yiff_sdf )
+                
+                new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
+                
+                self._SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to set new simple downloader parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                url_matches = ClientDefaults.GetDefaultURLMatches()
+                
+                url_matches = [ url_match for url_match in url_matches if 'xbooru' in url_match.GetName() ]
+                
+                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if 'xbooru' not in url_match.GetName() ]
+                
+                url_matches.extend( existing_url_matches )
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update xbooru url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                self._controller.pub( 'splash_set_status_subtext', 'generating normalised uls: initialising' )
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                all_url_hash_ids = self._STS( self._c.execute( 'SELECT hash_id FROM urls;' ) )
+                
+                num_to_do = len( all_url_hash_ids )
+                
+                for ( i, hash_id ) in enumerate( all_url_hash_ids ):
+                    
+                    urls = self._STS( self._c.execute( 'SELECT url FROM urls WHERE hash_id = ?;', ( hash_id, ) ) )
+                    
+                    normalised_urls = set()
+                    
+                    for url in urls:
+                        
+                        normalised_url = domain_manager.NormaliseURL( url )
+                        
+                        if normalised_url not in urls:
+                            
+                            normalised_urls.add( normalised_url )
+                            
+                        
+                    
+                    if len( normalised_urls ) > 0:
+                        
+                        self._c.executemany( 'INSERT OR IGNORE INTO urls ( hash_id, url ) VALUES ( ?, ? );', ( ( hash_id, normalised_url ) for normalised_url in normalised_urls ) )
+                        
+                    
+                    if i % 100 == 0:
+                        
+                        self._controller.pub( 'splash_set_status_subtext', 'generating normalised uls: ' + HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                        
+                    
+                
+                message = 'You\'ll have some additional \'normalised\' known urls for your files this week. I expect to have some ui ready to collapse the old unnormalised semi-duplicates back down in the coming weeks.'
+                
+                self.pub_initial_message( message )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to generate normalised urls at the db level failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

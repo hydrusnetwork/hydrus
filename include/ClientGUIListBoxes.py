@@ -2181,7 +2181,7 @@ class ListBoxTagsCensorship( ListBoxTags ):
         
         tag_slice = term
         
-        return ClientData.ConvertTagSliceToString( tag_slice )
+        return ClientTags.ConvertTagSliceToString( tag_slice )
         
     
     def AddTags( self, tags ):

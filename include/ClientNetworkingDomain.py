@@ -61,7 +61,41 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
 def ConvertDomainIntoSecondLevelDomain( domain ):
     
     return ConvertDomainIntoAllApplicableDomains( domain )[-1]
-
+    
+def ConvertHTTPSToHTTP( url ):
+    
+    if url.startswith( 'http://' ):
+        
+        return url
+        
+    elif url.startswith( 'https://' ):
+        
+        http_url = 'http://' + url[8:]
+        
+        return http_url
+        
+    else:
+        
+        raise Exception( 'Given a url that did not have a scheme!' )
+        
+    
+def ConvertHTTPToHTTPS( url ):
+    
+    if url.startswith( 'https://' ):
+        
+        return url
+        
+    elif url.startswith( 'http://' ):
+        
+        https_url = 'https://' + url[7:]
+        
+        return https_url
+        
+    else:
+        
+        raise Exception( 'Given a url that did not have a scheme!' )
+        
+    
 def ConvertURLMatchesIntoAPIPairs( url_matches ):
     
     pairs = []
@@ -97,7 +131,7 @@ def ConvertURLIntoDomain( url ):
     
     if parser_result.scheme == '':
         
-        raise HydrusExceptions.URLMatchException( 'URL "' + url + '" was not recognised--did you forget the http or https?' )
+        raise HydrusExceptions.URLMatchException( 'URL "' + url + '" was not recognised--did you forget the http:// or https://?' )
         
     
     if parser_result.netloc == '':
@@ -121,6 +155,8 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
     guidance_tag_import_options = url_types_to_guidance_tag_import_options[ url_type ]
     
     service_keys_to_namespaces = {}
+    
+    tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
     
     fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
     
@@ -146,11 +182,17 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
     
     import ClientImportOptions
     
-    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
     
     return tag_import_options
     
-
+def DomainEqualsAnotherForgivingWWW( test_domain, wwwable_domain ):
+    
+    # domain is either the same or starts with www. or www2. or something
+    rule = r'^(www[^\.]*\.)?' + re.escape( wwwable_domain ) + '$'
+    
+    return re.search( rule, test_domain ) is not None
+    
 def GetCookie( cookies, search_domain, name ):
     
     existing_domains = cookies.list_domains()
@@ -178,6 +220,30 @@ def GetCookie( cookies, search_domain, name ):
         
     
     raise HydrusExceptions.DataMissing( 'Cookie ' + name + ' not found for domain ' + search_domain + '!' )
+    
+def GetSearchURLs( url ):
+    
+    search_urls = set()
+    
+    search_urls.add( url )
+    
+    normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+    
+    search_urls.add( normalised_url )
+    
+    for url in list( search_urls ):
+        
+        if url.startswith( 'http://' ):
+            
+            search_urls.add( ConvertHTTPToHTTPS( url ) )
+            
+        elif url.startswith( 'https://' ):
+            
+            search_urls.add( ConvertHTTPSToHTTP( url ) )
+            
+        
+    
+    return search_urls
     
 VALID_DENIED = 0
 VALID_APPROVED = 1
@@ -904,6 +970,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             self._parsers.extend( parsers )
             
+            self._parsers.sort( key = lambda p: p.GetName() )
+            
             # delete orphans
             
             parser_keys = { parser.GetParserKey() for parser in parsers }
@@ -949,6 +1017,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_matches = HydrusSerialisable.SerialisableList()
             
             self._url_matches.extend( url_matches )
+            
+            self._url_matches.sort( key = lambda u: u.GetName() )
             
             #
             
@@ -1021,6 +1091,21 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._url_match_keys_to_parser_keys.update( new_url_match_keys_to_parser_keys )
             
             self._SetDirty()
+            
+        
+    
+    def URLDefinitelyRefersToMultipleFiles( self, url ):
+        
+        with self._lock:
+            
+            url_match = self._GetURLMatch( url )
+            
+            if url_match is None:
+                
+                return False
+                
+            
+            return url_match.RefersToMultipleFiles()
             
         
     
@@ -1174,7 +1259,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_NAME = 'URL Match'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', allow_subdomains = False, keep_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
         
         if url_match_key is None:
             
@@ -1218,8 +1303,8 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         self._url_type = url_type
         self._preferred_scheme = preferred_scheme
         self._netloc = netloc
-        self._allow_subdomains = allow_subdomains
-        self._keep_subdomains = keep_subdomains
+        self._match_subdomains = match_subdomains
+        self._keep_matched_subdomains = keep_matched_subdomains
         self._path_components = path_components
         self._parameters = parameters
         self._api_lookup_converter = api_lookup_converter
@@ -1230,7 +1315,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _ClipNetLoc( self, netloc ):
         
-        if self._keep_subdomains:
+        if self._keep_matched_subdomains:
             
             # for domains like artistname.website.com, where removing the subdomain may break the url, we leave it alone
             
@@ -1299,12 +1384,12 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_parameters = self._parameters.GetSerialisableTuple()
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         
-        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url )
+        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url ) = serialisable_info
+        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url ) = serialisable_info
         
         self._url_match_key = serialisable_url_match_key.decode( 'hex' )
         self._path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components )
@@ -1316,7 +1401,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         if version == 1:
             
-            ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, serialisable_path_components, serialisable_parameters, example_url ) = old_serialisable_info
+            ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, example_url ) = old_serialisable_info
             
             url_match_key = HydrusData.GenerateKey()
             
@@ -1326,14 +1411,14 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             serialisable_api_lookup_converter = api_lookup_converter.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, example_url )
+            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, example_url )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( serialisable_url_match_key, url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, example_url ) = old_serialisable_info
+            ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, example_url ) = old_serialisable_info
             
             if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                 
@@ -1344,7 +1429,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
                 should_be_associated_with_files = False
                 
             
-            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, should_be_associated_with_files, example_url )
+            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, should_be_associated_with_files, example_url )
             
             return ( 3, new_serialisable_info )
             
@@ -1409,6 +1494,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def NormalisationIsAppropriate( self ):
+        
+        return self._should_be_associated_with_files or self.UsesAPIURL()
+        
+    
     def Normalise( self, url ):
         
         p = urlparse.urlparse( url )
@@ -1419,7 +1509,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         # gallery urls we don't want to clip stuff, but we do want to flip to https
         
-        if self._url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+        if self.NormalisationIsAppropriate():
             
             netloc = self._ClipNetLoc( p.netloc )
             path = self._ClipPath( p.path )
@@ -1435,6 +1525,11 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
         
         return r.geturl()
+        
+    
+    def RefersToMultipleFiles( self ):
+        
+        return self._url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE )
         
     
     def RefersToOneFile( self ):
@@ -1456,7 +1551,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         p = urlparse.urlparse( url )
         
-        if self._allow_subdomains:
+        if self._match_subdomains:
             
             if p.netloc != self._netloc and not p.netloc.endswith( '.' + self._netloc ):
                 
@@ -1465,7 +1560,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
         else:
             
-            if p.netloc != self._netloc:
+            if not DomainEqualsAnotherForgivingWWW( p.netloc, self._netloc ):
                 
                 raise HydrusExceptions.URLMatchException( p.netloc + ' did not match ' + self._netloc )
                 
@@ -1528,7 +1623,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._url_type, self._preferred_scheme, self._netloc, self._allow_subdomains, self._keep_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._should_be_associated_with_files, self._example_url )
+        return ( self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._should_be_associated_with_files, self._example_url )
         
     
     def UsesAPIURL( self ):

@@ -553,6 +553,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.pub( 'splash_set_status_subtext', u'network' )
         
+        self.parsing_cache = ClientCaches.ParsingCache()
+        
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
         
         if bandwidth_manager is None:
@@ -794,6 +796,13 @@ class Controller( HydrusController.HydrusController ):
                 self._timestamps[ 'last_service_info_cache_fatten' ] = HydrusData.GetNow()
                 
             
+        
+    
+    def MaintainMemoryFast( self ):
+        
+        HydrusController.HydrusController.MaintainMemoryFast( self )
+        
+        self.parsing_cache.CleanCache()
         
     
     def MaintainMemorySlow( self ):

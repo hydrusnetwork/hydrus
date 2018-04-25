@@ -42,10 +42,10 @@ class TestDaemons( unittest.TestCase ):
             
             actions = {}
             
-            actions[ CC.STATUS_SUCCESSFUL ] = CC.IMPORT_FOLDER_DELETE
-            actions[ CC.STATUS_REDUNDANT ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] = CC.IMPORT_FOLDER_DELETE
+            actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = CC.IMPORT_FOLDER_DELETE
             actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_DELETE
-            actions[ CC.STATUS_FAILED ] = CC.IMPORT_FOLDER_IGNORE
+            actions[ CC.STATUS_ERROR ] = CC.IMPORT_FOLDER_IGNORE
             
             import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, actions = actions )
             

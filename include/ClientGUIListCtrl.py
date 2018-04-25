@@ -942,6 +942,8 @@ class BetterListCtrlPanel( wx.Panel ):
             add_callable( default )
             
         
+        self._listctrl.Sort()
+        
     
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_check_func = None ):
         
@@ -980,6 +982,8 @@ class BetterListCtrlPanel( wx.Panel ):
                     
                 
             
+        
+        self._listctrl.Sort()
         
     
     def _Duplicate( self ):
@@ -1099,6 +1103,8 @@ class BetterListCtrlPanel( wx.Panel ):
             wx.MessageBox( 'I could not understand what was in the clipboard' )
             
         
+        self._listctrl.Sort()
+        
     
     def _ImportFromPng( self ):
         
@@ -1136,6 +1142,8 @@ class BetterListCtrlPanel( wx.Panel ):
                     
                 
             
+        
+        self._listctrl.Sort()
         
     
     def _ImportObject( self, obj ):

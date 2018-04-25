@@ -445,7 +445,7 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystem ):
         
         domain = self._domain.GetValue()
         
-        rule = 'https?\\:\\/\\/(www\\.)?' + re.escape( domain ) + '\\/.*'
+        rule = r'^https?\:\/\/(www[^\.]*\.)?' + re.escape( domain ) + r'\/.*'
         
         description = operator_description + domain
         

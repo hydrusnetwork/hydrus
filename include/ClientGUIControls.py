@@ -264,6 +264,25 @@ class BytesControl( wx.Panel ):
         self.SetSizer( hbox )
         
     
+    def Bind( self, event_type, callback ):
+        
+        self._spin.Bind( wx.EVT_SPINCTRL, callback )
+        
+        self._unit.Bind( wx.EVT_CHOICE, callback )
+        
+    
+    def Disable( self ):
+        
+        self._spin.Disable()
+        self._unit.Disable()
+        
+    
+    def Enable( self ):
+        
+        self._spin.Enable()
+        self._unit.Enable()
+        
+    
     def GetSeparatedValue( self ):
         
         return ( self._spin.GetValue(), self._unit.GetChoice() )
@@ -339,6 +358,13 @@ class NoneableBytesControl( wx.Panel ):
     def EventNoneChecked( self, event ):
         
         self._UpdateEnabled()
+        
+    
+    def Bind( self, event_type, callback ):
+        
+        self._bytes.Bind( wx.EVT_SPINCTRL, callback )
+        
+        self._none_checkbox.Bind( wx.EVT_CHECKBOX, callback )
         
     
     def GetValue( self ):

@@ -106,40 +106,6 @@ def ColourIsGreyish( colour ):
     
     return greyish
     
-def ConvertHTTPSToHTTP( url ):
-    
-    if url.startswith( 'http://' ):
-        
-        return url
-        
-    elif url.startswith( 'https://' ):
-        
-        http_url = 'http://' + url[8:]
-        
-        return http_url
-        
-    else:
-        
-        raise Exception( 'Given a url that did not have a scheme!' )
-        
-    
-def ConvertHTTPToHTTPS( url ):
-    
-    if url.startswith( 'https://' ):
-        
-        return url
-        
-    elif url.startswith( 'http://' ):
-        
-        https_url = 'https://' + url[7:]
-        
-        return https_url
-        
-    else:
-        
-        raise Exception( 'Given a url that did not have a scheme!' )
-        
-    
 def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
     
     num_files = 0
@@ -247,27 +213,6 @@ def ConvertShortcutToPrettyShortcut( modifier, key ):
         
     
     return ( modifier, key )
-    
-def ConvertTagSliceToString( tag_slice ):
-    
-    if tag_slice == '':
-        
-        return 'unnamespaced tags'
-        
-    elif tag_slice == ':':
-        
-        return 'namespaced tags'
-        
-    elif tag_slice.count( ':' ) == 1 and tag_slice.endswith( ':' ):
-        
-        namespace = tag_slice[ : -1 ]
-        
-        return '\'' + namespace + '\' tags'
-        
-    else:
-        
-        return tag_slice
-        
     
 def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
     
@@ -395,21 +340,6 @@ def GetMediasTagCount( pool, tag_service_key = CC.COMBINED_TAG_SERVICE_KEY, coll
         
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
-    
-def GetSearchURLs( url ):
-    
-    search_urls = [ url ]
-    
-    if url.startswith( 'http://' ):
-        
-        search_urls.append( ConvertHTTPToHTTPS( url ) )
-        
-    elif url.startswith( 'https://' ):
-        
-        search_urls.append( ConvertHTTPSToHTTP( url ) )
-        
-    
-    return search_urls
     
 def GetSortTypeChoices():
 
@@ -1081,8 +1011,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, TagCensor() ) ], [], True, True )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, TagCensor() ) ], [], False, True )
+        import ClientTags
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = DuplicateActionOptions( [], [], False )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = DuplicateActionOptions( [], [], False )
         
@@ -2223,11 +2155,11 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
             services_manager = HG.client_controller.services_manager
             
-            self._tag_service_actions = [ ( service_key, action, tag_censor ) for ( service_key, action, tag_censor ) in self._tag_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ]
+            self._tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, action, tag_filter ) in self._tag_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ]
             self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
             
         
-        serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_censor.GetSerialisableTuple() ) for ( service_key, action, tag_censor ) in self._tag_service_actions ]
+        serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
         serialisable_rating_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in self._rating_service_actions ]
         
         return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files )
@@ -2237,7 +2169,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files ) = serialisable_info
         
-        self._tag_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_censor ) ) for ( serialisable_service_key, action, serialisable_tag_censor ) in serialisable_tag_service_actions ]
+        self._tag_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
         
     
@@ -2256,14 +2188,16 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
                 
                 service_key = service_key_encoded.decode( 'hex' )
                 
-                tag_censor = TagCensor()
+                import ClientTags
                 
-                tag_service_actions.append( ( service_key, action, tag_censor ) )
+                tag_filter = ClientTags.TagFilter()
+                
+                tag_service_actions.append( ( service_key, action, tag_filter ) )
                 
                 rating_service_actions.append( ( service_key, action ) )
                 
             
-            serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_censor.GetSerialisableTuple() ) for ( service_key, action, tag_censor ) in tag_service_actions ]
+            serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in tag_service_actions ]
             serialisable_rating_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in rating_service_actions ]
             
             sync_archive = delete_second_file
@@ -2321,7 +2255,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         
         services_manager = HG.client_controller.services_manager
         
-        for ( service_key, action, tag_censor ) in self._tag_service_actions:
+        for ( service_key, action, tag_filter ) in self._tag_service_actions:
             
             content_updates = []
             
@@ -2348,8 +2282,8 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             first_current_tags = first_media.GetTagsManager().GetCurrent( service_key )
             second_current_tags = second_media.GetTagsManager().GetCurrent( service_key )
             
-            first_current_tags = tag_censor.Censor( first_current_tags )
-            second_current_tags = tag_censor.Censor( second_current_tags )
+            first_current_tags = tag_filter.Filter( first_current_tags )
+            second_current_tags = tag_filter.Filter( second_current_tags )
             
             if action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
@@ -2906,203 +2840,3 @@ def ConvertMouseEventToShortcut( event ):
     
     return None
     
-class TagCensor( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_CENSOR
-    SERIALISABLE_NAME = 'Tag Censorship Rules'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self._lock = threading.Lock()
-        
-        self._tag_slices_to_rules = {}
-        
-    
-    def __eq__( self, other ):
-        
-        return self._tag_slices_to_rules == other._tag_slices_to_rules
-        
-    
-    def _GetRulesForTag( self, tag ):
-        
-        rules = []
-        tag_slices = []
-        
-        ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-        
-        tag_slices.append( tag )
-        
-        if namespace != '':
-            
-            tag_slices.append( namespace + ':' )
-            tag_slices.append( ':' )
-            
-        else:
-            
-            tag_slices.append( '' )
-            
-        
-        for tag_slice in tag_slices:
-            
-            if tag_slice in self._tag_slices_to_rules:
-                
-                rule = self._tag_slices_to_rules[ tag_slice ]
-                
-                rules.append( rule )
-                
-            
-        
-        return rules
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return self._tag_slices_to_rules.items()
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        self._tag_slices_to_rules = dict( serialisable_info )
-        
-    
-    def _TagOK( self, tag ):
-        
-        rules = self._GetRulesForTag( tag )
-        
-        if CC.CENSOR_WHITELIST in rules: # There is an exception for this tag
-            
-            return True
-            
-        elif CC.CENSOR_BLACKLIST in rules: # There is a rule against this tag
-            
-            return False
-            
-        else: # There are no rules for this tag
-            
-            return True
-            
-        
-    
-    def Censor( self, tags ):
-        
-        with self._lock:
-            
-            return { tag for tag in tags if self._TagOK( tag ) }
-            
-        
-    
-    def GetTagSlicesToRules( self ):
-        
-        with self._lock:
-            
-            return dict( self._tag_slices_to_rules )
-            
-        
-    
-    def SetRule( self, tag_slice, rule ):
-        
-        with self._lock:
-            
-            self._tag_slices_to_rules[ tag_slice ] = rule
-            
-        
-    
-    def ToCensoredString( self ):
-        
-        blacklist = []
-        whitelist = []
-        
-        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
-            
-            if rule == CC.CENSOR_BLACKLIST:
-                
-                blacklist.append( tag_slice )
-                
-            elif rule == CC.CENSOR_WHITELIST:
-                
-                whitelist.append( tag_slice )
-                
-            
-        
-        blacklist.sort()
-        whitelist.sort()
-        
-        if len( blacklist ) == 0:
-            
-            return 'all tags allowed'
-            
-        else:
-            
-            if set( blacklist ) == { '', ':' }:
-                
-                text = 'no tags allowed'
-                
-            else:
-                
-                text = 'censoring ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
-                
-            
-            if len( whitelist ) > 0:
-                
-                text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
-                
-            
-            return text
-            
-        
-    
-    def ToPermittedString( self ):
-        
-        blacklist = []
-        whitelist = []
-        
-        for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
-            
-            if rule == CC.CENSOR_BLACKLIST:
-                
-                blacklist.append( tag_slice )
-                
-            elif rule == CC.CENSOR_WHITELIST:
-                
-                whitelist.append( tag_slice )
-                
-            
-        
-        blacklist.sort()
-        whitelist.sort()
-        
-        if len( blacklist ) == 0:
-            
-            return 'all tags'
-            
-        else:
-            
-            if set( blacklist ) == { '', ':' }:
-                
-                text = 'no tags'
-                
-                if len( whitelist ) > 0:
-                    
-                    text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
-                    
-                
-            else:
-                
-                text = 'all tags except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
-                
-                if len( whitelist ) > 0:
-                    
-                    text += ' (except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) ) + ')'
-                    
-                
-            
-        
-        text += ' permitted'
-        
-        return text
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_CENSOR ] = TagCensor

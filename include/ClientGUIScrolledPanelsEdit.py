@@ -555,11 +555,11 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         services_manager = HG.client_controller.services_manager
         
-        for ( service_key, action, tag_censor ) in tag_service_options:
+        for ( service_key, action, tag_filter ) in tag_service_options:
             
             if services_manager.ServiceExists( service_key ):
                 
-                sort_tuple = ( service_key, action, tag_censor )
+                sort_tuple = ( service_key, action, tag_filter )
                 
                 display_tuple = self._GetTagDisplayTuple( sort_tuple )
                 
@@ -713,7 +713,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         existing_service_keys = set()
         
-        for ( service_key, action, tag_censor ) in self._tag_service_actions.GetClientData():
+        for ( service_key, action, tag_filter ) in self._tag_service_actions.GetClientData():
             
             existing_service_keys.add( service_key )
             
@@ -778,19 +778,19 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                         action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE
                         
                     
-                    tag_censor = ClientData.TagCensor()
+                    tag_filter = ClientTags.TagFilter()
                     
                     with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                         
-                        panel = EditTagCensorPanel( dlg_3, tag_censor )
+                        panel = EditTagFilterPanel( dlg_3, tag_filter )
                         
                         dlg_3.SetPanel( panel )
                         
                         if dlg_3.ShowModal() == wx.ID_OK:
                             
-                            tag_censor = panel.GetValue()
+                            tag_filter = panel.GetValue()
                             
-                            sort_tuple = ( service_key, action, tag_censor )
+                            sort_tuple = ( service_key, action, tag_filter )
                             
                             display_tuple = self._GetTagDisplayTuple( sort_tuple )
                             
@@ -869,7 +869,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for index in all_selected:
             
-            ( service_key, action, tag_censor ) = self._tag_service_actions.GetClientData( index )
+            ( service_key, action, tag_filter ) = self._tag_service_actions.GetClientData( index )
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
@@ -896,15 +896,15 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             with ClientGUITopLevelWindows.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
-                panel = EditTagCensorPanel( dlg_3, tag_censor )
+                panel = EditTagFilterPanel( dlg_3, tag_filter )
                 
                 dlg_3.SetPanel( panel )
                 
                 if dlg_3.ShowModal() == wx.ID_OK:
                     
-                    tag_censor = panel.GetValue()
+                    tag_filter = panel.GetValue()
                     
-                    sort_tuple = ( service_key, action, tag_censor )
+                    sort_tuple = ( service_key, action, tag_filter )
                     
                     display_tuple = self._GetTagDisplayTuple( sort_tuple )
                     
@@ -935,7 +935,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetTagDisplayTuple( self, sort_tuple ):
         
-        ( service_key, action, tag_censor ) = sort_tuple
+        ( service_key, action, tag_filter ) = sort_tuple
         
         services_manager = HG.client_controller.services_manager
         
@@ -945,9 +945,9 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_action = HC.content_merge_string_lookup[ action ]
         
-        pretty_tag_censor = tag_censor.ToPermittedString()
+        pretty_tag_filter = tag_filter.ToPermittedString()
         
-        return ( name, pretty_action, pretty_tag_censor )
+        return ( name, pretty_action, pretty_tag_filter )
         
     
     def GetValue( self ):
@@ -1711,7 +1711,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
             
-            self._network_context = ClientGUICommon.NetworkContextButton( self, network_context, allow_default = False )
+            self._network_context = ClientGUICommon.NetworkContextButton( self, network_context, limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN ), allow_default = False )
             
             self._key = wx.TextCtrl( self )
             self._value = wx.TextCtrl( self )
@@ -3730,9 +3730,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, tag_censor ):
+    def __init__( self, parent, tag_filter, message = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -3767,12 +3767,12 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._status_st = ClientGUICommon.BetterStaticText( self, 'current: ' )
+        self._status_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ' )
         
         #
         
-        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_censor.GetTagSlicesToRules().items() if rule == CC.CENSOR_BLACKLIST ]
-        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_censor.GetTagSlicesToRules().items() if rule == CC.CENSOR_WHITELIST ]
+        blacklist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_BLACKLIST ]
+        whitelist_tag_slices = [ tag_slice for ( tag_slice, rule ) in tag_filter.GetTagSlicesToRules().items() if rule == CC.FILTER_WHITELIST ]
         
         self._blacklist.AddTags( blacklist_tag_slices )
         self._whitelist.AddTags( whitelist_tag_slices )
@@ -3812,6 +3812,12 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        
+        if message is not None:
+            
+            vbox.Add( ClientGUICommon.BetterStaticText( self, message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
         vbox.Add( hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3918,11 +3924,11 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateStatus( self ):
         
-        tag_censor = self.GetValue()
+        tag_filter = self.GetValue()
         
-        pretty_tag_censor = tag_censor.ToPermittedString()
+        pretty_tag_filter = tag_filter.ToPermittedString()
         
-        self._status_st.SetLabelText( 'current: ' + pretty_tag_censor )
+        self._status_st.SetLabelText( 'currently keeping: ' + pretty_tag_filter )
         
     
     def EventListBoxChanged( self, event ):
@@ -3960,19 +3966,19 @@ class EditTagCensorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
         for tag_slice in self._blacklist.GetClientData():
             
-            tag_censor.SetRule( tag_slice, CC.CENSOR_BLACKLIST )
+            tag_filter.SetRule( tag_slice, CC.FILTER_BLACKLIST )
             
         
         for tag_slice in self._whitelist.GetClientData():
             
-            tag_censor.SetRule( tag_slice, CC.CENSOR_WHITELIST )
+            tag_filter.SetRule( tag_slice, CC.FILTER_WHITELIST )
             
         
-        return tag_censor
+        return tag_filter
         
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -3993,6 +3999,11 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db = wx.CheckBox( url_options_panel )
         
+        self._tag_filter = tag_import_options.GetTagBlacklist()
+        
+        self._tag_filter_button = ClientGUICommon.BetterButton( url_options_panel, self._tag_filter.ToBlacklistString()[:32], self._EditTagBlacklist )
+        self._tag_filter_button.SetToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
+        
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
         
         #
@@ -4007,6 +4018,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'fetch tags even if url known and file already in db: ', self._fetch_tags_even_if_url_known_and_file_already_in_db ) )
+        rows.append( ( 'set blacklist: ', self._tag_filter_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( url_options_panel, rows )
         
@@ -4045,6 +4057,29 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         additional_button.SetLabelText( button_label )
         
         self._service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
+        
+    
+    def _EditTagBlacklist( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag blacklist' ) as dlg:
+            
+            message = 'Blacklists are managed by this tag filtering object, which has an overcomplicated ui for this typically simple job.'
+            message += os.linesep * 2
+            message += 'Any tag that this filter excludes will be considered a blacklisted tag and will stop the file importing.'
+            message += os.linesep * 2
+            message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the left column and hit ok.'
+            
+            panel = EditTagFilterPanel( dlg, self._tag_filter, message )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._tag_filter = panel.GetValue()
+                
+                self._tag_filter_button.SetLabelText( self._tag_filter.ToBlacklistString()[:32] )
+                
+            
         
     
     def _InitialiseNamespaces( self, namespaces ):
@@ -4199,7 +4234,7 @@ Please note that you can set up 'default' values for these tag import options in
         
         service_keys_to_additional_tags = { service_key : additional_tags for ( service_key, ( additional_tags, additional_button ) ) in self._service_keys_to_additional_button_info.items() }
         
-        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = self._tag_filter, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
         
         return tag_import_options
         
@@ -4450,13 +4485,31 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._netloc = wx.TextCtrl( self )
         
-        self._keep_subdomains= wx.CheckBox( self )
-        self._allow_subdomains = wx.CheckBox( self )
+        self._match_subdomains = wx.CheckBox( self )
+        
+        tt = 'Should this class apply to subdomains as well?'
+        tt += os.linesep * 2
+        tt += 'For instance, if this url class has domain \'example.com\', should it match a url with \'boards.example.com\' or \'artistname.example.com\'?'
+        tt += os.linesep * 2
+        tt += 'Any subdomain starting with \'www\' is automatically matched, so do not worry about having to account for that.'
+        
+        self._match_subdomains.SetToolTip( tt )
+        
+        self._keep_matched_subdomains = wx.CheckBox( self )
+        
+        tt = 'Should this url keep its matched subdomains when it is normalised?'
+        tt += os.linesep * 2
+        tt += 'This is typically useful for direct file links that are often served on a numbered CDN subdomain like \'img3.example.com\' but are also valid on the neater main domain.'
+        
+        self._keep_matched_subdomains.SetToolTip( tt )
+        
         self._should_be_associated_with_files = wx.CheckBox( self )
         
-        tt = 'If checked, the client will try to remember this url with any files it ends up importing. Then, if the client sees this URL again, it can skip the download since it knows it already has (or has already deleted) the file once before.'
+        tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
         tt += os.linesep * 2
-        tt += 'This is only useful if the URL is non-ephemeral (i.e. the URL will produce the same file in six months\' time). It is usually not appropriate for gallery or thread urls, which alter regularly, but is for static File Post URLs.'
+        tt += 'If this URL is a File or Post URL and the client comes across it after having already downloaded it once, it can skip the redundant download since it knows it already has (or has already deleted) the file once before.'
+        tt += os.linesep * 2
+        tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for gallery or thread urls, which alter regularly, but is for static Post URLs or some gallery exceptions such as multi-image tweets.'
         
         self._should_be_associated_with_files.SetToolTip( tt )
         
@@ -4488,7 +4541,13 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._normalised_url = wx.TextCtrl( self, style = wx.TE_READONLY )
         
-        ( url_type, preferred_scheme, netloc, allow_subdomains, keep_subdomains, path_components, parameters, api_lookup_converter, should_be_associated_with_files, example_url ) = url_match.ToTuple()
+        tt = 'The same url can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/some-changing-tags-here" can be appended and then altered at a later date. In order to collapse all the different expressions of a url down to a single comparable form, the client will \'normalise\' them based on the essential definitions in their url class. Parameters will be alphebatised and non-defined elements will be removed.'
+        tt += os.linesep * 2
+        tt += 'All normalisation will switch to the preferred scheme, but the alphabetisation of parameters and stripping out of non-defined elements will only occur if this url is associated with files or uses an API Lookup. (In general, you can define gallery and watchable urls a little more loosely since they generally do not need to be compared, but if you will be saving it with a file or need to perform some regex transformation into an API URL, you\'ll want a rigorously defined url class that will normalise to something reliable and pretty.)'
+        
+        self._normalised_url.SetToolTip( tt )
+        
+        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, should_be_associated_with_files, example_url ) = url_match.ToTuple()
         
         self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
         
@@ -4506,8 +4565,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._netloc.SetValue( netloc )
         
-        self._allow_subdomains.SetValue( allow_subdomains )
-        self._keep_subdomains.SetValue( keep_subdomains )
+        self._match_subdomains.SetValue( match_subdomains )
+        self._keep_matched_subdomains.SetValue( keep_matched_subdomains )
         self._should_be_associated_with_files.SetValue( should_be_associated_with_files )
         
         self._path_components.AddDatas( path_components )
@@ -4540,8 +4599,8 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'url type: ', self._url_type ) )
         rows.append( ( 'preferred scheme: ', self._preferred_scheme ) )
         rows.append( ( 'network location: ', self._netloc ) )
-        rows.append( ( 'allow subdomains?: ', self._allow_subdomains ) )
-        rows.append( ( 'keep subdomains?: ', self._keep_subdomains ) )
+        rows.append( ( 'match subdomains?: ', self._match_subdomains ) )
+        rows.append( ( 'keep matched subdomains?: ', self._keep_matched_subdomains ) )
         rows.append( ( 'should associate a \'known url\' with resulting files: ', self._should_be_associated_with_files ) )
         
         gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
@@ -4765,14 +4824,15 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         url_type = self._url_type.GetChoice()
         preferred_scheme = self._preferred_scheme.GetChoice()
         netloc = self._netloc.GetValue()
-        allow_subdomains = self._allow_subdomains.GetValue()
-        keep_subdomains = self._keep_subdomains.GetValue()
+        match_subdomains = self._match_subdomains.GetValue()
+        keep_matched_subdomains = self._keep_matched_subdomains.GetValue()
+        should_be_associated_with_files = self._should_be_associated_with_files.GetValue()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
         example_url = self._example_url.GetValue()
         
-        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, allow_subdomains = allow_subdomains, keep_subdomains = keep_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, example_url = example_url )
+        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, should_be_associated_with_files = should_be_associated_with_files, example_url = example_url )
         
         return url_match
         
@@ -4783,23 +4843,21 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         url_type = url_match.GetURLType()
         
-        typically_saved_to_db = url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST )
-        
-        if typically_saved_to_db:
+        if url_match.NormalisationIsAppropriate():
             
-            if self._allow_subdomains.GetValue():
+            if self._match_subdomains.GetValue():
                 
-                self._keep_subdomains.Enable()
+                self._keep_matched_subdomains.Enable()
                 
             else:
                 
-                self._keep_subdomains.SetValue( False )
-                self._keep_subdomains.Disable()
+                self._keep_matched_subdomains.SetValue( False )
+                self._keep_matched_subdomains.Disable()
                 
             
         else:
             
-            self._keep_subdomains.Disable()
+            self._keep_matched_subdomains.Disable()
             
         
         try:
@@ -4855,7 +4913,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._url_type.GetChoice() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
-                message = 'Please note that it is only appropriate to associate a gallery or watchable URL with a file if that URL is non-ephemeral. It is only appropriate if tf the exact same URL will definitely give the same files in six months\' time (like a tweet or a fixed doujin chapter gallery).'
+                message = 'Please note that it is only appropriate to associate a Gallery or Watchable URL with a file if that URL is non-ephemeral. It is only appropriate if the exact same URL will definitely give the same files in six months\' time (like a tweet or a fixed doujin chapter gallery).'
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back off.'
                 
@@ -4866,13 +4924,15 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._url_type.GetChoice() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                 
-                message = 'Hydrus uses these file associations to make sure not to re-download the same file when it comes across the same URL in future. It is only appropriate to not associate a file or post url with a file if that url is particularly ephemeral. It is only appropriate if the URL has a non-removable random key or will otherwise become invalid after a very short time.'
+                message = 'Hydrus uses these file associations to make sure not to re-download the same file when it comes across the same URL in future. It is only appropriate to not associate a file or post url with a file if that url is particularly ephemeral, such as if the URL includes a non-removable random key that becomes invalid after a few minutes.'
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back on.'
                 
                 wx.MessageBox( message )
                 
             
+        
+        event.Skip()
         
     
     def EventUpdate( self, event ):
@@ -4928,7 +4988,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example (normalised) url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -4972,14 +5032,8 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._AddURLMatch( url_match )
                 
-            
-        
-    
-    def _AddDefaults( self ):
-        
-        for url_match in ClientDefaults.GetDefaultURLMatches():
-            
-            self._AddURLMatch( url_match )
+                self._list_ctrl.Sort()
+                
             
         
     
@@ -4996,7 +5050,7 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         name = url_match.GetName()
         url_type = url_match.GetURLType()
-        example_url = url_match.GetExampleURL()
+        example_url = url_match.Normalise( url_match.GetExampleURL() )
         
         pretty_name = name
         pretty_url_type = HC.url_type_string_lookup[ url_type ]
@@ -5046,6 +5100,8 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        self._list_ctrl.Sort()
+        
     
     def _GetExistingNames( self ):
         
@@ -5094,6 +5150,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
         self._parser_list_ctrl_panel.AddButton( 'edit', self._EditParser, enabled_only_on_selection = True )
+        self._parser_list_ctrl_panel.AddButton( 'clear', self._ClearParser, enabled_check_func = self._LinksOnCurrentSelection )
         self._parser_list_ctrl_panel.AddButton( 'try to fill in gaps based on example urls', self._TryToLinkUrlMatchesAndParsers, enabled_check_func = self._GapsExist )
         
         #
@@ -5175,6 +5232,28 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( self._parser_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+    
+    def _ClearParser( self ):
+        
+        with ClientGUIDialogs.DialogYesNo( self, 'Clear all the linked parsers?' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                for data in self._parser_list_ctrl.GetData( only_selected = True ):
+                    
+                    ( url_match_key, parser_key ) = data
+                    
+                    self._parser_list_ctrl.DeleteDatas( ( data, ) )
+                    
+                    new_data = ( url_match_key, None )
+                    
+                    self._parser_list_ctrl.AddDatas( ( new_data, ) )
+                    
+                    self._parser_list_ctrl.Sort()
+                    
+                
+            
         
     
     def _ConvertAPIPairDataToListCtrlTuples( self, data ):
@@ -5327,6 +5406,13 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         parser_keys = [ parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() ]
         
         return None in parser_keys
+        
+    
+    def _LinksOnCurrentSelection( self ):
+        
+        non_none_parser_keys = [ parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData( only_selected = True ) if parser_key is not None ]
+        
+        return len( non_none_parser_keys ) > 0
         
     
     def _TryToLinkUrlMatchesAndParsers( self ):

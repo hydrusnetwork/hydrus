@@ -5056,21 +5056,26 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
         
     
-    def _GetServiceKeysToContentUpdates( self ):
+    def _GetGroupsOfServiceKeysToContentUpdates( self ):
         
-        service_keys_to_content_updates = {}
+        groups_of_service_keys_to_content_updates = []
         
         for page in self._tag_repositories.GetActivePages():
             
-            ( service_key, content_updates ) = page.GetContentUpdates()
+            ( service_key, groups_of_content_updates ) = page.GetGroupsOfContentUpdates()
             
-            if len( content_updates ) > 0:
+            for content_updates in groups_of_content_updates:
                 
-                service_keys_to_content_updates[ service_key ] = content_updates
+                if len( content_updates ) > 0:
+                    
+                    service_keys_to_content_updates = { service_key : content_updates }
+                    
+                    groups_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                    
                 
             
         
-        return service_keys_to_content_updates
+        return groups_of_service_keys_to_content_updates
         
     
     def _SetSearchFocus( self ):
@@ -5098,9 +5103,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CanCancel( self ):
         
-        service_keys_to_content_updates = self._GetServiceKeysToContentUpdates()
+        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
         
-        if len( service_keys_to_content_updates ) > 0:
+        if len( groups_of_service_keys_to_content_updates ) > 0:
             
             message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
             
@@ -5118,9 +5123,9 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        service_keys_to_content_updates = self._GetServiceKeysToContentUpdates()
+        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
         
-        if len( service_keys_to_content_updates ) > 0:
+        for service_keys_to_content_updates in groups_of_service_keys_to_content_updates:
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
@@ -5205,7 +5210,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
             
-            self._content_updates = []
+            self._groups_of_content_updates = []
             
             self._i_am_local_tag_service = self._tag_service_key == CC.LOCAL_TAG_SERVICE_KEY
             
@@ -5594,7 +5599,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-                self._content_updates.extend( content_updates )
+                if len( content_updates ) > 0:
+                    
+                    self._groups_of_content_updates.append( content_updates )
+                    
                 
             
             self._tags_box.SetTagsByMedia( self._media, force_reload = True )
@@ -5736,11 +5744,14 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tags_box.SetShow( 'deleted', self._show_deleted_checkbox.GetValue() )
             
         
-        def GetContentUpdates( self ): return ( self._tag_service_key, self._content_updates )
+        def GetGroupsOfContentUpdates( self ):
+            
+            return ( self._tag_service_key, self._groups_of_content_updates )
+            
         
         def HasChanges( self ):
             
-            return len( self._content_updates ) > 0
+            return len( self._groups_of_content_updates ) > 0
             
         
         def OK( self ):

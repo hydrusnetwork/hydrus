@@ -1058,7 +1058,7 @@ class FrameInputLocalFiles( wx.Frame ):
         num_good_files = 0
         
         num_empty_files = 0
-        num_uninteresting_mime_files = 0
+        num_unimportable_mime_files = 0
         num_occupied_files = 0
         
         while not HG.view_shutdown:
@@ -1099,7 +1099,7 @@ class FrameInputLocalFiles( wx.Frame ):
                 message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
                 
             
-            if num_empty_files > 0 or num_uninteresting_mime_files > 0 or num_occupied_files > 0:
+            if num_empty_files > 0 or num_unimportable_mime_files > 0 or num_occupied_files > 0:
                 
                 if num_good_files == 0:
                     
@@ -1117,9 +1117,9 @@ class FrameInputLocalFiles( wx.Frame ):
                     bad_comments.append( HydrusData.ConvertIntToPrettyString( num_empty_files ) + ' were empty' )
                     
                 
-                if num_uninteresting_mime_files > 0:
+                if num_unimportable_mime_files > 0:
                     
-                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_uninteresting_mime_files ) + ' had unsupported mimes' )
+                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_unimportable_mime_files ) + ' had unsupported file types' )
                     
                 
                 if num_occupied_files > 0:
@@ -1215,7 +1215,7 @@ class FrameInputLocalFiles( wx.Frame ):
             
             if path.endswith( os.path.sep + 'Thumbs.db' ) or path.endswith( os.path.sep + 'thumbs.db' ):
                 
-                num_uninteresting_mime_files += 1
+                num_unimportable_mime_files += 1
                 
                 continue
                 
@@ -1252,7 +1252,7 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 HydrusData.Print( 'Unparsable file: ' + path )
                 
-                num_uninteresting_mime_files += 1
+                num_unimportable_mime_files += 1
                 
             
         

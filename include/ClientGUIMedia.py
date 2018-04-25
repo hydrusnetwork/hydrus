@@ -1369,7 +1369,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             flat_media = self._GetSelectedFlatMedia()
             
+            if len( flat_media ) < 2:
+                
+                return
+                
+            
             media_pairs = list( itertools.combinations( flat_media, 2 ) )
+            
+        
+        if len( media_pairs ) == 0:
+            
+            return
             
         
         if len( media_pairs ) > 100:
@@ -1729,6 +1739,34 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             elif action == 'copy_sha256_hash':
                 
                 self._CopyHashesToClipboard( 'sha256' )
+                
+            elif action == 'duplicate_media_remove_relationships':
+                
+                self._SetDuplicates( None )
+                
+            elif action == 'duplicate_media_reset_to_potential':
+                
+                self._SetDuplicates( HC.DUPLICATE_UNKNOWN )
+                
+            elif action == 'duplicate_media_set_alternate':
+                
+                self._SetDuplicates( HC.DUPLICATE_ALTERNATE )
+                
+            elif action == 'duplicate_media_set_custom':
+                
+                self._SetDuplicatesCustom()
+                
+            elif action == 'duplicate_media_set_focused_better':
+                
+                self._SetDuplicatesFocusedBetter()
+                
+            elif action == 'duplicate_media_set_not_duplicate':
+                
+                self._SetDuplicates( HC.DUPLICATE_NOT_DUPLICATE )
+                
+            elif action == 'duplicate_media_set_same_quality':
+                
+                self._SetDuplicates( HC.DUPLICATE_SAME_QUALITY )
                 
             elif action == 'export_files':
                 
@@ -3521,7 +3559,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     label = 'set this file as better than the ' + HydrusData.ConvertIntToPrettyString( num_selected - 1 ) + ' other selected'
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self._SetDuplicatesFocusedBetter )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_focused_better' ) )
                     
                     num_files = self._GetNumSelected()
                     
@@ -3529,19 +3567,19 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     num_pairs_text = HydrusData.ConvertIntToPrettyString( num_pairs ) + ' pairs'
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as same quality', 'Set all the selected files as same quality duplicates.', self._SetDuplicates, HC.DUPLICATE_SAME_QUALITY )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as same quality', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_same_quality' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self._SetDuplicates, HC.DUPLICATE_ALTERNATE )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as alternates', 'Set all the selected files as alternates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_alternate' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self._SetDuplicates, HC.DUPLICATE_NOT_DUPLICATE )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as not duplicates', 'Set all the selected files as not duplicates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_not_duplicate' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self._SetDuplicatesCustom )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'make a custom duplicates action', 'Choose which duplicates status to set to this selection and customise non-default merge options.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_custom' ) )
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'send the ' + num_pairs_text + ' in this selection to be compared in the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self._SetDuplicates, HC.DUPLICATE_UNKNOWN )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'send the ' + num_pairs_text + ' in this selection to be compared in the duplicates filter', 'Set all the possible pairs in the selection as unknown/potential duplicate pairs.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_reset_to_potential' ) )
                     
-                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self._SetDuplicates, None )
+                    ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'remove the ' + num_pairs_text + ' in this selection from the duplicates system', 'Remove all duplicates relationships from all the pairs in this selection.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_remove_relationships' ) )
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     

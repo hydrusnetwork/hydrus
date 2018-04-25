@@ -12,6 +12,7 @@ import HydrusTags
 import json
 import os
 import re
+import threading
 import time
 import urlparse
 
@@ -92,7 +93,7 @@ def ConvertParseResultToPrettyString( result ):
         
     elif content_type == HC.CONTENT_TYPE_VETO:
         
-        return 'veto'
+        return 'veto: ' + name
         
     
     raise NotImplementedError()
@@ -101,13 +102,13 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
     
     pretty_strings = []
     
-    content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( content_type, additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
+    content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( ( content_type, name ), additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
     
     data = list( content_type_to_additional_infos.items() )
     
     data.sort()
     
-    for ( content_type, additional_infos ) in data:
+    for ( ( content_type, name ), additional_infos ) in data:
         
         if content_type == HC.CONTENT_TYPE_URLS:
             
@@ -173,7 +174,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             
             if include_veto:
                 
-                pretty_strings.append( 'veto' )
+                pretty_strings.append( 'veto: ' + name )
                 
             
         
@@ -855,7 +856,7 @@ class ParseFormulaHTML( ParseFormula ):
         
         try:
             
-            root = GetSoup( data )
+            root = HG.client_controller.parsing_cache.GetSoup( data )
             
         except Exception as e:
             
@@ -1341,7 +1342,7 @@ class ParseFormulaJSON( ParseFormula ):
         
         try:
             
-            j = json.loads( data )
+            j = HG.client_controller.parsing_cache.GetJSON( data )
             
         except Exception as e:
             
@@ -1796,14 +1797,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         for content_parser in self._content_parsers:
             
-            try:
-                
-                whole_page_parse_results.extend( content_parser.Parse( parsing_context, converted_page_data ) )
-                
-            except HydrusExceptions.VetoException:
-                
-                return []
-                
+            whole_page_parse_results.extend( content_parser.Parse( parsing_context, converted_page_data ) )
             
         
         #
@@ -1836,7 +1830,14 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 for post in posts:
                     
-                    page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
+                    try:
+                        
+                        page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
+                        
+                    except HydrusExceptions.VetoException:
+                        
+                        continue
+                        
                     
                     for page_parser_parse_results in page_parser_all_parse_results:
                         
@@ -1865,7 +1866,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         except HydrusExceptions.VetoException as e:
             
-            pretty_parse_result_text = HydrusData.ToUnicode( e )
+            pretty_parse_result_text = 'veto: ' + HydrusData.ToUnicode( e )
             
         
         result_lines = []

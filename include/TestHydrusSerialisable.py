@@ -8,6 +8,7 @@ import ClientImportOptions
 import ClientMedia
 import ClientRatings
 import ClientSearch
+import ClientTags
 import HydrusConstants as HC
 import HydrusData
 import HydrusNetwork
@@ -154,9 +155,9 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( obj.ToTuple(), dupe_obj.ToTuple() )
             
         
-        duplicate_action_options_delete_and_move = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientData.TagCensor() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ], True )
-        duplicate_action_options_copy = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, ClientData.TagCensor() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ], False )
-        duplicate_action_options_merge = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientData.TagCensor() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ], False )
+        duplicate_action_options_delete_and_move = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE ) ], True )
+        duplicate_action_options_copy = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_COPY ) ], False )
+        duplicate_action_options_merge = ClientData.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [ ( TC.LOCAL_RATING_LIKE_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ), ( TC.LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ) ], False )
         
         inbox = True
         size = 40960
@@ -514,7 +515,7 @@ class TestSerialisables( unittest.TestCase ):
         self._dump_and_load_and_test( sub, test )
         
     
-    def test_SERIALISABLE_TYPE_TAG_CENSOR( self ):
+    def test_SERIALISABLE_TYPE_TAG_FILTER( self ):
         
         def test( obj, dupe_obj ):
             
@@ -531,131 +532,131 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
-        
-        #
-        
-        tag_censor = ClientData.TagCensor()
-        
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        
-        self._dump_and_load_and_test( tag_censor, test )
-        
-        self.assertEqual( tag_censor.Censor( tags ), set() )
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'series:', CC.CENSOR_WHITELIST )
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'series:neon genesis evangelion', 'series:kill la kill' } )
-        
-        #
-        
-        tag_censor = ClientData.TagCensor()
-        
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'series:kill la kill', CC.CENSOR_WHITELIST )
-        
-        self._dump_and_load_and_test( tag_censor, test )
-        
-        self.assertEqual( tag_censor.Censor( tags ), { 'series:kill la kill' } )
+        self.assertEqual( tag_filter.Filter( tags ), set() )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'smile', CC.CENSOR_WHITELIST )
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile' } )
-        
-        #
-        
-        tag_censor = ClientData.TagCensor()
-        
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        
-        self._dump_and_load_and_test( tag_censor, test )
-        
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes' } )
+        self.assertEqual( tag_filter.Filter( tags ), { 'series:neon genesis evangelion', 'series:kill la kill' } )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'series:', CC.CENSOR_WHITELIST )
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:kill la kill', CC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes', 'series:neon genesis evangelion', 'series:kill la kill' } )
-        
-        #
-        
-        tag_censor = ClientData.TagCensor()
-        
-        tag_censor.SetRule( ':', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'series:kill la kill', CC.CENSOR_WHITELIST )
-        
-        self._dump_and_load_and_test( tag_censor, test )
-        
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes', 'series:kill la kill' } )
+        self.assertEqual( tag_filter.Filter( tags ), { 'series:kill la kill' } )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( 'series:', CC.CENSOR_BLACKLIST )
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'smile', CC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes', 'title:test title' } )
-        
-        #
-        
-        tag_censor = ClientData.TagCensor()
-        
-        tag_censor.SetRule( 'series:', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'series:neon genesis evangelion', CC.CENSOR_WHITELIST )
-        
-        self._dump_and_load_and_test( tag_censor, test )
-        
-        self.assertEqual( tag_censor.Censor( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion' } )
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile' } )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes' } )
         
         #
         
-        tag_censor = ClientData.TagCensor()
+        tag_filter = ClientTags.TagFilter()
         
-        tag_censor.SetRule( '', CC.CENSOR_BLACKLIST )
-        tag_censor.SetRule( 'blue eyes', CC.CENSOR_WHITELIST )
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:', CC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_censor, test )
+        self._dump_and_load_and_test( tag_filter, test )
         
-        self.assertEqual( tag_censor.Censor( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill', 'blue eyes' } )
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'series:neon genesis evangelion', 'series:kill la kill' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( ':', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:kill la kill', CC.FILTER_WHITELIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'series:kill la kill' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( 'series:', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'series:neon genesis evangelion', CC.FILTER_WHITELIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
+        
+        #
+        
+        tag_filter = ClientTags.TagFilter()
+        
+        tag_filter.SetRule( '', CC.FILTER_BLACKLIST )
+        tag_filter.SetRule( 'blue eyes', CC.FILTER_WHITELIST )
+        
+        self._dump_and_load_and_test( tag_filter, test )
+        
+        self.assertEqual( tag_filter.Filter( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill', 'blue eyes' } )
         
     

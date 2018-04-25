@@ -901,7 +901,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _BroadcastCurrentText( self ):
         
-        ( inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         try:
             
@@ -996,7 +996,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 
             
         
-        return ( inclusive, search_text, explicit_wildcard, cache_text, entry_predicate )
+        return ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate )
         
     
     def _GenerateMatches( self ):
@@ -1005,31 +1005,41 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
-        ( inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
+        ( raw_entry, inclusive, search_text, explicit_wildcard, cache_text, entry_predicate ) = self._ParseSearchText()
         
         if search_text in ( '', ':', '*' ):
             
-            input_just_changed = self._cache_text is not None
+            # if the user inputs '-' or similar, let's go to an empty list
+            if raw_entry == '':
+                
+                input_just_changed = self._cache_text is not None
+                
+                db_not_going_to_hang_if_we_hit_it = not HG.client_controller.DBCurrentlyDoingJob()
+                
+                if input_just_changed or db_not_going_to_hang_if_we_hit_it or not self._initial_matches_fetched:
+                    
+                    self._cache_text = None
+                    
+                    if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                        
+                        search_service_key = self._tag_service_key
+                        
+                    else:
+                        
+                        search_service_key = self._file_service_key
+                        
+                    
+                    self._cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
+                    
+                
+                matches = self._cached_results
+                
+            else:
+                
+                matches = []
+                
             
-            db_not_going_to_hang_if_we_hit_it = not HG.client_controller.DBCurrentlyDoingJob()
             
-            if input_just_changed or db_not_going_to_hang_if_we_hit_it or not self._initial_matches_fetched:
-                
-                self._cache_text = None
-                
-                if self._file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
-                    
-                    search_service_key = self._tag_service_key
-                    
-                else:
-                    
-                    search_service_key = self._file_service_key
-                    
-                
-                self._cached_results = HG.client_controller.Read( 'file_system_predicates', search_service_key )
-                
-            
-            matches = self._cached_results
             
         else:
             
@@ -1319,12 +1329,12 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             sibling_predicate = None
             
         
-        return ( search_text, cache_text, entry_predicate, sibling_predicate )
+        return ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate )
         
     
     def _BroadcastCurrentText( self ):
         
-        ( search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
+        ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
         try:
             
@@ -1344,7 +1354,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         num_autocomplete_chars = HC.options[ 'num_autocomplete_chars' ]
         
-        ( search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
+        ( raw_entry, search_text, cache_text, entry_predicate, sibling_predicate ) = self._ParseSearchText()
         
         if search_text in ( '', ':', '*' ):
             

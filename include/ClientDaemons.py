@@ -393,7 +393,7 @@ def DAEMONSynchroniseSubscriptions( controller ):
                         
                     
                 
-                raise HydrusExceptions.CancelledException()
+                raise HydrusExceptions.CancelledException( 'subs cancelling or thread shutting down' )
                 
             
             filter_finished_jobs( subs_jobs )

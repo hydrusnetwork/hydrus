@@ -534,11 +534,11 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def ShouldPresent( self, status, inbox ):
         
-        if status == CC.STATUS_SUCCESSFUL and self._present_new_files:
+        if status == CC.STATUS_SUCCESSFUL_AND_NEW and self._present_new_files:
             
             return True
             
-        elif status == CC.STATUS_REDUNDANT:
+        elif status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
             
             if inbox and self._present_already_in_inbox_files:
                 
@@ -555,7 +555,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def ShouldPresentIgnorantOfInbox( self, status ):
         
-        if status == CC.STATUS_SUCCESSFUL and self._present_new_files:
+        if status == CC.STATUS_SUCCESSFUL_AND_NEW and self._present_new_files:
             
             return True
             
@@ -576,11 +576,16 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Tag Import Options'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, service_keys_to_namespaces = None, service_keys_to_additional_tags = None ):
+    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, tag_blacklist = None, service_keys_to_namespaces = None, service_keys_to_additional_tags = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if tag_blacklist is None:
+            
+            tag_blacklist = ClientTags.TagFilter()
+            
         
         if service_keys_to_namespaces is None:
             
@@ -593,6 +598,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db
+        self._tag_blacklist = tag_blacklist
         self._service_keys_to_namespaces = service_keys_to_namespaces
         self._service_keys_to_additional_tags = service_keys_to_additional_tags
         
@@ -613,16 +619,18 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        serialisable_tag_blacklist = self._tag_blacklist.GetSerialisableTuple()
         safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() if test_func( service_key ) }
         safe_service_keys_to_additional_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_additional_tags.items() if test_func( service_key ) }
         
-        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
+        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = serialisable_info
+        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = serialisable_info
         
+        self._tag_blacklist = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_blacklist )
         self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
         self._service_keys_to_additional_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_additional_tags.items() }
         
@@ -649,6 +657,33 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
             
             return ( 3, new_serialisable_info )
+            
+        
+        if version == 3:
+            
+            ( fetch_tags_even_if_url_known_and_file_already_in_db, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = old_serialisable_info
+            
+            tag_blacklist = ClientTags.TagFilter()
+            
+            serialisable_tag_blacklist = tag_blacklist.GetSerialisableTuple()
+            
+            new_serialisable_info = ( fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
+            
+            return ( 4, new_serialisable_info )
+            
+        
+    
+    def CheckBlacklist( self, tags ):
+        
+        ok_tags = self._tag_blacklist.Filter( tags )
+        
+        if len( ok_tags ) < len( tags ):
+            
+            bad_tags = set( tags ).difference( ok_tags )
+            
+            bad_tags = HydrusTags.SortNumericTags( bad_tags )
+            
+            raise HydrusExceptions.VetoException( ', '.join( bad_tags ) + ' are blacklisted!' )
             
         
     
@@ -772,6 +807,10 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if show_url_options:
                 
+                pre_statements = []
+                
+                pre_statements.append( self._tag_blacklist.ToBlacklistString() )
+                
                 if self._fetch_tags_even_if_url_known_and_file_already_in_db:
                     
                     s = 'fetching tags even if url is known and file already in db'
@@ -781,7 +820,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                     s = 'not fetching tags if url is known and file already in db'
                     
                 
-                statements = [ s, '---' ] + statements
+                pre_statements.append( s )
+                
+                statements = pre_statements + [ '---' ] + statements
                 
             
             separator = os.linesep * 2
@@ -796,14 +837,14 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return summary
         
     
+    def GetTagBlacklist( self ):
+        
+        return self._tag_blacklist
+        
+    
     def WorthFetchingTags( self ):
         
         return len( self._service_keys_to_namespaces ) > 0
-        
-    
-    def SetShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB( self, value ):
-        
-        self._fetch_tags_even_if_url_known_and_file_already_in_db = value
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions

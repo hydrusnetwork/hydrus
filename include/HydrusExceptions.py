@@ -1,6 +1,5 @@
 import os
 
-class CancelledException( Exception ): pass
 class CantRenderWithCVException( Exception ): pass
 class DataMissing( Exception ): pass
 
@@ -13,12 +12,14 @@ class DBException( Exception ):
 
 class DBAccessException( Exception ): pass
 class FileMissingException( Exception ): pass
-class MimeException( Exception ): pass
 class NameException( Exception ): pass
 class ShutdownException( Exception ): pass
-class SizeException( Exception ): pass
-class DecompressionBombException( SizeException ): pass
+
 class VetoException( Exception ): pass
+class CancelledException( VetoException ): pass
+class MimeException( VetoException ): pass
+class SizeException( VetoException ): pass
+class DecompressionBombException( SizeException ): pass
 
 class ParseException( Exception ): pass
 class StringConvertException( ParseException ): pass

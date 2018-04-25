@@ -1,5 +1,6 @@
 import bs4
 import ClientData
+import ClientNetworkingDomain
 import ClientNetworkingJobs
 import ClientParsing
 import HydrusConstants as HC
@@ -796,7 +797,7 @@ class GalleryBooru( Gallery ):
                 
             
             # giving 404 on some content servers for http, no redirect for some reason
-            urls = [ ClientData.ConvertHTTPToHTTPS( url ) for url in urls ]
+            urls = [ ClientNetworkingDomain.ConvertHTTPToHTTPS( url ) for url in urls ]
             
         
         urls_and_tags = [ ( url, set() ) for url in urls ]
@@ -949,7 +950,7 @@ class GalleryBooru( Gallery ):
         if 'gelbooru.com' in url_base:
             
             # giving 404 on some content servers for http, no redirect for some reason
-            image_url = ClientData.ConvertHTTPToHTTPS( image_url )
+            image_url = ClientNetworkingDomain.ConvertHTTPToHTTPS( image_url )
             
         
         tags = []
@@ -1801,7 +1802,7 @@ class GalleryTumblr( Gallery ):
                                     
                                 
                             
-                            url = ClientData.ConvertHTTPToHTTPS( url )
+                            url = ClientNetworkingDomain.ConvertHTTPToHTTPS( url )
                             
                             urls_and_tags.append( ( url, tags ) )
                             

@@ -18,8 +18,8 @@ BLANK_PHASH = '\x80\x00\x00\x00\x00\x00\x00\x00' # first bit 1 but everything el
 
 CAN_HIDE_MOUSE = True
 
-CENSOR_WHITELIST = 0
-CENSOR_BLACKLIST = 1
+FILTER_WHITELIST = 0
+FILTER_BLACKLIST = 1
 
 # Hue is generally 200, Sat and Lum changes based on need
 COLOUR_LIGHT_SELECTED = wx.Colour( 235, 248, 255 )
@@ -336,10 +336,10 @@ SHORTCUTS_RESERVED_NAMES = [ 'archive_delete_filter', 'duplicate_filter', 'media
 
 # shortcut commands
 
-SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative' ]
+SHORTCUTS_MEDIA_ACTIONS = [ 'manage_file_tags', 'manage_file_ratings', 'manage_file_urls', 'manage_file_notes', 'archive_file', 'inbox_file', 'delete_file', 'export_files', 'remove_file_from_view', 'open_file_in_external_program', 'open_selection_in_new_page', 'launch_the_archive_delete_filter', 'copy_bmp', 'copy_file', 'copy_path', 'copy_sha256_hash', 'get_similar_to_exact', 'get_similar_to_very_similar', 'get_similar_to_similar', 'get_similar_to_speculative', 'duplicate_media_remove_relationships', 'duplicate_media_reset_to_potential', 'duplicate_media_set_alternate', 'duplicate_media_set_custom', 'duplicate_media_set_focused_better', 'duplicate_media_set_not_duplicate', 'duplicate_media_set_same_quality' ]
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [ 'move_animation_to_previous_frame', 'move_animation_to_next_frame', 'switch_between_fullscreen_borderless_and_regular_framed_window', 'pan_up', 'pan_down', 'pan_left', 'pan_right', 'zoom_in', 'zoom_out', 'switch_between_100_percent_and_canvas_zoom', 'flip_darkmode' ]
 SHORTCUTS_MEDIA_VIEWER_BROWSER_ACTIONS = [ 'view_next', 'view_first', 'view_last', 'view_previous' ]
-SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders' ]
+SHORTCUTS_MAIN_GUI_ACTIONS = [ 'refresh', 'new_page', 'new_page_of_pages', 'new_duplicate_filter_page', 'new_url_downloader_page', 'new_simple_downloader_page', 'new_watcher_downloader_page', 'synchronised_wait_switch', 'set_media_focus', 'show_hide_splitters', 'set_search_focus', 'unclose_page', 'close_page', 'redo', 'undo', 'flip_darkmode', 'check_all_import_folders' ]
 SHORTCUTS_DUPLICATE_FILTER_ACTIONS = [ 'duplicate_filter_this_is_better', 'duplicate_filter_exactly_the_same', 'duplicate_filter_alternates', 'duplicate_filter_not_dupes', 'duplicate_filter_custom_action', 'duplicate_filter_skip', 'duplicate_filter_back' ]
 SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS = [ 'archive_delete_filter_keep', 'archive_delete_filter_delete', 'archive_delete_filter_skip', 'archive_delete_filter_back' ]
 
@@ -396,26 +396,30 @@ SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_PIXELS ) )
 SORT_CHOICES.append( ( 'system', SORT_FILES_BY_NUM_TAGS ) )
 
 STATUS_UNKNOWN = 0
-STATUS_SUCCESSFUL = 1
-STATUS_REDUNDANT = 2
+STATUS_SUCCESSFUL_AND_NEW = 1
+STATUS_SUCCESSFUL_BUT_REDUNDANT = 2
 STATUS_DELETED = 3
-STATUS_FAILED = 4
-STATUS_NEW = 5
-STATUS_PAUSED = 6
-STATUS_UNINTERESTING_MIME = 7
+STATUS_ERROR = 4
+STATUS_NEW = 5 # no longer used
+STATUS_PAUSED = 6 # not used
+STATUS_VETOED = 7
 STATUS_SKIPPED = 8
 
 status_string_lookup = {}
 
 status_string_lookup[ STATUS_UNKNOWN ] = ''
-status_string_lookup[ STATUS_SUCCESSFUL ] = 'successful'
-status_string_lookup[ STATUS_REDUNDANT ] = 'already in db'
+status_string_lookup[ STATUS_SUCCESSFUL_AND_NEW ] = 'successful'
+status_string_lookup[ STATUS_SUCCESSFUL_BUT_REDUNDANT ] = 'already in db'
 status_string_lookup[ STATUS_DELETED ] = 'deleted'
-status_string_lookup[ STATUS_FAILED ] = 'failed'
+status_string_lookup[ STATUS_ERROR ] = 'error'
 status_string_lookup[ STATUS_NEW ] = 'new'
 status_string_lookup[ STATUS_PAUSED ] = 'paused'
-status_string_lookup[ STATUS_UNINTERESTING_MIME ] = 'uninteresting mime'
+status_string_lookup[ STATUS_VETOED ] = 'vetoed'
 status_string_lookup[ STATUS_SKIPPED ] = 'skipped'
+
+SUCCESSFUL_IMPORT_STATES = { STATUS_SUCCESSFUL_AND_NEW, STATUS_SUCCESSFUL_BUT_REDUNDANT }
+UNSUCCESSFUL_IMPORT_STATES = { STATUS_DELETED, STATUS_ERROR, STATUS_VETOED }
+FAILED_IMPORT_STATES = { STATUS_ERROR, STATUS_VETOED }
 
 THUMBNAIL_MARGIN = 2
 THUMBNAIL_BORDER = 1

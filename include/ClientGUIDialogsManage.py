@@ -2515,16 +2515,16 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._mimes.SetValue( mimes )
         
-        self._action_successful.SelectClientData( actions[ CC.STATUS_SUCCESSFUL ] )
-        if CC.STATUS_SUCCESSFUL in action_locations:
+        self._action_successful.SelectClientData( actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] )
+        if CC.STATUS_SUCCESSFUL_AND_NEW in action_locations:
             
-            self._location_successful.SetPath( action_locations[ CC.STATUS_SUCCESSFUL ] )
+            self._location_successful.SetPath( action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] )
             
         
-        self._action_redundant.SelectClientData( actions[ CC.STATUS_REDUNDANT ] )
-        if CC.STATUS_REDUNDANT in action_locations:
+        self._action_redundant.SelectClientData( actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] )
+        if CC.STATUS_SUCCESSFUL_BUT_REDUNDANT in action_locations:
             
-            self._location_redundant.SetPath( action_locations[ CC.STATUS_REDUNDANT ] )
+            self._location_redundant.SetPath( action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] )
             
         
         self._action_deleted.SelectClientData( actions[ CC.STATUS_DELETED ] )
@@ -2533,10 +2533,10 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             self._location_deleted.SetPath( action_locations[ CC.STATUS_DELETED ] )
             
         
-        self._action_failed.SelectClientData( actions[ CC.STATUS_FAILED ] )
-        if CC.STATUS_FAILED in action_locations:
+        self._action_failed.SelectClientData( actions[ CC.STATUS_ERROR ] )
+        if CC.STATUS_ERROR in action_locations:
             
-            self._location_failed.SetPath( action_locations[ CC.STATUS_FAILED ] )
+            self._location_failed.SetPath( action_locations[ CC.STATUS_ERROR ] )
             
         
         good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in tag_service_keys_to_filename_tagging_options.items() if HG.client_controller.services_manager.ServiceExists( service_key ) }
@@ -2899,16 +2899,16 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         actions = {}
         action_locations = {}
         
-        actions[ CC.STATUS_SUCCESSFUL ] = self._action_successful.GetChoice()
-        if actions[ CC.STATUS_SUCCESSFUL ] == CC.IMPORT_FOLDER_MOVE:
+        actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] = self._action_successful.GetChoice()
+        if actions[ CC.STATUS_SUCCESSFUL_AND_NEW ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_SUCCESSFUL ] = HydrusData.ToUnicode( self._location_successful.GetPath() )
+            action_locations[ CC.STATUS_SUCCESSFUL_AND_NEW ] = HydrusData.ToUnicode( self._location_successful.GetPath() )
             
         
-        actions[ CC.STATUS_REDUNDANT ] = self._action_redundant.GetChoice()
-        if actions[ CC.STATUS_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
+        actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = self._action_redundant.GetChoice()
+        if actions[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_REDUNDANT ] = HydrusData.ToUnicode( self._location_redundant.GetPath() )
+            action_locations[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ] = HydrusData.ToUnicode( self._location_redundant.GetPath() )
             
         
         actions[ CC.STATUS_DELETED ] = self._action_deleted.GetChoice()
@@ -2917,10 +2917,10 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
             action_locations[ CC.STATUS_DELETED ] = HydrusData.ToUnicode( self._location_deleted.GetPath() )
             
         
-        actions[ CC.STATUS_FAILED ] = self._action_failed.GetChoice()
-        if actions[ CC.STATUS_FAILED ] == CC.IMPORT_FOLDER_MOVE:
+        actions[ CC.STATUS_ERROR ] = self._action_failed.GetChoice()
+        if actions[ CC.STATUS_ERROR ] == CC.IMPORT_FOLDER_MOVE:
             
-            action_locations[ CC.STATUS_FAILED ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
+            action_locations[ CC.STATUS_ERROR ] = HydrusData.ToUnicode( self._location_failed.GetPath() )
             
         
         period = self._period.GetValue()

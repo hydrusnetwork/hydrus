@@ -1,5 +1,6 @@
 import ClientDefaults
 import ClientDownloading
+import ClientParsing
 import ClientRendering
 import ClientSearch
 import ClientServices
@@ -1668,6 +1669,103 @@ class MenuEventIdToActionCache( object ):
     
 MENU_EVENT_ID_TO_ACTION_CACHE = MenuEventIdToActionCache()
 
+class ParsingCache( object ):
+    
+    def __init__( self ):
+        
+        self._html_to_soups = {}
+        self._json_to_jsons = {}
+        
+        self._lock = threading.Lock()
+        
+    
+    def _CleanCache( self ):
+        
+        for cache in ( self._html_to_soups, self._json_to_jsons ):
+            
+            dead_datas = set()
+            
+            for ( data, ( last_accessed, parsed_object ) ) in cache.items():
+                
+                if HydrusData.TimeHasPassed( last_accessed + 10 ):
+                    
+                    dead_datas.add( data )
+                    
+                
+            
+            for dead_data in dead_datas:
+                
+                del cache[ dead_data ]
+                
+            
+        
+    
+    def CleanCache( self ):
+        
+        with self._lock:
+            
+            self._CleanCache()
+            
+        
+    
+    def GetJSON( self, json_text ):
+        
+        with self._lock:
+            
+            now = HydrusData.GetNow()
+            
+            if json_text not in self._json_to_jsons:
+                
+                json_object = json.loads( json_text )
+                
+                self._json_to_jsons[ json_text ] = ( now, json_object )
+                
+            
+            ( last_accessed, json_object ) = self._json_to_jsons[ json_text ]
+            
+            if last_accessed != now:
+                
+                self._json_to_jsons[ json_text ] = ( now, json_object )
+                
+            
+            if len( self._json_to_jsons ) > 10:
+                
+                self._CleanCache()
+                
+            
+            return json_object
+            
+        
+    
+    def GetSoup( self, html ):
+        
+        with self._lock:
+            
+            now = HydrusData.GetNow()
+            
+            if html not in self._html_to_soups:
+                
+                soup = ClientParsing.GetSoup( html )
+                
+                self._html_to_soups[ html ] = ( now, soup )
+                
+            
+            ( last_accessed, soup ) = self._html_to_soups[ html ]
+            
+            if last_accessed != now:
+                
+                self._html_to_soups[ html ] = ( now, soup )
+                
+            
+            if len( self._html_to_soups ) > 10:
+                
+                self._CleanCache()
+                
+            
+            return soup
+            
+        
+    
 class RenderedImageCache( object ):
     
     def __init__( self, controller ):
@@ -2400,7 +2498,7 @@ class TagParentsManager( object ):
         
         self._lock = threading.Lock()
         
-        self._controller.sub( self, 'RefreshParents', 'notify_new_parents' )
+        self._controller.sub( self, 'NotifyNewParents', 'notify_new_parents' )
         
     
     def _RefreshParents( self ):

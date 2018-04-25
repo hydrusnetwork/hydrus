@@ -1293,11 +1293,14 @@ class PagesNotebook( wx.Notebook ):
     
     def _SendPageToNewNotebook( self, index ):
         
-        page = self.GetPage( index )
-        
-        dest_notebook = self.NewPagesNotebook( forced_insertion_index = index, give_it_a_blank_page = False )
-        
-        self._MovePage( page, dest_notebook, 0 )
+        if 0 <= index and index <= self.GetPageCount() - 1:
+            
+            page = self.GetPage( index )
+            
+            dest_notebook = self.NewPagesNotebook( forced_insertion_index = index, give_it_a_blank_page = False )
+            
+            self._MovePage( page, dest_notebook, 0 )
+            
         
     
     def _SendRightPagesToNewNotebook( self, from_index ):

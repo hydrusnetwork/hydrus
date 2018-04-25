@@ -443,9 +443,9 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         HG.client_controller.pub( 'clipboard', 'text', payload )
         
     
-    def _RetryFailures( self ):
+    def _RetryErrors( self ):
         
-        message = 'Are you sure you want to retry all the failed files?'
+        message = 'Are you sure you want to retry all the files that encountered errors?'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -513,16 +513,16 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         seed_cache = self._seed_cache_get_callable()
         
-        num_failures = seed_cache.GetSeedCount( CC.STATUS_FAILED )
+        num_errors = seed_cache.GetSeedCount( CC.STATUS_ERROR )
         
-        if num_failures > 0:
+        if num_errors > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ConvertIntToPrettyString( num_failures ) + ' failures', 'Tell this cache to reattempt all its failures.', self._RetryFailures )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ConvertIntToPrettyString( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
         
         num_unknown = seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
         
-        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL ) + seed_cache.GetSeedCount( CC.STATUS_REDUNDANT )
+        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
         
         if num_successful > 0:
             
