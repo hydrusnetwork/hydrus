@@ -8,6 +8,53 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 304</h3></li>
+				<ul>
+					<li>renamed the new 'tagcensor' object to 'tagfilter' (since it will end up doing a bunch of non-censoring jobs) and refactored it into clienttags</li>
+					<li>attached a tag filter object to all tag import options to act as a tag blacklist. all tags that go through the import pipeline (except for a couple of old legacy instances) are now checked against the blacklist, and if a bad tag is found, the file vetoes! tag import options has some new ui to handle this and background code to deal with inheritance from defaults and so on</li>
+					<li>new file import urls that have url classes, no matter their source, are now normalised!</li>
+					<li>all new file import urls are now tested against both the original and normalised version of the url, so even though previously parsed urls remain un-normalised, new urls that are pre-normalised the same will not count as new! -fingers crossed-</li>
+					<li>on update, the db will get normalised copies of all existing urls. this means many files will now have two versions of its urls--some ui to collapse everything down to only the normalised version (after some human eyes have passed in front of this big change) will come in the coming weeks</li>
+					<li>some sites where normalisation is a consistent problem for later redownloads (like e621, which appends 'preview' tags to the post url) _should_ now be caught reliably!</li>
+					<li>the 'allow subdomains' on edit url class panel is now named 'match subdomains' and has a tooltip to better explain how it works</li>
+					<li>'keep subdomains' is now 'keep matched subdomains' and has a tooltip as well</li>
+					<li>the 'keep matched subdomains' enabled behaviour (and some normalisation calculation) is now additionally governed by the 'associate url with files' value and api url conversion info rather than just 'match subdomains' and raw url type</li>
+					<li>fixed an issue that was stopping the 'associate url with files' option sticking in edit url class panel</li>
+					<li>edit url matches now resorts after an add or edit action</li>
+					<li>all listctrls with a wrapper panel now resort after an import from clipboard, png, or defaults call</li>
+					<li>url matches now match against www*. versions of their domain regardless of 'match subdomains' settings</li>
+					<li>updated xbooru url classes to prefer https</li>
+					<li>the manage url class links panel now has a 'clear' button to clear a url_class->parser link</li>
+					<li>introduced three new simple downloader parsers for yiff.party, thanks to @cuddlebear on discord for the submission</li>
+					<li>the old 'uninteresting mime' status has been expanded to a wider 'vetoed' status to represent all file imports that are abandoned without a particular error (e.g. tag blacklist, wrong filesize or resolution)</li>
+					<li>the import system now reports the total of 'num vetoed' as 'num ignored' in its summary statements</li>
+					<li>it now also reports 'num skipped'</li>
+					<li>the 'num successful' and 'num already in db' are now folded more neatly together in import cache summary statements</li>
+					<li>file downloads that are cancelled will now set a 'veto' state rather than a 'skip' state</li>
+					<li>improved file import exception handling across the board</li>
+					<li>improved how single-file-result parsing vetoes propagate up to the file import status cache</li>
+					<li>404 network errors will now provide a 'veto' status rather than an 'error'</li>
+					<li>vetoes will not count as errors when deciding whether a subscription should be abandoned early (so a bunch of decomp bombs or 404s will no longer stutter a subscription!)</li>
+					<li>misc fixes and improvements to the new download stuff</li>
+					<li>wrote a new parsing cache that saves a lot of work in the new parsing system</li>
+					<li>improved the 'is this url known?' test to better deal with situations where all the given urls are galleries or unrecognised--a better aggregate of file status is formed, and 'already in db'/'deleted' statuses will apply if there is no evidence otherwise (the dev got the new logic for this from a legit nightmare about urls downloading over and over, so let's hope it works out)</li>
+					<li>the 'is this url known?' logic also recovers from 1->n url->hash relationships where it does not expect them, trying to find 'already in db' hashes over 'deleted' ones</li>
+					<li>to clear up some ambiguity, galleries or subscriptions now give a different 'checking in x seconds' status when waiting on the first page of a query</li>
+					<li>the 'noneablebytescontrol', as seen in edit file import options, will now correctly disable/enable its bytes sub-control when it is none'ed</li>
+					<li>a persistent issue with the new network engine sometimes failing to correctly error after certain broken connections (the computer going to sleep mid-download was a common cause here) should now be recovered from and the connection naturally reattempted</li>
+					<li>added three new shortcuts to the 'main_gui' shortcut set that allow for opening a new 'urls', 'simple', or 'thread watcher' downloader page</li>
+					<li>added two more shortcuts to 'main_gui' for new 'page of pages' and 'duplicate filter page'</li>
+					<li>moved some old 'new page' menu code to the new application command system</li>
+					<li>added numerous 'duplicates' shortcuts to the 'media' shortcut set that will work on selections of thumbnails</li>
+					<li>the thumbnail duplicates menu actions now go through the new application command system</li>
+					<li>fixed an issue where the current tag parents caches was not refreshing when notified</li>
+					<li>inputting a short invalid syntactic input on a 'read' tag autocomplete such as '-' will now clear the system predicates list--system preds should now only show on a completely empty input</li>
+					<li>fixed an issue where certain combinations of 'remove a tag, then re-add it' nullipotent actions in a single manage tags dialog transaction were not applying reliably (sometimes, the subsequent mirror action was not occuring due to a processing re-order optimisation at the db level)</li>
+					<li>made some animation code a little safer and quieter as a test for some users who were getting blitzed with some deadwindow error spam in certain situations--let's see if this changes anything</li>
+					<li>replaced all the em dashes in the help with double hyphens as github pages was rendering them wrong</li>
+					<li>added CrystalDiskInfo recommendation to 'help my db is broke.txt'</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 303</h3></li>
 				<ul>
 					<li>file post url classes can now be linked to parsers!</li>
