@@ -9933,11 +9933,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 new_yiff_sdf = [ sdf for sdf in default_sdf if 'yiff' in sdf.GetName() ]
                 
-                existing_sdf = new_options.GetSimpleDownloaderFormulae()
+                existing_sdf = list( new_options.GetSimpleDownloaderFormulae() )
                 
                 existing_sdf.extend( new_yiff_sdf )
                 
-                new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
+                new_options.SetSimpleDownloaderFormulae( existing_sdf )
                 
                 self._SetJSONDump( new_options )
                 
@@ -10027,6 +10027,60 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to generate normalised urls at the db level failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 304:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                url_matches = ClientDefaults.GetDefaultURLMatches()
+                
+                url_matches = [ url_match for url_match in url_matches if 'pixiv file page' in url_match.GetName() or 'yiff.party' in url_match.GetName() ]
+                
+                existing_url_matches = [ url_match for url_match in domain_manager.GetURLMatches() if 'pixiv file page' not in url_match.GetName() and 'yiff.party' not in url_match.GetName() ]
+                
+                url_matches.extend( existing_url_matches )
+                
+                domain_manager.SetURLMatches( url_matches )
+                
+                #
+                
+                existing_parsers = domain_manager.GetParsers()
+                
+                existing_names = { parser.GetName() for parser in existing_parsers }
+                
+                new_parsers = list( existing_parsers )
+                
+                default_parsers = ClientDefaults.GetDefaultParsers()
+                
+                interesting_new_parsers = [ parser for parser in default_parsers if parser.GetName() not in existing_names ] # add it
+                
+                new_parsers.extend( interesting_new_parsers )
+                
+                domain_manager.SetParsers( new_parsers )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update pixiv url class failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

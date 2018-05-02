@@ -2444,7 +2444,43 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                             
                         
                     
-                    subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                    job_key = ClientThreading.JobKey( cancellable = True )
+                    
+                    job_key.SetVariable( 'popup_title', 'loading subscriptions' )
+                    
+                    subscription_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+                    
+                    pubbed_it = False
+                    started = HydrusData.GetNowFloat()
+                    num_to_do = len( subscription_names )
+                    
+                    subscriptions = []
+                    
+                    for ( i, name ) in enumerate( subscription_names ):
+                        
+                        if job_key.IsCancelled():
+                            
+                            job_key.Delete()
+                            
+                            return
+                            
+                        
+                        if not pubbed_it and HydrusData.TimeHasPassedFloat( started + 1.0 ):
+                            
+                            self._controller.pub( 'message', job_key )
+                            
+                            pubbed_it = True
+                            
+                        
+                        job_key.SetVariable( 'popup_text_1', HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) + ': ' + name )
+                        job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+                        
+                        subscription = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION, name )
+                        
+                        subscriptions.append( subscription )
+                        
+                    
+                    job_key.Delete()
                     
                     controller.CallBlockingToWx( wx_do_it, subscriptions, original_pause_status )
                     
@@ -3728,7 +3764,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._notebook.TestAbleToClose()
                 
-            except HydrusExceptions.PermissionException:
+            except HydrusExceptions.VetoException:
                 
                 return False
                 
@@ -4156,6 +4192,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == 'undo':
                 
                 self._controller.pub( 'undo' )
+                
+            elif action == 'flip_debug_force_idle_mode_do_not_set_this':
+                
+                self._SwitchBoolean( 'force_idle_mode' )
+                
+                self._DirtyMenu( 'help' )
+                
+                self._menu_updater.Update()
                 
             else:
                 

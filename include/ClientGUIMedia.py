@@ -1095,6 +1095,26 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         
     
+    def _OpenFileInWebBrowser( self ):
+        
+        if self._focussed_media is not None:
+            
+            if self._focussed_media.GetLocationsManager().IsLocal():
+                
+                hash = self._focussed_media.GetHash()
+                mime = self._focussed_media.GetMime()
+                
+                client_files_manager = HG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                self._SetFocussedMedia( None )
+                
+                webbrowser.open( 'file://' + path )
+                
+            
+        
+    
     def _OpenFileLocation( self ):
         
         if self._focussed_media is not None:
@@ -3348,13 +3368,24 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            if advanced_mode:
+            if focussed_is_local:
                 
-                if not HC.PLATFORM_LINUX and focussed_is_local:
+                show_open_in_web = not HC.PLATFORM_WINDOWS or advanced_mode # let's turn it on for any Winlads who wants to try
+                show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
+                
+                if show_open_in_web or show_open_in_explorer:
                     
                     open_menu = wx.Menu()
                     
-                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                    if show_open_in_web:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser (prototype)', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+                        
+                    
+                    if show_open_in_explorer:
+                        
+                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                        
                     
                     ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
                     
@@ -3547,6 +3578,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if advanced_mode:
                 
+                ClientGUIMenus.AppendSeparator( menu )
+                
                 duplicates_menu = menu # this is important to make the menu flexible if not multiple selected
                 
                 focussed_hash = self._focussed_media.GetDisplayMedia().GetHash()
@@ -3625,12 +3658,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                     
                 
-            
-            if advanced_mode:
-                
                 if self._focussed_media.HasImages():
-                    
-                    ClientGUIMenus.AppendSeparator( menu )
                     
                     similar_menu = wx.Menu()
                     
@@ -3642,8 +3670,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenu( menu, similar_menu, 'find similar files' )
                     
                 
-            
-            if advanced_mode:
+                ClientGUIMenus.AppendSeparator( menu )
                 
                 ClientGUIMenus.AppendMenuItem( self, menu, 'reparse files and regenerate thumbnails', 'Refresh this file\'s metadata and regenerate its thumbnails.', self._ReparseFile )
                 

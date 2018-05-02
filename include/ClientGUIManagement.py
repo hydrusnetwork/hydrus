@@ -693,6 +693,49 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return self._management_type
         
     
+    def GetValueRange( self ):
+        
+        try:
+            
+            if self._management_type == MANAGEMENT_TYPE_IMPORT_GALLERY:
+                
+                gallery_import = self._serialisables[ 'gallery_import' ]
+                
+                return gallery_import.GetValueRange()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+                
+                hdd_import = self._serialisables[ 'hdd_import' ]
+                
+                return hdd_import.GetValueRange()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER:
+                
+                simple_downloader_import = self._serialisables[ 'simple_downloader_import' ]
+                
+                return simple_downloader_import.GetValueRange()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER:
+                
+                thread_watcher_import = self._serialisables[ 'thread_watcher_import' ]
+                
+                return thread_watcher_import.GetValueRange()
+                
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
+                
+                urls_import = self._serialisables[ 'urls_import' ]
+                
+                return urls_import.GetValueRange()
+                
+            
+        except KeyError:
+            
+            return ( 0 , 0 )
+            
+        
+        return ( 0, 0 )
+        
+    
     def GetVariable( self, name ):
         
         if name in self._simples:
@@ -718,6 +761,8 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             return thread_watcher_import.IsDead()
             
+        
+        return False
         
     
     def IsImporter( self ):
@@ -790,6 +835,11 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         sizer.Add( tags_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
+    def CheckAbleToClose( self ):
+        
+        pass
+        
+    
     def CleanBeforeDestroy( self ):
         
         pass
@@ -811,11 +861,6 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
     
     def Start( self ):
-        
-        pass
-        
-    
-    def TestAbleToClose( self ):
         
         pass
         
@@ -1571,6 +1616,14 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._current_action.SetLabelText( current_action )
         
     
+    def CheckAbleToClose( self ):
+        
+        if self._gallery_import.CurrentlyWorking():
+            
+            raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+    
     def EventAdvance( self, event ):
         
         selected_indices = self._pending_queries_listbox.GetSelections()
@@ -1656,20 +1709,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._gallery_import.Start( self._page_key )
         
     
-    def TestAbleToClose( self ):
-        
-        if self._gallery_import.CurrentlyWorking():
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    raise HydrusExceptions.PermissionException()
-                    
-                
-            
-        
-    
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImporterGallery
 
 class ManagementPanelImporterHDD( ManagementPanelImporter ):
@@ -1748,6 +1787,14 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._current_action.SetLabelText( current_action )
         
     
+    def CheckAbleToClose( self ):
+        
+        if self._hdd_import.CurrentlyWorking():
+            
+            raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+    
     def EventPause( self, event ):
         
         self._hdd_import.PausePlay()
@@ -1758,20 +1805,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
     def Start( self ):
         
         self._hdd_import.Start( self._page_key )
-        
-    
-    def TestAbleToClose( self ):
-        
-        if self._hdd_import.CurrentlyWorking():
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    raise HydrusExceptions.PermissionException()
-                    
-                
-            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImporterHDD
@@ -2118,6 +2151,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
         
     
+    def CheckAbleToClose( self ):
+        
+        if self._simple_downloader_import.CurrentlyWorking():
+            
+            raise HydrusExceptions.VetoException( 'This page is still importing.' )
+            
+        
+    
     def EventAdvance( self, event ):
         
         selection = self._pending_jobs_listbox.GetSelection()
@@ -2199,20 +2240,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     def Start( self ):
         
         self._simple_downloader_import.Start( self._page_key )
-        
-    
-    def TestAbleToClose( self ):
-        
-        if self._simple_downloader_import.CurrentlyWorking():
-            
-            with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_NO:
-                    
-                    raise HydrusExceptions.PermissionException()
-                    
-                
-            
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER ] = ManagementPanelImporterSimpleDownloader
@@ -2463,6 +2490,17 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
     
+    def CheckAbleToClose( self ):
+        
+        if self._thread_watcher_import.HasThread():
+            
+            if self._thread_watcher_import.CurrentlyWorking():
+                
+                raise HydrusExceptions.VetoException( 'This page is still importing.' )
+                
+            
+        
+    
     def EventCheckNow( self, event ):
         
         self._thread_watcher_import.CheckNow()
@@ -2524,23 +2562,6 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         if self._thread_watcher_import.HasThread():
             
             self._thread_watcher_import.Start( self._page_key )
-            
-        
-    
-    def TestAbleToClose( self ):
-        
-        if self._thread_watcher_import.HasThread():
-            
-            if self._thread_watcher_import.CurrentlyWorking():
-                
-                with ClientGUIDialogs.DialogYesNo( self, 'This page is still importing. Are you sure you want to close it?' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_NO:
-                        
-                        raise HydrusExceptions.PermissionException()
-                        
-                    
-                
             
         
     
@@ -2658,6 +2679,14 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         else:
             
             ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
+            
+        
+    
+    def CheckAbleToClose( self ):
+        
+        if self._urls_import.CurrentlyWorking():
+            
+            raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
         
     

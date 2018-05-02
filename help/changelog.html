@@ -8,6 +8,43 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 305</h3></li>
+				<ul>
+					<li>fixed the pixiv url class, which was unintentionally removing a parameter</li>
+					<li>wrote a pixiv parser in the new system, fixing a whole bunch of tag parsing along the way, and also parses 'source time'! by default, pixiv now fetches the translated/romaji versions of tags</li>
+					<li>finished a safebooru parser that also handles source time and source urls</li>
+					<li>finished an e621 parser that also handles source time and source urls and hash!</li>
+					<li>wrote a danbooru parser that also handles source time and source urls and hash!</li>
+					<li>as a result, danbooru, safebooru, e621, and pixiv post urls are now drag-and-droppable onto the client!</li>
+					<li>finished up a full yiff.party watcher from another contribution by @cuddlebear on the discord, including url classes and a full parser, meaning yiff.party artist urls are now droppable onto the client and will spawn thread watchers (I expect to add some kind of subscription support for watchers in the future). inline links are supported, and there is source time and limited filename: and hash parsing</li>
+					<li>fixed some thread watcher tag association problems in the new system</li>
+					<li>when pages put an (x) number after their name for number of files, they will now also put an (x/y) import total (if appropriate and not complete) as well. this also sums up through page of pages!</li>
+					<li>if a call to close a page of pages or the application would present more than one page's 'I am still importing' complaint, all the complaints are now summarised in a single yes/no dialog</li>
+					<li>url downloader pages now run a 'are you sure you want to close this page' when their import queues are unfinished and unpaused</li>
+					<li>if the subscriptions for 'manage subscriptions' take more than a second to load, a popup will come up with load progress. the popup is cancellable</li>
+					<li>added a prototype 'open in web browser' to the thumbnail right-click share menu. it will only appear in windows if you are in advanced mode, as atm it mostly just launches the file in the default program, not browser. I will keep working on this</li>
+					<li>harmonised more old download code into a single location in the new system</li>
+					<li>created a neater network job factory system for generalised network requests at the import job level</li>
+					<li>created a neater presentation context factory system for generalised and reliable set/clear network job ui presentation at the import job level</li>
+					<li>moved the new downloader simple-file-download-and-import to the new file object and harmonised all downloader code to call this single location where possible</li>
+					<li>did the same thing with download-post-and-then-fetch-tags-and-file job and added hooks for in the subscription and gallery downloader loops (where a parser match for the url is found)</li>
+					<li>the simple downloader and urls downloader now use 'downloader instance' network jobs, so they obey a couple more bandwidth rules</li>
+					<li>harmonised how imported media is then presented to pages as thumbnails through the new main import object</li>
+					<li>the new post downloader sets up referral urls for the file download (which are needed for pixiv and anything else picky) automatically</li>
+					<li>improved file download/import error reporting a little</li>
+					<li>entering an invalid regex phrase in the stringmatch panel (as happens all the time as you type it) will now present the error in the status area rather than spamming popups</li>
+					<li>fixed a bug in the new parsing gui that was prohibiting editing a date decode string transformation</li>
+					<li>fixed enabling of additional date decode controls in the string transformations edit panel</li>
+					<li>added a hyperlink to date decoding controls that links to python date decoding explainer</li>
+					<li>if a source time in the new parsing system suggests a time in the future, it will now clip to 30s ago</li>
+					<li>misc downloader refactoring and cleanup</li>
+					<li>fixed an issue where new file lookup scripts were initialising with bad string transformation rows and breaking the whole dialog in subsequent calls, fugg</li>
+					<li>hid the 'find similar files' menu entry for images that have duration (gifs and apngs), which are not yet supported</li>
+					<li>added 'flip_debug_force_idle_mode_do_not_set_this' to main_gui shortcut set. only set it if you are an advanced user and prepared for the potential consequences</li>
+					<li>silenced a problem with newgrounds gallery parser--will fix it properly next week</li>
+					<li>fixed some old busted unit test code</li>
+					<li>rejiggered some thumb dupe menu entry layout</li>
+				</ul>
 				<li><h3>version 304</h3></li>
 				<ul>
 					<li>renamed the new 'tagcensor' object to 'tagfilter' (since it will end up doing a bunch of non-censoring jobs) and refactored it into clienttags</li>

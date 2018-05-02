@@ -10,6 +10,7 @@ import ClientGUICanvas
 import ClientDownloading
 import ClientSearch
 import ClientThreading
+import collections
 import hashlib
 import HydrusData
 import HydrusExceptions
@@ -475,6 +476,11 @@ class Page( wx.SplitterWindow ):
         self._controller.pub( 'refresh_page_name', self._page_key )
         
     
+    def CheckAbleToClose( self ):
+        
+        self._management_panel.CheckAbleToClose()
+        
+    
     def CleanBeforeDestroy( self ):
         
         self._management_panel.CleanBeforeDestroy()
@@ -550,16 +556,25 @@ class Page( wx.SplitterWindow ):
         return self._management_controller.GetPageName()
         
     
-    def GetNumFiles( self ):
+    def GetNumFileSummary( self ):
         
         if self._initialised:
             
-            return self._media_panel.GetNumFiles()
+            num_files = self._media_panel.GetNumFiles()
             
         else:
             
-            return len( self._initial_hashes )
+            num_files = len( self._initial_hashes )
             
+        
+        ( num_value, num_range ) = self._management_controller.GetValueRange()
+        
+        if num_value == num_range:
+            
+            ( num_value, num_range ) = ( 0, 0 )
+            
+        
+        return ( num_files, ( num_value, num_range ) )
         
     
     def GetPageKey( self ):
@@ -751,7 +766,22 @@ class Page( wx.SplitterWindow ):
     
     def TestAbleToClose( self ):
         
-        self._management_panel.TestAbleToClose()
+        try:
+            
+            self._management_panel.CheckAbleToClose()
+            
+        except HydrusExceptions.VetoException as e:
+            
+            reason = HydrusData.ToUnicode( e )
+            
+            with ClientGUIDialogs.DialogYesNo( self, reason + ' Are you sure you want to close it?' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
+            
         
     
     def THREADLoadInitialMediaResults( self, controller, initial_hashes ):
@@ -912,7 +942,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 page.TestAbleToClose()
                 
-            except HydrusExceptions.PermissionException:
+            except HydrusExceptions.VetoException:
                 
                 return False
                 
@@ -1252,9 +1282,16 @@ class PagesNotebook( wx.Notebook ):
         
         if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and page.IsImporter() ):
             
-            num_files = page.GetNumFiles()
+            ( num_files, ( num_value, num_range ) ) = page.GetNumFileSummary()
             
-            page_name += ' (' + HydrusData.ConvertIntToPrettyString( num_files ) + ')'
+            num_string = HydrusData.ConvertIntToPrettyString( num_files )
+            
+            if num_range > 0 and num_value != num_range:
+                
+                num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
+                
+            
+            page_name += ' (' + num_string + ')'
             
         
         safe_page_name = self.EscapeMnemonics( page_name )
@@ -1847,9 +1884,22 @@ class PagesNotebook( wx.Notebook ):
         return self._name
         
     
-    def GetNumFiles( self ):
+    def GetNumFileSummary( self ):
         
-        return sum( page.GetNumFiles() for page in self._GetPages() )
+        total_num_files = 0
+        total_num_value = 0
+        total_num_range = 0
+        
+        for page in self._GetPages():
+            
+            ( num_files, ( num_value, num_range ) ) = page.GetNumFileSummary()
+            
+            total_num_files += num_files
+            total_num_value += num_value
+            total_num_range += num_range
+            
+        
+        return ( total_num_files, ( total_num_value, total_num_range ) )
         
     
     def GetNumPages( self, only_my_level = False ):
@@ -1912,7 +1962,16 @@ class PagesNotebook( wx.Notebook ):
     
     def GetPrettyStatus( self ):
         
-        return HydrusData.ConvertIntToPrettyString( self.GetPageCount() ) + ' pages, ' + HydrusData.ConvertIntToPrettyString( self.GetNumFiles() ) + ' files'
+        ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
+        
+        num_string = HydrusData.ConvertIntToPrettyString( num_files )
+        
+        if num_range > 0 and num_value != num_range:
+            
+            num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
+            
+        
+        return HydrusData.ConvertIntToPrettyString( self.GetPageCount() ) + ' pages, ' + num_string + ' files'
         
     
     def HasPage( self, page ):
@@ -1978,7 +2037,7 @@ class PagesNotebook( wx.Notebook ):
                 
                 self.TestAbleToClose()
                 
-            except HydrusExceptions.PermissionException:
+            except HydrusExceptions.VetoException:
                 
                 return
                 
@@ -2700,9 +2759,60 @@ class PagesNotebook( wx.Notebook ):
     
     def TestAbleToClose( self ):
         
-        for page in self._GetPages():
+        count = collections.Counter()
+        
+        for page in self._GetMediaPages( False ):
             
-            page.TestAbleToClose()
+            try:
+                
+                page.CheckAbleToClose()
+                
+            except HydrusExceptions.VetoException as e:
+                
+                reason = HydrusData.ToUnicode( e )
+                
+                count[ reason ] += 1
+                
+            
+        
+        if len( count ) > 0:
+            
+            total_problems = sum( count.values() )
+            
+            message = ''
+            
+            for ( reason, c ) in count.items():
+                
+                if c == 1:
+                    
+                    message = '1 page says: ' + reason
+                    
+                else:
+                    
+                    message = HydrusData.ConvertIntToPrettyString( c ) + ' pages say:' + reason
+                    
+                
+                message += os.linesep
+                
+            
+            message += os.linesep
+            
+            if total_problems == 1:
+                
+                message += 'Are you sure you want to close it?'
+                
+            else:
+                
+                message += 'Are you sure you want to close them?'
+                
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_NO:
+                    
+                    raise HydrusExceptions.VetoException()
+                    
+                
             
         
     

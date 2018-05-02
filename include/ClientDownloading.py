@@ -1387,7 +1387,14 @@ class GalleryNewgrounds( Gallery ):
         
         fatcol = soup.find( 'div', class_ = 'fatcol' )
         
-        links = fatcol.find_all( 'a' )
+        if fatcol is not None:
+            
+            links = fatcol.find_all( 'a' )
+            
+        else:
+            
+            links = []
+            
         
         urls_set = set()
         

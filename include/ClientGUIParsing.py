@@ -1433,8 +1433,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_type = ClientGUICommon.BetterChoice( self._urls_panel )
         
-        self._url_type.Append( 'actual file', HC.URL_TYPE_FILE )
-        self._url_type.Append( 'post page', HC.URL_TYPE_POST )
+        self._url_type.Append( 'file url', HC.URL_TYPE_FILE )
+        self._url_type.Append( 'post url', HC.URL_TYPE_POST )
         self._url_type.Append( 'next gallery page', HC.URL_TYPE_NEXT )
         
         self._file_priority = wx.SpinCtrl( self._urls_panel, min = 0, max = 100 )
@@ -3663,6 +3663,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_encoding = ClientGUICommon.BetterChoice( self )
             self._data_regex_pattern = wx.TextCtrl( self )
             self._data_regex_repl = wx.TextCtrl( self )
+            self._data_date_link = wx.adv.HyperlinkCtrl( self, label = 'link to date info', url = 'https://docs.python.org/2/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone = ClientGUICommon.BetterChoice( self )
             self._data_timezone_offset = wx.SpinCtrl( self, min = -86400, max = 86400 )
             
@@ -3699,7 +3700,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 ( phrase, timezone_type, timezone_offset ) = data
                 
                 self._data_text.SetValue( phrase )
-                self._data_timezone.SetValue( timezone_type )
+                self._data_timezone.SelectClientData( timezone_type )
                 self._data_timezone_offset.SetValue( timezone_offset )
                 
             elif data is not None:
@@ -3723,6 +3724,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'encoding data: ', self._data_encoding ) )
             rows.append( ( 'regex pattern: ', self._data_regex_pattern ) )
             rows.append( ( 'regex replacement: ', self._data_regex_repl ) )
+            rows.append( ( 'date info: ', self._data_date_link ) )
             rows.append( ( 'date timezone: ', self._data_timezone ) )
             rows.append( ( 'timezone offset: ', self._data_timezone_offset ) )
             
@@ -3761,19 +3763,19 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_text.Enable()
                 
+                if transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
+                    
+                    self._data_timezone.Enable()
+                    
+                    if self._data_timezone.GetChoice() == HC.TIMEZONE_OFFSET:
+                        
+                        self._data_timezone_offset.Enable()
+                        
+                    
+                
             elif transformation_type in ( ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING, ClientParsing.STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ):
                 
                 self._data_number.Enable()
-                
-            elif transformation_type == ClientParsing.STRING_TRANSFORMATION_DATE_DECODE:
-                
-                self._data_text.Enable()
-                self._data_timezone.Enable()
-                
-                if self._data_timezone.GetChoice() == HC.TIMEZONE_OFFSET:
-                    
-                    self._data_timezone_offset.Enable()
-                    
                 
             elif transformation_type == ClientParsing.STRING_TRANSFORMATION_REGEX_SUB:
                 
@@ -4162,7 +4164,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         url = ''
         query_type = HC.GET
         file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-        file_identifier_string_converter = ClientParsing.StringConverter( [ ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ], 'some hash bytes' )
+        file_identifier_string_converter = ClientParsing.StringConverter( ( [ ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ] ), 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
         children = []

@@ -293,6 +293,11 @@ def GetTimestampFromParseResults( results, desired_timestamp_type ):
                     continue
                     
                 
+                if timestamp_type == HC.TIMESTAMP_TYPE_SOURCE:
+                    
+                    timestamp = min( HydrusData.GetNow() - 30, timestamp )
+                    
+                
                 timestamp_results.append( timestamp )
                 
             
@@ -337,7 +342,7 @@ def GetTitleFromAllParseResults( all_parse_results ):
         return None
         
     
-def GetURLsFromParseResults( results, desired_url_types ):
+def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority = False ):
     
     url_results = collections.defaultdict( list )
     
@@ -354,23 +359,35 @@ def GetURLsFromParseResults( results, desired_url_types ):
             
         
     
-    # ( priority, url_list ) pairs
-    
-    url_results = list( url_results.items() )
-    
-    # ordered by descending priority
-    
-    url_results.sort( reverse = True )
-    
-    # url_lists of descending priority
-    
-    if len( url_results ) > 0:
+    if only_get_top_priority:
         
-        ( priority, url_list ) = url_results[0]
+        # ( priority, url_list ) pairs
+        
+        url_results = list( url_results.items() )
+        
+        # ordered by descending priority
+        
+        url_results.sort( reverse = True )
+        
+        # url_lists of descending priority
+        
+        if len( url_results ) > 0:
+            
+            ( priority, url_list ) = url_results[0]
+            
+        else:
+            
+            url_list = []
+            
         
     else:
         
         url_list = []
+        
+        for u_l in url_results.values():
+            
+            url_list.extend( u_l )
+            
         
     
     return url_list
@@ -1866,6 +1883,8 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
         except HydrusExceptions.VetoException as e:
             
+            all_parse_results = [ 1 ]
+            
             pretty_parse_result_text = 'veto: ' + HydrusData.ToUnicode( e )
             
         
@@ -2404,14 +2423,21 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         
         self.transformations = []
         
-        for ( transformation_type, data ) in serialisable_transformations:
+        try: # I initialised this bad one time and broke a dialog on subsequent loads, fugg
             
-            if isinstance( data, list ):
+            for ( transformation_type, data ) in serialisable_transformations:
                 
-                data = tuple( data ) # convert from list to tuple thing
+                if isinstance( data, list ):
+                    
+                    data = tuple( data ) # convert from list to tuple thing
+                    
+                
+                self.transformations.append( ( transformation_type, data ) )
                 
             
-            self.transformations.append( ( transformation_type, data ) )
+        except:
+            
+            pass
             
         
     
@@ -2705,7 +2731,16 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
                 fail_reason = ' did not match "' + r + '"'
                 
             
-            if re.search( r, text, flags = re.UNICODE ) is None:
+            try:
+                
+                result = re.search( r, text, flags = re.UNICODE )
+                
+            except Exception as e:
+                
+                raise HydrusExceptions.StringMatchException( 'That regex did not work! ' + HydrusData.ToUnicode( e ) )
+                
+            
+            if result is None:
                 
                 raise HydrusExceptions.StringMatchException( presentation_text + fail_reason )
                 

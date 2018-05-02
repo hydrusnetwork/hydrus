@@ -1384,31 +1384,6 @@ class TestServerDB( unittest.TestCase ):
         
         self.assertEqual( set( result ), { self._tag_service_key, self._file_service_key } )
         
-        #
-        
-        result = self._read( 'services_info' )
-        
-        services_info = { service_key : ( service_type, options ) for ( service_key, service_type, options ) in result }
-        
-        self.assertEqual( services_info[ HC.SERVER_ADMIN_KEY ], ( 99, { 'max_monthly_data' : None, 'message' : 'hydrus server administration service', 'max_storage' : None, 'upnp' : None, 'port' : 45870 } ) )
-        self.assertEqual( services_info[ self._tag_service_key ], ( HC.TAG_REPOSITORY, t_options ) )
-        self.assertEqual( services_info[ self._file_service_key ], ( HC.FILE_REPOSITORY, f_options ) )
-        
-        #
-        
-        f_options_modified = dict( f_options )
-        f_options_modified[ 'port' ] = 102
-        
-        edit_log = [ ( HC.EDIT, ( self._file_service_key, HC.FILE_REPOSITORY, f_options_modified ) ) ]
-        
-        self._write( 'services', self._admin_account_key, edit_log )
-        
-        result = self._read( 'services_info' )
-        
-        services_info = { service_key : ( service_type, options ) for ( service_key, service_type, options ) in result }
-        
-        self.assertEqual( services_info[ self._file_service_key ], ( HC.FILE_REPOSITORY, f_options_modified ) )
-        
     
     def test_server( self ):
         

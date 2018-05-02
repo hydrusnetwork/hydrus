@@ -322,7 +322,7 @@ class TestServer( unittest.TestCase ):
         
         # num_petitions
         
-        num_petitions = [ ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, 23 ), ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, 0 ) ]
+        num_petitions = [ [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, 23 ], [ HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, 0 ] ]
         
         HG.test_controller.SetRead( 'num_petitions', num_petitions )
         
@@ -341,7 +341,7 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'petition', petition )
         
-        response = service.Request( HC.GET, 'petition' )
+        response = service.Request( HC.GET, 'petition', { 'content_type' : HC.CONTENT_TYPE_FILES, 'status' : HC.CONTENT_UPDATE_PETITION } )
         
         self.assertEqual( response[ 'petition' ].GetSerialisableTuple(), petition.GetSerialisableTuple() )
         
@@ -361,7 +361,12 @@ class TestServer( unittest.TestCase ):
         
         path = ServerFiles.GetExpectedFilePath( definitions_update_hash )
         
-        with open( path, 'wb' ) as f: f.write( definitions_update_network_string )
+        HydrusPaths.MakeSureDirectoryExists( path )
+        
+        with open( path, 'wb' ) as f:
+            
+            f.write( definitions_update_network_string )
+            
         
         response = service.Request( HC.GET, 'update', { 'update_hash' : definitions_update_hash } )
         
@@ -475,25 +480,24 @@ class TestServer( unittest.TestCase ):
         
         # account_types
         
-        account_types = { 'message' : 'hello' }
+        account_types = [ HydrusNetwork.AccountType.GenerateAdminAccountType( service.GetServiceType() ) ]
         
         HG.test_controller.SetRead( 'account_types', account_types )
         
         response = service.Request( HC.GET, 'account_types' )
         
-        self.assertEqual( response[ 'account_types' ], account_types )
+        self.assertEqual( response[ 'account_types' ][0].GetAccountTypeKey(), account_types[0].GetAccountTypeKey() )
         
-        edit_log = 'blah'
-        
-        service.Request( HC.POST, 'account_types', { 'edit_log' : edit_log } )
+        service.Request( HC.POST, 'account_types', { 'account_types' : account_types, 'deletee_account_type_keys_to_new_account_type_keys' : {} } )
         
         written = HG.test_controller.GetWrite( 'account_types' )
         
         [ ( args, kwargs ) ] = written
         
-        ( written_service_key, written_edit_log ) = args
+        ( written_service_key, written_account, written_account_types, written_deletee_account_type_keys_to_new_account_type_keys ) = args
         
-        self.assertEqual( edit_log, written_edit_log )
+        self.assertEqual( written_account_types[0].GetAccountTypeKey(), account_types[0].GetAccountTypeKey() )
+        self.assertEqual( written_deletee_account_type_keys_to_new_account_type_keys, {} )
         
         # registration_keys
         
@@ -514,37 +518,19 @@ class TestServer( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'access_key', access_key )
         
-        response = service.Request( HC.GET, 'access_key', 'init' )
+        response = service.Request( HC.GET, 'access_key', { 'registration_key' : 'init' } )
         
         self.assertEqual( response[ 'access_key' ], access_key )
         
         #
         
-        # backup
+        ## backup
         
         response = service.Request( HC.POST, 'backup' )
         
-        # services
+        #
         
-        services_info = { 'message' : 'hello' }
-        
-        HG.test_controller.SetRead( 'services_info', services_info )
-        
-        response = service.Request( HC.GET, 'services_info' )
-        
-        self.assertEqual( response[ 'services_info' ], services_info )
-        
-        edit_log = 'blah'
-        
-        registration_keys = service.Request( HC.POST, 'services', { 'edit_log' : edit_log } )
-        
-        written = HG.test_controller.GetWrite( 'services' )
-        
-        [ ( args, kwargs ) ] = written
-        
-        ( written_service_key, written_edit_log ) = args
-        
-        self.assertEqual( edit_log, written_edit_log )
+        # add some new services info
         
     
     def _test_tag_repo( self, service ):

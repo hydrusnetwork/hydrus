@@ -1664,7 +1664,10 @@ class MediaSingleton( Media ):
     
     def IsCollection( self ): return False
     
-    def IsImage( self ): return self._media_result.GetMime() in HC.IMAGES
+    def IsImage( self ):
+        
+        return self._media_result.GetMime() in HC.IMAGES and not self.HasDuration()
+        
     
     def IsNoisy( self ): return self._media_result.GetMime() in HC.NOISY_MIMES
     
