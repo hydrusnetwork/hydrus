@@ -1,12 +1,12 @@
 import ClientDaemons
 import ClientImporting
+import ClientPaths
 import collections
 import HydrusConstants as HC
 import os
 import shutil
 import stat
 import TestConstants
-import tempfile
 import unittest
 import HydrusData
 import ClientConstants as CC
@@ -21,7 +21,7 @@ class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
         
-        test_dir = HydrusPaths.GetTempDir()
+        test_dir = ClientPaths.GetTempDir()
         
         try:
             

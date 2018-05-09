@@ -524,13 +524,13 @@ class LocationsManager( object ):
             
             if action == HC.CONTENT_UPDATE_ADD:
                 
-                ( hash, urls ) = row
+                ( urls, hashes ) = row
                 
                 self._urls.update( urls )
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
-                ( hash, urls ) = row
+                ( urls, hashes ) = row
                 
                 self._urls.difference_update( urls )
                 

@@ -1808,36 +1808,49 @@ class DialogModifyAccounts( Dialog ):
     
     def EventAddToExpires( self, event ):
         
-        self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
+        raise NotImplementedError()
+        #self._DoModification( HC.ADD_TO_EXPIRES, timespan = self._add_to_expires.GetClientData( self._add_to_expires.GetSelection() ) )
         
     
     def EventBan( self, event ):
         
         with DialogTextEntry( self, 'Enter reason for the ban.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.BAN, reason = dlg.GetValue() )
+            if dlg.ShowModal() == wx.ID_OK:
+                raise NotImplementedError()
+                #self._DoModification( HC.BAN, reason = dlg.GetValue() )
+                
             
         
     
     def EventChangeAccountType( self, event ):
         
-        self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetChoice() )
+        raise NotImplementedError()
+        #self._DoModification( HC.CHANGE_ACCOUNT_TYPE, account_type_key = self._account_types.GetChoice() )
         
     
     def EventSetExpires( self, event ):
         
         expires = self._set_expires.GetClientData( self._set_expires.GetSelection() )
         
-        if expires is not None: expires += HydrusData.GetNow()
+        if expires is not None:
+            
+            expires += HydrusData.GetNow()
+            
         
-        self._DoModification( HC.SET_EXPIRES, expires = expires )
+        raise NotImplementedError()
+        #self._DoModification( HC.SET_EXPIRES, expires = expires )
         
     
     def EventSuperban( self, event ):
         
         with DialogTextEntry( self, 'Enter reason for the superban.' ) as dlg:
             
-            if dlg.ShowModal() == wx.ID_OK: self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                raise NotImplementedError()
+                #self._DoModification( HC.SUPERBAN, reason = dlg.GetValue() )
+                
             
         
     

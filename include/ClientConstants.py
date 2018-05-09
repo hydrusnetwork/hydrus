@@ -414,7 +414,7 @@ status_string_lookup[ STATUS_DELETED ] = 'deleted'
 status_string_lookup[ STATUS_ERROR ] = 'error'
 status_string_lookup[ STATUS_NEW ] = 'new'
 status_string_lookup[ STATUS_PAUSED ] = 'paused'
-status_string_lookup[ STATUS_VETOED ] = 'vetoed'
+status_string_lookup[ STATUS_VETOED ] = 'ignored'
 status_string_lookup[ STATUS_SKIPPED ] = 'skipped'
 
 SUCCESSFUL_IMPORT_STATES = { STATUS_SUCCESSFUL_AND_NEW, STATUS_SUCCESSFUL_BUT_REDUNDANT }

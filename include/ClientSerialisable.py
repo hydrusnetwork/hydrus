@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientImageHandling
 import ClientImporting
 import ClientParsing
+import ClientPaths
 import cv2
 import HydrusConstants as HC
 import HydrusData
@@ -166,7 +167,7 @@ def DumpToPng( width, payload, title, payload_description, text, path ):
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath( suffix = '.png' )
+    ( os_file_handle, temp_path ) = ClientPaths.GetTempPath( suffix = '.png' )
     
     try:
         
@@ -226,7 +227,7 @@ def GetPayloadDescriptionAndString( payload_obj ):
 def LoadFromPng( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+    ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
     
     try:
         

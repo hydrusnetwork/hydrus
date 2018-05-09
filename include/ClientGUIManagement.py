@@ -28,6 +28,7 @@ import ClientImporting
 import ClientImportOptions
 import ClientMedia
 import ClientParsing
+import ClientPaths
 import ClientRendering
 import ClientSearch
 import ClientThreading
@@ -42,7 +43,6 @@ import threading
 import time
 import traceback
 import urlparse
-import webbrowser
 import wx
 import wx.lib.scrolledpanel
 
@@ -431,7 +431,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
         
         jpeg = self._controller.DoHTTP( HC.GET, 'https://www.google.com/recaptcha/api/image?c=' + self._captcha_challenge )
         
-        ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
         
         try:
             
@@ -559,6 +559,11 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         self._keys = {}
         self._simples = {}
         self._serialisables = {}
+        
+    
+    def __repr__( self ):
+        
+        return HydrusData.ToByteString( 'Management Controller: ' + self._management_type + ' - ' + self._page_name )
         
     
     def _GetSerialisableInfo( self ):
@@ -894,7 +899,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/duplicates.html' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'duplicates.html' ) )
         
         menu_items.append( ( 'normal', 'show some simpler help here', 'Throw up a message box with some simple help.', self._ShowSimpleHelp ) )
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browesr.', page_func ) )
@@ -1397,7 +1402,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'imports' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller )
+        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
         self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
@@ -1720,7 +1725,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import summary' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller )
+        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
@@ -1829,7 +1834,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._pause_files_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller )
+        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
         #
@@ -2267,7 +2272,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( imports_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( imports_panel, self._controller )
+        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( imports_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
         
         #

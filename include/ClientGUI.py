@@ -22,6 +22,7 @@ import ClientGUITopLevelWindows
 import ClientDownloading
 import ClientMedia
 import ClientNetworkingContexts
+import ClientPaths
 import ClientSearch
 import ClientServices
 import ClientThreading
@@ -49,7 +50,6 @@ import threading
 import time
 import traceback
 import types
-import webbrowser
 import wx
 import wx.adv
 
@@ -217,7 +217,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         library_versions.append( ( 'sqlite', sqlite3.sqlite_version ) )
         library_versions.append( ( 'wx', wx.version() ) )
-        library_versions.append( ( 'temp dir', HydrusPaths.tempfile.gettempdir() ) )
+        library_versions.append( ( 'temp dir', ClientPaths.GetCurrentTempDir() ) )
         
         import locale
         
@@ -636,11 +636,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
-    def _CheckFileIntegrity( self ):
+    def _CheckFileIntegrity( self, allowed_mimes = None ):
         
         client_files_manager = self._controller.client_files_manager
         
-        message = 'This will go through all the files the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
+        if allowed_mimes is None:
+            
+            file_desc = 'files'
+            
+        else:
+            
+            file_desc = os.linesep * 2 + os.linesep.join( ( HC.mime_string_lookup[ mime ] for mime in allowed_mimes ) ) + os.linesep * 2 + 'files'
+            
+        
+        message = 'This will go through all the ' + file_desc + ' the database thinks it has and check that they actually exist. Any files that are missing will be deleted from the internal record.'
         message += os.linesep * 2
         message += 'You can perform a quick existence check, which will only look to see if a file exists, or a thorough content check, which will also make sure existing files are not corrupt or otherwise incorrect.'
         message += os.linesep * 2
@@ -652,7 +661,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if result == wx.ID_YES:
                 
-                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick' )
+                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'quick', allowed_mimes = allowed_mimes )
                 
             elif result == wx.ID_NO:
                 
@@ -670,17 +679,22 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                                 
                                 path = HydrusData.ToUnicode( dlg_3.GetPath() )
                                 
-                                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', path )
+                                self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes, move_location = path )
                                 
                             
                         
                     elif result == wx.ID_NO:
                         
-                        self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough' )
+                        self._controller.CallToThread( client_files_manager.CheckFileIntegrity, 'thorough', allowed_mimes = allowed_mimes )
                         
                     
                 
             
+        
+    
+    def _CheckFileIntegrityRepositoryUpdates( self ):
+        
+        self._CheckFileIntegrity( allowed_mimes = HC.HYDRUS_UPDATE_FILES )
         
     
     def _CheckImportFolder( self, name = None ):
@@ -1386,7 +1400,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
             
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
+            #ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
             
             result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
             
@@ -1476,6 +1490,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuItem( self, submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'file integrity', 'Have the database check if it truly has the files it thinks it does, and remove records when not.', self._CheckFileIntegrity )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'file integrity - only repository updates', 'Have the database check if it truly has the repository update files it thinks it does, and remove records when not.', self._CheckFileIntegrityRepositoryUpdates )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'check' )
             
@@ -1762,20 +1777,20 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def help():
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/index.html' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'help', 'Open hydrus\'s local help in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'index.html' ) )
             
             links = wx.Menu()
             
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalBMPs.file_repository, webbrowser.open, 'https://hydrusnetwork.github.io/hydrus/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalBMPs.eight_chan, webbrowser.open, 'https://8ch.net/hydrus/index.html' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalBMPs.twitter, webbrowser.open, 'https://twitter.com/hydrusnetwork' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalBMPs.tumblr, webbrowser.open, 'http://hydrus.tumblr.com/' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalBMPs.discord, webbrowser.open, 'https://discord.gg/vy8CUB4' )
-            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalBMPs.patreon, webbrowser.open, 'https://www.patreon.com/hydrus_dev' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'site', 'Open hydrus\'s website, which is mostly a mirror of the local help.', CC.GlobalBMPs.file_repository, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, '8chan board', 'Open hydrus dev\'s 8chan board, where he makes release posts and other status updates. Much other discussion also occurs.', CC.GlobalBMPs.eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8ch.net/hydrus/index.html' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'twitter', 'Open hydrus dev\'s twitter, where he makes general progress updates and emergency notifications.', CC.GlobalBMPs.twitter, ClientPaths.LaunchURLInWebBrowser, 'https://twitter.com/hydrusnetwork' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.GlobalBMPs.tumblr, ClientPaths.LaunchURLInWebBrowser, 'http://hydrus.tumblr.com/' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.GlobalBMPs.discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/vy8CUB4' )
+            site = ClientGUIMenus.AppendMenuBitmapItem( self, links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.GlobalBMPs.patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
             
             ClientGUIMenus.AppendMenu( menu, links, 'links' )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', webbrowser.open, 'file://' + HC.HELP_DIR + '/changelog.html' )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'changelog.html' ) )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -3903,16 +3918,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         current_page = self.GetCurrentPage()
         
-        if current_page is None:
+        if current_page is not None:
             
-            return False
+            in_current_page = ClientGUICommon.IsWXAncestor( window, current_page )
             
-        
-        in_current_page = ClientGUICommon.IsWXAncestor( window, current_page )
+            if in_current_page:
+                
+                return True
+                
+            
         
         in_other_window = ClientGUICommon.GetTLP( window ) != self
         
-        return in_current_page or in_other_window
+        return in_other_window
         
     
     def ImportFiles( self, paths ):

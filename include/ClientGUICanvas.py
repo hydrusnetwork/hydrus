@@ -16,6 +16,7 @@ import ClientGUIScrolledPanelsManagement
 import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientMedia
+import ClientPaths
 import ClientRatings
 import ClientRendering
 import ClientTags
@@ -27,7 +28,6 @@ import HydrusSerialisable
 import HydrusTags
 import os
 import urlparse
-import webbrowser
 import wx
 
 FLASHWIN_OK = False
@@ -1694,6 +1694,40 @@ class Canvas( wx.Window ):
         self._MediaFocusWentToExternalProgram()
         
     
+    def _OpenFileInWebBrowser( self ):
+        
+        if self._current_media is not None:
+            
+            hash = self._current_media.GetHash()
+            mime = self._current_media.GetMime()
+            
+            client_files_manager = HG.client_controller.client_files_manager
+            
+            path = client_files_manager.GetFilePath( hash, mime )
+            
+            ClientPaths.LaunchPathInWebBrowser( path )
+            
+            self._MediaFocusWentToExternalProgram()
+            
+        
+    
+    def _OpenFileLocation( self ):
+        
+        if self._current_media is not None:
+            
+            hash = self._current_media.GetHash()
+            mime = self._current_media.GetMime()
+            
+            client_files_manager = HG.client_controller.client_files_manager
+            
+            path = client_files_manager.GetFilePath( hash, mime )
+            
+            HydrusPaths.OpenFileLocation( path )
+            
+            self._MediaFocusWentToExternalProgram()
+            
+        
+    
     def _PauseCurrentMedia( self ):
         
         if self._current_media is None:
@@ -2381,6 +2415,10 @@ class CanvasPanel( Canvas ):
         
         if self._current_media is not None:
             
+            new_options = HG.client_controller.new_options
+            
+            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
+            
             services = HG.client_controller.services_manager.GetServices()
             
             locations_manager = self._current_media.GetLocationsManager()
@@ -2455,7 +2493,7 @@ class CanvasPanel( Canvas ):
                 
                 for url in urls:
                     
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', webbrowser.open, url )
+                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
                     ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
                     
                 
@@ -2466,6 +2504,26 @@ class CanvasPanel( Canvas ):
                 
             
             share_menu = wx.Menu()
+            
+            show_open_in_web = True
+            show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
+            
+            if show_open_in_web or show_open_in_explorer:
+                
+                open_menu = wx.Menu()
+                
+                if show_open_in_web:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+                    
+                
+                if show_open_in_explorer:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                    
+                
+                ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
+                
             
             copy_menu = wx.Menu()
             
@@ -3133,7 +3191,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
+                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
                     
                     dlg_2.SetPanel( panel )
                     
@@ -4683,6 +4741,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if self._current_media is not None:
             
+            new_options = HG.client_controller.new_options
+            
+            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
+        
             services = HG.client_controller.services_manager.GetServices()
             
             local_ratings_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ]
@@ -4780,7 +4842,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 for url in urls:
                     
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', webbrowser.open, url )
+                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
                     ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
                     
                 
@@ -4791,6 +4853,26 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             
             share_menu = wx.Menu()
+            
+            show_open_in_web = True
+            show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
+            
+            if show_open_in_web or show_open_in_explorer:
+                
+                open_menu = wx.Menu()
+                
+                if show_open_in_web:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+                    
+                
+                if show_open_in_explorer:
+                    
+                    ClientGUIMenus.AppendMenuItem( self, open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
+                    
+                
+                ClientGUIMenus.AppendMenu( share_menu, open_menu, 'open' )
+                
             
             copy_menu = wx.Menu()
             

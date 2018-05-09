@@ -182,6 +182,11 @@ def CleanTag( tag ):
     
     try:
         
+        if tag is None:
+            
+            raise Exception()
+            
+        
         tag = tag[:1024]
         
         tag = tag.lower()
@@ -226,6 +231,11 @@ def CleanTags( tags ):
     clean_tags = set()
     
     for tag in tags:
+        
+        if tag is None:
+            
+            continue
+            
         
         tag = CleanTag( tag )
         

@@ -7,6 +7,7 @@ import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
 import ClientImporting
+import ClientPaths
 import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
@@ -15,7 +16,6 @@ import HydrusGlobals as HG
 import HydrusPaths
 import HydrusText
 import os
-import webbrowser
 import wx
 
 class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -175,7 +175,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 for seed in seeds:
                     
-                    webbrowser.open( seed.seed_data )
+                    ClientPaths.LaunchURLInWebBrowser( seed.seed_data )
                     
                 
             else:
@@ -209,9 +209,20 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ShowMenuIfNeeded( self ):
         
-        if self._list_ctrl.HasSelected() > 0:
+        selected_seeds = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected_seeds ) > 0:
             
             menu = wx.Menu()
+            
+            can_show_files_in_new_page = True in ( seed.HasHash() for seed in selected_seeds )
+            
+            if can_show_files_in_new_page:
+                
+                ClientGUIMenus.AppendMenuItem( self, menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeedData )
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
@@ -227,6 +238,24 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIMenus.AppendMenuItem( self, menu, 'delete from list', 'Remove all the selected imports.', self._DeleteSelected )
             
             HG.client_controller.PopupMenu( self, menu )
+            
+        
+    
+    def _ShowSelectionInNewPage( self ):
+        
+        hashes = []
+        
+        for seed in self._list_ctrl.GetData( only_selected = True ):
+            
+            if seed.HasHash():
+                
+                hashes.append( seed.GetHash() )
+                
+            
+        
+        if len( hashes ) > 0:
+            
+            HG.client_controller.pub( 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY, initial_hashes = hashes )
             
         
     
@@ -310,24 +339,9 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
     
-    def _ClearProcessed( self ):
+    def _ClearSeeds( self, statuses_to_remove ):
         
-        message = 'Are you sure you want to delete all the processed (i.e. anything with a non-blank status in the larger window) file imports? This is useful for cleaning up and de-laggifying a very large list, but not much else.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                seed_cache = self._seed_cache_get_callable()
-                
-                seed_cache.RemoveProcessedSeeds()
-                
-            
-        
-    
-    def _ClearSuccessful( self ):
-        
-        message = 'Are you sure you want to delete all the successful/already in db file imports? This is useful for cleaning up and de-laggifying a very large list and leaving only failed and otherwise skipped entries.'
+        message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' file import items? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit or what watcher/subscription may be using for future check time calculations.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -335,7 +349,7 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
                 
                 seed_cache = self._seed_cache_get_callable()
                 
-                seed_cache.RemoveSuccessfulSeeds()
+                seed_cache.RemoveSeedsByStatus( statuses_to_remove )
                 
             
         
@@ -513,27 +527,36 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         seed_cache = self._seed_cache_get_callable()
         
+        num_seeds = len( seed_cache )
+        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+        num_deleted_and_vetoed = seed_cache.GetSeedCount( CC.STATUS_DELETED ) + seed_cache.GetSeedCount( CC.STATUS_VETOED )
         num_errors = seed_cache.GetSeedCount( CC.STATUS_ERROR )
+        num_skipped = seed_cache.GetSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ConvertIntToPrettyString( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
         
-        num_unknown = seed_cache.GetSeedCount( CC.STATUS_UNKNOWN )
-        
-        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-        
         if num_successful > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_successful ) + ' \'successful\' file imports from the queue', 'Tell this cache to clear out successful/already in db files, reducing the size of the queue.', self._ClearSuccessful )
+            num_deletees = num_successful
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
             
         
-        num_processed = len( seed_cache ) - num_unknown
-        
-        if num_processed > 0 and num_processed != num_successful:
+        if num_deleted_and_vetoed > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_processed ) + ' \'processed\' file imports from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearProcessed )
+            num_deletees = num_deleted_and_vetoed
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
+            
+        
+        if num_errors + num_skipped > 0:
+            
+            num_deletees = num_errors + num_skipped
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out all non-unknown files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -560,11 +583,12 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
 class SeedCacheStatusControl( wx.Panel ):
     
-    def __init__( self, parent, controller ):
+    def __init__( self, parent, controller, page_key = None ):
         
         wx.Panel.__init__( self, parent, style = wx.BORDER_DOUBLE )
         
         self._controller = controller
+        self._page_key = page_key
         
         self._seed_cache = None
         
@@ -655,7 +679,26 @@ class SeedCacheStatusControl( wx.Panel ):
     
     def TIMERUIUpdate( self ):
         
-        if self._controller.gui.IShouldRegularlyUpdate( self ):
+        do_it_anyway = False
+        
+        if self._seed_cache is not None:
+            
+            ( import_summary, ( num_done, num_to_do ) ) = self._seed_cache.GetStatus()
+            
+            ( old_num_done, old_num_to_do ) = self._progress_gauge.GetValueRange()
+            
+            if old_num_done != num_done or old_num_to_do != num_to_do:
+                
+                if self._page_key is not None:
+                    
+                    do_it_anyway = True # to update the gauge
+                    
+                    HG.client_controller.pub( 'refresh_page_name', self._page_key )
+                    
+                
+            
+        
+        if self._controller.gui.IShouldRegularlyUpdate( self ) or do_it_anyway:
             
             self._Update()
             

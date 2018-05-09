@@ -42,7 +42,6 @@ import os
 import random
 import traceback
 import urlparse
-import webbrowser
 import wx
 
 class ManageAccountTypesPanel( ClientGUIScrolledPanels.ManagePanel ):
@@ -851,13 +850,13 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             wx.CallAfter( wx_setkey, access_key_encoded )
                             
-                            wx.MessageBox( 'Looks good!' )
+                            wx.CallAfter( wx.MessageBox, 'Looks good!' )
                             
                         except Exception as e:
                             
                             HydrusData.PrintException( e )
                             
-                            wx.MessageBox( 'Had a problem: ' + HydrusData.ToUnicode( e ) )
+                            wx.CallAfter( wx.MessageBox, 'Had a problem: ' + HydrusData.ToUnicode( e ) )
                             
                         
                     finally:
@@ -939,23 +938,23 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             if not response[ 'verified' ]:
                                 
-                                wx.MessageBox( 'That access key was not recognised!' )
+                                wx.CallAfter( wx.MessageBox, 'That access key was not recognised!' )
                                 
                             else:
                                 
-                                wx.MessageBox( 'Everything looks ok!' )
+                                wx.CallAfter( wx.MessageBox, 'Everything looks ok!' )
                                 
                             
                         
                     except HydrusExceptions.WrongServiceTypeException:
                         
-                        wx.MessageBox( 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
+                        wx.CallAfter( wx.MessageBox, 'Connection was made, but the service was not a ' + HC.service_string_lookup[ self._service_type ] + '.' )
                         
                         return
                         
                     except HydrusExceptions.NetworkException as e:
                         
-                        wx.MessageBox( 'Network problem: ' + HydrusData.ToUnicode( e ) )
+                        wx.CallAfter( wx.MessageBox, 'Network problem: ' + HydrusData.ToUnicode( e ) )
                         
                         return
                         
@@ -2047,7 +2046,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 1, max = 365, none_phrase = 'do not automatically vacuum' )
+            self._maintenance_vacuum_period_days = ClientGUICommon.NoneableSpinCtrl( self._maintenance_panel, '', min = 28, max = 365, none_phrase = 'do not automatically vacuum' )
+            
+            tts = 'Vacuuming is a kind of full defrag of the database\'s internal page table. It can take a long time (1MB/s) on a slow drive and does not need to be done often, so feel free to set this at 90 days+.'
+            
+            self._maintenance_vacuum_period_days.SetToolTip( tts )
             
             #
             
@@ -2261,6 +2264,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.Panel.__init__( self, parent )
             
+            self._new_options = HG.client_controller.new_options
+            
             self._export_location = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
             
             self._delete_to_recycle_bin = wx.CheckBox( self, label = '' )
@@ -2271,7 +2276,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
             self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
             
+            self._temp_path_override = wx.DirPickerCtrl( self, style = wx.DIRP_USE_TEXTCTRL )
+            
             mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
+            
+            self._web_browser_path = wx.TextCtrl( mime_panel )
             
             self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, [ ( 'mime', 20 ), ( 'launch path', -1 ) ], self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
             
@@ -2293,7 +2302,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
-            self._new_options = HG.client_controller.new_options
+            temp_path_override = self._new_options.GetNoneableString( 'temp_path_override' )
+            
+            if temp_path_override is not None:
+                
+                self._temp_path_override.SetPath( temp_path_override )
+                
+            
+            web_browser_path = self._new_options.GetNoneableString( 'web_browser_path' )
+            
+            if web_browser_path is not None:
+                
+                self._web_browser_path.SetValue( web_browser_path )
+                
             
             for mime in HC.SEARCHABLE_MIMES:
                 
@@ -2308,6 +2329,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = wx.BoxSizer( wx.VERTICAL )
             
+            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
+            
+            vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
+            
             rows = []
             
             rows.append( ( 'Default export directory: ', self._export_location ) )
@@ -2316,15 +2341,29 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
             rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
+            rows.append( ( 'BUGFIX: Temp folder override (set blank for OS default): ', self._temp_path_override ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
+            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            text = 'Setting a specific web browser path here--like \'C:\\program files\\firefox\\firefox.exe "%path%"\'--can help with the \'share->open->in web browser\' command, which is buggy working with OS defaults, particularly on Windows. It also fixes #anchors, which are dropped in some OSes using default means. Use the same %path% format as the \'open externally\' commands below.'
+            
+            st = ClientGUICommon.BetterStaticText( mime_panel, text )
+            
+            st.Wrap( 800 )
+            
+            mime_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Manual web browser launch path: ', self._web_browser_path ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( mime_panel, rows )
+            
+            mime_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             mime_panel.Add( self._mime_launch_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            text = 'If you set the default export directory blank, the client will use \'hydrus_export\' under the current user\'s home directory.'
-            
-            vbox.Add( ClientGUICommon.BetterStaticText( self, text ), CC.FLAGS_CENTER )
-            vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             vbox.Add( mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
@@ -2407,6 +2446,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.GetValue()
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            temp_path_override = self._temp_path_override.GetPath()
+            
+            if temp_path_override == '':
+                
+                temp_path_override = None
+                
+            
+            self._new_options.SetNoneableString( 'temp_path_override', temp_path_override )
+            
+            web_browser_path = self._web_browser_path.GetValue()
+            
+            if web_browser_path == '':
+                
+                web_browser_path = None
+                
+            
+            self._new_options.SetNoneableString( 'web_browser_path', web_browser_path )
             
             for ( mime, launch_path ) in self._mime_launch_listctrl.GetData():
                 
@@ -5996,12 +6053,12 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if len( self._urls_to_add ) > 0:
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( hash, self._urls_to_add ) ) )
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( self._urls_to_add, ( hash, ) ) ) )
             
         
         if len( self._urls_to_remove ) > 0:
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( hash, self._urls_to_remove ) ) )
+            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( self._urls_to_remove, ( hash, ) ) ) )
             
         
         if len( content_updates ) > 0:

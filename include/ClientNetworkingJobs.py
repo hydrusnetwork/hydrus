@@ -138,6 +138,13 @@ class NetworkJob( object ):
         ( self._session_network_context, self._login_network_context ) = self._GenerateSpecificNetworkContexts()
         
     
+    def _CanReattemptConnection( self ):
+        
+        max_attempts_allowed = 3
+        
+        return self._current_connection_attempt_number <= max_attempts_allowed
+        
+    
     def _CanReattemptRequest( self ):
         
         if self._method == 'GET':
@@ -824,7 +831,7 @@ class NetworkJob( object ):
                     
                     self._current_connection_attempt_number += 1
                     
-                    if not self._CanReattemptRequest():
+                    if not self._CanReattemptConnection():
                         
                         raise HydrusExceptions.ConnectionException( 'Could not connect!' )
                         

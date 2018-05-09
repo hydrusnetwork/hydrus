@@ -2568,7 +2568,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _CheckFileIntegrity( self, mode, move_location = None ):
+    def _CheckFileIntegrity( self, mode, allowed_mimes = None, move_location = None ):
         
         prefix_string = 'checking file integrity: '
         
@@ -2580,7 +2580,16 @@ class DB( HydrusDB.HydrusDB ):
             
             self._controller.pub( 'modal_message', job_key )
             
-            info = self._c.execute( 'SELECT hash_id, mime FROM current_files NATURAL JOIN files_info WHERE service_id = ?;', ( self._combined_local_file_service_id, ) ).fetchall()
+            if allowed_mimes is None:
+                
+                select = 'SELECT hash_id, mime FROM current_files NATURAL JOIN files_info WHERE service_id = ?;'
+                
+            else:
+                
+                select = 'SELECT hash_id, mime FROM current_files NATURAL JOIN files_info WHERE service_id = ? AND mime IN ' + HydrusData.SplayListForDB( allowed_mimes ) + ';'
+                
+            
+            info = self._c.execute( select, ( self._combined_local_file_service_id, ) ).fetchall()
             
             missing_count = 0
             deletee_hash_ids = []
@@ -4301,11 +4310,25 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( tags_to_include ) > 0 or len( namespaces_to_include ) > 0 or len( wildcards_to_include ) > 0:
             
-            if len( tags_to_include ) > 0:
+            def sort_longest_first_key( s ):
                 
-                tag_query_hash_ids = HydrusData.IntelligentMassIntersect( ( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) for tag in tags_to_include ) )
+                return -len( s )
+                
+            
+            tags_to_include = list( tags_to_include )
+            
+            tags_to_include.sort( key = sort_longest_first_key )
+            
+            for tag in tags_to_include:
+                
+                tag_query_hash_ids = self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids )
                 
                 query_hash_ids = update_qhi( query_hash_ids, tag_query_hash_ids )
+                
+                if query_hash_ids == set():
+                    
+                    return query_hash_ids
+                    
                 
             
             if len( namespaces_to_include ) > 0:
@@ -4324,15 +4347,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( files_info_predicates ) > 0:
                 
+                files_info_predicates.append( 'hash_id IN %s' )
+                
                 if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
                     
-                    query_hash_ids.intersection_update( self._STI( self._c.execute( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) ) )
+                    query_hash_ids.intersection_update( self._STI( self._SelectFromList( 'SELECT hash_id FROM files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                     
                 else:
                     
                     files_info_predicates.insert( 0, 'service_id = ' + str( file_service_id ) )
                     
-                    query_hash_ids.intersection_update( self._STI( self._c.execute( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';' ) ) )
+                    query_hash_ids.intersection_update( self._STI( self._SelectFromList( 'SELECT hash_id FROM current_files NATURAL JOIN files_info WHERE ' + ' AND '.join( files_info_predicates ) + ';', query_hash_ids ) ) )
                     
                 
             
@@ -4432,7 +4457,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for tag in tags_to_exclude:
             
-            exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ) )
+            exclude_query_hash_ids.update( self._GetHashIdsFromTag( file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = query_hash_ids ) )
             
         
         for namespace in namespaces_to_exclude:
@@ -4798,7 +4823,7 @@ class DB( HydrusDB.HydrusDB ):
         return hash_ids
         
     
-    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags ):
+    def _GetHashIdsFromTag( self, file_service_key, tag_service_key, tag, include_current_tags, include_pending_tags, allowed_hash_ids = None ):
         
         siblings_manager = self._controller.GetManager( 'tag_siblings' )
         
@@ -4814,8 +4839,6 @@ class DB( HydrusDB.HydrusDB ):
             
             search_tag_service_ids = [ self._GetServiceId( tag_service_key ) ]
             
-        
-        hash_ids = set()
         
         for tag in tags:
             
@@ -4880,20 +4903,35 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            if include_current_tags:
+        
+        hash_ids = set()
+        
+        selects = []
+        
+        if include_current_tags:
+            
+            selects.extend( current_selects )
+            
+        
+        if include_pending_tags:
+            
+            selects.extend( pending_selects )
+            
+        
+        if allowed_hash_ids is None:
+            
+            for select in selects:
                 
-                for current_select in current_selects:
-                    
-                    hash_ids.update( ( id for ( id, ) in self._c.execute( current_select ) ) )
-                    
+                hash_ids.update( self._STI( self._c.execute( select ) ) )
                 
             
-            if include_pending_tags:
+        else:
+            
+            selects = [ select.replace( ';', ' AND hash_id IN %s;' ) for select in selects ]
+            
+            for select in selects:
                 
-                for pending_select in pending_selects:
-                    
-                    hash_ids.update( ( id for ( id, ) in self._c.execute( pending_select ) ) )
-                    
+                hash_ids.update( self._STI( self._SelectFromList( select, allowed_hash_ids ) ) )
                 
             
         
@@ -5155,47 +5193,48 @@ class DB( HydrusDB.HydrusDB ):
         return results
         
     
-    def _GetHashIdStatus( self, hash_id ):
-    
+    def _GetHashIdStatus( self, hash_id, prefix = '' ):
+        
+        hash = self._GetHash( hash_id )
+        
         result = self._c.execute( 'SELECT 1 FROM deleted_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
-            hash = self._GetHash( hash_id )
-            
-            return ( CC.STATUS_DELETED, hash, '' )
+            return ( CC.STATUS_DELETED, hash, prefix )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._trash_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
-            hash = self._GetHash( hash_id )
-            
             ( timestamp, ) = result
             
             note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
             
-            return ( CC.STATUS_DELETED, hash, note )
+            return ( CC.STATUS_DELETED, hash, prefix + ': ' + note )
             
         
         result = self._c.execute( 'SELECT timestamp FROM current_files WHERE service_id = ? AND hash_id = ?;', ( self._combined_local_file_service_id, hash_id ) ).fetchone()
         
         if result is not None:
             
-            hash = self._GetHash( hash_id )
-            
             ( timestamp, ) = result
             
             note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
             
-            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, note )
+            return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + ': ' + note )
             
         
-        return ( CC.STATUS_UNKNOWN, None, '' )
+        return ( CC.STATUS_UNKNOWN, hash, '' )
         
     
-    def _GetHashStatus( self, hash_type, hash ):
+    def _GetHashStatus( self, hash_type, hash, prefix = None ):
+        
+        if prefix is None:
+            
+            prefix = hash_type + ' recognised'
+            
         
         if hash_type == 'sha256':
             
@@ -5207,7 +5246,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_id = self._GetHashId( hash )
                 
-                return self._GetHashIdStatus( hash_id )
+                return self._GetHashIdStatus( hash_id, prefix = prefix )
                 
             
         else:
@@ -5233,7 +5272,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( hash_id, ) = result
                 
-                return self._GetHashIdStatus( hash_id )
+                return self._GetHashIdStatus( hash_id, prefix = prefix )
                 
             
         
@@ -6624,7 +6663,7 @@ class DB( HydrusDB.HydrusDB ):
             hash_ids.update( results )
             
         
-        results = [ self._GetHashIdStatus( hash_id ) for hash_id in hash_ids ]
+        results = [ self._GetHashIdStatus( hash_id, prefix = 'url recognised' ) for hash_id in hash_ids ]
         
         return results
         
@@ -6703,7 +6742,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_id = self._GetHashId( hash )
         
-        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id )
+        ( status, status_hash, note ) = self._GetHashIdStatus( hash_id, prefix = 'recognised during import' )
         
         if status != CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
             
@@ -6771,7 +6810,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        return status
+        return ( status, note )
         
     
     def _ImportUpdate( self, update_network_string, update_hash, mime ):
@@ -7273,19 +7312,25 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( hash, urls ) = row
+                            ( urls, hashes ) = row
                             
-                            hash_id = self._GetHashId( hash )
-                            
-                            self._c.executemany( 'INSERT OR IGNORE INTO urls ( hash_id, url ) VALUES ( ?, ? );', ( ( hash_id, url ) for url in urls ) )
+                            for hash in hashes:
+                                
+                                hash_id = self._GetHashId( hash )
+                                
+                                self._c.executemany( 'INSERT OR IGNORE INTO urls ( hash_id, url ) VALUES ( ?, ? );', ( ( hash_id, url ) for url in urls ) )
+                                
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
-                            ( hash, urls ) = row
+                            ( urls, hashes ) = row
                             
-                            hash_id = self._GetHashId( hash )
-                            
-                            self._c.executemany( 'DELETE FROM urls WHERE hash_id = ? AND url = ?;', ( ( hash_id, url ) for url in urls ) )
+                            for hash in hashes:
+                                
+                                hash_id = self._GetHashId( hash )
+                                
+                                self._c.executemany( 'DELETE FROM urls WHERE hash_id = ? AND url = ?;', ( ( hash_id, url ) for url in urls ) )
+                                
                             
                         
                     
@@ -8719,7 +8764,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if value is None:
             
-            self._c.execute( 'DELET FROM json_dict WHERE name = ?;', ( name, ) )
+            self._c.execute( 'DELETE FROM json_dict WHERE name = ?;', ( name, ) )
             
         else:
             
@@ -10084,6 +10129,44 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 305:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'pixiv file page', 'twitter tweet' ) )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( '4chan thread api parser', 'pixiv single file page parser - japanese tags' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            message = 'The Newgrounds gallery parser no longer works! I hope to have it back once the new downloader engine\'s gallery work is done. You may want to pause any Newgrounds subscriptions.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

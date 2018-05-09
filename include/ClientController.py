@@ -22,6 +22,7 @@ import ClientNetworkingBandwidth
 import ClientNetworkingDomain
 import ClientNetworkingLogin
 import ClientNetworkingSessions
+import ClientPaths
 import ClientThreading
 import hashlib
 import HydrusConstants as HC
@@ -546,6 +547,8 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.pub( 'splash_set_status_subtext', u'client files' )
+        
+        self.temp_dir = ClientPaths.GetTempDir()
         
         self.InitClientFilesManager()
         
@@ -1110,6 +1113,11 @@ class Controller( HydrusController.HydrusController ):
         if not HG.emergency_exit:
             
             self.SaveDirtyObjects()
+            
+        
+        if hasattr( self, 'temp_dir' ):
+            
+            HydrusPaths.DeletePath( self.temp_dir )
             
         
         HydrusController.HydrusController.ShutdownModel( self )

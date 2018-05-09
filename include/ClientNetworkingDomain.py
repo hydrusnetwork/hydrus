@@ -60,7 +60,14 @@ def ConvertDomainIntoAllApplicableDomains( domain ):
     
 def ConvertDomainIntoSecondLevelDomain( domain ):
     
-    return ConvertDomainIntoAllApplicableDomains( domain )[-1]
+    domains = ConvertDomainIntoAllApplicableDomains( domain )
+    
+    if len( domains ) == 0:
+        
+        raise HydrusExceptions.URLMatchException( 'That url or domain did not seem to be valid!' )
+        
+    
+    return domains[-1]
     
 def ConvertHTTPSToHTTP( url ):
     
@@ -608,7 +615,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                     url_match_key = url_match.GetMatchKey()
                     
-                    if url_match.IsPostURL() and url_match_key in self._url_match_keys_to_display:
+                    if url_match_key in self._url_match_keys_to_display:
                         
                         url_match_name = url_match.GetName()
                         
@@ -750,6 +757,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return list( self._parsers )
+            
+        
+    
+    def GetURLMatch( self, url ):
+        
+        with self._lock:
+            
+            return self._GetURLMatch( url )
             
         
     
@@ -913,6 +928,40 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def OverwriteDefaultParsers( self, parser_names ):
+        
+        with self._lock:
+            
+            import ClientDefaults
+            
+            default_parsers = ClientDefaults.GetDefaultParsers()
+            
+            existing_parsers = list( self._parsers )
+            
+            new_parsers = [ parser for parser in existing_parsers if parser.GetName() not in parser_names ]
+            new_parsers.extend( [ parser for parser in default_parsers if parser.GetName() in parser_names ] )
+            
+        
+        self.SetParsers( new_parsers )
+        
+    
+    def OverwriteDefaultURLMatches( self, url_match_names ):
+        
+        with self._lock:
+            
+            import ClientDefaults
+            
+            default_url_matches = ClientDefaults.GetDefaultURLMatches()
+            
+            existing_url_matches = list( self._url_matches )
+            
+            new_url_matches = [ url_match for url_match in existing_url_matches if url_match.GetName() not in url_match_names ]
+            new_url_matches.extend( [ url_match for url_match in default_url_matches if url_match.GetName() in url_match_names ] )
+            
+        
+        self.SetURLMatches( new_url_matches )
+        
+    
     def SetClean( self ):
         
         with self._lock:
@@ -929,6 +978,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._watchable_default_tag_import_options = watchable_default_tag_import_options
             
             self._url_match_keys_to_default_tag_import_options = url_match_keys_to_tag_import_options
+            
+            self._SetDirty()
             
         
     
@@ -1003,14 +1054,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            # add new post url matches to the yes display set
+            # by default, we will show post urls
             
-            old_url_match_keys = { url_match.GetMatchKey() for url_match in self._url_matches if url_match.IsPostURL() }
-            url_match_keys = { url_match.GetMatchKey() for url_match in url_matches if url_match.IsPostURL() }
+            old_post_url_match_keys = { url_match.GetMatchKey() for url_match in self._url_matches if url_match.IsPostURL() }
+            post_url_match_keys = { url_match.GetMatchKey() for url_match in url_matches if url_match.IsPostURL() }
             
-            added_url_match_keys = url_match_keys.difference( old_url_match_keys )
+            added_post_url_match_keys = post_url_match_keys.difference( old_post_url_match_keys )
             
-            self._url_match_keys_to_display.update( added_url_match_keys )
+            self._url_match_keys_to_display.update( added_post_url_match_keys )
             
             #
             
@@ -1094,7 +1145,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def URLDefinitelyRefersToMultipleFiles( self, url ):
+    def URLCanReferToMultipleFiles( self, url ):
         
         with self._lock:
             
@@ -1105,7 +1156,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 return False
                 
             
-            return url_match.RefersToMultipleFiles()
+            return url_match.CanReferToMultipleFiles()
             
         
     
@@ -1126,6 +1177,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     @staticmethod
     def STATICLinkURLMatchesAndParsers( url_matches, parsers, existing_url_match_keys_to_parser_keys ):
+        
+        parsers = list( parsers )
+        
+        parsers.sort( key = lambda p: p.GetName() )
         
         new_url_match_keys_to_parser_keys = {}
         
@@ -1257,9 +1312,9 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
     SERIALISABLE_NAME = 'URL Match'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
-    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
+    def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):
         
         if url_match_key is None:
             
@@ -1308,6 +1363,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         self._path_components = path_components
         self._parameters = parameters
         self._api_lookup_converter = api_lookup_converter
+        self._can_produce_multiple_files = can_produce_multiple_files
         self._should_be_associated_with_files = should_be_associated_with_files
         
         self._example_url = example_url
@@ -1384,12 +1440,12 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_parameters = self._parameters.GetSerialisableTuple()
         serialisable_api_lookup_converter = self._api_lookup_converter.GetSerialisableTuple()
         
-        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url )
+        return ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._should_be_associated_with_files, self._example_url ) = serialisable_info
+        ( serialisable_url_match_key, self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url ) = serialisable_info
         
         self._url_match_key = serialisable_url_match_key.decode( 'hex' )
         self._path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components )
@@ -1433,6 +1489,26 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             return ( 3, new_serialisable_info )
             
+        
+        if version == 3:
+            
+            ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, should_be_associated_with_files, example_url ) = old_serialisable_info
+            
+            can_produce_multiple_files = False
+            
+            new_serialisable_info = ( serialisable_url_match_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, example_url )
+            
+            return ( 4, new_serialisable_info )
+            
+        
+    
+    def CanReferToMultipleFiles( self ):
+        
+        is_a_gallery_page = self._url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE )
+        
+        is_a_multipost_post_page = self._url_type == HC.URL_TYPE_POST and self._can_produce_multiple_files
+        
+        return is_a_gallery_page or is_a_multipost_post_page
         
     
     def GetAPIURL( self, url ):
@@ -1527,14 +1603,13 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         return r.geturl()
         
     
-    def RefersToMultipleFiles( self ):
-        
-        return self._url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE )
-        
-    
     def RefersToOneFile( self ):
         
-        return self._url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST )
+        is_a_direct_file_page = self._url_type == HC.URL_TYPE_FILE
+        
+        is_a_single_file_post_page = self._url_type == HC.URL_TYPE_POST and not self._can_produce_multiple_files
+        
+        return is_a_direct_file_page or is_a_single_file_post_page
         
     
     def RegenMatchKey( self ):
@@ -1598,7 +1673,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( url_parameters ) < len( self._parameters ):
             
-            raise HydrusExceptions.URLMatchException( p.query + ' did not have ' + str( len( self._parameters ) ) + ' value pairs' )
+            raise HydrusExceptions.URLMatchException( p.query + ' did not have ' + str( len( self._parameters ) ) + ' parameters' )
             
         
         for ( key, string_match ) in self._parameters.items():
@@ -1623,7 +1698,7 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     def ToTuple( self ):
         
-        return ( self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._should_be_associated_with_files, self._example_url )
+        return ( self._url_type, self._preferred_scheme, self._netloc, self._match_subdomains, self._keep_matched_subdomains, self._path_components, self._parameters, self._api_lookup_converter, self._can_produce_multiple_files, self._should_be_associated_with_files, self._example_url )
         
     
     def UsesAPIURL( self ):

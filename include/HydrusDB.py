@@ -12,7 +12,6 @@ import Queue
 import random
 import sqlite3
 import sys
-import tempfile
 import threading
 import traceback
 import time

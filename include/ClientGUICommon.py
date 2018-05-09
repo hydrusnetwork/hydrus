@@ -1232,9 +1232,24 @@ class Gauge( wx.Gauge ):
         
         wx.Gauge.__init__( self, *args, **kwargs )
         
+        self._actual_value = None
         self._actual_range = None
         
         self._is_pulsing = False
+        
+    
+    def GetValueRange( self ):
+        
+        if self._actual_range is None:
+            
+            range = self.GetRange()
+            
+        else:
+            
+            range = self._actual_range
+            
+        
+        return ( self._actual_value, range )
         
     
     def SetRange( self, range ):
@@ -1270,6 +1285,8 @@ class Gauge( wx.Gauge ):
         
     
     def SetValue( self, value ):
+        
+        self._actual_value = value
         
         if not self._is_pulsing:
             

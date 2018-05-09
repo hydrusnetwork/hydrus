@@ -1013,8 +1013,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         import ClientTags
         
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True )
-        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = DuplicateActionOptions( [], [], False )
         self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = DuplicateActionOptions( [], [], False )
         
@@ -1093,6 +1093,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_not_found_page_string' ] = '[404]'
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_dead_page_string' ] = '[DEAD]'
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_paused_page_string' ] = u'\u23F8'
+        self._dictionary[ 'noneable_strings' ][ 'temp_path_override' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
         
         self._dictionary[ 'strings' ] = {}
         
@@ -1572,12 +1574,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     fetch_tags_even_if_url_known_and_file_already_in_db = False
                     
+                    tag_blacklist = None
+                    
                     service_keys_to_namespaces = {}
                     service_keys_to_additional_tags = {}
                     
                     if guidance_tag_import_options is not None:
                         
                         fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+                        
+                        tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
                         
                         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
                         
@@ -1600,7 +1606,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     import ClientImportOptions
                     
-                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
                     
                 
                 return tag_import_options
@@ -2126,9 +2132,9 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_ACTION_OPTIONS
     SERIALISABLE_NAME = 'Duplicate Action Options'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, tag_service_actions = None, rating_service_actions = None, delete_second_file = False, sync_archive = False, delete_both_files = False ):
+    def __init__( self, tag_service_actions = None, rating_service_actions = None, delete_second_file = False, sync_archive = False, delete_both_files = False, sync_urls_action = None ):
         
         if tag_service_actions is None:
             
@@ -2147,6 +2153,7 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         self._delete_second_file = delete_second_file
         self._sync_archive = sync_archive
         self._delete_both_files = delete_both_files
+        self._sync_urls_action = sync_urls_action
         
     
     def _GetSerialisableInfo( self ):
@@ -2162,12 +2169,12 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_tag_service_actions = [ ( service_key.encode( 'hex' ), action, tag_filter.GetSerialisableTuple() ) for ( service_key, action, tag_filter ) in self._tag_service_actions ]
         serialisable_rating_service_actions = [ ( service_key.encode( 'hex' ), action ) for ( service_key, action ) in self._rating_service_actions ]
         
-        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files )
+        return ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files ) = serialisable_info
+        ( serialisable_tag_service_actions, serialisable_rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action ) = serialisable_info
         
         self._tag_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( serialisable_service_key.decode( 'hex' ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
@@ -2208,6 +2215,17 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( serialisable_tag_service_actions, serialisable_rating_service_actions, delete_second_file, sync_archive, delete_both_files ) = old_serialisable_info
+            
+            sync_urls_action = None
+            
+            new_serialisable_info = ( serialisable_tag_service_actions, serialisable_rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def GetDeletedHashes( self, first_media, second_media ):
         
@@ -2228,18 +2246,19 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetTuple( self, tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files ):
+    def SetTuple( self, tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action ):
         
         self._tag_service_actions = tag_service_actions
         self._rating_service_actions = rating_service_actions
         self._delete_second_file = delete_second_file
         self._sync_archive = sync_archive
         self._delete_both_files = delete_both_files
+        self._sync_urls_action = sync_urls_action
         
     
     def ToTuple( self ):
         
-        return ( self._tag_service_actions, self._rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files )
+        return ( self._tag_service_actions, self._rating_service_actions, self._delete_second_file, self._sync_archive, self._delete_both_files, self._sync_urls_action )
         
     
     def ProcessPairIntoContentUpdates( self, first_media, second_media ):
@@ -2404,6 +2423,38 @@ class DuplicateActionOptions( HydrusSerialisable.SerialisableBase ):
         if len( service_keys_to_content_updates ) > 0:
             
             list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+            
+        
+        #
+        
+        if self._sync_urls_action is not None:
+            
+            first_urls = set( first_media.GetLocationsManager().GetURLs() )
+            second_urls = set( second_media.GetLocationsManager().GetURLs() )
+            
+            content_updates = []
+            
+            if self._sync_urls_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
+                
+                first_needs = second_urls.difference( first_urls )
+                second_needs = first_urls.difference( second_urls )
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                
+            elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
+                
+                first_needs = second_urls.difference( first_urls )
+                
+                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                
+            
+            if len( content_updates ) > 0:
+                
+                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates }
+                
+                list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                
             
         
         #

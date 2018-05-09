@@ -13,6 +13,7 @@ import ClientGUISerialisable
 import ClientGUITopLevelWindows
 import ClientNetworkingJobs
 import ClientParsing
+import ClientPaths
 import ClientSerialisable
 import ClientThreading
 import HydrusConstants as HC
@@ -27,7 +28,6 @@ import sys
 import threading
 import traceback
 import time
-import webbrowser
 import wx
 
 ( StringConverterEvent, EVT_STRING_CONVERTER ) = wx.lib.newevent.NewCommandEvent()
@@ -154,7 +154,7 @@ class EditCompoundFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_formulae.html#compound_formula' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#compound_formula' ) )
         
         menu_items.append( ( 'normal', 'open the compound formula help', 'Open the help page for compound formulae in your web browesr.', page_func ) )
         
@@ -384,7 +384,7 @@ class EditContextVariableFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_formulae.html#context_variable_formula' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#context_variable_formula' ) )
         
         menu_items.append( ( 'normal', 'open the context variable formula help', 'Open the help page for context variable formulae in your web browesr.', page_func ) )
         
@@ -802,7 +802,7 @@ class EditHTMLFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_formulae.html#html_formula' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#html_formula' ) )
         
         menu_items.append( ( 'normal', 'open the html formula help', 'Open the help page for html formulae in your web browesr.', page_func ) )
         
@@ -1170,7 +1170,7 @@ class EditJSONFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_formulae.html#json_formula' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_formulae.html#json_formula' ) )
         
         menu_items.append( ( 'normal', 'open the json formula help', 'Open the help page for json formulae in your web browesr.', page_func ) )
         
@@ -1400,7 +1400,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_content_parsers.html#content_parsers' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_content_parsers.html#content_parsers' ) )
         
         menu_items.append( ( 'normal', 'open the content parsers help', 'Open the help page for content parsers in your web browesr.', page_func ) )
         
@@ -2410,7 +2410,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_parsers_page_parsers.html#page_parsers' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_parsers_page_parsers.html#page_parsers' ) )
         
         menu_items.append( ( 'normal', 'open the page parser help', 'Open the help page for page parsers in your web browesr.', page_func ) )
         
@@ -4516,7 +4516,7 @@ class ScriptManagementControl( wx.Panel ):
         
         for url in urls:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, url, 'launch this url in your browser', webbrowser.open, url )
+            ClientGUIMenus.AppendMenuItem( self, menu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
             
         
         HG.client_controller.PopupMenu( self, menu )

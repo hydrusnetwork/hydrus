@@ -9,7 +9,6 @@ import HydrusImageHandling
 import HydrusPaths
 import HydrusVideoHandling
 import os
-import tempfile
 import threading
 import traceback
 import cStringIO

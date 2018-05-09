@@ -878,30 +878,43 @@ def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None
     
-    sets_to_reduce = list( sets_to_reduce )
-    
     def get_len( item ):
         
         return len( item )
         
     
-    sets_to_reduce.sort( key = get_len )
-    
     for set_to_reduce in sets_to_reduce:
         
-        if len( set_to_reduce ) == 0: return set()
+        if len( set_to_reduce ) == 0:
+            
+            return set()
+            
         
-        if answer is None: answer = set( set_to_reduce )
+        if answer is None:
+            
+            answer = set( set_to_reduce )
+            
         else:
             
-            # same thing as union; I could go &= here, but I want to be quick, so use the function call
-            if len( answer ) == 0: return set()
-            else: answer.intersection_update( set_to_reduce )
+            if len( answer ) == 0:
+                
+                return set()
+                
+            else:
+                
+                answer.intersection_update( set_to_reduce )
+                
             
         
     
-    if answer is None: return set()
-    else: return answer
+    if answer is None:
+        
+        return set()
+        
+    else:
+        
+        return answer
+        
     
 def IsAlreadyRunning( db_path, instance ):
     
@@ -1586,9 +1599,7 @@ class ContentUpdate( object ):
             
         elif self._data_type == HC.CONTENT_TYPE_URLS:
             
-            ( hash, urls ) = self._row
-            
-            hashes = { hash }
+            ( urls, hashes ) = self._row
             
         elif self._data_type == HC.CONTENT_TYPE_MAPPINGS:
             

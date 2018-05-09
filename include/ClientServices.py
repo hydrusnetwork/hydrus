@@ -1325,7 +1325,7 @@ class ServiceRepository( ServiceRestricted ):
                             self._DealWithFundamentalNetworkError()
                             
                         
-                        message = 'While downloading updates for the ' + self._name + ' repository, an update failed to import! The error follows:'
+                        message = 'While downloading updates for the ' + self._name + ' repository, one failed to import! The error follows:'
                         
                         HydrusData.ShowText( message )
                         
@@ -1428,7 +1428,7 @@ class ServiceRepository( ServiceRestricted ):
             
             with self._lock:
                 
-                message = 'While processing updates for the ' + self._name + ' repository, an update failed to import! The error follows:'
+                message = 'While processing updates for the ' + self._name + ' repository, one failed! The error follows:'
                 
                 HydrusData.ShowText( message )
                 

@@ -269,7 +269,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             entries.append( ( 'page_import_booru', None ) )
             entries.append( ( 'page_import_gallery', HC.SITE_TYPE_DEVIANT_ART ) )
             entries.append( ( 'menu', 'hentai foundry' ) )
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
+            #entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
             
             result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
             
@@ -2856,6 +2856,15 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetSerialisableInfo( self ):
         
+        def handle_e( e ):
+            
+            HydrusData.ShowText( 'Attempting to save a page to the session failed! Its data tuple and error follows! Please close it or see if you can clear any potentially invalid data from it!' )
+            
+            HydrusData.ShowText( page_tuple )
+            
+            HydrusData.ShowException( e )
+            
+        
         def GetSerialisablePageTuple( page_tuple ):
             
             ( page_type, page_data ) = page_tuple
@@ -2864,7 +2873,19 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( name, page_tuples ) = page_data
                 
-                serialisable_page_tuples = [ GetSerialisablePageTuple( pt ) for pt in page_tuples ]
+                serialisable_page_tuples = []
+                
+                for pt in page_tuples:
+                    
+                    try:
+                        
+                        serialisable_page_tuples.append( GetSerialisablePageTuple( pt ) )
+                        
+                    except Exception as e:
+                        
+                        handle_e( e )
+                        
+                    
                 
                 serialisable_page_data = ( name, serialisable_page_tuples )
                 
@@ -2888,15 +2909,31 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         for page_tuple in self._pages:
             
-            serialisable_page_tuple = GetSerialisablePageTuple( page_tuple )
-            
-            serialisable_info.append( serialisable_page_tuple )
+            try:
+                
+                serialisable_page_tuple = GetSerialisablePageTuple( page_tuple )
+                
+                serialisable_info.append( serialisable_page_tuple )
+                
+            except Exception as e:
+                
+                handle_e( e )
+                
             
         
         return serialisable_info
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        def handle_e( e ):
+            
+            HydrusData.ShowText( 'A page failed to load! Its serialised data and error follows!' )
+            
+            HydrusData.ShowText( serialisable_page_tuple )
+            
+            HydrusData.ShowException( e )
+            
         
         def GetPageTuple( serialisable_page_tuple ):
             
@@ -2906,7 +2943,19 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( name, serialisable_page_tuples ) = serialisable_page_data
                 
-                page_tuples = [ GetPageTuple( spt ) for spt in serialisable_page_tuples ]
+                page_tuples = []
+                
+                for spt in serialisable_page_tuples:
+                    
+                    try:
+                        
+                        page_tuples.append( GetPageTuple( spt ) )
+                        
+                    except Exception as e:
+                        
+                        handle_e( e )
+                        
+                    
                 
                 page_data = ( name, page_tuples )
                 
@@ -2928,9 +2977,16 @@ class GUISession( HydrusSerialisable.SerialisableBaseNamed ):
         
         for serialisable_page_tuple in serialisable_info:
             
-            page_tuple = GetPageTuple( serialisable_page_tuple )
-            
-            self._pages.append( page_tuple )
+            try:
+                
+                page_tuple = GetPageTuple( serialisable_page_tuple )
+                
+                self._pages.append( page_tuple )
+                
+            except Exception as e:
+                
+                handle_e( e )
+                
             
         
     

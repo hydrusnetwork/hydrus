@@ -8,6 +8,58 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 306</h3></li>
+				<ul>
+					<li>the file import status list now has 'open selected import files in a new page', which should show up where it is possible. this is a bit prototype and ugly--it'll show _all_ files, including in-trash and permanently deleted (which will show up with the hydrus thumbnail)</li>
+					<li>the file import status list now prefixes the already in db/deleted notes with 'url' or the hash type that lead to the recognition</li>
+					<li>these redundant/deleted notes now also propagate up from 'during import' recognition phase as well</li>
+					<li>the 'delete seeds of type x' entries on the file import status button's right-click menu are now split into three smaller individual tyes and are more explicit about exactly which status types they will remove</li>
+					<li>like import folders, subscriptions can now optionally publish their files to pages as well as popup buttons. also, subscriptions can optionally publish their files separately for each query instead of all merged together</li>
+					<li>sped up multiple tag queries significantly</li>
+					<li>sped up simple (file size, mime, etc...) system predicate queries that also include a tag/namespace/wildcard predicate significantly</li>
+					<li>added a pixiv parser that pulls the japanese tags to the defaults--users can switch to this if they prefer under network->manage url class links</li>
+					<li>fixed the 4chan parser to get part of comment as backup subject/page title</li>
+					<li>removed the 'newgrounds' entry from the normal gallery page creation ui, as the basic gallery parser no longer works due to a dynamic loading change on their end. I hope to have it back with the new gallery parsing system I will soon be writing</li>
+					<li>the edit url classes panel now has a little text box to put in example urls and see which class, if any, that they match to</li>
+					<li>improved layout of edit url class links panel</li>
+					<li>all url types are now displayable in the media viewer--only post url classes are default on</li>
+					<li>the new (x/y) import page page_name progress count is now updated on all alterations to this value (previously, this was not updating when a user interacted with the import queue, only when the natural downloader loop cycled)</li>
+					<li>added 'can produce multiple files' option to post url url classes, which informs client url-checking logic whether the url can be relied upon for 'already in db/deleted' calculations</li>
+					<li>the pixiv file page url class now has 'can produce multiple files' checked, meaning some bad pixiv url association logic due to other sites referencing it as a source url is now fixed</li>
+					<li>added a 'twitter tweet' url class, which is also a 'can produce multiple files' post url</li>
+					<li>added a 'sync known urls?' action choice to the duplicate merge options panel, which governs whether urls should be copied from worse to better or in both directions</li>
+					<li>gave the edit duplicate merge options panel a layout pass</li>
+					<li>the edit duplicate merge options panel will now disable pointless/over-complicated choices on non-custom actions, let me know if this is a pain for your workflow</li>
+					<li>added a 'manual' web browser path override to the 'files and trash' options panel, which fixes the new share->open->in web browser option for Windows and also fixes some #anchor link propagation</li>
+					<li>consolidated all URL/Path web browser launching code to one location</li>
+					<li>'open in web browser' is now available for non-advanced_mode users and the 'open' submenu of the share menu is available in the preview window and the media viewer</li>
+					<li>fixed a bug that was causing import folders to publish incorrect file identifiers, which was poisoning popup buttons and import page destinations</li>
+					<li>gui sessions that fail to load a page will recover and continue to attempt loading the rest of their pages. some popups detailing the page's serialised data and error will be presented</li>
+					<li>gui sessions that fail to save a page will recover and continue to attempt saving the rest of their pages. some popups detailsing the page's rough info and error will be presented</li>
+					<li>the core controller inside all media pages will now present itself in a more beautiful way when asked to dump itself to a log (which should beautify the above save error a bit)</li>
+					<li>wrote a subsidiary database->check->just repo update files that tests integrity of only repository update files</li>
+					<li>fixed an issue where default tag import options were sometimes not being saved from the new dialog in the networking menu</li>
+					<li>wrote a couple of layers of bad tag protection to help the new downloader deal with some occasional bad output from the old downloader</li>
+					<li>network jobs can now reattempt connection attempts up to three times on POST requests (if you ever got inexplicable immediate 'could not connect' errors on repository uploads, this should now be fixed)</li>
+					<li>replaced some archaic misc old import code with the new system, cleaning up a bunch of stuff and making space for further refactoring along the way</li>
+					<li>fixed tags blacklist not being inherited in the old (through options dialog) system</li>
+					<li>improved some invalid domain error handling</li>
+					<li>fixed an animation update issue that would pause naturally updating controls on non-main-gui  frames when there were no regular media pages open on the main gui</li>
+					<li>added a BUGFIX option to 'files and trash' option page to override the default temp path for almost all client temp path requests</li>
+					<li>the minimum value for the 'vacuum period' in maintenance and processing options is now 28 days. the control also has a little explanatory tooltip</li>
+					<li>the 'try to auto-link url classes and parsers' function now always preferences parsers alphabetically</li>
+					<li>fixed a typo in the string transformations prettyfication code that incorrectly summarised 'take the last x characters' as the opposite</li>
+					<li>misc fix to file hash generation and status checking code</li>
+					<li>the 'export tags to .txt files' checkbox on the export files panel will no longer bother you with a dialog as you uncheck it</li>
+					<li>wrote some code to make it easier and more fool-proof to update the domain manager with new url classes and parsers on my end</li>
+					<li>improved some popup message manager ok-to-alter-ui logic when the main ui is minimised and so on</li>
+					<li>fixed some potential crash conditions (affecting linux mostly, seems like) in the service credential testing and access key fetching ui code</li>
+					<li>fixed a bug when 'stopping' a gallery parse during a long error pause (like when it holds on '404')</li>
+					<li>sped up some old set intersection code</li>
+					<li>some import file presentation refactoring</li>
+					<li>some url content application pipeline cleanup</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 305</h3></li>
 				<ul>
 					<li>fixed the pixiv url class, which was unintentionally removing a parameter</li>

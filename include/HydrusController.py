@@ -358,8 +358,6 @@ class HydrusController( object ):
     
     def InitModel( self ):
         
-        self.temp_dir = HydrusPaths.GetTempDir()
-        
         self._job_scheduler = HydrusThreading.JobScheduler( self )
         
         self._job_scheduler.start()
@@ -476,11 +474,6 @@ class HydrusController( object ):
             self._job_scheduler.shutdown()
             
             self._job_scheduler = None
-            
-        
-        if hasattr( self, 'temp_dir' ):
-            
-            HydrusPaths.DeletePath( self.temp_dir )
             
         
     

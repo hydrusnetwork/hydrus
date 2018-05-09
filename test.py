@@ -532,7 +532,7 @@ class Controller( object ):
                 
             else:
                 
-                return CC.STATUS_SUCCESSFUL_AND_NEW
+                return ( CC.STATUS_SUCCESSFUL_AND_NEW, '' )
                 
             
         

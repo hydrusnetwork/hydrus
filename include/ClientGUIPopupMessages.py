@@ -615,6 +615,11 @@ class PopupMessageManager( wx.Frame ):
             size_and_position_needed = True
             
         
+        if not self.IsShown():
+            
+            size_and_position_needed = True
+            
+        
         if size_and_position_needed:
             
             self._SizeAndPositionAndShow()
@@ -640,6 +645,47 @@ class PopupMessageManager( wx.Frame ):
         return False
         
     
+    def _DoDebugHide( self ):
+        
+        parent = self.GetParent()
+        
+        parent_iconized = parent.IsIconized()
+        
+        # changing show status while parent iconised in Windows leads to grey window syndrome
+        windows_and_iconised = HC.PLATFORM_WINDOWS and parent_iconized
+        
+        possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
+        
+        going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
+        
+        new_options = HG.client_controller.new_options
+        
+        if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
+            
+            if parent.IsIconized():
+                
+                self.Hide()
+                
+                return
+                
+            
+        
+        current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
+        
+        main_gui_is_active = current_focus_tlp in ( self, parent )
+        
+        if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
+            
+            if not main_gui_is_active:
+                
+                if not going_to_bug_out_at_hide_or_show:
+                    
+                    self.Hide()
+                    
+                
+            
+        
+    
     def _SizeAndPositionAndShow( self ):
         
         try:
@@ -652,18 +698,6 @@ class PopupMessageManager( wx.Frame ):
             possibly_on_hidden_virtual_desktop = not ClientGUITopLevelWindows.MouseIsOnMyDisplay( parent )
             
             going_to_bug_out_at_hide_or_show = windows_and_iconised or possibly_on_hidden_virtual_desktop
-            
-            new_options = HG.client_controller.new_options
-            
-            if new_options.GetBoolean( 'hide_message_manager_on_gui_iconise' ):
-                
-                if parent.IsIconized():
-                    
-                    self.Hide()
-                    
-                    return
-                    
-                
             
             current_focus_tlp = wx.GetTopLevelParent( wx.Window.FindFocus() )
             
@@ -678,27 +712,6 @@ class PopupMessageManager( wx.Frame ):
                 if c_f_tlp_is_child_frame_of_main_gui and current_focus_tlp.GetWindowStyle() & wx.FRAME_FLOAT_ON_PARENT == wx.FRAME_FLOAT_ON_PARENT:
                     
                     on_top_frame_is_active = True
-                    
-                
-            
-            if new_options.GetBoolean( 'hide_message_manager_on_gui_deactive' ):
-                
-                if main_gui_is_active:
-                    
-                    # gui can have focus even while minimised to the taskbar--let's not show in this case
-                    if not self.IsShown() and parent.IsIconized():
-                        
-                        return
-                        
-                    
-                else:
-                    
-                    if not going_to_bug_out_at_hide_or_show:
-                        
-                        self.Hide()
-                        
-                    
-                    return
                     
                 
             
@@ -797,6 +810,17 @@ class PopupMessageManager( wx.Frame ):
         return job_keys
         
     
+    def _OKToAlterUI( self ):
+        
+        main_gui = self.GetParent()
+        
+        not_on_hidden_or_virtual_display = ClientGUITopLevelWindows.MouseIsOnMyDisplay( main_gui )
+        
+        main_gui_up = not main_gui.IsIconized()
+        
+        return not_on_hidden_or_virtual_display and main_gui_up
+        
+    
     def _TryToMergeMessage( self, job_key ):
         
         if not job_key.HasVariable( 'popup_files_mergable' ):
@@ -874,8 +898,6 @@ class PopupMessageManager( wx.Frame ):
                 
             
         
-        self._SizeAndPositionAndShow()
-        
     
     def AddMessage( self, job_key ):
         
@@ -890,7 +912,7 @@ class PopupMessageManager( wx.Frame ):
             
             self._pending_job_keys.append( job_key )
             
-            if ClientGUITopLevelWindows.MouseIsOnMyDisplay( self.GetParent() ):
+            if self._OKToAlterUI():
                 
                 self._CheckPending()
                 
@@ -937,9 +959,12 @@ class PopupMessageManager( wx.Frame ):
         # OS X segfaults if this is instant
         wx.CallAfter( window.Destroy )
         
-        self._SizeAndPositionAndShow()
-        
-        self._CheckPending()
+        if self._OKToAlterUI():
+            
+            self._SizeAndPositionAndShow()
+            
+            self._CheckPending()
+            
         
     
     def DismissAll( self ):
@@ -960,21 +985,29 @@ class PopupMessageManager( wx.Frame ):
     
     def EventMove( self, event ):
         
-        self._SizeAndPositionAndShow()
+        if self._OKToAlterUI():
+            
+            self._SizeAndPositionAndShow()
+            
         
         event.Skip()
         
     
     def MakeSureEverythingFits( self ):
         
-        self._SizeAndPositionAndShow()
+        if self._OKToAlterUI():
+            
+            self._SizeAndPositionAndShow()
+            
         
     
     def REPEATINGUpdate( self ):
         
         try:
             
-            if ClientGUITopLevelWindows.MouseIsOnMyDisplay( self.GetParent() ):
+            self._DoDebugHide()
+            
+            if self._OKToAlterUI():
                 
                 self._Update()
                 

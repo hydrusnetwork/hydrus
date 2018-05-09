@@ -16,6 +16,7 @@ import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientNetworking
 import ClientNetworkingContexts
+import ClientPaths
 import ClientTags
 import ClientThreading
 import collections
@@ -32,7 +33,6 @@ import sys
 import threading
 import time
 import traceback
-import webbrowser
 import wx
 
 try:
@@ -327,7 +327,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/database_migration.html' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'database_migration.html' ) )
         
         menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browesr.', page_func ) )
         
@@ -1757,33 +1757,40 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventExportTagTxtsChanged( self, event ):
         
-        services_manager = HG.client_controller.services_manager
-        
-        tag_services = services_manager.GetServices( HC.TAG_SERVICES )
-        
-        list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
-        
-        list_of_tuples.sort()
-        
-        with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
+        if self._export_tag_txts.GetValue() == True:
             
-            if dlg.ShowModal() == wx.ID_OK:
+            services_manager = HG.client_controller.services_manager
+            
+            tag_services = services_manager.GetServices( HC.TAG_SERVICES )
+            
+            list_of_tuples = [ ( service.GetName(), service.GetServiceKey(), service.GetServiceKey() in self._neighbouring_txt_tag_service_keys ) for service in tag_services ]
+            
+            list_of_tuples.sort()
+            
+            with ClientGUIDialogs.DialogCheckFromList( self, 'select tag services', list_of_tuples ) as dlg:
                 
-                self._neighbouring_txt_tag_service_keys = dlg.GetChecked()
-                
-                if len( self._neighbouring_txt_tag_service_keys ) == 0:
+                if dlg.ShowModal() == wx.ID_OK:
                     
-                    self._export_tag_txts.SetValue( False )
+                    self._neighbouring_txt_tag_service_keys = dlg.GetChecked()
+                    
+                    if len( self._neighbouring_txt_tag_service_keys ) == 0:
+                        
+                        self._export_tag_txts.SetValue( False )
+                        
+                    else:
+                        
+                        self._export_tag_txts.SetValue( True )
+                        
                     
                 else:
                     
-                    self._export_tag_txts.SetValue( True )
+                    self._export_tag_txts.SetValue( False )
                     
                 
-            else:
-                
-                self._export_tag_txts.SetValue( False )
-                
+            
+        else:
+            
+            self._neighbouring_txt_tag_service_keys = []
             
         
     

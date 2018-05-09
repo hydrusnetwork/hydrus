@@ -27,7 +27,6 @@ import shutil
 import sqlite3
 import stat
 import TestConstants
-import tempfile
 import time
 import threading
 import unittest
@@ -321,9 +320,10 @@ class TestClientDB( unittest.TestCase ):
         
         file_import_job.GenerateInfo()
         
-        written_result = self._write( 'import_file', file_import_job )
+        ( written_status, written_note ) = self._write( 'import_file', file_import_job )
         
-        self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_AND_NEW )
+        self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
+        self.assertEqual( written_note, '' )
         self.assertEqual( file_import_job.GetHash(), hash )
         
         time.sleep( 1 )
@@ -780,9 +780,10 @@ class TestClientDB( unittest.TestCase ):
             
             file_import_job.GenerateInfo()
             
-            written_result = self._write( 'import_file', file_import_job )
+            ( written_status, written_note ) = self._write( 'import_file', file_import_job )
             
-            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_AND_NEW )
+            self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_AND_NEW )
+            self.assertEqual( written_note, '' )
             self.assertEqual( file_import_job.GetHash(), hash )
             
             file_import_job = ClientImporting.FileImportJob( path )
@@ -791,9 +792,10 @@ class TestClientDB( unittest.TestCase ):
             
             file_import_job.GenerateInfo()
             
-            written_result = self._write( 'import_file', file_import_job )
+            ( written_status, written_note ) = self._write( 'import_file', file_import_job )
             
-            self.assertEqual( written_result, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+            self.assertEqual( written_status, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+            self.assertTrue( len( written_note ) > 0 )
             self.assertEqual( file_import_job.GetHash(), hash )
             
             written_hash = file_import_job.GetHash()

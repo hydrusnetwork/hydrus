@@ -2579,7 +2579,7 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
             
         elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
             
-            return 'take the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            return 'take the last ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
             
         elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
             

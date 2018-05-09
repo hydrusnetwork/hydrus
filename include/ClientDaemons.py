@@ -1,6 +1,7 @@
 import ClientData
 import ClientImporting
 import ClientImportOptions
+import ClientPaths
 import ClientThreading
 import HydrusConstants as HC
 import HydrusData
@@ -122,7 +123,7 @@ def DAEMONDownloadFiles( controller ):
                         
                         try:
                             
-                            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+                            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
                             
                             try:
                                 

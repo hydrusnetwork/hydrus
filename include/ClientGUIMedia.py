@@ -16,6 +16,7 @@ import ClientGUIScrolledPanelsReview
 import ClientGUIShortcuts
 import ClientGUITopLevelWindows
 import ClientMedia
+import ClientPaths
 import ClientSearch
 import ClientTags
 import collections
@@ -36,7 +37,6 @@ import wx
 import yaml
 import HydrusData
 import HydrusGlobals as HG
-import webbrowser
 
 def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
     
@@ -1110,7 +1110,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 self._SetFocussedMedia( None )
                 
-                webbrowser.open( 'file://' + path )
+                ClientPaths.LaunchPathInWebBrowser( path )
                 
             
         
@@ -1472,7 +1472,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'edit duplicate merge options' ) as dlg_2:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options )
+                    panel = ClientGUIScrolledPanelsEdit.EditDuplicateActionOptionsPanel( dlg_2, duplicate_type, duplicate_action_options, for_custom_action = True )
                     
                     dlg_2.SetPanel( panel )
                     
@@ -3352,7 +3352,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 for url in urls:
                     
-                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', webbrowser.open, url )
+                    ClientGUIMenus.AppendMenuItem( self, urls_visit_menu, url, 'Open this url in your web browser.', ClientPaths.LaunchURLInWebBrowser, url )
                     ClientGUIMenus.AppendMenuItem( self, urls_copy_menu, url, 'Copy this url to your clipboard.', HG.client_controller.pub, 'clipboard', 'text', url )
                     
                 
@@ -3370,7 +3370,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if focussed_is_local:
                 
-                show_open_in_web = not HC.PLATFORM_WINDOWS or advanced_mode # let's turn it on for any Winlads who wants to try
+                show_open_in_web = True
                 show_open_in_explorer = advanced_mode and not HC.PLATFORM_LINUX
                 
                 if show_open_in_web or show_open_in_explorer:
@@ -3379,7 +3379,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if show_open_in_web:
                         
-                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser (prototype)', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
+                        ClientGUIMenus.AppendMenuItem( self, open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
                         
                     
                     if show_open_in_explorer:
@@ -3616,6 +3616,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ClientGUIMenus.AppendSeparator( duplicates_action_submenu )
                     
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
+                    
                     duplicates_edit_action_submenu = wx.Menu()
                     
                     for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ):
@@ -3623,11 +3625,9 @@ class MediaPanelThumbnails( MediaPanel ):
                         ClientGUIMenus.AppendMenuItem( self, duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[ duplicate_type ], 'Edit what happens when you set this status.', self._EditDuplicateActionOptions, duplicate_type )
                         
                     
-                    ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default merge options' )
+                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_edit_action_submenu, 'edit default merge options' )
                     
                     ClientGUIMenus.AppendMenu( menu, duplicates_menu, 'duplicates' )
-                    
-                    ClientGUIMenus.AppendMenu( duplicates_menu, duplicates_action_submenu, 'set duplicate relationships' )
                     
                 
                 if HG.client_controller.DBCurrentlyDoingJob():

@@ -320,21 +320,13 @@ def GetFreeSpace( path ):
     
     return disk_usage.free
     
-def GetTempFile():
+def GetTempDir( dir = None ):
     
-    return tempfile.TemporaryFile()
+    return tempfile.mkdtemp( prefix = 'hydrus', dir = dir )
     
-def GetTempFileQuick():
+def GetTempPath( suffix = '', dir = None ):
     
-    return tempfile.SpooledTemporaryFile( max_size = 1024 * 1024 * 4 )
-    
-def GetTempDir():
-    
-    return tempfile.mkdtemp( prefix = 'hydrus' )
-    
-def GetTempPath( suffix = '' ):
-    
-    return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus' )
+    return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus', dir = dir )
     
 def HasSpaceForDBTransaction( db_dir, num_bytes ):
     

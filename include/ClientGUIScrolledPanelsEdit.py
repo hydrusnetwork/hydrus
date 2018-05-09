@@ -19,6 +19,7 @@ import ClientImportOptions
 import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientParsing
+import ClientPaths
 import ClientSerialisable
 import ClientTags
 import collections
@@ -31,7 +32,6 @@ import HydrusSerialisable
 import HydrusTags
 import HydrusText
 import os
-import webbrowser
 import wx
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
@@ -513,7 +513,7 @@ class EditDomainManagerInfoPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, duplicate_action, duplicate_action_options ):
+    def __init__( self, parent, duplicate_action, duplicate_action_options, for_custom_action = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -540,18 +540,36 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._rating_service_actions.SetMinSize( ( 380, 120 ) )
         
         add_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'add', self._AddRating )
-        edit_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'edit', self._EditRating )
+        
+        if self._duplicate_action == HC.DUPLICATE_BETTER: # because there is only one valid action otherwise
+            
+            edit_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'edit', self._EditRating )
+            
+        
         delete_rating_button = ClientGUICommon.BetterButton( rating_services_panel, 'delete', self._DeleteRating )
         
         #
         
-        self._delete_second_file = wx.CheckBox( self, label = 'delete worse file' )
-        self._sync_archive = wx.CheckBox( self, label = 'if one file is archived, archive the other as well' )
-        self._delete_both_files = wx.CheckBox( self, label = 'delete both files' )
+        self._delete_second_file = wx.CheckBox( self )
+        self._sync_archive = wx.CheckBox( self )
+        self._delete_both_files = wx.CheckBox( self )
+        
+        self._delete_both_files.SetToolTip( 'This is only enabled on custom actions.' )
+        
+        self._sync_urls_action = ClientGUICommon.BetterChoice( self )
+        
+        self._sync_urls_action.Append( 'sync nothing', None )
+        
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
+            
+            self._sync_urls_action.Append( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_COPY ], HC.CONTENT_MERGE_ACTION_COPY )
+            
+        
+        self._sync_urls_action.Append( HC.content_merge_string_lookup[ HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE ], HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
         
         #
         
-        ( tag_service_options, rating_service_options, delete_second_file, sync_archive, delete_both_files ) = duplicate_action_options.ToTuple()
+        ( tag_service_options, rating_service_options, delete_second_file, sync_archive, delete_both_files, sync_urls_action ) = duplicate_action_options.ToTuple()
         
         services_manager = HG.client_controller.services_manager
         
@@ -585,14 +603,26 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if self._duplicate_action == HC.DUPLICATE_BETTER:
+        if not for_custom_action:
             
-            self._delete_both_files.Hide()
+            self._delete_both_files.Disable()
+            
+        
+        if self._duplicate_action in ( HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_NOT_DUPLICATE ) and not for_custom_action:
+            
+            self._sync_archive.Disable()
+            self._sync_urls_action.Disable()
+            
+            self._sync_urls_action.SelectClientData( None )
             
         else:
             
-            self._delete_second_file.Hide()
-            edit_rating_button.Hide() # because there is only one valid action in this case, and no tag censor to edit
+            self._sync_urls_action.SelectClientData( sync_urls_action )
+            
+        
+        if self._duplicate_action != HC.DUPLICATE_BETTER:
+            
+            self._delete_second_file.Disable()
             
         
         #
@@ -611,7 +641,10 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         button_hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         button_hbox.Add( add_rating_button, CC.FLAGS_VCENTER )
-        button_hbox.Add( edit_rating_button, CC.FLAGS_VCENTER )
+        if self._duplicate_action == HC.DUPLICATE_BETTER:
+            
+            button_hbox.Add( edit_rating_button, CC.FLAGS_VCENTER )
+            
         button_hbox.Add( delete_rating_button, CC.FLAGS_VCENTER )
         
         rating_services_panel.Add( self._rating_service_actions, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -623,9 +656,17 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox.Add( tag_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( rating_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._delete_second_file, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._sync_archive, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( self._delete_both_files, CC.FLAGS_LONE_BUTTON )
+        
+        rows = []
+        
+        rows.append( ( 'delete worse file: ', self._delete_second_file ) )
+        rows.append( ( 'delete both files: ', self._delete_both_files ) )
+        rows.append( ( 'if one file is archived, archive the other as well: ', self._sync_archive ) )
+        rows.append( ( 'sync known urls?: ', self._sync_urls_action ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
         
@@ -957,8 +998,9 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         delete_second_file = self._delete_second_file.GetValue()
         sync_archive = self._sync_archive.GetValue()
         delete_both_files = self._delete_both_files.GetValue()
+        sync_urls_action = self._sync_urls_action.GetChoice()
         
-        duplicate_action_options = ClientData.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files )
+        duplicate_action_options = ClientData.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action )
         
         return duplicate_action_options
         
@@ -2196,6 +2238,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._periodic_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
         self._periodic_file_limit.SetToolTip( 'If set, normal syncs will add no more than this many files. Otherwise, they will get everything up until they find a file they have seen before.' )
         
+        self._publish_files_to_popup_button = wx.CheckBox( self._options_panel )
+        self._publish_files_to_page = wx.CheckBox( self._options_panel )
+        self._merge_query_publish_events = wx.CheckBox( self._options_panel )
+        
+        tt = 'If unchecked, each query will produce its own \'subscription_name: query\' button or page.'
+        
+        self._merge_query_publish_events.SetToolTip( tt )
+        
         #
         
         self._control_panel = ClientGUICommon.StaticBox( self, 'control' )
@@ -2243,6 +2293,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._initial_file_limit.SetValue( initial_file_limit )
         self._periodic_file_limit.SetValue( periodic_file_limit )
         
+        ( publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = subscription.GetPresentationOptions()
+        
+        self._publish_files_to_popup_button.SetValue( publish_files_to_popup_button )
+        self._publish_files_to_page.SetValue( publish_files_to_page )
+        self._merge_query_publish_events.SetValue( merge_query_publish_events )
+        
         self._paused.SetValue( paused )
         
         #
@@ -2258,6 +2314,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        rows.append( ( 'if new files imported, publish them to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'if new files imported, publish them to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish all queries\' new files to the same page/popup button: ', self._merge_query_publish_events ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
@@ -2766,6 +2825,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
+        publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
+        publish_files_to_page = self._publish_files_to_page.GetValue()
+        merge_query_publish_events = self._merge_query_publish_events.GetValue()
+        
+        subscription.SetPresentationOptions( publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
+        
         return subscription
         
     
@@ -2870,7 +2935,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/getting_started_subscriptions.html' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'getting_started_subscriptions.html' ) )
         
         menu_items.append( ( 'normal', 'open the html subscriptions help', 'Open the help page for subscriptions in your web browesr.', page_func ) )
         
@@ -4503,13 +4568,21 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._keep_matched_subdomains.SetToolTip( tt )
         
+        self._can_produce_multiple_files = wx.CheckBox( self )
+        
+        tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
+        tt += os.linesep * 2
+        tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
+        
+        self._can_produce_multiple_files.SetToolTip( tt )
+        
         self._should_be_associated_with_files = wx.CheckBox( self )
         
         tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
         tt += os.linesep * 2
         tt += 'If this URL is a File or Post URL and the client comes across it after having already downloaded it once, it can skip the redundant download since it knows it already has (or has already deleted) the file once before.'
         tt += os.linesep * 2
-        tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for gallery or thread urls, which alter regularly, but is for static Post URLs or some gallery exceptions such as multi-image tweets.'
+        tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for booru gallery or thread urls, which alter regularly, but is for static Post URLs or some fixed doujin galleries.'
         
         self._should_be_associated_with_files.SetToolTip( tt )
         
@@ -4547,7 +4620,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._normalised_url.SetToolTip( tt )
         
-        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, should_be_associated_with_files, example_url ) = url_match.ToTuple()
+        ( url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, path_components, parameters, api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, example_url ) = url_match.ToTuple()
         
         self._api_lookup_converter = ClientGUIParsing.StringConverterButton( self, api_lookup_converter )
         
@@ -4567,6 +4640,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._match_subdomains.SetValue( match_subdomains )
         self._keep_matched_subdomains.SetValue( keep_matched_subdomains )
+        self._can_produce_multiple_files.SetValue( can_produce_multiple_files )
         self._should_be_associated_with_files.SetValue( should_be_associated_with_files )
         
         self._path_components.AddDatas( path_components )
@@ -4601,6 +4675,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'network location: ', self._netloc ) )
         rows.append( ( 'match subdomains?: ', self._match_subdomains ) )
         rows.append( ( 'keep matched subdomains?: ', self._keep_matched_subdomains ) )
+        rows.append( ( 'can produce multiple files: ', self._can_produce_multiple_files ) )
         rows.append( ( 'should associate a \'known url\' with resulting files: ', self._should_be_associated_with_files ) )
         
         gridbox_1 = ClientGUICommon.WrapInGrid( self, rows )
@@ -4826,13 +4901,14 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         netloc = self._netloc.GetValue()
         match_subdomains = self._match_subdomains.GetValue()
         keep_matched_subdomains = self._keep_matched_subdomains.GetValue()
+        can_produce_multiple_files = self._can_produce_multiple_files.GetValue()
         should_be_associated_with_files = self._should_be_associated_with_files.GetValue()
         path_components = self._path_components.GetData()
         parameters = dict( self._parameters.GetData() )
         api_lookup_converter = self._api_lookup_converter.GetValue()
         example_url = self._example_url.GetValue()
         
-        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, should_be_associated_with_files = should_be_associated_with_files, example_url = example_url )
+        url_match = ClientNetworkingDomain.URLMatch( name, url_match_key = url_match_key, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, match_subdomains = match_subdomains, keep_matched_subdomains = keep_matched_subdomains, path_components = path_components, parameters = parameters, api_lookup_converter = api_lookup_converter, can_produce_multiple_files = can_produce_multiple_files, should_be_associated_with_files = should_be_associated_with_files, example_url = example_url )
         
         return url_match
         
@@ -4842,6 +4918,15 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         url_match = self._GetValue()
         
         url_type = url_match.GetURLType()
+        
+        if url_type == HC.URL_TYPE_POST:
+            
+            self._can_produce_multiple_files.Enable()
+            
+        else:
+            
+            self._can_produce_multiple_files.Disable()
+            
         
         if url_match.NormalisationIsAppropriate():
             
@@ -4913,7 +4998,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._url_type.GetChoice() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
-                message = 'Please note that it is only appropriate to associate a Gallery or Watchable URL with a file if that URL is non-ephemeral. It is only appropriate if the exact same URL will definitely give the same files in six months\' time (like a tweet or a fixed doujin chapter gallery).'
+                message = 'Please note that it is only appropriate to associate a Gallery or Watchable URL with a file if that URL is non-ephemeral. It is only appropriate if the exact same URL will definitely give the same files in six months\' time (like a fixed doujin chapter gallery).'
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back off.'
                 
@@ -4942,7 +5027,9 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventURLTypeUpdate( self, event ):
         
-        if self._url_type.GetChoice() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+        url_type = self._url_type.GetChoice()
+        
+        if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
             
             self._should_be_associated_with_files.SetValue( True )
             
@@ -4978,13 +5065,18 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( webbrowser.open, 'file://' + HC.HELP_DIR + '/downloader_url_classes.html' )
+        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'downloader_url_classes.html' ) )
         
         menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browesr.', page_func ) )
         
         help_button = ClientGUICommon.MenuBitmapButton( self, CC.GlobalBMPs.help, menu_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
+        
+        self._url_class_checker = wx.TextCtrl( self )
+        self._url_class_checker.Bind( wx.EVT_TEXT, self.EventURLClassCheckerText )
+        
+        self._url_class_checker_st = ClientGUICommon.BetterStaticText( self )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -5008,12 +5100,22 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        url_hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        url_hbox.Add( self._url_class_checker, CC.FLAGS_EXPAND_BOTH_WAYS )
+        url_hbox.Add( self._url_class_checker_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( url_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
+        
+        #
+        
+        self._UpdateURLClassCheckerText()
         
     
     def _Add( self ):
@@ -5112,6 +5214,51 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
+    def _UpdateURLClassCheckerText( self ):
+        
+        url = self._url_class_checker.GetValue()
+        
+        if url == '':
+            
+            text = '<-- Enter a URL here to see which url class it currently matches!'
+            
+        else:
+            
+            url_matches = self.GetValue()
+            
+            domain_manager = ClientNetworkingDomain.NetworkDomainManager()
+            
+            domain_manager.Initialise()
+            
+            domain_manager.SetURLMatches( url_matches )
+            
+            try:
+                
+                url_match = domain_manager.GetURLMatch( url )
+                
+                if url_match is None:
+                    
+                    text = 'No match!'
+                    
+                else:
+                    
+                    text = 'Matches "' + url_match.GetName() + '"'
+                    
+                
+            except HydrusExceptions.URLMatchException as e:
+                
+                text = HydrusData.ToUnicode( e )
+                
+            
+        
+        self._url_class_checker_st.SetLabelText( text )
+        
+    
+    def EventURLClassCheckerText( self, event ):
+        
+        self._UpdateURLClassCheckerText()
+        
+    
     def GetValue( self ):
         
         url_matches = self._list_ctrl.GetData()
@@ -5133,19 +5280,29 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._network_engine = network_engine
         
-        self._display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        #
         
-        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_keys_to_display', 15, 36, [ ( 'url class', -1 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
+        self._notebook = wx.Notebook( self )
+        
+        #
+        
+        self._display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
+        
+        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_keys_to_display', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
         
         self._display_list_ctrl_panel.SetListCtrl( self._display_list_ctrl )
         
         self._display_list_ctrl_panel.AddButton( 'edit', self._EditDisplay, enabled_only_on_selection = True )
         
-        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'url_match_api_pairs', 10, 36, [ ( 'url class', -1 ), ( 'api url class', 36 ) ], self._ConvertAPIPairDataToListCtrlTuples )
+        #
         
-        self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, 'url_match_api_pairs', 10, 36, [ ( 'url class', -1 ), ( 'api url class', 36 ) ], self._ConvertAPIPairDataToListCtrlTuples )
         
-        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
+        #
+        
+        self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
+        
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 24, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
@@ -5159,11 +5316,6 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for url_match in url_matches:
             
-            if not url_match.IsPostURL():
-                
-                continue
-                
-            
             url_match_key = url_match.GetMatchKey()
             
             display = url_match_key in url_match_keys_to_display
@@ -5173,7 +5325,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._display_list_ctrl.AddDatas( listctrl_data )
         
-        self._display_list_ctrl.Sort( 0 )
+        self._display_list_ctrl.Sort( 1 )
         
         #
         
@@ -5225,33 +5377,37 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._notebook.AddPage( self._parser_list_ctrl_panel, 'parser links' )
+        self._notebook.AddPage( self._api_pairs_list_ctrl, 'api link review' )
+        self._notebook.AddPage( self._display_list_ctrl_panel, 'media viewer display' )
+        
+        #
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( self._display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( self._api_pairs_list_ctrl, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._parser_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.SetSizer( vbox )
         
     
     def _ClearParser( self ):
         
-        with ClientGUIDialogs.DialogYesNo( self, 'Clear all the linked parsers?' ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, 'Clear all the selected linked parsers?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
                 for data in self._parser_list_ctrl.GetData( only_selected = True ):
                     
-                    ( url_match_key, parser_key ) = data
-                    
                     self._parser_list_ctrl.DeleteDatas( ( data, ) )
+                    
+                    ( url_match_key, parser_key ) = data
                     
                     new_data = ( url_match_key, None )
                     
                     self._parser_list_ctrl.AddDatas( ( new_data, ) )
                     
-                    self._parser_list_ctrl.Sort()
-                    
+                
+                self._parser_list_ctrl.Sort()
                 
             
         
@@ -5276,9 +5432,13 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( url_match_key, display ) = data
         
-        url_match_name = self._url_match_keys_to_url_matches[ url_match_key ].GetName()
+        url_match = self._url_match_keys_to_url_matches[ url_match_key ]
+        
+        url_match_name = url_match.GetName()
+        url_type = url_match.GetURLType()
         
         pretty_name = url_match_name
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
         
         if display:
             
@@ -5289,8 +5449,8 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_display = 'no'
             
         
-        display_tuple = ( pretty_name, pretty_display )
-        sort_tuple = ( url_match_name, display )
+        display_tuple = ( pretty_name, pretty_url_type, pretty_display )
+        sort_tuple = ( url_match_name, pretty_url_type, display )
         
         return ( display_tuple, sort_tuple )
         
@@ -5323,7 +5483,7 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_parser_name = parser_name
         
         display_tuple = ( pretty_url_match_name, pretty_url_type, pretty_parser_name )
-        sort_tuple = ( url_match_name, url_type, parser_name )
+        sort_tuple = ( url_match_name, pretty_url_type, parser_name )
         
         return ( display_tuple, sort_tuple )
         
@@ -5397,15 +5557,13 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            self._parser_list_ctrl.Sort()
-            
+        
+        self._parser_list_ctrl.Sort()
         
     
     def _GapsExist( self ):
         
-        parser_keys = [ parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() ]
-        
-        return None in parser_keys
+        return None in ( parser_key for ( url_match_key, parser_key ) in self._parser_list_ctrl.GetData() )
         
     
     def _LinksOnCurrentSelection( self ):

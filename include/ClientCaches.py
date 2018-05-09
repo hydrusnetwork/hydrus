@@ -1,6 +1,7 @@
 import ClientDefaults
 import ClientDownloading
 import ClientParsing
+import ClientPaths
 import ClientRendering
 import ClientSearch
 import ClientServices
@@ -977,9 +978,7 @@ class ClientFilesManager( object ):
     
     def ImportFile( self, file_import_job ):
         
-        file_import_job.GenerateHashAndStatus()
-        
-        hash = file_import_job.GetHash()
+        ( pre_import_status, hash, note ) = file_import_job.GenerateHashAndStatus()
         
         if file_import_job.IsNewToDB():
             
@@ -987,11 +986,11 @@ class ClientFilesManager( object ):
             
             file_import_job.CheckIsGoodToImport()
             
+            ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
+            
+            mime = file_import_job.GetMime()
+            
             with self._lock:
-                
-                ( temp_path, thumbnail ) = file_import_job.GetTempPathAndThumbnail()
-                
-                mime = file_import_job.GetMime()
                 
                 self.LocklessAddFile( hash, mime, temp_path )
                 
@@ -1000,17 +999,17 @@ class ClientFilesManager( object ):
                     self.LocklessAddFullSizeThumbnail( hash, thumbnail )
                     
                 
-                import_status = self._controller.WriteSynchronous( 'import_file', file_import_job )
+                ( import_status, note ) = self._controller.WriteSynchronous( 'import_file', file_import_job )
                 
             
         else:
             
-            file_import_job.PubsubContentUpdates()
-            
-            import_status = file_import_job.GetPreImportStatus()
+            import_status = pre_import_status
             
         
-        return ( import_status, hash )
+        file_import_job.PubsubContentUpdates()
+        
+        return ( import_status, hash, note )
         
     
     def LocklessGetFilePath( self, hash, mime = None ):
@@ -1964,7 +1963,7 @@ class ThumbnailCache( object ):
             
             names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video', 'zip' ]
             
-            ( os_file_handle, temp_path ) = HydrusPaths.GetTempPath()
+            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
             
             try:
                 
