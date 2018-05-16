@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 307</h3></li>
+				<ul>
+					<li>wrote a gelbooru 0.2.5 (which matches gelbooru itself) parser in the new system. it now has some more redundancy and produces md5 hash and source urls</li>
+					<li>fixed the e621 parser for flash files</li>
+					<li>manage tags is now a notebook rather than a listbook!</li>
+					<li>a problem where OS X was displaying the wrong label in the manage tags listbook is now fixed (as it no longer uses the buggy old listbook)</li>
+					<li>improved autocomplete focus setting in OS X in general</li>
+					<li>moved all paged importer loops to the new job scheduling system, which will massively cut down on idle time thread count (and some idle CPU usage) on clients with a bunch of import pages open</li>
+					<li>the main thread pool (which the job scheduling system uses) can now temporarily grow much larger (200 threads) when it gets hammered</li>
+					<li>recalibrated some thread watcher code to deal with being embedded in a larger object better (and sharing a page with other watcher importers)</li>
+					<li>finished the first version of a multiple watcher. it is ugly and only for advanced users for now--please check release post for more information</li>
+					<li>added 'use the multiple watcher on DnD events' to options->downloading, which will send thread url drag and drops straight to a new/existing multiple watcher!</li>
+					<li>gui session load now 'shows' the first page but loads everything to the right in the background, which saves some CPU and memory for large sessions. this means it now starts focused on the leftmost page rather than the right--see if you like it or not</li>
+					<li>'clear and load session' now fully deletes old pages and takes a little break between the clear and load step to make sure old large sessions are deleted tidily before loading the new stuff</li>
+					<li>cleaned up the new leaner popup message display code to react better to (and re-layout) sub-changes in its popups (so now when a subscription popup spawns a new progress gauge, it _should_ be positioned in the right place immediately)</li>
+					<li>if an import folder/subscription publishes files to a page while the main gui is minimised (and the action would result in a new page creation), the page add will be delayed until the gui is no longer minimised (new page layout in this case was broken due to minimised parent frame)</li>
+					<li>the edit subscription query panel will now spawn with the query text input focused</li>
+					<li>added a patch to ensure new booru import pages get query input focus after a second if the focus attempt on init failed (this will be fixed better in the new downloader system)</li>
+					<li>restored the 'clear deleted files record' button to the 'combined local files' service on _review services_, which was previously hidden during a significant service rewrite.</li>
+					<li>if critical master tables are missing on boot, the client will warn and provide info and then abandon the boot</li>
+					<li>if cache similar files tables are missing on boot, the client will warn and provide info and offer to recreate them empty and try to boot the client anyway (this replaces some old repair code that wasn't always kicking in at a good time)</li>
+					<li>if cache autocomplete tables are missing on boot, the client will warn and provide info and offer to recreate and repopulate them</li>
+					<li>if mappings tables are missing on boot, the client will warn and provide info and offer to recreate them empty and try to boot the client anyway</li>
+					<li>the emergency 'repair missing file locations' panel now runs in a more stable way</li>
+					<li>this emergency dialog will now also recognise 'I fixed all the file paths but cannot do the thumbnail paths' situations and will present the same 'ok, make sure you run regen thumbs after boot' dialog as if all the missing paths were thumbnail related</li>
+					<li>you can now turn off x/y page name import progress under options->gui</li>
+					<li>fixed an issue where tags that begin with ':' like ':p' were not getting through the new importing system</li>
+					<li>fixed an issue where tags that begin with ':' like ':p' could sometimes get prepended extra escape characters and end up looking like ':::p'</li>
+					<li>fixed sibling tag searching (e.g. if a->b exists and you search for b, results with a but not b should also appear), which the recent tag search optimisation accidentally disabled</li>
+					<li>whole bunch of refactoring and cleanup of ClientData and ClientGUICommon</li>
+					<li>cleaned up some spammy splash text status setting that was flooding some debug info with useless garbage</li>
+					<li>gave getting_started_tags.html's tag repo section and access_keys.html a pass, updating the ancient screenshot and linking advanced users to the latest QuickSync location</li>
+					<li>some misc help updates</li>
+					<li>misc autocomplete logic improvements</li>
+					<li>misc ui display fixes</li>
+					<li>misc wx destroy code stability improvement</li>
+					<li>updated ffmpeg for windows builds to the new 4.0 release</li>
+					<li>updated sqlite for windows builds</li>
+				</ul>
 				<li><h3>version 306</h3></li>
 				<ul>
 					<li>the file import status list now has 'open selected import files in a new page', which should show up where it is possible. this is a bit prototype and ugly--it'll show _all_ files, including in-trash and permanently deleted (which will show up with the hydrus thumbnail)</li>
