@@ -7,7 +7,6 @@ import unittest
 import HydrusData
 import ClientCaches
 import ClientConstants as CC
-import ClientData
 import ClientMedia
 import ClientSearch
 import HydrusGlobals as HG

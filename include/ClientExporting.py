@@ -1,5 +1,5 @@
 import ClientConstants as CC
-import ClientData
+import ClientPaths
 import ClientSearch
 import HydrusConstants as HC
 import HydrusData
@@ -357,7 +357,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         deletee_path = os.path.join( folder_path, deletee_filename )
                         
-                        ClientData.DeletePath( deletee_path )
+                        ClientPaths.DeletePath( deletee_path )
                         
                     
                     if len( deletee_filenames ) > 0:

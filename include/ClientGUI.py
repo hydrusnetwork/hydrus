@@ -77,10 +77,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         ClientGUITopLevelWindows.FrameThatResizes.__init__( self, None, title, 'main_gui', float_on_parent = False )
         
-        bandwidth_width = ClientData.ConvertTextToPixelWidth( self, 17 )
-        idle_width = ClientData.ConvertTextToPixelWidth( self, 6 )
-        system_busy_width = ClientData.ConvertTextToPixelWidth( self, 13 )
-        db_width = ClientData.ConvertTextToPixelWidth( self, 14 )
+        bandwidth_width = ClientGUICommon.ConvertTextToPixelWidth( self, 17 )
+        idle_width = ClientGUICommon.ConvertTextToPixelWidth( self, 6 )
+        system_busy_width = ClientGUICommon.ConvertTextToPixelWidth( self, 13 )
+        db_width = ClientGUICommon.ConvertTextToPixelWidth( self, 14 )
         
         stb_style = wx.STB_SIZEGRIP | wx.STB_ELLIPSIZE_END | wx.FULL_REPAINT_ON_RESIZE
         
@@ -126,6 +126,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'NewPageImportHDD', 'new_hdd_import' )
         self._controller.sub( self, 'NewPageQuery', 'new_page_query' )
         self._controller.sub( self, 'NotifyClosedPage', 'notify_closed_page' )
+        self._controller.sub( self, 'NotifyDeletedPage', 'notify_deleted_page' )
         self._controller.sub( self, 'NotifyNewImportFolders', 'notify_new_import_folders' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'NotifyNewPages', 'notify_new_pages' )
@@ -971,7 +972,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             page.CleanBeforeDestroy()
             
-            page.Destroy()
+            page.DestroyLater()
             
         
     
@@ -1499,7 +1500,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'autocomplete cache', 'Delete and recreate the tag autocomplete cache, fixing any miscounts.', self._RegenerateACCache )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search metadata', 'Delete and recreate the similar files search phashes.', self._RegenerateSimilarFilesPhashes )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'all thumbnails', 'Delete all thumbnails and regenerate them from their original files.', self._RegenerateThumbnails )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'missing/all thumbnails', 'Delete missing/all thumbnails and regenerate them from their original files.', self._RegenerateThumbnails )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'regenerate' )
             
@@ -1849,6 +1850,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
+            ClientGUIMenus.AppendMenuItem( self, debug, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( self, debug, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
             ClientGUIMenus.AppendMenuItem( self, debug, 'force a layout for all non-gui tlws now', 'Tell all sub-frames to relayout--useful to test some layout issues.', self._ForceLayoutAllNonGUITLWs )
@@ -3833,14 +3835,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         else:
             
-            self._controller.CallLaterWXSafe( self, 2, self.Destroy )
-            
             self._controller.CreateSplash()
             
             wx.CallAfter( self._controller.Exit )
             
-        
-        self.Destroy()
+            self.DestroyLater()
+            
         
         return True
         
@@ -3985,9 +3985,23 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if url_type == HC.URL_TYPE_WATCHABLE:
                 
-                self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
-                
-                return
+                if self._new_options.GetBoolean( 'use_multiple_watcher_for_drag_and_drops' ):
+                    
+                    page = self._notebook.GetOrMakeMultipleWatcherPage()
+                    
+                    if page is not None:
+                        
+                        self._notebook.ShowPage( page )
+                        
+                        page_key = page.GetPageKey()
+                        
+                        HG.client_controller.pub( 'pend_url', page_key, url )
+                        
+                    
+                else:
+                    
+                    self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
+                    
                 
             
         
@@ -4042,6 +4056,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._focus_holder.SetFocus()
             
+        
+        self._DirtyMenu( 'pages' )
+        
+        self._menu_updater.Update()
+        
+    
+    def NotifyDeletedPage( self, page ):
+        
+        if self._notebook.GetNumPages() == 0:
+            
+            self._focus_holder.SetFocus()
+            
+        
+        self._DestroyPages( ( page, ) )
         
         self._DirtyMenu( 'pages' )
         
@@ -4128,6 +4156,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def PresentImportedFilesToPage( self, hashes, page_name ):
+        
+        tlp = ClientGUICommon.GetTLP( self )
+        
+        if tlp.IsIconized(): # initial layout is bugged if the new page is added during minimised, so let's delay it here
+            
+            if not self._notebook.HasMediaPageName( page_name ):
+                
+                self._controller.CallLaterWXSafe( self, 5.0, self.PresentImportedFilesToPage, hashes, page_name )
+                
+                return
+                
+            
         
         dest_page = self._notebook.PresentImportedFilesToPage( hashes, page_name )
         

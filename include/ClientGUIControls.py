@@ -6,12 +6,14 @@ import ClientGUIDialogs
 import ClientGUIListCtrl
 import ClientGUIMenus
 import ClientGUIScrolledPanels
+import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
 import HydrusNetworking
+import HydrusText
 import os
 import wx
 
@@ -239,7 +241,7 @@ class BytesControl( wx.Panel ):
         
         self._spin = wx.SpinCtrl( self, min = 0, max = 1048576 )
         
-        width = ClientData.ConvertTextToPixelWidth( self._spin, 12 )
+        width = ClientGUICommon.ConvertTextToPixelWidth( self._spin, 12 )
         
         self._spin.SetSize( ( width, -1 ) )
         
@@ -542,7 +544,7 @@ class NetworkJobControl( wx.Panel ):
         self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
         
         # 512/768KB - 200KB/s
-        right_width = ClientData.ConvertTextToPixelWidth( self._right_text, 20 )
+        right_width = ClientGUICommon.ConvertTextToPixelWidth( self._right_text, 20 )
         
         self._right_text.SetMinSize( ( right_width, -1 ) )
         
@@ -795,5 +797,79 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     def SetValue( self, value ):
         
         self._value = value
+        
+    
+class TextAndPasteCtrl( wx.Panel ):
+    
+    def __init__( self, parent, add_callable ):
+        
+        self._add_callable = add_callable
+        
+        wx.Panel.__init__( self, parent )
+        
+        self._text_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
+        self._text_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        
+        self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
+        self._paste_button.SetToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
+        
+        self.SetSizer( hbox )
+        
+    
+    def _Paste( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            texts = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) if text != '' ]
+            
+            if len( texts ) > 0:
+                
+                self._add_callable( texts )
+                
+            
+        except:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+        
+    
+    def EventKeyDown( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+            
+            text = self._text_input.GetValue()
+            
+            if text != '':
+                
+                self._add_callable( ( text, ) )
+                
+            
+            self._text_input.SetValue( '' )
+            
+        else:
+            
+            event.Skip()
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._text_input.GetValue()
+        
+    
+    def SetValue( self, text ):
+        
+        self._text_input.SetValue( text )
         
     

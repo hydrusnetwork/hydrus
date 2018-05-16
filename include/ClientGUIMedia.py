@@ -941,7 +941,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
-                size = ClientData.ConvertTextToPixels( control, ( 80, 14 ) )
+                size = ClientGUICommon.ConvertTextToPixels( control, ( 80, 14 ) )
                 
                 control.SetInitialSize( size )
                 

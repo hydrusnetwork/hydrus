@@ -749,7 +749,7 @@ class TestClientDB( unittest.TestCase ):
             
         finally:
             
-            test_frame.Destroy()
+            test_frame.DestroyLater()
             
         
     

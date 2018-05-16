@@ -14,6 +14,7 @@ import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIPredicates
+import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
@@ -608,7 +609,7 @@ class DialogInputFileSystemPredicates( Dialog ):
         
         def EventCharHook( self, event ):
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 

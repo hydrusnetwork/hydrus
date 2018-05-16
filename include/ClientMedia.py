@@ -1,7 +1,6 @@
 import bisect
 import collections
 import ClientConstants as CC
-import ClientData
 import ClientFiles
 import ClientRatings
 import ClientSearch

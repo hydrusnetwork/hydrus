@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientDefaults
 import ClientDownloading
+import ClientDuplicates
 import ClientImporting
 import ClientGUICommon
 import ClientGUIControls
@@ -13,6 +14,7 @@ import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUISeedCache
 import ClientGUISerialisable
+import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImportOptions
@@ -1000,7 +1002,7 @@ class EditDuplicateActionOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         delete_both_files = self._delete_both_files.GetValue()
         sync_urls_action = self._sync_urls_action.GetChoice()
         
-        duplicate_action_options = ClientData.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action )
+        duplicate_action_options = ClientDuplicates.DuplicateActionOptions( tag_service_actions, rating_service_actions, delete_second_file, sync_archive, delete_both_files, sync_urls_action )
         
         return duplicate_action_options
         
@@ -1767,7 +1769,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._reason = wx.TextCtrl( self )
             
-            width = ClientData.ConvertTextToPixelWidth( self._reason, 60 )
+            width = ClientGUICommon.ConvertTextToPixelWidth( self._reason, 60 )
             self._reason.SetMinSize( ( width, -1 ) )
             
             #
@@ -2844,7 +2846,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._status_st = ClientGUICommon.BetterStaticText( self )
         
-        st_width = ClientData.ConvertTextToPixelWidth( self._status_st, 50 )
+        st_width = ClientGUICommon.ConvertTextToPixelWidth( self._status_st, 50 )
         
         self._status_st.SetMinSize( ( st_width, -1 ) )
         
@@ -2891,6 +2893,10 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self.Bind( wx.EVT_CHECKBOX, self.EventUpdate )
         
         self._UpdateStatus()
+        
+        self._query_text.SetSelection( -1, -1 ) # select all
+        
+        wx.CallAfter( self._query_text.SetFocus )
         
     
     def _GetValue( self ):
@@ -3771,7 +3777,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def SetCheckerOptions( self ):
         
-        checker_options = ClientData.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        checker_options = ClientImportOptions.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
             
@@ -4003,7 +4009,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventKeyDownBlacklist( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -4017,7 +4023,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventKeyDownWhitelist( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -4651,7 +4657,7 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url.SetValue( example_url )
         
-        example_url_width = ClientData.ConvertTextToPixelWidth( self._example_url, 75 )
+        example_url_width = ClientGUICommon.ConvertTextToPixelWidth( self._example_url, 75 )
         
         self._example_url.SetMinSize( ( example_url_width, -1 ) )
         

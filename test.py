@@ -50,6 +50,7 @@ import wx
 from twisted.internet import reactor
 from include import ClientCaches
 from include import ClientData
+from include import ClientOptions
 from include import HydrusData
 from include import HydrusPaths
 
@@ -83,7 +84,7 @@ class Controller( object ):
         
         self._pubsub = HydrusPubSub.HydrusPubSub( self )
         
-        self.new_options = ClientData.ClientOptions( self.db_dir )
+        self.new_options = ClientOptions.ClientOptions( self.db_dir )
         
         HC.options = ClientDefaults.GetClientDefaultOptions()
         
@@ -288,44 +289,44 @@ class Controller( object ):
     
     CallToThreadLongRunning = CallToThread
     
-    def CallLater( self, delay, func, *args, **kwargs ):
+    def CallLater( self, initial_delay, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, call, initial_delay = delay )
+        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallLaterWXSafe( self, window, delay, func, *args, **kwargs ):
+    def CallLaterWXSafe( self, window, initial_delay, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, call, initial_delay = delay )
+        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallRepeating( self, period, delay, func, *args, **kwargs ):
+    def CallRepeating( self, initial_delay, period, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, call, period, initial_delay = delay )
+        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, initial_delay, period, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallRepeatingWXSafe( self, window, period, delay, func, *args, **kwargs ):
+    def CallRepeatingWXSafe( self, window, initial_delay, period, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, call, period, initial_delay = delay )
+        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, initial_delay, period, call )
         
         self._job_scheduler.AddJob( job )
         
@@ -566,7 +567,7 @@ if __name__ == '__main__':
                 
                 controller.Run()
                 
-                win.Destroy()
+                win.DestroyLater()
                 
             
             wx.CallAfter( do_it )

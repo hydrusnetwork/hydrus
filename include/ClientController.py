@@ -22,6 +22,7 @@ import ClientNetworkingBandwidth
 import ClientNetworkingDomain
 import ClientNetworkingLogin
 import ClientNetworkingSessions
+import ClientOptions
 import ClientPaths
 import ClientThreading
 import hashlib
@@ -69,7 +70,7 @@ class Controller( HydrusController.HydrusController ):
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self.options = ClientDefaults.GetClientDefaultOptions()
-        self.new_options = ClientData.ClientOptions( self.db_dir )
+        self.new_options = ClientOptions.ClientOptions( self.db_dir )
         
         HC.options = self.options
         
@@ -91,7 +92,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self._splash is not None:
             
-            wx.CallAfter( self._splash.Destroy )
+            self._splash.DestroyLater()
             
             self._splash = None
             
@@ -170,22 +171,22 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallLaterWXSafe( self, window, delay, func, *args, **kwargs ):
+    def CallLaterWXSafe( self, window, initial_delay, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, call, initial_delay = delay )
+        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallRepeatingWXSafe( self, window, period, delay, func, *args, **kwargs ):
+    def CallRepeatingWXSafe( self, window, initial_delay, period, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, call, period, initial_delay = delay )
+        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, initial_delay, period, call )
         
         self._job_scheduler.AddJob( job )
         
@@ -493,11 +494,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitClientFilesManager( self ):
         
-        self.client_files_manager = ClientCaches.ClientFilesManager( self )
-        
-        missing_locations = self.client_files_manager.GetMissing()
-        
-        while len( missing_locations ) > 0:
+        def wx_code( missing_locations ):
             
             with ClientGUITopLevelWindows.DialogManage( None, 'repair file system' ) as dlg:
                 
@@ -516,6 +513,17 @@ class Controller( HydrusController.HydrusController ):
                     raise HydrusExceptions.PermissionException( 'File system failed, user chose to quit.' )
                     
                 
+            
+            return missing_locations
+            
+        
+        self.client_files_manager = ClientCaches.ClientFilesManager( self )
+        
+        missing_locations = self.client_files_manager.GetMissing()
+        
+        while len( missing_locations ) > 0:
+            
+            missing_locations = self.CallBlockingToWx( wx_code, missing_locations )
             
         
     

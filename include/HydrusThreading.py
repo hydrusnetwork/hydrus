@@ -514,7 +514,7 @@ class JobScheduler( threading.Thread ):
     
 class SchedulableJob( object ):
     
-    def __init__( self, controller, scheduler, work_callable, initial_delay = 0.0 ):
+    def __init__( self, controller, scheduler, initial_delay, work_callable ):
         
         self._controller = controller
         self._scheduler = scheduler
@@ -575,13 +575,6 @@ class SchedulableJob( object ):
         return HydrusData.TimeHasPassedFloat( self._next_work_time )
         
     
-    def MoveNextWorkTimeToNow( self ):
-        
-        self._next_work_time = HydrusData.GetNowFloat()
-        
-        self._scheduler.WorkTimesHaveChanged()
-        
-    
     def StartWork( self ):
         
         if self._is_cancelled.is_set():
@@ -592,6 +585,13 @@ class SchedulableJob( object ):
         self._currently_working.set()
         
         self._BootWorker()
+        
+    
+    def Wake( self ):
+        
+        self._next_work_time = HydrusData.GetNowFloat()
+        
+        self._scheduler.WorkTimesHaveChanged()
         
     
     def Work( self ):
@@ -611,9 +611,9 @@ class SchedulableJob( object ):
     
 class RepeatingJob( SchedulableJob ):
     
-    def __init__( self, controller, scheduler, work_callable, period, initial_delay = 0.0 ):
+    def __init__( self, controller, scheduler, initial_delay, period, work_callable ):
         
-        SchedulableJob.__init__( self, controller, scheduler, work_callable, initial_delay = initial_delay )
+        SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
         
         self._period = period
         

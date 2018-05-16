@@ -45,6 +45,11 @@ class ReviewServicePanel( wx.Panel ):
             subpanels.append( self._ServiceFilePanel( self, service ) )
             
         
+        if self._service.GetServiceKey() == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+            
+            subpanels.append( self._ServiceCombinedLocalFilesPanel( self, service ) )
+            
+        
         if self._service.GetServiceKey() == CC.TRASH_SERVICE_KEY:
             
             subpanels.append( self._ServiceTrashPanel( self, service ) )
@@ -108,31 +113,6 @@ class ReviewServicePanel( wx.Panel ):
                 num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
                 
                 self._num_shares.SetLabelText( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
-                
-            
-        
-    
-    def EventDeleteLocalDeleted( self, event ):
-        
-        message = 'This will clear the client\'s memory of which files it has locally deleted, which affects \'exclude previously deleted files\' import tests.'
-        message += os.linesep * 2
-        message += 'It will freeze the gui while it works.'
-        message += os.linesep * 2
-        message += 'If you do not know what this does, click \'forget it\'.'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
-            
-            result = dlg_add.ShowModal()
-            
-            if result == wx.ID_YES:
-                
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', None ) )
-                
-                service_keys_to_content_updates = { self._service_key : [ content_update ] }
-                
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
-                
-                self._DisplayService()
                 
             
         
@@ -253,6 +233,45 @@ class ReviewServicePanel( wx.Panel ):
                 self._service = service
                 
                 self._my_updater.Update()
+                
+            
+        
+    
+    class _ServiceCombinedLocalFilesPanel( ClientGUICommon.StaticBox ):
+        
+        def __init__( self, parent, service ):
+            
+            ClientGUICommon.StaticBox.__init__( self, parent, 'combined local files' )
+            
+            self._service = service
+            
+            self._clear_deleted_files_record = ClientGUICommon.BetterButton( self, 'clear deleted files record', self._ClearDeletedFilesRecord )
+            
+            #
+            
+            self.Add( self._clear_deleted_files_record, CC.FLAGS_LONE_BUTTON )
+            
+        
+        def _ClearDeletedFilesRecord( self ):
+            
+            message = 'This will instruct your database to forget its entire record of locally deleted files, meaning that if it ever encounters any of those files again, it will assume they are new and reimport them. This operation cannot be undone.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'do it', no_label = 'forget it' ) as dlg_add:
+                
+                result = dlg_add.ShowModal()
+                
+                if result == wx.ID_YES:
+                    
+                    hashes = None
+                    
+                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADVANCED, ( 'delete_deleted', hashes ) )
+                    
+                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                    
+                    HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                    
+                    HG.client_controller.pub( 'service_updated', self._service )
+                    
                 
             
         

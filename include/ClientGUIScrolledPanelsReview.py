@@ -421,7 +421,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.SetSizer( vbox )
         
-        min_width = ClientData.ConvertTextToPixelWidth( self, 100 )
+        min_width = ClientGUICommon.ConvertTextToPixelWidth( self, 100 )
         
         self.SetMinSize( ( min_width, -1 ) )
         
@@ -1195,7 +1195,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths.Sort( 0 )
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 5.0, 0.0, self._Update )
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 5.0, self._Update )
         
         #
         
@@ -1311,7 +1311,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._controller.network_engine.bandwidth_manager.DeleteHistory( selected_network_contexts )
                     
-                    self._update_job.MoveNextWorkTimeToNow()
+                    self._update_job.Wake()
                     
                 
         
@@ -1411,7 +1411,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._controller.new_options.SetNoneableInteger( 'last_review_bandwidth_search_distance', last_review_bandwidth_search_distance )
         
-        self._update_job.MoveNextWorkTimeToNow()
+        self._update_job.Wake()
         
     
     def ShowNetworkContext( self ):
@@ -1929,9 +1929,9 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._rules_job = HG.client_controller.CallRepeatingWXSafe( self, 5.0, 0.0, self._UpdateRules )
+        self._rules_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 5.0, self._UpdateRules )
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 1.0, 0.0, self._Update )
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 1.0, self._Update )
         
     
     def _EditRules( self ):
@@ -2068,7 +2068,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._controller.network_engine.bandwidth_manager.DeleteRules( self._network_context )
                 
-                self._rules_job.MoveNextWorkTimeToNow()
+                self._rules_job.Wake()
                 
             
         

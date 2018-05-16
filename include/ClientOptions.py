@@ -1,0 +1,1211 @@
+import ClientConstants as CC
+import ClientDefaults
+import ClientDownloading
+import ClientDuplicates
+import ClientImporting
+import HydrusConstants as HC
+import HydrusGlobals as HG
+import HydrusPaths
+import HydrusSerialisable
+import HydrusTags
+import os
+import threading
+import wx
+
+class ClientOptions( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
+    SERIALISABLE_NAME = 'Client Options'
+    SERIALISABLE_VERSION = 3
+    
+    def __init__( self, db_dir = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        if db_dir is None:
+            
+            db_dir = HC.DEFAULT_DB_DIR
+            
+        
+        self._dictionary = HydrusSerialisable.SerialisableDictionary()
+        
+        self._lock = threading.Lock()
+        
+        self._InitialiseDefaults( db_dir )
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        with self._lock:
+            
+            serialisable_info = self._dictionary.GetSerialisableTuple()
+            
+            return serialisable_info
+            
+        
+    
+    def _InitialiseDefaults( self, db_dir ):
+        
+        self._dictionary[ 'booleans' ] = {}
+        
+        self._dictionary[ 'booleans' ][ 'advanced_mode' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'always_show_hover_windows' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'apply_all_parents_to_all_services' ] = False
+        self._dictionary[ 'booleans' ][ 'apply_all_siblings_to_all_services' ] = False
+        self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
+        self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'permit_watchers_to_name_their_pages' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
+        self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
+        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
+        self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_deactive' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'reverse_page_shift_drag_behaviour' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
+        
+        self._dictionary[ 'booleans' ][ 'thumbnail_fill' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'import_page_progress_display' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'process_subs_in_random_order' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'ac_select_first_with_count' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
+        
+        self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'use_multiple_watcher_for_drag_and_drops' ] = False
+        
+        #
+        
+        self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'default' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ] = ( 217, 242, 255 ) # light blue
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ] = ( 32, 32, 36 ) # 50% Payne's Gray
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ] = ( 64, 64, 72 ) # Payne's Gray
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER ] = ( 223, 227, 230 ) # light grey
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_SELECTED ] = ( 1, 17, 26 ) # dark grey
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_REMOTE ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ] = ( 227, 66, 52 ) # Vermillion, lol
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_THUMBGRID_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] = ( 235, 248, 255 ) # very light blue
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 255, 255, 255 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_MEDIA_TEXT ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'default' ][ CC.COLOUR_TAGS_BOX ] = ( 255, 255, 255 )
+        
+        self._dictionary[ 'colours' ][ 'darkmode' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND ] = ( 64, 64, 72 ) # Payne's Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_SELECTED ] = ( 112, 128, 144 ) # Slate Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE ] = ( 64, 13, 2 ) # Black Bean
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ] = ( 171, 39, 79 ) # Amaranth Purple
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER ] = ( 145, 163, 176 ) # Cadet Grey
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_SELECTED ] = ( 223, 227, 230 ) # light grey
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_REMOTE ] = ( 248, 208, 204 ) # 25% Vermillion, 75% White
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ] = ( 227, 66, 52 ) # Vermillion, lol
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_THUMBGRID_BACKGROUND ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_AUTOCOMPLETE_BACKGROUND ] = ( 83, 98, 103 ) # Gunmetal
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_BACKGROUND ] = ( 0, 0, 0 )
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_MEDIA_TEXT ] = ( 112, 128, 144 ) # Slate Gray
+        self._dictionary[ 'colours' ][ 'darkmode' ][ CC.COLOUR_TAGS_BOX ] = ( 0, 0, 0 )
+        
+        #
+        
+        self._dictionary[ 'duplicate_action_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        import ClientTags
+        
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_BETTER ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_MOVE, ClientTags.TagFilter() ) ], [], True, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_COPY )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_SAME_QUALITY ] = ClientDuplicates.DuplicateActionOptions( [ ( CC.LOCAL_TAG_SERVICE_KEY, HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE, ClientTags.TagFilter() ) ], [], False, True, sync_urls_action = HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_ALTERNATE ] = ClientDuplicates.DuplicateActionOptions( [], [], False )
+        self._dictionary[ 'duplicate_action_options' ][ HC.DUPLICATE_NOT_DUPLICATE ] = ClientDuplicates.DuplicateActionOptions( [], [], False )
+        
+        #
+        
+        self._dictionary[ 'integers' ] = {}
+        
+        self._dictionary[ 'integers' ][ 'video_buffer_size_mb' ] = 96
+        
+        self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
+        self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
+        self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
+        
+        self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
+        
+        self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
+        
+        self._dictionary[ 'integers' ][ 'default_new_page_goes' ] = CC.NEW_PAGE_GOES_FAR_RIGHT
+        
+        self._dictionary[ 'integers' ][ 'max_page_name_chars' ] = 20
+        self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
+        
+        self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
+        
+        self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
+        
+        self._dictionary[ 'integers' ][ 'total_pages_warning' ] = 165
+        
+        self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
+        
+        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_pages' ] = 15
+        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_subscriptions' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
+        
+        #
+        
+        self._dictionary[ 'keys' ] = {}
+        
+        self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.encode( 'hex' )
+        
+        self._dictionary[ 'key_list' ] = {}
+        
+        self._dictionary[ 'key_list' ][ 'default_neighbouring_txt_tag_service_keys' ] = []
+        
+        #
+        
+        self._dictionary[ 'noneable_integers' ] = {}
+        
+        self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
+        
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_maintenance_mb' ] = 256
+        self._dictionary[ 'noneable_integers' ][ 'disk_cache_init_period' ] = 4
+        
+        self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
+        
+        self._dictionary[ 'noneable_integers' ][ 'maintenance_vacuum_period_days' ] = 30
+        
+        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity' ] = 3
+        
+        self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
+        
+        #
+        
+        self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList()
+        
+        #
+        
+        self._dictionary[ 'noneable_strings' ] = {}
+        
+        self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
+        self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
+        self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_not_found_page_string' ] = '[404]'
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_dead_page_string' ] = '[DEAD]'
+        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_paused_page_string' ] = u'\u23F8'
+        self._dictionary[ 'noneable_strings' ][ 'temp_path_override' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
+        
+        self._dictionary[ 'strings' ] = {}
+        
+        self._dictionary[ 'strings' ][ 'main_gui_title' ] = 'hydrus client'
+        self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
+        self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
+        self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
+        self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
+        
+        self._dictionary[ 'string_list' ] = {}
+        
+        self._dictionary[ 'string_list' ][ 'default_media_viewer_custom_shortcuts' ] = []
+        self._dictionary[ 'string_list' ][ 'favourite_tags' ] = []
+        
+        #
+        
+        self._dictionary[ 'tag_summary_generators' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        import ClientTags
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'creator', '', ', ' ) )
+        namespace_info.append( ( 'series', '', ', ' ) )
+        namespace_info.append( ( 'title', '', ', ' ) )
+        
+        separator = ' - '
+        
+        # the cleantags here converts to unicode, which is important!
+        
+        example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_top' ] = tsg
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'volume', 'v', '-' ) )
+        namespace_info.append( ( 'chapter', 'c', '-' ) )
+        namespace_info.append( ( 'page', 'p', '-' ) )
+        
+        separator = '-'
+        
+        example_tags = HydrusTags.CleanTags( [ 'volume:3', 'chapter:10', 'page:330', 'page:331' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'thumbnail_bottom_right' ] = tsg
+        
+        namespace_info = []
+        
+        namespace_info.append( ( 'creator', '', ', ' ) )
+        namespace_info.append( ( 'series', '', ', ' ) )
+        namespace_info.append( ( 'title', '', ', ' ) )
+        namespace_info.append( ( 'volume', 'v', '-' ) )
+        namespace_info.append( ( 'chapter', 'c', '-' ) )
+        namespace_info.append( ( 'page', 'p', '-' ) )
+        
+        separator = ' - '
+        
+        example_tags = HydrusTags.CleanTags( [ 'creator:creator', 'series:series', 'title:title', 'volume:1', 'chapter:1', 'page:1' ] )
+        
+        tsg = ClientTags.TagSummaryGenerator( namespace_info = namespace_info, separator = separator, example_tags = example_tags )
+        
+        self._dictionary[ 'tag_summary_generators' ][ 'media_viewer_top' ] = tsg
+        
+        #
+        
+        client_files_default = os.path.join( db_dir, 'client_files' )
+        
+        self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( HydrusPaths.ConvertAbsPathToPortablePath( client_files_default ), 1.0 ) ]
+        self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = None
+        self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = None
+        
+        #
+        
+        self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        exclude_deleted = True
+        allow_decompression_bombs = False
+        min_size = None
+        max_size = None
+        max_gif_size = 32 * 1048576
+        min_resolution = None
+        max_resolution = None
+        
+        automatic_archive = False
+        
+        present_new_files = True
+        present_already_in_inbox_files = False
+        present_already_in_archive_files = False
+        
+        import ClientImportOptions
+        
+        quiet_file_import_options = ClientImportOptions.FileImportOptions()
+        
+        quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        quiet_file_import_options.SetPostImportOptions( automatic_archive )
+        quiet_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
+        
+        present_new_files = True
+        present_already_in_inbox_files = True
+        present_already_in_archive_files = True
+        
+        loud_file_import_options = ClientImportOptions.FileImportOptions()
+        
+        loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        loud_file_import_options.SetPostImportOptions( automatic_archive )
+        loud_file_import_options.SetPresentationOptions( present_new_files, present_already_in_inbox_files, present_already_in_archive_files )
+        
+        self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
+        
+        #
+        
+        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        #
+        
+        self._dictionary[ 'frame_locations' ] = {}
+        
+        # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
+        self._dictionary[ 'frame_locations' ][ 'file_import_status' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'local_import_filename_tagging' ] = ( True, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 800, 600 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_subscriptions_dialog' ] = ( True, True, None, None, ( 1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_dialog' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'manage_tags_frame' ] = ( False, False, None, None, ( -1, 1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'media_viewer' ] = ( True, True, ( 640, 480 ), ( 70, 70 ), ( -1, -1 ), 'topleft', True, True )
+        self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'deeply_nested_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
+        
+        #
+        
+        self._dictionary[ 'media_launch' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
+        
+        for mime in HC.SEARCHABLE_MIMES:
+            
+            self._dictionary[ 'media_launch' ][ mime ] = None
+            
+        
+        #
+        
+        self._dictionary[ 'media_view' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
+        
+        # media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) )
+        
+        image_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        gif_zoom_info = ( CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        flash_zoom_info = ( CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_MAX_REGULAR, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
+        null_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_100, False, CC.ZOOM_LINEAR, CC.ZOOM_LINEAR )
+        
+        self._dictionary[ 'media_view' ][ HC.IMAGE_JPEG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_PNG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, image_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_APNG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, gif_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.IMAGE_GIF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, gif_zoom_info )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, CC.MEDIA_VIEWER_ACTION_SHOW_BEHIND_EMBED, flash_zoom_info )
+            
+        else:
+            
+            self._dictionary[ 'media_view' ][ HC.APPLICATION_FLASH ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+            
+        
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_PDF ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_ZIP ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_7Z ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_RAR ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_CONTENT ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS ] = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, null_zoom_info )
+        
+        self._dictionary[ 'media_view' ][ HC.VIDEO_AVI ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_FLV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MOV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MP4 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MPEG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_MKV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WEBM ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.VIDEO_WMV ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, CC.MEDIA_VIEWER_ACTION_SHOW_AS_NORMAL, video_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_MP3 ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_OGG ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_FLAC ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        self._dictionary[ 'media_view' ][ HC.AUDIO_WMA ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, null_zoom_info )
+        
+        self._dictionary[ 'media_zooms' ] = [ 0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.5, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.5, 2.0, 3.0, 5.0, 10.0, 20.0 ]
+        
+        #
+        
+        self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = ClientImportOptions.CheckerOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+        
+        #
+        
+        self._dictionary[ 'suggested_tags' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'suggested_tags' ][ 'favourites' ] = {}
+        
+        #
+        
+        import ClientMedia
+        
+        self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+        
+        for ( key, value ) in loaded_dictionary.items():
+            
+            if isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
+                
+                self._dictionary[ key ].update( value )
+                
+            else:
+                
+                self._dictionary[ key ] = value
+                
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            if 'media_view' in loaded_dictionary:
+                
+                mimes = loaded_dictionary[ 'media_view' ].keys()
+                
+                for mime in mimes:
+                    
+                    if mime in self._dictionary[ 'media_view' ]:
+                        
+                        ( default_media_show_action, default_preview_show_action, default_zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+                        
+                        ( media_show_action, preview_show_action, zoom_in_to_fit, exact_zooms_only, scale_up_quality, scale_down_quality ) = loaded_dictionary[ 'media_view' ][ mime ]
+                        
+                        loaded_dictionary[ 'media_view' ][ mime ] = ( media_show_action, preview_show_action, default_zoom_info )
+                        
+                    else:
+                        
+                        # while devving this, I discovered some u'20' stringified keys had snuck in and hung around. let's nuke them here, in case anyone else got similar
+                        
+                        del loaded_dictionary[ 'media_view' ][ mime ]
+                        
+                    
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            # as db_dir is now moveable, let's move portable base from base_dir to db_dir
+            
+            def update_portable_path( p ):
+                
+                if p is None:
+                    
+                    return p
+                    
+                
+                p = os.path.normpath( p ) # collapses .. stuff and converts / to \\ for windows only
+                
+                if os.path.isabs( p ):
+                    
+                    a_p = p
+                    
+                else:
+                    
+                    a_p = os.path.normpath( os.path.join( HC.BASE_DIR, p ) )
+                    
+                
+                if not HC.PLATFORM_WINDOWS and not os.path.exists( a_p ):
+                    
+                    a_p = a_p.replace( '\\', '/' )
+                    
+                
+                try:
+                    
+                    db_dir = HG.controller.GetDBDir()
+                    
+                    p = os.path.relpath( a_p, db_dir )
+                    
+                    if p.startswith( '..' ):
+                        
+                        p = a_p
+                        
+                    
+                except:
+                    
+                    p = a_p
+                    
+                
+                if HC.PLATFORM_WINDOWS:
+                    
+                    p = p.replace( '\\', '/' ) # store seps as /, to maintain multiplatform uniformity
+                    
+                
+                return p
+                
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            if 'client_files_locations_ideal_weights' in loaded_dictionary:
+                
+                updated_cfliw = []
+                
+                for ( old_portable_path, weight ) in loaded_dictionary[ 'client_files_locations_ideal_weights' ]:
+                    
+                    new_portable_path = update_portable_path( old_portable_path )
+                    
+                    updated_cfliw.append( ( new_portable_path, weight ) )
+                    
+                
+                loaded_dictionary[ 'client_files_locations_ideal_weights' ] = updated_cfliw
+                
+            
+            if 'client_files_locations_resized_thumbnail_override' in loaded_dictionary:
+                
+                loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_resized_thumbnail_override' ] )
+                
+            
+            if 'client_files_locations_full_size_thumbnail_override' in loaded_dictionary:
+                
+                loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = update_portable_path( loaded_dictionary[ 'client_files_locations_full_size_thumbnail_override' ] )
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 3, new_serialisable_info )
+            
+        
+    
+    def ClearDefaultTagImportOptions( self ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
+            
+        
+    
+    def FlipBoolean( self, name ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'booleans' ][ name ] = not self._dictionary[ 'booleans' ][ name ]
+            
+        
+    
+    def GetBoolean( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'booleans' ][ name ]
+            
+        
+    
+    def GetClientFilesLocationsToIdealWeights( self ):
+        
+        with self._lock:
+            
+            paths_to_weights = {}
+            
+            for ( portable_path, weight ) in self._dictionary[ 'client_files_locations_ideal_weights' ]:
+                
+                abs_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_path )
+                
+                paths_to_weights[ abs_path ] = weight
+                
+            
+            resized_thumbnail_override = self._dictionary[ 'client_files_locations_resized_thumbnail_override' ]
+            
+            if resized_thumbnail_override is not None:
+                
+                resized_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( resized_thumbnail_override )
+                
+            
+            
+            full_size_thumbnail_override = self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ]
+            
+            if full_size_thumbnail_override is not None:
+                
+                full_size_thumbnail_override = HydrusPaths.ConvertPortablePathToAbsPath( full_size_thumbnail_override )
+                
+            
+            return ( paths_to_weights, resized_thumbnail_override, full_size_thumbnail_override )
+            
+        
+    
+    def GetColour( self, colour_type, colourset = None ):
+        
+        with self._lock:
+            
+            if colourset is None:
+                
+                colourset = self._dictionary[ 'strings' ][ 'current_colourset' ]
+                
+            
+            ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
+            
+            return wx.Colour( r, g, b )
+            
+        
+    
+    def GetDefaultFileImportOptions( self, options_type ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_file_import_options' ][ options_type ]
+            
+        
+    
+    def GetDefaultTagImportOptions( self, gallery_identifier = None ):
+        
+        with self._lock:
+            
+            default_tag_import_options = self._dictionary[ 'default_import_tag_options' ]
+            
+            if gallery_identifier is None:
+                
+                return default_tag_import_options
+                
+            else:
+                
+                if gallery_identifier in default_tag_import_options:
+                    
+                    tag_import_options = default_tag_import_options[ gallery_identifier ]
+                    
+                else:
+                    
+                    default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
+                    default_hentai_foundry_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY )
+                    default_pixiv_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV )
+                    default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
+                    
+                    guidance_tag_import_options = None
+                    
+                    site_type = gallery_identifier.GetSiteType()
+                    
+                    if site_type == HC.SITE_TYPE_THREAD_WATCHER:
+                        
+                        import ClientImportOptions
+                        
+                        return ClientImportOptions.TagImportOptions() # if nothing set, do nothing in this special case
+                        
+                    
+                    if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_tag_import_options:
+                        
+                        guidance_tag_import_options = default_tag_import_options[ default_booru_gallery_identifier ]
+                        
+                    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) and default_hentai_foundry_gallery_identifier in default_tag_import_options:
+                        
+                        guidance_tag_import_options = default_tag_import_options[ default_hentai_foundry_gallery_identifier ]
+                        
+                    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ) and default_pixiv_gallery_identifier in default_tag_import_options:
+                        
+                        guidance_tag_import_options = default_tag_import_options[ default_pixiv_gallery_identifier ]
+                        
+                    elif default_gallery_identifier in default_tag_import_options:
+                        
+                        guidance_tag_import_options = default_tag_import_options[ default_gallery_identifier ]
+                        
+                    
+                    fetch_tags_even_if_url_known_and_file_already_in_db = False
+                    
+                    tag_blacklist = None
+                    
+                    service_keys_to_namespaces = {}
+                    service_keys_to_additional_tags = {}
+                    
+                    if guidance_tag_import_options is not None:
+                        
+                        fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+                        
+                        tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
+                        
+                        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+                        
+                        guidance_service_keys_to_namespaces = guidance_tag_import_options.GetServiceKeysToNamespaces()
+                        
+                        for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
+                            
+                            if 'all namespaces' in guidance_namespaces:
+                                
+                                service_keys_to_namespaces[ service_key ] = namespaces
+                                
+                            else:
+                                
+                                service_keys_to_namespaces[ service_key ] = [ namespace for namespace in namespaces if namespace in guidance_namespaces ]
+                                
+                            
+                        
+                        service_keys_to_additional_tags = guidance_tag_import_options.GetServiceKeysToAdditionalTags()
+                        
+                    
+                    import ClientImportOptions
+                    
+                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+                    
+                
+                return tag_import_options
+                
+            
+        
+    
+    def GetDefaultThreadCheckerOptions( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ]
+            
+        
+    
+    def GetDefaultSort( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'default_sort' ]
+            
+        
+    
+    def GetDuplicateActionOptions( self, duplicate_type ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'duplicate_action_options' ][ duplicate_type ]
+            
+        
+    
+    def GetFallbackSort( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'fallback_sort' ]
+            
+        
+    
+    def GetFrameLocation( self, frame_key ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'frame_locations' ][ frame_key ]
+            
+        
+    
+    def GetFrameLocations( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'frame_locations' ].items()
+            
+        
+    
+    def GetInteger( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'integers' ][ name ]
+            
+        
+    
+    def GetKey( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'keys' ][ name ].decode( 'hex' )
+            
+        
+    
+    def GetKeyList( self, name ):
+        
+        with self._lock:
+            
+            return [ key.decode( 'hex' ) for key in self._dictionary[ 'key_list' ][ name ] ]
+            
+        
+    
+    def GetMediaShowAction( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            if media_show_action not in CC.media_viewer_capabilities[ mime ]:
+                
+                return CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+                
+            
+            return media_show_action
+            
+        
+    
+    def GetMediaViewOptions( self, mime ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'media_view' ][ mime ]
+            
+        
+    
+    def GetMediaZoomOptions( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return zoom_info
+            
+        
+    
+    def GetMediaZooms( self ):
+        
+        with self._lock:
+            
+            return list( self._dictionary[ 'media_zooms' ] )
+            
+        
+    
+    def GetMediaZoomQuality( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            return ( scale_up_quality, scale_down_quality )
+            
+        
+    
+    def GetMimeLaunch( self, mime ):
+        
+        with self._lock:
+            
+            if mime not in self._dictionary[ 'media_launch' ]:
+                
+                self._dictionary[ 'media_launch' ][ mime ] = None
+                
+            
+            return self._dictionary[ 'media_launch' ][ mime ]
+            
+        
+    
+    def GetNoneableInteger( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'noneable_integers' ][ name ]
+            
+        
+    
+    def GetNoneableString( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'noneable_strings' ][ name ]
+            
+        
+    
+    def GetPreviewShowAction( self, mime ):
+        
+        with self._lock:
+            
+            ( media_show_action, preview_show_action, zoom_info ) = self._dictionary[ 'media_view' ][ mime ]
+            
+            if preview_show_action not in CC.media_viewer_capabilities[ mime ]:
+                
+                return CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+                
+            
+            return preview_show_action
+            
+        
+    
+    def GetSimpleDownloaderFormulae( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'simple_downloader_formulae' ]
+            
+        
+    
+    def GetString( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'strings' ][ name ]
+            
+        
+    
+    def GetStringList( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'string_list' ][ name ]
+            
+        
+    
+    def GetSuggestedTagsFavourites( self, service_key ):
+        
+        with self._lock:
+            
+            service_key_hex = service_key.encode( 'hex' )
+            
+            stf = self._dictionary[ 'suggested_tags' ][ 'favourites' ]
+            
+            if service_key_hex in stf:
+                
+                return set( stf[ service_key_hex ] )
+                
+            else:
+                
+                return set()
+                
+            
+        
+    
+    def GetTagSummaryGenerator( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'tag_summary_generators' ][ name ]
+            
+        
+    
+    def InvertBoolean( self, name ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'booleans' ][ name ] = not self._dictionary[ 'booleans' ][ name ]
+            
+        
+    
+    def RemoveClientFilesLocation( self, location ):
+        
+        with self._lock:
+            
+            if len( self._dictionary[ 'client_files_locations_ideal_weights' ] ) < 2:
+                
+                raise Exception( 'Cannot remove any more files locations!' )
+                
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
+            
+        
+    
+    def SetBoolean( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'booleans' ][ name ] = value
+            
+        
+    
+    def SetClientFilesLocation( self, location, weight ):
+        
+        with self._lock:
+            
+            portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+            weight = float( weight )
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ] = [ ( l, w ) for ( l, w ) in self._dictionary[ 'client_files_locations_ideal_weights' ] if l != portable_location ]
+            
+            self._dictionary[ 'client_files_locations_ideal_weights' ].append( ( portable_location, weight ) )
+            
+        
+    
+    def SetColour( self, colour_type, colourset, colour ):
+        
+        with self._lock:
+            
+            if isinstance( colour, wx.Colour ):
+                
+                ( r, g, b, a ) = colour.Get()
+                
+            else:
+                
+                ( r, g, b ) = colour
+                
+            
+            self._dictionary[ 'colours' ][ colourset ][ colour_type ] = ( r, g, b )
+            
+        
+    
+    def SetDefaultTagImportOptions( self, gallery_identifier, tag_import_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = tag_import_options
+            
+        
+    
+    def SetDefaultThreadCheckerOptions( self, checker_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = checker_options
+            
+        
+    
+    def SetDefaultSort( self, media_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_sort' ] = media_sort
+            
+        
+    
+    def SetDuplicateActionOptions( self, duplicate_type, duplicate_action_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'duplicate_action_options' ][ duplicate_type ] = duplicate_action_options
+            
+        
+    
+    def SetFallbackSort( self, media_sort ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'fallback_sort' ] = media_sort
+            
+        
+    
+    def SetDefaultFileImportOptions( self, options_type, file_import_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'default_file_import_options' ][ options_type ] = file_import_options
+            
+        
+    
+    def SetFrameLocation( self, frame_key, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'frame_locations' ][ frame_key ] = ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
+            
+        
+    
+    def SetFullsizeThumbnailOverride( self, full_size_thumbnail_override ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'client_files_locations_full_size_thumbnail_override' ] = full_size_thumbnail_override
+            
+        
+    
+    def SetInteger( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'integers' ][ name ] = value
+            
+        
+    
+    def SetKey( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'keys' ][ name ] = value.encode( 'hex' )
+            
+        
+    
+    def SetKeyList( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'key_list' ][ name ] = [ key.encode( 'hex' ) for key in value ]
+            
+        
+    
+    def SetMediaViewOptions( self, mime, value_tuple ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_view' ][ mime ] = value_tuple
+            
+        
+    
+    def SetMediaZooms( self, zooms ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_zooms' ] = zooms
+            
+        
+    
+    def SetMimeLaunch( self, mime, launch_path ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'media_launch' ][ mime ] = launch_path
+            
+        
+    
+    def SetNoneableInteger( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'noneable_integers' ][ name ] = value
+            
+        
+    
+    def SetNoneableString( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'noneable_strings' ][ name ] = value
+            
+        
+    
+    def SetResizedThumbnailOverride( self, resized_thumbnail_override ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'client_files_locations_resized_thumbnail_override' ] = resized_thumbnail_override
+            
+        
+    
+    def SetSimpleDownloaderFormulae( self, simple_downloader_formulae ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'simple_downloader_formulae' ] = HydrusSerialisable.SerialisableList( simple_downloader_formulae )
+            
+        
+    
+    def SetString( self, name, value ):
+        
+        with self._lock:
+            
+            it_changed = False
+            
+            if value is not None and value != '':
+                
+                if self._dictionary[ 'strings' ][ name ] != value:
+                    
+                    self._dictionary[ 'strings' ][ name ] = value
+                    
+                    it_changed = True
+                    
+                
+            
+        
+    
+    def SetStringList( self, name, value ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'string_list' ][ name ] = list( value )
+            
+        
+    
+    def SetSuggestedTagsFavourites( self, service_key, tags ):
+        
+        with self._lock:
+            
+            service_key_hex = service_key.encode( 'hex' )
+            
+            self._dictionary[ 'suggested_tags' ][ 'favourites' ][ service_key_hex ] = list( tags )
+            
+        
+    
+    def SetTagSummaryGenerator( self, name, tag_summary_generator ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'tag_summary_generators' ][ name ] = tag_summary_generator
+            
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions

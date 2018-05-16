@@ -171,6 +171,8 @@ class HydrusDB( object ):
         
         self._InitDB()
         
+        self._RepairDB()
+        
         ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
         
         if version < HC.SOFTWARE_VERSION - 50:
@@ -224,8 +226,6 @@ class HydrusDB( object ):
             
             ( version, ) = self._c.execute( 'SELECT version FROM version;' ).fetchone()
             
-        
-        self._RepairDB()
         
         self._CloseDBCursor()
         

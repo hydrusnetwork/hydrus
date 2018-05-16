@@ -3,6 +3,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientGUIMenus
+import ClientGUIShortcuts
 import ClientSearch
 import ClientSerialisable
 import ClientTags
@@ -55,7 +56,7 @@ class AddEditDeleteListBox( wx.Panel ):
         
         #
         
-        ( width, height ) = ClientData.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
         
         self._listbox.SetInitialSize( ( width, height ) )
         
@@ -574,7 +575,7 @@ class QueueListBox( wx.Panel ):
         
         #
         
-        ( width, height ) = ClientData.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
+        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._listbox, ( 20, height_num_chars ) )
         
         self._listbox.SetInitialSize( ( width, height ) )
         
@@ -2518,7 +2519,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in CC.DELETE_KEYS:
             

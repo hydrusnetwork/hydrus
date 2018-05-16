@@ -1496,7 +1496,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownNamespace( self, event ):
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
@@ -1716,6 +1716,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._permit_watchers_to_name_their_pages = wx.CheckBox( thread_checker )
             
+            self._use_multiple_watcher_for_drag_and_drops = wx.CheckBox( thread_checker )
+            
             self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
             self._thread_watcher_paused_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
@@ -1734,6 +1736,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
             self._permit_watchers_to_name_their_pages.SetValue( self._new_options.GetBoolean( 'permit_watchers_to_name_their_pages' ) )
+            
+            self._use_multiple_watcher_for_drag_and_drops.SetValue( self._new_options.GetBoolean( 'use_multiple_watcher_for_drag_and_drops' ) )
             
             self._thread_watcher_not_found_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_not_found_page_string' ) )
             self._thread_watcher_dead_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_dead_page_string' ) )
@@ -1768,6 +1772,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
+            rows.append( ( 'When drag-and-dropping, use the Multiple Watcher (advanced!):', self._use_multiple_watcher_for_drag_and_drops ) )
             rows.append( ( 'Prepend 404 thread checker page names with this:', self._thread_watcher_not_found_page_string ) )
             rows.append( ( 'Prepend dead thread checker page names with this:', self._thread_watcher_dead_page_string ) )
             rows.append( ( 'Prepend paused thread checker page names with this:', self._thread_watcher_paused_page_string ) )
@@ -1799,11 +1804,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
             
-            self._new_options.SetDefaultThreadCheckerOptions( self._thread_checker_options.GetValue() )
+            self._new_options.SetBoolean( 'use_multiple_watcher_for_drag_and_drops', self._use_multiple_watcher_for_drag_and_drops.GetValue() )
             
             self._new_options.SetNoneableString( 'thread_watcher_not_found_page_string', self._thread_watcher_not_found_page_string.GetValue() )
             self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
             self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
+            
+            self._new_options.SetDefaultThreadCheckerOptions( self._thread_checker_options.GetValue() )
             
         
     
@@ -2504,6 +2511,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._page_file_count_display.Append( CC.page_file_count_display_string_lookup[ display_type ], display_type )
                 
             
+            self._import_page_progress_display = wx.CheckBox( self )
+            
             self._total_pages_warning = wx.SpinCtrl( self, min = 5, max = 200 )
             
             self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
@@ -2582,6 +2591,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._page_file_count_display.SelectClientData( self._new_options.GetInteger( 'page_file_count_display' ) )
             
+            self._import_page_progress_display.SetValue( self._new_options.GetBoolean( 'import_page_progress_display' ) )
+            
             self._total_pages_warning.SetValue( self._new_options.GetInteger( 'total_pages_warning' ) )
             
             self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
@@ -2627,6 +2638,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
             rows.append( ( 'Max characters to display in a page name: ', self._max_page_name_chars ) )
             rows.append( ( 'Show page file count after its name: ', self._page_file_count_display ) )
+            rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
@@ -2722,6 +2734,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'max_page_name_chars', self._max_page_name_chars.GetValue() )
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetChoice() )
+            self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.GetValue() )
             
             self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.GetValue() )
             
@@ -3045,7 +3058,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventKeyDownSortBy( self, event ):
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 
@@ -3371,12 +3384,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if self._fetch_ac_results_automatically.GetValue() == True:
                 
+                self._num_autocomplete_chars.Enable()
                 self._autocomplete_long_wait.Enable()
                 self._autocomplete_short_wait_chars.Enable()
                 self._autocomplete_short_wait.Enable()
                 
             else:
                 
+                self._num_autocomplete_chars.Disable()
                 self._autocomplete_long_wait.Disable()
                 self._autocomplete_short_wait_chars.Disable()
                 self._autocomplete_short_wait.Disable()
@@ -4234,7 +4249,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Add( self ):
         
-        shortcuts = ClientData.Shortcuts( 'new shortcuts' )
+        shortcuts = ClientGUIShortcuts.Shortcuts( 'new shortcuts' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit shortcuts' ) as dlg:
             
@@ -4484,7 +4499,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EventAdd( self, event ):
             
-            shortcut = ClientData.Shortcut()
+            shortcut = ClientGUIShortcuts.Shortcut()
             command = ClientData.ApplicationCommand()
             name = self._name.GetValue()
             
@@ -4526,7 +4541,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 raise HydrusExceptions.VetoException( 'That name is reserved--please pick another!' )
                 
             
-            shortcuts = ClientData.Shortcuts( name )
+            shortcuts = ClientGUIShortcuts.Shortcuts( name )
             
             for ( shortcut, command ) in self._shortcuts.GetClientData():
                 
@@ -4562,7 +4577,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._shortcut_panel = ClientGUICommon.StaticBox( self, 'shortcut' )
                 
-                self._shortcut = ClientGUICommon.Shortcut( self._shortcut_panel )
+                self._shortcut = ClientGUIShortcuts.ShortcutPanel( self._shortcut_panel )
                 
                 #
                 
@@ -5070,12 +5085,13 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hashes.update( m.GetHashes() )
             
         
-        self._tag_repositories = ClientGUICommon.ListBook( self )
-        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+        self._tag_repositories = ClientGUICommon.BetterNotebook( self )
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES )
+        services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
+        
+        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
         
         for service in services:
             
@@ -5084,12 +5100,10 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             page = self._Panel( self._tag_repositories, self._file_service_key, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             
-            self._tag_repositories.AddPage( name, service_key, page )
+            select = service_key == default_tag_repository_key
             
-        
-        default_tag_repository_key = HC.options[ 'default_tag_repository' ]
-        
-        self._tag_repositories.Select( default_tag_repository_key )
+            self._tag_repositories.AddPage( page, name, select = select )
+            
         
         #
         
@@ -5112,12 +5126,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
         
+        self._tag_repositories.Bind( wx.EVT_NOTEBOOK_PAGE_CHANGED, self.EventServiceChanged )
+        
+        self._SetSearchFocus()
+        
     
     def _GetGroupsOfServiceKeysToContentUpdates( self ):
         
         groups_of_service_keys_to_content_updates = []
         
-        for page in self._tag_repositories.GetActivePages():
+        for page in self._tag_repositories.GetPages():
             
             ( service_key, groups_of_content_updates ) = page.GetGroupsOfContentUpdates()
             
@@ -5151,7 +5169,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._current_media = ( new_media_singleton.Duplicate(), )
             
-            for page in self._tag_repositories.GetActivePages():
+            for page in self._tag_repositories.GetPages():
                 
                 page.SetMedia( self._current_media )
                 
@@ -5190,12 +5208,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventSelectDown( self, event ):
         
-        self._tag_repositories.SelectDown()
+        self._tag_repositories.SelectRight()
+        
+        self._SetSearchFocus()
         
     
     def EventSelectUp( self, event ):
         
-        self._tag_repositories.SelectUp()
+        self._tag_repositories.SelectLeft()
+        
+        self._SetSearchFocus()
         
     
     def EventShowNext( self, event ):
@@ -5222,6 +5244,8 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             wx.CallAfter( page.SetTagBoxFocus )
             
+        
+        event.Skip()
         
     
     def ProcessApplicationCommand( self, command ):
@@ -5872,7 +5896,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._urls_listbox = wx.ListBox( self, style = wx.LB_SORT | wx.LB_SINGLE )
         self._urls_listbox.Bind( wx.EVT_LISTBOX_DCLICK, self.EventListDoubleClick )
         
-        ( width, height ) = ClientData.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
+        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
         
         self._urls_listbox.SetInitialSize( ( width, height ) )
         
@@ -6013,7 +6037,7 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def EventInputCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -6089,7 +6113,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         text += os.linesep * 2
         text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will likely be a simple ctrl+a->correct, but if you have a more complicated system or store your thumbnails different to your files, make sure you skim the whole list. Check everything reports _ok!_'
         text += os.linesep * 2
-        text += 'Then hit \'apply\', and the client will launch. You should double-check your \'preferred\' file storage locations under database->migrate database immediately.'
+        text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' and \'r\' are for your thumbnails, which can be regenerated with a bit of work.'
+        text += os.linesep * 2
+        text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under database->migrate database immediately.'
         text += os.linesep * 2
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help.'
         
@@ -6172,58 +6198,51 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         correct_rows = []
         
-        if self._only_thumbs:
+        thumb_problems = False
+        
+        for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
             
-            problems = False
-            
-            for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
+            if correct_location == '':
                 
-                if correct_location == '':
+                if prefix.startswith( 'f' ):
                     
-                    problems = True
-                    
-                    correct_location = incorrect_location
-                    
-                elif ok != 'ok!':
-                    
-                    problems = True
-                    
-                
-                correct_rows.append( ( incorrect_location, prefix, correct_location ) )
-                
-            
-            if problems:
-                
-                message = 'Some or all of your incorrect paths have not been corrected, but they are all thumbnail paths.'
-                message += os.linesep * 2
-                message += 'Would you like instead to create new empty folders at the previous (or corrected, if you have entered them) locations?'
-                message += os.linesep * 2
-                message += 'You can run database->regenerate->all thumbnails to fill them up again.'
-                
-                with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-                    
-                    if dlg.ShowModal() != wx.ID_YES:
-                        
-                        raise HydrusExceptions.VetoException()
-                        
-                    
-                
-            
-        else:
-            
-            for ( incorrect_location, prefix, correct_location, ok ) in self._locations.GetClientData():
-                
-                if correct_location == '':
-                    
-                    raise HydrusExceptions.VetoException( 'You did not correct all the locations!' )
-                    
-                elif ok != 'ok!':
-                    
-                    raise HydrusExceptions.VetoException( 'You did not find all the correct locations!' )
+                    raise HydrusExceptions.VetoException( 'You did not correct all the file locations!' )
                     
                 else:
                     
-                    correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+                    thumb_problems = True
+                    
+                    correct_location = incorrect_location
+                    
+                
+            elif ok != 'ok!':
+                
+                if prefix.startswith( 'f' ):
+                    
+                    raise HydrusExceptions.VetoException( 'You did not find all the correct file locations!' )
+                    
+                else:
+                    
+                    thumb_problems = True
+                    
+                
+            
+            correct_rows.append( ( incorrect_location, prefix, correct_location ) )
+            
+        
+        if thumb_problems:
+            
+            message = 'Some or all of your incorrect paths have not been corrected, but they are all thumbnail paths.'
+            message += os.linesep * 2
+            message += 'Would you like instead to create new empty subdirectories at the previous (or corrected, if you have entered them) locations?'
+            message += os.linesep * 2
+            message += 'You can run database->regenerate->thumbnails to fill them up again.'
+            
+            with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+                
+                if dlg.ShowModal() != wx.ID_YES:
+                    
+                    raise HydrusExceptions.VetoException()
                     
                 
             

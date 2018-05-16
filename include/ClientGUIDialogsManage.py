@@ -3475,7 +3475,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         def EventKeyDownTag( self, event ):
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
                 

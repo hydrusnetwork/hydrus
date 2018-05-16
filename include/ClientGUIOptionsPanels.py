@@ -1,7 +1,6 @@
 import ClientConstants as CC
 import ClientGUICommon
 import ClientCaches
-import ClientData
 import ClientDefaults
 import ClientGUIDialogs
 import ClientImporting

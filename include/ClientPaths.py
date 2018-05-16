@@ -1,7 +1,19 @@
+import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusPaths
 import webbrowser
 
+def DeletePath( path ):
+    
+    if HC.options[ 'delete_to_recycle_bin' ] == True:
+        
+        HydrusPaths.RecyclePath( path )
+        
+    else:
+        
+        HydrusPaths.DeletePath( path )
+        
+    
 def GetCurrentTempDir():
     
     temp_path_override = HG.client_controller.new_options.GetNoneableString( 'temp_path_override' )

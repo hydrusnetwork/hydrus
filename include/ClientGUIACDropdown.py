@@ -4,6 +4,7 @@ import ClientData
 import ClientGUICommon
 import ClientGUIListBoxes
 import ClientGUIMenus
+import ClientGUIShortcuts
 import ClientSearch
 import collections
 import HydrusConstants as HC
@@ -281,7 +282,7 @@ class AutoCompleteDropdown( wx.Panel ):
                     
                     if self._move_hide_job is None:
                         
-                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.25, 0.0, self._DropdownHideShow )
+                        self._move_hide_job = HG.client_controller.CallRepeatingWXSafe( self._dropdown_window, 0.0, 0.25, self._DropdownHideShow )
                         
                     
                     self._move_hide_job.Delay( 0.25 )
@@ -298,7 +299,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         if self._refresh_list_job is not None and delay == 0.0:
             
-            self._refresh_list_job.MoveNextWorkTimeToNow()
+            self._refresh_list_job.Wake()
             
         else:
             
@@ -427,7 +428,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HG.client_controller.ResetIdleTimer()
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_INSERT, wx.WXK_NUMPAD_INSERT ):
             
@@ -696,6 +697,18 @@ class AutoCompleteDropdown( wx.Panel ):
         self._favourites_list.SetPredicates( predicates )
         
     
+    def SetFocus( self ):
+        
+        if HC.PLATFORM_OSX:
+            
+            wx.CallAfter( self._text_ctrl.SetFocus )
+            
+        else:
+            
+            self._text_ctrl.SetFocus()
+            
+        
+    
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def __init__( self, parent, file_service_key, tag_service_key ):
@@ -771,15 +784,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._search_results_list.SetPredicates( matches )
         
         self._current_matches = matches
-        
-        num_chars = len( self._text_ctrl.GetValue() )
-        
-        if num_chars == 0:
-            
-            # refresh system preds after five mins
-            
-            self._ScheduleListRefresh( 300 )
-            
         
     
     def FileButtonHit( self ):
@@ -1039,8 +1043,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
                 matches = []
                 
             
-            
-            
         else:
             
             ( namespace, half_complete_subtag ) = HydrusTags.SplitTag( search_text )
@@ -1213,6 +1215,20 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     def _TakeResponsibilityForEnter( self ):
         
         self._BroadcastCurrentText()
+        
+    
+    def _UpdateSearchResultsList( self ):
+        
+        AutoCompleteDropdownTags._UpdateSearchResultsList( self )
+        
+        num_chars = len( self._text_ctrl.GetValue() )
+        
+        if num_chars == 0:
+            
+            # refresh system preds after five mins
+            
+            self._ScheduleListRefresh( 300 )
+            
         
     
     def GetFileSearchContext( self ):

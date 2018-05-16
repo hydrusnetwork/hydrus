@@ -263,6 +263,42 @@ def RenderTag( tag, render_for_user ):
         return namespace + connector + subtag
         
     
+def SortTagsList( tags, sort_type ):
+    
+    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_DESC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+        
+        reverse = True
+        
+    else:
+        
+        reverse = False
+        
+    
+    if sort_type in ( CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_ASC, CC.SORT_BY_LEXICOGRAPHIC_NAMESPACE_DESC ):
+        
+        def key( tag ):
+            
+            # '{' is above 'z' in ascii, so this works for most situations
+            
+            ( namespace, subtag ) = HydrusTags.SplitTag( tag )
+            
+            if namespace == '':
+                
+                return ( '{', subtag )
+                
+            else:
+                
+                return ( namespace, subtag )
+                
+            
+        
+    else:
+        
+        key = None
+        
+    
+    tags.sort( key = key, reverse = reverse )
+    
 class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER

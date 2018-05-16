@@ -193,13 +193,9 @@ def CleanTag( tag ):
         
         tag = HydrusData.ToUnicode( tag )
         
-        if tag.startswith( ':' ):
-            
-            tag = HydrusText.re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
-            
-            tag = StripTextOfGumpf( tag )
-            
-        elif ':' in tag:
+        tag = HydrusText.re_leading_single_colon.sub( '::', tag ) # Convert anything starting with one colon to start with two i.e. :D -> ::D
+        
+        if ':' in tag:
             
             tag = StripTextOfGumpf( tag ) # need to repeat here to catch 'system:' stuff
             
@@ -257,7 +253,7 @@ def CombineTag( namespace, subtag ):
     
     if namespace == '':
         
-        if subtag.startswith( ':' ):
+        if HydrusText.re_leading_single_colon.search( subtag ) is not None:
             
             return ':' + subtag
             

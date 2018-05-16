@@ -1,7 +1,7 @@
 import ClientCaches
 import ClientConstants as CC
-import ClientData
 import ClientGUIMenus
+import ClientGUIShortcuts
 import HydrusConstants as HC
 import HydrusData
 import HydrusExceptions
@@ -798,7 +798,7 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
     
     def EventCharHook( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key == wx.WXK_ESCAPE:
             

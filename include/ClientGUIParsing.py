@@ -477,7 +477,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._formula_description = ClientGUICommon.SaneMultilineTextCtrl( my_panel )
         
-        ( width, height ) = ClientData.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
+        ( width, height ) = ClientGUICommon.ConvertTextToPixels( self._formula_description, ( 90, 8 ) )
         
         self._formula_description.SetInitialSize( ( width, height ) )
         
@@ -4563,7 +4563,7 @@ class TestPanel( wx.Panel ):
         
         self._example_data_preview = ClientGUICommon.SaneMultilineTextCtrl( self, style = wx.TE_READONLY )
         
-        size = ClientData.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
+        size = ClientGUICommon.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
         
         self._example_data_preview.SetInitialSize( size )
         
@@ -4571,7 +4571,7 @@ class TestPanel( wx.Panel ):
         
         self._results = ClientGUICommon.SaneMultilineTextCtrl( self )
         
-        size = ClientData.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
+        size = ClientGUICommon.ConvertTextToPixels( self._example_data_preview, ( 80, 12 ) )
         
         self._results.SetInitialSize( size )
         

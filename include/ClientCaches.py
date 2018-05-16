@@ -944,7 +944,7 @@ class ClientFilesManager( object ):
                     continue
                     
                 
-                ClientData.DeletePath( path )
+                ClientPaths.DeletePath( path )
                 
             
     

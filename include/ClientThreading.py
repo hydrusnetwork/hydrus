@@ -363,9 +363,9 @@ class JobKey( object ):
     
 class WXAwareJob( HydrusThreading.SchedulableJob ):
     
-    def __init__( self, controller, scheduler, window, work_callable, initial_delay = 0.0 ):
+    def __init__( self, controller, scheduler, window, initial_delay, work_callable ):
         
-        HydrusThreading.SchedulableJob.__init__( self, controller, scheduler, work_callable, initial_delay = initial_delay )
+        HydrusThreading.SchedulableJob.__init__( self, controller, scheduler, initial_delay, work_callable )
         
         self._window = window
         
@@ -409,9 +409,9 @@ class WXAwareJob( HydrusThreading.SchedulableJob ):
     
 class WXAwareRepeatingJob( HydrusThreading.RepeatingJob ):
     
-    def __init__( self, controller, scheduler, window, work_callable, period, initial_delay = 0.0 ):
+    def __init__( self, controller, scheduler, window, initial_delay, period, work_callable ):
         
-        HydrusThreading.RepeatingJob.__init__( self, controller, scheduler, work_callable, period, initial_delay = initial_delay )
+        HydrusThreading.RepeatingJob.__init__( self, controller, scheduler, initial_delay, period, work_callable )
         
         self._window = window
         

@@ -1,8 +1,9 @@
 import ClientConstants as CC
-import ClientData
 import ClientGUICommon
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
+import ClientImporting
+import ClientImportOptions
 import HydrusData
 import os
 import wx
@@ -78,7 +79,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         never_slower_than = self._never_slower_than.GetValue()
         death_file_velocity = self._death_file_velocity.GetValue()
         
-        return ClientData.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
+        return ClientImportOptions.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
         
     
 ( TimeDeltaEvent, EVT_TIME_DELTA ) = wx.lib.newevent.NewCommandEvent()

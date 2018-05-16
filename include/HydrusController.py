@@ -78,7 +78,7 @@ class HydrusController( object ):
             
             calling_from_the_thread_pool = threading.current_thread() in self._call_to_threads
             
-            if calling_from_the_thread_pool or len( self._call_to_threads ) < 10:
+            if calling_from_the_thread_pool or len( self._call_to_threads ) < 200:
                 
                 call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThread' )
                 
@@ -207,22 +207,22 @@ class HydrusController( object ):
         self._pubsub.sub( object, method_name, topic )
         
     
-    def CallLater( self, delay, func, *args, **kwargs ):
+    def CallLater( self, initial_delay, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, call, initial_delay = delay )
+        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, initial_delay, call )
         
         self._job_scheduler.AddJob( job )
         
         return job
         
     
-    def CallRepeating( self, period, delay, func, *args, **kwargs ):
+    def CallRepeating( self, initial_delay, period, func, *args, **kwargs ):
         
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, call, period, initial_delay = delay )
+        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, initial_delay, period, call )
         
         self._job_scheduler.AddJob( job )
         
@@ -372,9 +372,9 @@ class HydrusController( object ):
             self._daemons.append( HydrusThreading.DAEMONBackgroundWorker( self, 'MaintainDB', HydrusDaemons.DAEMONMaintainDB, period = 300, init_wait = 60 ) )
             
         
-        self.CallRepeating( 120.0, 10.0, self.SleepCheck )
-        self.CallRepeating( 60.0, 10.0, self.MaintainMemoryFast )
-        self.CallRepeating( 300.0, 10.0, self.MaintainMemorySlow )
+        self.CallRepeating( 10.0, 120.0, self.SleepCheck )
+        self.CallRepeating( 10.0, 60.0, self.MaintainMemoryFast )
+        self.CallRepeating( 10.0, 300.0, self.MaintainMemorySlow )
         
     
     def IsFirstStart( self ):

@@ -216,9 +216,7 @@ class TestListBoxes( unittest.TestCase ):
             
         finally:
             
-            frame.Hide()
-            
-            frame.Destroy()
+            frame.DestroyLater()
             
         
     

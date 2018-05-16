@@ -227,6 +227,18 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
     return True
     
+def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
+    
+    dialog_units = ( char_cols * 4, char_rows * 8 )
+    
+    return tuple( window.ConvertDialogToPixels( dialog_units ) ) # convert from _Point_ to a tuple that size methods can deal with
+    
+def ConvertTextToPixelWidth( window, char_cols ):
+    
+    ( width, height ) = ConvertTextToPixels( window, ( char_cols, 1 ) )
+    
+    return width
+    
 def GetFocusTLP():
     
     focus = wx.Window.FindFocus()
@@ -563,6 +575,38 @@ class BetterChoice( wx.Choice ):
             
             self.Select( 0 )
             
+        
+    
+class BetterNotebook( wx.Notebook ):
+    
+    def _ShiftSelection( self, delta ):
+        
+        existing_selection = self.GetSelection()
+        
+        if existing_selection != wx.NOT_FOUND:
+            
+            new_selection = ( existing_selection + delta ) % self.GetPageCount()
+            
+            if new_selection != existing_selection:
+                
+                self.SetSelection( new_selection )
+                
+            
+        
+    
+    def GetPages( self ):
+        
+        return [ self.GetPage( i ) for i in range( self.GetPageCount() ) ]
+        
+    
+    def SelectLeft( self ):
+        
+        self._ShiftSelection( -1 )
+        
+    
+    def SelectRight( self ):
+        
+        self._ShiftSelection( 1 )
         
     
 class BetterRadioBox( wx.RadioBox ):
@@ -960,7 +1004,7 @@ class ChoiceSort( wx.Panel ):
         self._sort_type_choice = BetterChoice( self )
         self._sort_asc_choice = BetterChoice( self )
         
-        asc_width = ClientData.ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
+        asc_width = ConvertTextToPixelWidth( self._sort_asc_choice, 15 )
         
         self._sort_asc_choice.SetMinSize( ( asc_width, -1 ) )
         
@@ -973,7 +1017,7 @@ class ChoiceSort( wx.Panel ):
             self._sort_type_choice.Append( example_sort.GetSortTypeString(), sort_type )
             
         
-        type_width = ClientData.ConvertTextToPixelWidth( self._sort_type_choice, 10 )
+        type_width = ConvertTextToPixelWidth( self._sort_type_choice, 10 )
         
         self._sort_type_choice.SetMinSize( ( type_width, -1 ) )
         
@@ -1573,7 +1617,7 @@ class ListBook( wx.Panel ):
             
             self._panel_sizer.Detach( page_to_delete )
             
-            page_to_delete.Destroy()
+            page_to_delete.DestroyLater()
             
             del self._keys_to_active_pages[ key_to_delete ]
             
@@ -1881,7 +1925,7 @@ class NoneableSpinCtrl( wx.Panel ):
         
         self._one = wx.SpinCtrl( self, min = min, max = max )
         
-        width = ClientData.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
+        width = ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
         
         self._one.SetInitialSize( ( width, -1 ) )
         
@@ -1889,7 +1933,7 @@ class NoneableSpinCtrl( wx.Panel ):
             
             self._two = wx.SpinCtrl( self, initial = 0, min = min, max = max )
             
-            width = ClientData.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
+            width = ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
             
             self._two.SetInitialSize( ( width, -1 ) )
             
@@ -2780,168 +2824,6 @@ class SaneMultilineTextCtrl( wx.TextCtrl ):
             
         
     
-class Shortcut( wx.Panel ):
-    
-    def __init__( self, parent ):
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._mouse_radio = wx.RadioButton( self, style = wx.RB_GROUP, label = 'mouse' )
-        self._mouse_shortcut = ShortcutMouse( self, self._mouse_radio )
-        
-        self._keyboard_radio = wx.RadioButton( self, label = 'keyboard' )
-        self._keyboard_shortcut = ShortcutKeyboard( self, self._keyboard_radio )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( BetterStaticText( self, 'Mouse events only work for the duplicate and archive/delete filters atm!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        gridbox = wx.FlexGridSizer( 2 )
-        
-        gridbox.AddGrowableCol( 1, 1 )
-        
-        gridbox.Add( self._mouse_radio, CC.FLAGS_VCENTER )
-        gridbox.Add( self._mouse_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        gridbox.Add( self._keyboard_radio, CC.FLAGS_VCENTER )
-        gridbox.Add( self._keyboard_shortcut, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self.SetSizer( vbox )
-        
-    
-    def GetValue( self ):
-        
-        if self._mouse_radio.GetValue() == True:
-            
-            return self._mouse_shortcut.GetValue()
-            
-        else:
-            
-            return self._keyboard_shortcut.GetValue()
-            
-        
-    
-    def SetValue( self, shortcut ):
-        
-        if shortcut.GetShortcutType() == CC.SHORTCUT_TYPE_MOUSE:
-            
-            self._mouse_radio.SetValue( True )
-            self._mouse_shortcut.SetValue( shortcut )
-            
-        else:
-            
-            self._keyboard_radio.SetValue( True )
-            self._keyboard_shortcut.SetValue( shortcut )
-            
-        
-    
-class ShortcutKeyboard( wx.TextCtrl ):
-    
-    def __init__( self, parent, related_radio = None ):
-        
-        self._shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_KEYBOARD, wx.WXK_F7, [] )
-        
-        self._related_radio = related_radio
-        
-        wx.TextCtrl.__init__( self, parent, style = wx.TE_PROCESS_ENTER )
-        
-        self.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._SetShortcutString()
-        
-    
-    def _SetShortcutString( self ):
-        
-        display_string = self._shortcut.ToString()
-        
-        wx.TextCtrl.SetValue( self, display_string )
-        
-    
-    def EventKeyDown( self, event ):
-        
-        shortcut = ClientData.ConvertKeyEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            self._shortcut = shortcut
-            
-            if self._related_radio is not None:
-                
-                self._related_radio.SetValue( True )
-                
-            
-            self._SetShortcutString()
-            
-        
-    
-    def GetValue( self ):
-        
-        return self._shortcut
-        
-    
-    def SetValue( self, shortcut ):
-        
-        self._shortcut = shortcut
-        
-        self._SetShortcutString()
-        
-    
-class ShortcutMouse( wx.Button ):
-    
-    def __init__( self, parent, related_radio = None ):
-        
-        self._shortcut = ClientData.Shortcut( CC.SHORTCUT_TYPE_MOUSE, CC.SHORTCUT_MOUSE_LEFT, [] )
-        
-        self._related_radio = related_radio
-        
-        wx.Button.__init__( self, parent )
-        
-        self.Bind( wx.EVT_MOUSE_EVENTS, self.EventMouse )
-        
-        self._SetShortcutString()
-        
-    
-    def _SetShortcutString( self ):
-        
-        display_string = self._shortcut.ToString()
-        
-        self.SetLabel( display_string )
-        
-    
-    def EventMouse( self, event ):
-        
-        self.SetFocus()
-        
-        shortcut = ClientData.ConvertMouseEventToShortcut( event )
-        
-        if shortcut is not None:
-            
-            self._shortcut = shortcut
-            
-            if self._related_radio is not None:
-                
-                self._related_radio.SetValue( True )
-                
-            
-            self._SetShortcutString()
-            
-        
-    
-    def GetValue( self ):
-        
-        return self._shortcut
-        
-    
-    def SetValue( self, shortcut ):
-        
-        self._shortcut = shortcut
-        
-        self._SetShortcutString()
-        
-    
 class StaticBox( wx.Panel ):
     
     def __init__( self, parent, title ):
@@ -3110,80 +2992,6 @@ class TextAndGauge( wx.Panel ):
         
         self._gauge.SetRange( range )
         self._gauge.SetValue( value )
-        
-    
-class TextAndPasteCtrl( wx.Panel ):
-    
-    def __init__( self, parent, add_callable ):
-        
-        self._add_callable = add_callable
-        
-        wx.Panel.__init__( self, parent )
-        
-        self._text_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-        self._text_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._paste_button = BetterBitmapButton( self, CC.GlobalBMPs.paste, self._Paste )
-        self._paste_button.SetToolTip( 'Paste multiple inputs from the clipboard. Assumes the texts are newline-separated.' )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._text_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-        hbox.Add( self._paste_button, CC.FLAGS_VCENTER )
-        
-        self.SetSizer( hbox )
-        
-    
-    def _Paste( self ):
-        
-        raw_text = HG.client_controller.GetClipboardText()
-        
-        try:
-            
-            texts = [ text for text in HydrusText.DeserialiseNewlinedTexts( raw_text ) if text != '' ]
-            
-            if len( texts ) > 0:
-                
-                self._add_callable( texts )
-                
-            
-        except:
-            
-            wx.MessageBox( 'I could not understand what was in the clipboard' )
-            
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            text = self._text_input.GetValue()
-            
-            if text != '':
-                
-                self._add_callable( ( text, ) )
-                
-            
-            self._text_input.SetValue( '' )
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def GetValue( self ):
-        
-        return self._text_input.GetValue()
-        
-    
-    def SetValue( self, text ):
-        
-        self._text_input.SetValue( text )
         
     
 class ThreadToGUIUpdater( object ):

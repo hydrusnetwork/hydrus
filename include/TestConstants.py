@@ -1,6 +1,6 @@
 import collections
 import ClientConstants as CC
-import ClientData
+import ClientOptions
 import HydrusConstants as HC
 import HydrusGlobals as HG
 import HydrusTags
@@ -36,7 +36,7 @@ class MockController( object ):
         
         self.model_is_shutdown = False
         
-        self.new_options = ClientData.ClientOptions()
+        self.new_options = ClientOptions.ClientOptions()
         
     
     def CallToThread( self, callable, *args, **kwargs ):

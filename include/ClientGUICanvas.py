@@ -1012,7 +1012,7 @@ class CanvasFrame( ClientGUITopLevelWindows.FrameThatResizes ):
             self.ShowFullScreen( False, wx.FULLSCREEN_ALL )
             
         
-        self.Destroy()
+        self.DestroyLater()
         
     
     def FullscreenSwitch( self ):
@@ -1532,7 +1532,7 @@ class Canvas( wx.Window ):
                 
                 control = wx.TextCtrl( panel, style = wx.TE_MULTILINE )
                 
-                size = ClientData.ConvertTextToPixels( control, ( 80, 14 ) )
+                size = ClientGUICommon.ConvertTextToPixels( control, ( 80, 14 ) )
                 
                 control.SetInitialSize( size )
                 
@@ -2041,7 +2041,7 @@ class Canvas( wx.Window ):
         
         if self._CanProcessInput() and not self._FocusIsElsewhere(): # focus is likely on a tag manager frame in this case
             
-            shortcut = ClientData.ConvertKeyEventToShortcut( event )
+            shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
             
             if shortcut is not None:
                 
@@ -2647,7 +2647,7 @@ class CanvasWithDetails( Canvas ):
             
             tags_i_want_to_display = list( tags_i_want_to_display )
             
-            ClientData.SortTagsList( tags_i_want_to_display, HC.options[ 'default_tag_sort' ] )
+            ClientTags.SortTagsList( tags_i_want_to_display, HC.options[ 'default_tag_sort' ] )
             
             current_y = 3
             
@@ -3568,7 +3568,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._CanProcessInput() and not self._FocusIsElsewhere():
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ):
                 
@@ -3576,7 +3576,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
             else:
                 
-                ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+                ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
                 
                 if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS:
                     
@@ -3634,7 +3634,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                 
             
-            shortcut = ClientData.ConvertMouseEventToShortcut( event )
+            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
             
             if shortcut is not None:
                 
@@ -4255,7 +4255,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         
         if self._CanProcessInput() and not self._FocusIsElsewhere():
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if modifier == wx.ACCEL_NORMAL and key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER, wx.WXK_ESCAPE ): self._Close()
             else:
@@ -4312,7 +4312,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                 
             
-            shortcut = ClientData.ConvertMouseEventToShortcut( event )
+            shortcut = ClientGUIShortcuts.ConvertMouseEventToShortcut( event )
             
             if shortcut is not None:
                 
@@ -4693,7 +4693,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         if self._CanProcessInput() and not self._FocusIsElsewhere():
             
-            ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+            ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
             
             if modifier == wx.ACCEL_NORMAL and key in CC.DELETE_KEYS: self._Delete()
             elif modifier == wx.ACCEL_SHIFT and key in CC.DELETE_KEYS: self._Undelete()
@@ -4959,21 +4959,9 @@ class MediaContainer( wx.Window ):
     
     def _DestroyThisMediaWindow( self, media_window ):
         
-        def wx_destroy( media_window ):
-            
-            if not media_window:
-                
-                return
-                
-            
-            media_window.Destroy()
-            
-        
         if media_window is not None:
             
-            media_window.Hide()
-            
-            wx.CallAfter( wx_destroy, media_window )
+            media_window.DestroyLater()
             
         
     

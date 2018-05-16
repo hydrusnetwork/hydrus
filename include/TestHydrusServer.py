@@ -1,6 +1,3 @@
-import ClientConstants as CC
-import ClientData
-import ClientFiles
 import ClientLocalServer
 import ClientMedia
 import ClientRatings
@@ -13,18 +10,13 @@ import HydrusNetwork
 import HydrusPaths
 import HydrusServer
 import HydrusServerResources
-import HydrusSerialisable
-import itertools
 import os
 import random
 import ServerFiles
 import ServerServer
-import shutil
 import ssl
-import stat
 import TestConstants
 import time
-import threading
 import unittest
 from twisted.internet import reactor
 from twisted.internet.endpoints import TCP4ClientEndpoint, connectProtocol

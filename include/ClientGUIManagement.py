@@ -16,12 +16,14 @@ import ClientGUIControls
 import ClientGUIDialogs
 import ClientGUIImport
 import ClientGUIListBoxes
+import ClientGUIListCtrl
 import ClientGUIMedia
 import ClientGUIMenus
 import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUISeedCache
+import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
@@ -61,6 +63,7 @@ MANAGEMENT_TYPE_PETITIONS = 5
 MANAGEMENT_TYPE_QUERY = 6
 MANAGEMENT_TYPE_IMPORT_URLS = 7
 MANAGEMENT_TYPE_DUPLICATE_FILTER = 8
+MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER = 9
 
 management_panel_types_to_classes = {}
 
@@ -139,6 +142,16 @@ def CreateManagementControllerImportThreadWatcher( thread_url = None ):
     thread_watcher_import.SetThreadURL( thread_url )
     
     management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
+    
+    return management_controller
+    
+def CreateManagementControllerImportMultipleWatcher( thread_url = None ):
+    
+    management_controller = CreateManagementController( 'multiple watcher', MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
+    
+    multiple_watcher_import = ClientImporting.MultipleWatcherImport( thread_url = thread_url )
+    
+    management_controller.SetVariable( 'multiple_watcher_import', multiple_watcher_import )
     
     return management_controller
     
@@ -413,7 +426,7 @@ def GenerateDumpMultipartFormDataCTAndBody( fields ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ): self.EventReady( None )
         else: event.Skip()
@@ -720,6 +733,12 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 return simple_downloader_import.GetValueRange()
                 
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
+                
+                multiple_watcher_import = self._serialisables[ 'multiple_watcher_import' ]
+                
+                return multiple_watcher_import.GetValueRange()
+                
             elif self._management_type == MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER:
                 
                 thread_watcher_import = self._serialisables[ 'thread_watcher_import' ]
@@ -772,7 +791,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def IsImporter( self ):
         
-        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
         
     
     def SetKey( self, name, key ):
@@ -826,8 +845,6 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         self._collect_by = ClientGUICommon.CheckboxCollect( self, self._page_key )
         
-        self._controller.sub( self, 'SetSearchFocus', 'set_search_focus' )
-        
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
@@ -860,7 +877,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-    def SetSearchFocus( self, page_key = None ):
+    def SetSearchFocus( self ):
         
         pass
         
@@ -1433,7 +1450,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._delay_button = wx.Button( self._pending_queries_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._query_input = ClientGUICommon.TextAndPasteCtrl( self._pending_queries_panel, self._PendQueries )
+        self._query_input = ClientGUIControls.TextAndPasteCtrl( self._pending_queries_panel, self._PendQueries )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
@@ -1699,12 +1716,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def SetSearchFocus( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._page_key:
-            
-            return
-            
+    def SetSearchFocus( self ):
         
         wx.CallAfter( self._query_input.SetFocus )
         
@@ -1859,7 +1871,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._delay_button = wx.Button( self._pending_jobs_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._page_url_input = ClientGUICommon.TextAndPasteCtrl( self._pending_jobs_panel, self._PendPageURLs )
+        self._page_url_input = ClientGUIControls.TextAndPasteCtrl( self._pending_jobs_panel, self._PendPageURLs )
         
         self._formulae = ClientGUICommon.BetterChoice( self._pending_jobs_panel )
         
@@ -2232,12 +2244,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def SetSearchFocus( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._page_key:
-            
-            return
-            
+    def SetSearchFocus( self ):
         
         wx.CallAfter( self._page_url_input.SetFocus )
         
@@ -2529,7 +2536,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
@@ -2544,7 +2551,9 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             self._thread_watcher_import.SetThreadURL( thread_url )
             
-            self._thread_watcher_import.Start( self._page_key )
+            publish_to_page = True
+            
+            self._thread_watcher_import.Start( self._page_key, publish_to_page )
             
         else:
             
@@ -2552,12 +2561,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
         
     
-    def SetSearchFocus( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._page_key:
-            
-            return
-            
+    def SetSearchFocus( self ):
         
         wx.CallAfter( self._thread_input.SetFocus )
         
@@ -2566,11 +2570,280 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         if self._thread_watcher_import.HasThread():
             
-            self._thread_watcher_import.Start( self._page_key )
+            publish_to_page = True
+            
+            self._thread_watcher_import.Start( self._page_key, publish_to_page )
             
         
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER ] = ManagementPanelImporterThreadWatcher
+
+class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
+    
+    def __init__( self, parent, page, controller, management_controller ):
+        
+        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        
+        self._last_thread_keys = set()
+        self._next_update_time = 0
+        self._highlit_watcher = None
+        
+        #
+        
+        self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
+        
+        self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
+        
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 6, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        
+        self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
+        
+        self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
+        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightWatcher, enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
+        
+        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
+        
+        self._watchers_listctrl.Sort( 0 )
+        
+        # suck up thread watchers from elsewhere in the program (presents a checklistboxdialog)
+        
+        #
+        
+        self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
+        
+        self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._collect_by.Hide()
+        
+        vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._UpdateStatus()
+        
+        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
+        
+    
+    def _AddURLs( self, urls ):
+        
+        for url in urls:
+            
+            self._multiple_watcher_import.AddURL( url )
+            
+        
+    
+    def _CanClearHighlight( self ):
+        
+        return self._highlit_watcher is not None
+        
+    
+    def _CanHighlight( self ):
+        
+        num_selected = len( self._watchers_listctrl.GetData( only_selected = True ) )
+        
+        return num_selected == 1
+        
+    
+    def _ClearExistingHighlight( self ):
+        
+        if self._highlit_watcher is not None:
+            
+            publish_to_page = False
+            
+            self._highlit_watcher.Repage( self._page_key, publish_to_page )
+            
+            self._highlit_watcher = None
+            
+            self._watchers_listctrl_panel.UpdateButtons()
+            
+        
+    
+    def _ClearExistingHighlightAndPanel( self ):
+        
+        self._ClearExistingHighlight()
+        
+        media_results = []
+        
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        
+        self._page.SwapMediaPanel( panel )
+        
+        self._watchers_listctrl.UpdateDatas()
+        
+    
+    def _ConvertDataToListCtrlTuples( self, watcher ):
+        
+        subject = watcher.GetSubject()
+        
+        if watcher == self._highlit_watcher:
+            
+            subject = '* ' + subject
+            
+        
+        status = watcher.GetSimpleStatus()
+        
+        ( value, range ) = watcher.GetValueRange()
+        
+        progress = ( range, value )
+        
+        pretty_subject = subject
+        pretty_status = status
+        pretty_progress = HydrusData.ConvertValueRangeToPrettyString( value, range )
+        
+        display_tuple = ( pretty_subject, pretty_status, pretty_progress )
+        sort_tuple = ( subject, status, progress )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _HighlightWatcher( self ):
+        
+        selected = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            new_highlight = selected[0]
+            
+            if new_highlight == self._highlit_watcher:
+                
+                self._ClearExistingHighlightAndPanel()
+                
+            else:
+                
+                self._ClearExistingHighlight()
+                
+                self._highlit_watcher = selected[0]
+                
+                hashes = self._highlit_watcher.GetPresentedHashes()
+                
+                media_results = HG.client_controller.Read( 'media_results', hashes )
+                
+                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+                
+                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+                
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+                
+                self._page.SwapMediaPanel( panel )
+                
+                publish_to_page = True
+                
+                self._highlit_watcher.Repage( self._page_key, publish_to_page )
+                
+                self._watchers_listctrl_panel.UpdateButtons()
+                
+                self._watchers_listctrl.UpdateDatas()
+                
+            
+        
+    
+    def _RemoveWatchers( self ):
+        
+        # should prob have some sort of 'three are still importing m8'
+        
+        message = 'Remove the selected watchers?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                highlight_was_included = False
+                
+                for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+                    
+                    if watcher == self._highlit_watcher:
+                        
+                        highlight_was_included = True
+                        
+                    
+                    self._multiple_watcher_import.RemoveWatcher( watcher.GetThreadKey() )
+                    
+                
+                if highlight_was_included:
+                    
+                    self._ClearExistingHighlightAndPanel()
+                    
+                
+            
+        
+    
+    def _UpdateStatus( self ):
+        
+        if HydrusData.TimeHasPassed( self._next_update_time ):
+            
+            self._next_update_time = HydrusData.GetNow() + 1
+            
+            thread_keys = self._multiple_watcher_import.GetThreadKeys()
+            
+            if self._last_thread_keys != thread_keys:
+                
+                self._last_thread_keys = thread_keys
+                
+                watchers = self._multiple_watcher_import.GetWatchers()
+                
+                self._watchers_listctrl.SetData( watchers )
+                
+            
+            self._watchers_listctrl.UpdateDatas()
+            
+        
+        # something here to push a refreshpagename thing to update value/range values on any change. so maybe cache this number and then check on changes or whatever!
+        
+        # although I had to write a hook in the seedcachepanel thing so that it would do that even if page was hidden. this is not so available here, so think about it.
+        
+        pass
+        
+    
+    def CheckAbleToClose( self ):
+        
+        num_working = 0
+        
+        for watcher in self._multiple_watcher_import.GetWatchers():
+            
+            if watcher.CurrentlyWorking():
+                
+                num_working += 1
+                
+            
+        
+        if num_working > 0:
+            
+            raise HydrusExceptions.VetoException( HydrusData.ConvertIntToPrettyString( num_working ) + ' watchers are still importing.' )
+            
+        
+    
+    def PendURL( self, page_key, url ):
+        
+        if page_key == self._page_key:
+            
+            self._multiple_watcher_import.AddURL( url )
+            
+        
+    
+    def SetSearchFocus( self ):
+        
+        wx.CallAfter( self._watcher_url_input.SetFocus )
+        
+    
+    def Start( self ):
+        
+        self._multiple_watcher_import.Start( self._page_key )
+        
+    
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER ] = ManagementPanelImporterMultipleWatcher
 
 class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
@@ -2595,7 +2868,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         # replace all this with a seed cache panel sometime
         self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._url_panel, self._controller, self._urls_import.GetSeedCache )
         
-        self._url_input = ClientGUICommon.TextAndPasteCtrl( self._url_panel, self._PendURLs )
+        self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
         file_import_options = self._urls_import.GetOptions()
         
@@ -2710,12 +2983,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
         
     
-    def SetSearchFocus( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._page_key:
-            
-            return
-            
+    def SetSearchFocus( self ):
         
         wx.CallAfter( self._url_input.SetFocus )
         
@@ -3511,12 +3779,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def SetSearchFocus( self, page_key = None ):
-        
-        if page_key is not None and page_key != self._page_key:
-            
-            return
-            
+    def SetSearchFocus( self ):
         
         if self._search_enabled:
             

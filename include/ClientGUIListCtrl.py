@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientData
 import ClientGUICommon
 import ClientSerialisable
+import ClientGUIShortcuts
 import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
@@ -130,7 +131,7 @@ class SaneListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in CC.DELETE_KEYS:
             
@@ -510,7 +511,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        ( total_width, height ) = ClientData.ConvertTextToPixels( self, ( sizing_column_initial_width_num_chars, height_num_chars ) )
+        ( total_width, height ) = ClientGUICommon.ConvertTextToPixels( self, ( sizing_column_initial_width_num_chars, height_num_chars ) )
         
         resize_column = 1
         
@@ -524,7 +525,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
                 
             else:
                 
-                width = ClientData.ConvertTextToPixelWidth( self, width_num_chars )
+                width = ClientGUICommon.ConvertTextToPixelWidth( self, width_num_chars )
                 
                 total_width += width
                 
@@ -756,7 +757,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def EventKeyDown( self, event ):
         
-        ( modifier, key ) = ClientData.ConvertKeyEventToSimpleTuple( event )
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
         
         if key in CC.DELETE_KEYS:
             
@@ -1314,3 +1315,7 @@ class BetterListCtrlPanel( wx.Panel ):
         self._listctrl.Bind( wx.EVT_LIST_DELETE_ALL_ITEMS, self.EventContentChanged )
         
     
+    def UpdateButtons( self ):
+        
+        self._UpdateButtons()
+        

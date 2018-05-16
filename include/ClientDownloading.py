@@ -1,5 +1,4 @@
 import bs4
-import ClientData
 import ClientNetworkingDomain
 import ClientNetworkingJobs
 import ClientParsing

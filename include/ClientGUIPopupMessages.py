@@ -87,7 +87,7 @@ class PopupMessage( PopupWindow ):
         
         popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
-        wrap_width = ClientData.ConvertTextToPixelWidth( self._title, popup_message_character_width )
+        wrap_width = ClientGUICommon.ConvertTextToPixelWidth( self._title, popup_message_character_width )
         
         self._title.Wrap( wrap_width )
         self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
@@ -319,7 +319,10 @@ class PopupMessage( PopupWindow ):
             
             text = title
             
-            if self._title.GetLabelText() != text: self._title.SetLabelText( text )
+            if self._title.GetLabelText() != text:
+                
+                self._title.SetLabelText( text )
+                
             
             self._title.Show()
             
@@ -569,7 +572,7 @@ class PopupMessageManager( wx.Frame ):
         
         job_key.SetVariable( 'popup_text_1', u'initialising popup message manager\u2026' )
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 0.25, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
         HG.client_controller.CallLaterWXSafe( self, 0.5, self.AddMessage, job_key )
         
@@ -578,7 +581,7 @@ class PopupMessageManager( wx.Frame ):
     
     def _CheckPending( self ):
         
-        size_and_position_needed = False
+        force_relayout = False
         
         self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
         
@@ -592,7 +595,7 @@ class PopupMessageManager( wx.Frame ):
             
             self._message_vbox.Add( window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            size_and_position_needed = True
+            force_relayout = True
             
         
         dismiss_shown_before = self._dismiss_all.IsShown()
@@ -612,15 +615,15 @@ class PopupMessageManager( wx.Frame ):
         
         if self._dismiss_all.IsShown() != dismiss_shown_before:
             
-            size_and_position_needed = True
+            force_relayout = True
             
         
-        if not self.IsShown():
+        if force_relayout:
             
-            size_and_position_needed = True
+            self.Layout()
             
         
-        if size_and_position_needed:
+        if self._NeedsSizeOrShow():
             
             self._SizeAndPositionAndShow()
             
@@ -684,6 +687,39 @@ class PopupMessageManager( wx.Frame ):
                     
                 
             
+        
+    
+    def _NeedsSizeOrShow( self ):
+        
+        num_messages_displayed = self._message_vbox.GetItemCount()
+        
+        there_is_stuff_to_display = num_messages_displayed > 0
+        
+        is_shown = self.IsShown()
+        
+        if there_is_stuff_to_display:
+            
+            if not is_shown:
+                
+                return True
+                
+            
+            best_size = self.GetBestSize()
+            
+            if best_size != self.GetSize():
+                
+                return True
+                
+            
+        else:
+            
+            if is_shown:
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _SizeAndPositionAndShow( self ):
@@ -786,7 +822,7 @@ class PopupMessageManager( wx.Frame ):
             
             self.CleanBeforeDestroy()
             
-            self.Destroy()
+            self.DestroyLater()
             
         
     
@@ -875,7 +911,7 @@ class PopupMessageManager( wx.Frame ):
             
             self.CleanBeforeDestroy()
             
-            self.Destroy()
+            self.DestroyLater()
             
             return
             
@@ -889,6 +925,8 @@ class PopupMessageManager( wx.Frame ):
             if message_window.IsDeleted():
                 
                 message_window.TryToDismiss()
+                
+                self.Layout()
                 
                 break
                 
@@ -956,12 +994,11 @@ class PopupMessageManager( wx.Frame ):
         
         self._message_vbox.Detach( window )
         
-        # OS X segfaults if this is instant
-        wx.CallAfter( window.Destroy )
+        window.DestroyLater()
         
         if self._OKToAlterUI():
             
-            self._SizeAndPositionAndShow()
+            self.Layout()
             
             self._CheckPending()
             
@@ -980,6 +1017,8 @@ class PopupMessageManager( wx.Frame ):
             message_window.TryToDismiss()
             
         
+        self.Layout()
+        
         self._CheckPending()
         
     
@@ -996,6 +1035,8 @@ class PopupMessageManager( wx.Frame ):
     def MakeSureEverythingFits( self ):
         
         if self._OKToAlterUI():
+            
+            self.Layout()
             
             self._SizeAndPositionAndShow()
             
@@ -1044,7 +1085,7 @@ class PopupMessageDialogPanel( ClientGUIScrolledPanels.ReviewPanelVetoable ):
         
         self._message_pubbed = False
         
-        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.5, 0.25, self.REPEATINGUpdate )
+        self._update_job = HG.client_controller.CallRepeatingWXSafe( self, 0.25, 0.5, self.REPEATINGUpdate )
         
     
     def _HideOtherWindows( self ):
