@@ -1343,7 +1343,7 @@ class DialogManageExportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._query_box = ClientGUICommon.StaticBox( self, 'query to export' )
         
-        self._page_key = HydrusData.GenerateKey()
+        self._page_key = 'export folders placeholder'
         
         predicates = file_search_context.GetPredicates()
         

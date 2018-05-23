@@ -218,6 +218,11 @@ class Controller( object ):
         self._pubsub.sub( object, method_name, topic )
         
     
+    def AcquirePageKey( self ):
+        
+        return HydrusData.GenerateKey()
+        
+    
     def CallBlockingToWx( self, func, *args, **kwargs ):
         
         def wx_code( job_key ):
@@ -387,7 +392,7 @@ class Controller( object ):
         return HG.model_shutdown
         
     
-    def PageCompletelyDestroyed( self, page_key ):
+    def PageAlive( self, page_key ):
         
         return False
         
@@ -403,6 +408,11 @@ class Controller( object ):
         
     
     def RegisterUIUpdateWindow( self, window ):
+        
+        pass
+        
+    
+    def ReleasePageKey( self, page_key ):
         
         pass
         

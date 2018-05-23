@@ -89,7 +89,7 @@ def ConvertParseResultToPrettyString( result ):
         
         priority = additional_info
         
-        return 'thread watcher page title (priority ' + str( priority ) + '): ' + parsed_text
+        return 'watcher page title (priority ' + str( priority ) + '): ' + parsed_text
         
     elif content_type == HC.CONTENT_TYPE_VETO:
         
@@ -168,7 +168,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             
         elif content_type == HC.CONTENT_TYPE_TITLE:
             
-            pretty_strings.append( 'thread watcher page title' )
+            pretty_strings.append( 'watcher page title' )
             
         elif content_type == HC.CONTENT_TYPE_VETO:
             

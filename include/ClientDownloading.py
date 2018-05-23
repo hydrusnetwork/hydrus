@@ -103,94 +103,6 @@ def GetGallery( gallery_identifier ):
         return GalleryTumblr()
         
     
-_8CHAN_BOARDS_TO_MEDIA_HOSTS = {}
-
-def GetImageboardFileURL( thread_url, filename, ext ):
-    
-    ( thread_url, host, board, thread_id ) = ParseImageboardThreadURL( thread_url )
-    
-    is_4chan = '4chan.org' in host
-    is_8chan = '8ch.net' in host
-    
-    if is_4chan:
-        
-        return 'https://i.4cdn.org/' + board + '/' + filename + ext
-        
-    elif is_8chan:
-        
-        if len( filename ) == 64: # new sha256 filename
-            
-            return 'https://media.8ch.net/file_store/' + filename + ext
-            
-        else:
-            
-            if board not in _8CHAN_BOARDS_TO_MEDIA_HOSTS:
-                
-                try:
-                    
-                    html_url = 'https://8ch.net/' + board + '/res/' + thread_id + '.html'
-                    
-                    network_job = ClientNetworkingJobs.NetworkJob( 'GET', html_url )
-                    
-                    network_job.OverrideBandwidth()
-                    
-                    HG.client_controller.network_engine.AddJob( network_job )
-                    
-                    network_job.WaitUntilDone()
-                    
-                    thread_html = network_job.GetContent()
-                    
-                    soup = ClientParsing.GetSoup( thread_html )
-                    
-                    file_infos = soup.find_all( 'p', class_ = "fileinfo" )
-                    
-                    example_file_url = file_infos[0].find( 'a' )[ 'href' ]
-                    
-                    parse_result = urlparse.urlparse( example_file_url )
-                    
-                    hostname = parse_result.hostname
-                    
-                    if hostname is None:
-                        
-                        hostname = '8ch.net'
-                        
-                    
-                    _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = hostname
-                    
-                except Exception as e:
-                    
-                    _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ] = 'media.8ch.net'
-                    
-                
-            
-            media_host = _8CHAN_BOARDS_TO_MEDIA_HOSTS[ board ]
-        
-            return 'https://' + media_host + '/' + board + '/src/' + filename + ext
-            
-        
-    
-def GetImageboardThreadJSONURL( thread_url ):
-    
-    ( thread_url, host, board, thread_id ) = ParseImageboardThreadURL( thread_url )
-    
-    is_4chan = '4chan.org' in host
-    is_8chan = '8ch.net' in host
-    
-    # 4chan
-    # https://a.4cdn.org/asp/thread/382059.json
-    
-    # 8chan
-    # https://8ch.net/v/res/406061.json
-    
-    if is_4chan:
-        
-        return 'https://a.4cdn.org/' + board + '/thread/' + thread_id + '.json'
-        
-    elif is_8chan:
-        
-        return 'https://8ch.net/' + board + '/res/' + thread_id + '.json'
-        
-    
 def GetYoutubeFormats( youtube_url ):
     
     try:
@@ -249,185 +161,6 @@ def Parse4chanPostScreen( html ):
             
         except: return ( 'error', 'unknown error' )
         
-    
-def ParseImageboardFileURLFromPost( thread_url, post, source_timestamp ):
-    
-    url_filename = str( post[ 'tim' ] )
-    url_ext = post[ 'ext' ]
-    
-    file_original_filename = post[ 'filename' ]
-    file_url = GetImageboardFileURL( thread_url, url_filename, url_ext )
-    
-    if 'md5' in post:
-        
-        file_md5_base64 = post[ 'md5' ]
-        
-    else:
-        
-        file_md5_base64 = None
-        
-    
-    return ( file_url, file_md5_base64, file_original_filename, source_timestamp )
-    
-def ParseImageboardFileURLsFromJSON( thread_url, raw_json ):
-    
-    json_dict = json.loads( raw_json )
-    
-    posts_list = json_dict[ 'posts' ]
-    
-    file_infos = []
-    
-    for post in posts_list:
-        
-        if 'filename' not in post:
-            
-            continue
-            
-        
-        if 'time' in post:
-            
-            source_timestamp = post[ 'time' ]
-            
-        else:
-            
-            source_timestamp = HydrusData.GetNow()
-            
-        
-        file_infos.append( ParseImageboardFileURLFromPost( thread_url, post, source_timestamp ) )
-        
-        if 'extra_files' in post:
-            
-            for extra_file in post[ 'extra_files' ]:
-                
-                if 'filename' not in extra_file:
-                    
-                    continue
-                    
-                
-                file_infos.append( ParseImageboardFileURLFromPost( thread_url, extra_file, source_timestamp ) )
-                
-            
-        
-    
-    return file_infos
-    
-def ParseImageboardThreadSubject( raw_json ):
-    
-    json_dict = json.loads( raw_json )
-    
-    posts_list = json_dict[ 'posts' ]
-    
-    if len( posts_list ) > 0:
-        
-        top_post = posts_list[0]
-        
-        if 'sub' in top_post:
-            
-            return top_post[ 'sub' ]
-            
-        
-    
-    return ''
-    
-def IsImageboardThread( url ):
-    
-    if '4chan.org' in url:
-        
-        if '/thread/' in url:
-            
-            return True
-            
-        
-    
-    if '8ch.net' in url:
-        
-        if '/res/' in url:
-            
-            return True
-            
-        
-    
-    return False
-    
-def ParseImageboardThreadURL( thread_url ):
-    
-    try:
-        
-        if '#' in thread_url:
-            
-            ( thread_url, post_anchor_gumpf ) = thread_url.split( '#', 1 )
-            
-        
-        parse_result = urlparse.urlparse( thread_url )
-        
-        host = parse_result.hostname
-        
-        request = parse_result.path
-        
-        if host is None or request is None:
-            
-            raise Exception()
-            
-        
-    except:
-        
-        raise Exception ( 'Could not understand that url!' )
-        
-    
-    is_4chan = '4chan.org' in host or 'a.4cdn.org' in host
-    is_8chan = '8ch.net' in host
-    
-    if not ( is_4chan or is_8chan ):
-        
-        raise Exception( 'This only works for 4chan and 8chan right now!' )
-        
-    
-    try:
-        
-        # 4chan
-        # /asp/thread/382059/post-your-favourite-martial-arts-video-if-martin
-        
-        # 8chan
-        # /v/res/406061.html
-        
-        if is_4chan:
-            
-            ( board, rest_of_request ) = request[1:].split( '/thread/', 1 )
-            
-            if '/' in rest_of_request:
-                
-                ( thread_id, gumpf ) = rest_of_request.split( '/' )
-                
-            else:
-                
-                thread_id = rest_of_request
-                
-            
-        elif is_8chan:
-            
-            ( board, rest_of_request ) = request[1:].split( '/res/', 1 )
-            
-            thread_id = rest_of_request[:-5]
-            
-        
-    except Exception as e:
-        
-        raise Exception( 'Could not understand that thread url! Either the board or the thread id components were malformed or missing.' )
-        
-    
-    return ( thread_url, host, board, thread_id )
-    
-def ParsePageForURLs( html, starting_url ):
-    
-    soup = ClientParsing.GetSoup( html )
-    
-    all_links = soup.find_all( 'a' )
-    
-    links_with_images = [ link for link in all_links if len( link.find_all( 'img' ) ) > 0 ]
-    
-    urls = [ urlparse.urljoin( starting_url, link[ 'href' ] ) for link in links_with_images ]
-    
-    return urls
     
 class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
@@ -606,9 +339,13 @@ class Gallery( object ):
         self._network_job_factory = network_job_factory
         
     
+gallery_advance_nums = {}
+
 class GalleryBooru( Gallery ):
     
     def __init__( self, booru_name ):
+        
+        self._booru_name = booru_name
         
         try:
             
@@ -618,8 +355,6 @@ class GalleryBooru( Gallery ):
             
             raise Exception( 'Attempted to find booru "' + booru_name + '", but it was missing from the database!' )
             
-        
-        self._gallery_advance_num = None
         
         ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = self._booru.GetGalleryParsingInfo()
         
@@ -634,29 +369,30 @@ class GalleryBooru( Gallery ):
             
         else:
             
-            if self._gallery_advance_num is None:
+            if page_index == 0:
                 
-                if page_index == 0:
-                    
-                    url_index = page_index
-                    
-                else:
-                    
-                    self.GetPage( query, 0 )
-                    
-                    if self._gallery_advance_num is None:
-                        
-                        raise Exception( 'Unable to calculate the booru\'s gallery advance number.' )
-                        
-                    else:
-                        
-                        url_index = page_index * self._gallery_advance_num
-                        
-                    
+                url_index = 0
                 
             else:
                 
-                url_index = page_index * self._gallery_advance_num
+                if self._booru_name not in gallery_advance_nums:
+                    
+                    if page_index == 0:
+                        
+                        url_index = page_index
+                        
+                    else:
+                        
+                        self.GetPage( query, 0 )
+                        
+                        if self._booru_name not in gallery_advance_nums:
+                            
+                            raise Exception( 'Unable to calculate the booru\'s gallery advance number.' )
+                            
+                        
+                    
+                
+                url_index = page_index * gallery_advance_nums[ self._booru_name ]
                 
             
         
@@ -739,15 +475,16 @@ class GalleryBooru( Gallery ):
                 
             
         
-        if self._gallery_advance_num is None:
+        if len( urls ) == 0:
             
-            if len( urls ) == 0:
+            definitely_no_more_pages = True
+            
+        
+        if self._booru_name not in gallery_advance_nums:
+            
+            if len( urls ) > 0:
                 
-                definitely_no_more_pages = True
-                
-            else:
-                
-                self._gallery_advance_num = len( urls )
+                gallery_advance_nums[ self._booru_name ] = len( urls )
                 
             
         

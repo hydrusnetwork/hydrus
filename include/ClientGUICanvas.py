@@ -1802,12 +1802,14 @@ class Canvas( wx.Window ):
             self._media_container.SetSize( new_size )
             
         
-        if HC.PLATFORM_OSX and new_position == self._media_container.GetPosition():
+        if new_position == self._media_container.GetPosition():
             
-            self._media_container.Refresh()
+            if HC.PLATFORM_OSX:
+                
+                self._media_container.Refresh()
+                
             
-        
-        if new_position != self._media_container.GetPosition():
+        else:
             
             self._media_container.SetPosition( new_position )
             

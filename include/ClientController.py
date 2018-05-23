@@ -74,6 +74,11 @@ class Controller( HydrusController.HydrusController ):
         
         HC.options = self.options
         
+        self._page_key_lock = threading.Lock()
+        
+        self._alive_page_keys = set()
+        self._closed_page_keys = set()
+        
         self._last_mouse_position = None
         self._menu_open = False
         self._previously_idle = False
@@ -107,6 +112,18 @@ class Controller( HydrusController.HydrusController ):
         names.sort()
         
         self.pub( 'splash_set_status_subtext', ', '.join( names ) )
+        
+    
+    def AcquirePageKey( self ):
+        
+        with self._page_key_lock:
+            
+            page_key = HydrusData.GenerateKey()
+            
+            self._alive_page_keys.add( page_key )
+            
+            return page_key
+            
         
     
     def CallBlockingToWx( self, func, *args, **kwargs ):
@@ -173,22 +190,26 @@ class Controller( HydrusController.HydrusController ):
     
     def CallLaterWXSafe( self, window, initial_delay, func, *args, **kwargs ):
         
+        job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
+        
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareJob( self, self._job_scheduler, window, initial_delay, call )
+        job = ClientThreading.WXAwareJob( self, job_scheduler, window, initial_delay, call )
         
-        self._job_scheduler.AddJob( job )
+        job_scheduler.AddJob( job )
         
         return job
         
     
     def CallRepeatingWXSafe( self, window, initial_delay, period, func, *args, **kwargs ):
         
+        job_scheduler = self._GetAppropriateJobScheduler( period )
+        
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = ClientThreading.WXAwareRepeatingJob( self, self._job_scheduler, window, initial_delay, period, call )
+        job = ClientThreading.WXAwareRepeatingJob( self, job_scheduler, window, initial_delay, period, call )
         
-        self._job_scheduler.AddJob( job )
+        job_scheduler.AddJob( job )
         
         return job
         
@@ -252,8 +273,16 @@ class Controller( HydrusController.HydrusController ):
             
             if move_knocked_us_out_of_idle:
                 
-                self.gui.SetStatusBarDirty()
+                self.pub( 'set_status_bar_dirty' )
                 
+            
+        
+    
+    def ClosePageKeys( self, page_keys ):
+        
+        with self._page_key_lock:
+            
+            self._closed_page_keys.update( page_keys )
             
         
     
@@ -478,18 +507,6 @@ class Controller( HydrusController.HydrusController ):
     def GetNewOptions( self ):
         
         return self.new_options
-        
-    
-    def GoodTimeToDoForegroundWork( self ):
-        
-        if self.gui:
-            
-            return not self.gui.CurrentlyBusy()
-            
-        else:
-            
-            return True
-            
         
     
     def InitClientFilesManager( self ):
@@ -861,27 +878,19 @@ class Controller( HydrusController.HydrusController ):
         return self._menu_open
         
     
-    def PageCompletelyDestroyed( self, page_key ):
+    def PageAlive( self, page_key ):
         
-        if self.gui:
+        with self._page_key_lock:
             
-            return self.gui.PageCompletelyDestroyed( page_key )
-            
-        else:
-            
-            return True
+            return page_key in self._alive_page_keys
             
         
     
     def PageClosedButNotDestroyed( self, page_key ):
         
-        if self.gui:
+        with self._page_key_lock:
             
-            return self.gui.PageClosedButNotDestroyed( page_key )
-            
-        else:
-            
-            return False
+            return page_key in self._closed_page_keys
             
         
     
@@ -912,6 +921,15 @@ class Controller( HydrusController.HydrusController ):
     def RefreshServices( self ):
         
         self.services_manager.RefreshServices()
+        
+    
+    def ReleasePageKey( self, page_key ):
+        
+        with self._page_key_lock:
+            
+            self._alive_page_keys.discard( page_key )
+            self._closed_page_keys.discard( page_key )
+            
         
     
     def ResetIdleTimer( self ):
@@ -1378,6 +1396,14 @@ class Controller( HydrusController.HydrusController ):
                 
             
             self.CallToThread( THREADWait )
+            
+        
+    
+    def UnclosePageKeys( self, page_keys ):
+        
+        with self._page_key_lock:
+            
+            self._closed_page_keys.difference_update( page_keys )
             
         
     

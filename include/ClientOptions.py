@@ -419,7 +419,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
         
-        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = ClientImportOptions.CheckerOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
+        self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = ClientDefaults.GetDefaultCheckerOptions( 'thread' )
         
         #
         
@@ -675,7 +675,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     site_type = gallery_identifier.GetSiteType()
                     
-                    if site_type == HC.SITE_TYPE_THREAD_WATCHER:
+                    if site_type == HC.SITE_TYPE_WATCHER:
                         
                         import ClientImportOptions
                         
@@ -741,7 +741,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultThreadCheckerOptions( self ):
+    def GetDefaultWatcherCheckerOptions( self ):
         
         with self._lock:
             
@@ -1028,7 +1028,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultThreadCheckerOptions( self, checker_options ):
+    def SetDefaultWatcherCheckerOptions( self, checker_options ):
         
         with self._lock:
             

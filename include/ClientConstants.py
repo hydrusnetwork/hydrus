@@ -137,14 +137,17 @@ FLAGS_BIG_INDENT = wx.SizerFlags( 0 ).Border( wx.ALL, 10 )
 FLAGS_CENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Center()
 
 FLAGS_EXPAND_PERPENDICULAR = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Expand()
-FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_EXPAND_BOTH_WAYS = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_DEPTH_ONLY = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
-FLAGS_SIZER_CENTER = wx.SizerFlags( 2 ).Center()
+FLAGS_EXPAND_BOTH_WAYS_POLITE = wx.SizerFlags( 3 ).Border( wx.ALL, 2 ).Expand()
+FLAGS_EXPAND_BOTH_WAYS_SHY = wx.SizerFlags( 1 ).Border( wx.ALL, 2 ).Expand()
+
+FLAGS_SIZER_CENTER = wx.SizerFlags( 5 ).Center()
 
 FLAGS_EXPAND_SIZER_PERPENDICULAR = wx.SizerFlags( 0 ).Expand()
-FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 2 ).Expand()
-FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_EXPAND_SIZER_BOTH_WAYS = wx.SizerFlags( 5 ).Expand()
+FLAGS_EXPAND_SIZER_DEPTH_ONLY = wx.SizerFlags( 5 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 FLAGS_BUTTON_SIZER = wx.SizerFlags( 0 ).Align( wx.ALIGN_RIGHT )
 
@@ -152,7 +155,7 @@ FLAGS_LONE_BUTTON = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_RIGHT
 
 FLAGS_VCENTER = wx.SizerFlags( 0 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 FLAGS_SIZER_VCENTER = wx.SizerFlags( 0 ).Align( wx.ALIGN_CENTRE_VERTICAL )
-FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 2 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
+FLAGS_VCENTER_EXPAND_DEPTH_ONLY = wx.SizerFlags( 5 ).Border( wx.ALL, 2 ).Align( wx.ALIGN_CENTER_VERTICAL )
 
 DAY = 0
 WEEK = 1
@@ -268,7 +271,7 @@ NETWORK_CONTEXT_DOMAIN = 2
 NETWORK_CONTEXT_DOWNLOADER = 3
 NETWORK_CONTEXT_DOWNLOADER_PAGE = 4
 NETWORK_CONTEXT_SUBSCRIPTION = 5
-NETWORK_CONTEXT_THREAD_WATCHER_PAGE = 6
+NETWORK_CONTEXT_WATCHER_PAGE = 6
 
 network_context_type_string_lookup = {}
 
@@ -278,7 +281,7 @@ network_context_type_string_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'web domain'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'downloader'
 network_context_type_string_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'downloader page'
 network_context_type_string_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'subscription'
-network_context_type_string_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_PAGE ] = 'watcher page'
+network_context_type_string_lookup[ NETWORK_CONTEXT_WATCHER_PAGE ] = 'watcher page'
 
 network_context_type_description_lookup = {}
 
@@ -288,7 +291,7 @@ network_context_type_description_lookup[ NETWORK_CONTEXT_DOMAIN ] = 'Network tra
 network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER ] = 'Network traffic going through a downloader. This is no longer used.'
 network_context_type_description_lookup[ NETWORK_CONTEXT_DOWNLOADER_PAGE ] = 'Network traffic going through a single downloader page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual downloader pages so they give the db and other import pages time to do work.'
 network_context_type_description_lookup[ NETWORK_CONTEXT_SUBSCRIPTION ] = 'Network traffic going through a subscription query. Each query gets its own network context, named \'[subscription name]: [query text]\'.'
-network_context_type_description_lookup[ NETWORK_CONTEXT_THREAD_WATCHER_PAGE ] = 'Network traffic going through a single watcher page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual watcher pages so they give the db and other import pages time to do work.'
+network_context_type_description_lookup[ NETWORK_CONTEXT_WATCHER_PAGE ] = 'Network traffic going through a single watcher page. This is an ephemeral context--it will not be saved through a client restart. It is useful to throttle individual watcher pages so they give the db and other import pages time to do work.'
 
 PAGE_FILE_COUNT_DISPLAY_ALL = 0
 PAGE_FILE_COUNT_DISPLAY_NONE = 1

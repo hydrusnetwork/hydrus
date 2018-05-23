@@ -7,130 +7,6 @@ import HydrusSerialisable
 import os
 import wx
 
-def SetDefaultBandwidthManagerRules( bandwidth_manager ):
-    
-    import ClientNetworkingContexts
-    
-    KB = 1024
-    MB = 1024 ** 2
-    GB = 1024 ** 3
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage/bugspam. db and gui prob need a break
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 ) # don't ever hammer a domain
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # don't go nuts on a site in a single day
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    # most gallery downloaders need two rqs per file (page and file), remember
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 200 ) # after that first sample of small files, take it easy
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    # most gallery downloaders need two rqs per file (page and file), remember
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 400 ) # catch up on a big sub in little chunks every day
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE ), rules )
-    
-    #
-    
-    rules = HydrusNetworking.BandwidthRules()
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60 * 7, 80 )
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # keep this in there so subs can know better when to stop running (the files come from a subdomain, which causes a pain for bandwidth calcs)
-    
-    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
-    
-    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
-    
-def SetDefaultDomainManagerData( domain_manager ):
-    
-    network_contexts_to_custom_header_dicts = {}
-    
-    #
-    
-    import ClientNetworkingContexts
-    import ClientNetworkingDomain
-    
-    custom_header_dict = {}
-    
-    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (compatible; Hydrus Client)', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
-    
-    network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
-    
-    #
-    
-    custom_header_dict = {}
-    
-    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku have unusual User-Agent rules on certain requests. Setting this User-Agent allows the sankaku downloader to work.' )
-    
-    network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
-    
-    network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
-    
-    #
-    
-    domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
-    
-    #
-    
-    domain_manager.SetURLMatches( GetDefaultURLMatches() )
-    
-    #
-    
-    domain_manager.SetParsers( GetDefaultParsers() )
-    
-    #
-    
-    domain_manager.TryToLinkURLMatchesAndParsers()
-    
 def GetClientDefaultOptions():
     
     options = {}
@@ -149,7 +25,6 @@ def GetClientDefaultOptions():
     options[ 'default_gui_session' ] = 'last session'
     options[ 'fetch_ac_results_automatically' ] = True
     options[ 'ac_timings' ] = ( 3, 500, 250 )
-    options[ 'thread_checker_timings' ] = ( 3, 1200 )
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_cpu_max' ] = 50
@@ -231,6 +106,31 @@ def GetClientDefaultOptions():
     options[ 'rating_dialog_position' ] = ( False, None )
     
     return options
+    
+def GetDefaultCheckerOptions( name ):
+    
+    import ClientImportOptions
+    
+    if name == 'thread':
+        
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 4, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 3 * 86400 ) )
+        
+    elif name == 'slow thread':
+        
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 1, never_faster_than = 4 * 3600, never_slower_than = 7 * 86400, death_file_velocity = ( 1, 30 * 86400 ) )
+        
+    elif name == 'artist subscription':
+        
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 4, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 180 * 86400 ) )
+        
+    elif name == 'fast tag subscription':
+        
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 10, never_faster_than = 43200, never_slower_than = 30 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        
+    elif name == 'slow tag subscription':
+        
+        return ClientImportOptions.CheckerOptions( intended_files_per_check = 1, never_faster_than = 7 * 86400, never_slower_than = 180 * 86400, death_file_velocity = ( 1, 360 * 86400 ) )
+        
     
 def GetDefaultHentaiFoundryInfo():
 
@@ -354,7 +254,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         namespaces = [ '' ]
         search_value = 'username'
         
-    elif site_type == HC.SITE_TYPE_THREAD_WATCHER:
+    elif site_type == HC.SITE_TYPE_WATCHER:
         
         namespaces = [ 'filename' ]
         search_value = 'thread url'
@@ -827,4 +727,128 @@ def GetDefaultObjectsFromPNGs( dir_path, allowed_object_types ):
         
     
     return default_objects
+    
+def SetDefaultBandwidthManagerRules( bandwidth_manager ):
+    
+    import ClientNetworkingContexts
+    
+    KB = 1024
+    MB = 1024 ** 2
+    GB = 1024 ** 3
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage/bugspam. db and gui prob need a break
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 1 ) # don't ever hammer a domain
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # don't go nuts on a site in a single day
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # don't sync a giant db in one day
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    # most gallery downloaders need two rqs per file (page and file), remember
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 200 ) # after that first sample of small files, take it easy
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    # most gallery downloaders need two rqs per file (page and file), remember
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 86400, 400 ) # catch up on a big sub in little chunks every day
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 256 * MB ) # catch up on a big sub in little chunks every day
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 300, 100 ) # after that first sample of small files, take it easy
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 300, 128 * MB ) # after that first sample of big files, take it easy
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_WATCHER_PAGE ), rules )
+    
+    #
+    
+    rules = HydrusNetworking.BandwidthRules()
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60 * 7, 80 )
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 4, 1 )
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 2 * GB ) # keep this in there so subs can know better when to stop running (the files come from a subdomain, which causes a pain for bandwidth calcs)
+    
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 64 * MB ) # added as a compromise to try to reduce hydrus sankaku bandwidth usage until their new API and subscription model comes in
+    
+    bandwidth_manager.SetRules( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' ), rules )
+    
+def SetDefaultDomainManagerData( domain_manager ):
+    
+    network_contexts_to_custom_header_dicts = {}
+    
+    #
+    
+    import ClientNetworkingContexts
+    import ClientNetworkingDomain
+    
+    custom_header_dict = {}
+    
+    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (compatible; Hydrus Client)', ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
+    
+    network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
+    
+    #
+    
+    custom_header_dict = {}
+    
+    custom_header_dict[ 'User-Agent' ] = ( 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0', ClientNetworkingDomain.VALID_UNKNOWN, 'Sankaku have unusual User-Agent rules on certain requests. Setting this User-Agent allows the sankaku downloader to work.' )
+    
+    network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
+    
+    network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
+    
+    #
+    
+    domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
+    
+    #
+    
+    domain_manager.SetURLMatches( GetDefaultURLMatches() )
+    
+    #
+    
+    domain_manager.SetParsers( GetDefaultParsers() )
+    
+    #
+    
+    domain_manager.TryToLinkURLMatchesAndParsers()
     

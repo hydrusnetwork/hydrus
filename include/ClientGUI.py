@@ -94,8 +94,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._focus_holder.SetSize( ( 0, 0 ) )
         
         self._closed_pages = []
-        self._closed_page_keys = set()
-        self._deleted_page_keys = set()
+        
         self._lock = threading.Lock()
         
         self._delayed_dialog_lock = threading.Lock()
@@ -139,6 +138,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self._controller.sub( self, 'RenamePage', 'rename_page' )
         self._controller.sub( self, 'SetDBLockedStatus', 'db_locked_status' )
         self._controller.sub( self, 'SetMediaFocus', 'set_media_focus' )
+        self._controller.sub( self, 'SetStatusBarDirty', 'set_status_bar_dirty' )
         self._controller.sub( self, 'SetTitle', 'main_gui_title' )
         self._controller.sub( self, 'SyncToTagArchive', 'sync_to_tag_archive' )
         
@@ -960,14 +960,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _DestroyPages( self, pages ):
         
-        with self._lock:
-            
-            for page in pages:
-                
-                self._deleted_page_keys.add( page.GetPageKey() )
-                
-            
-        
         for page in pages:
             
             page.CleanBeforeDestroy()
@@ -1183,10 +1175,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         def undo():
             
-            with self._lock:
-                
-                have_closed_pages = len( self._closed_pages ) > 0
-                
+            have_closed_pages = len( self._closed_pages ) > 0
             
             undo_manager = self._controller.GetManager( 'undo' )
             
@@ -1220,14 +1209,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     args = []
                     
-                    with self._lock:
+                    for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
                         
-                        for ( i, ( time_closed, page ) ) in enumerate( self._closed_pages ):
-                            
-                            name = page.GetDisplayName()
-                            
-                            args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
-                            
+                        name = page.GetDisplayName()
+                        
+                        args.append( ( i, name + ' - ' + page.GetPrettyStatus() ) )
                         
                     
                     args.reverse() # so that recently closed are at the top
@@ -1386,7 +1372,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             download_menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'thread watcher', 'Open a new tab to watch a thread.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'watcher', 'Open a new tab to watch a thread or other single changing location.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
             
             gallery_menu = wx.Menu()
@@ -2299,7 +2285,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
         self._controller.pub( 'wake_daemons' )
-        self._controller.gui.SetStatusBarDirty()
+        self.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
         self._controller.pub( 'notify_new_colourset' )
         self._controller.pub( 'notify_new_favourite_tags' )
@@ -2876,7 +2862,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 password = dlg.GetValue()
                 
-                if password == '': password = None
+                if password == '':
+                    
+                    password = None
+                    
                 
                 self._controller.Write( 'set_password', password )
                 
@@ -3128,7 +3117,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HG.force_idle_mode = not HG.force_idle_mode
             
             self._controller.pub( 'wake_daemons' )
-            self._controller.gui.SetStatusBarDirty()
+            self.SetStatusBarDirty()
             
         elif name == 'no_page_limit_mode':
             
@@ -3148,12 +3137,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             closed_page_index = 0
             
         
-        with self._lock:
-            
-            ( time_closed, page ) = self._closed_pages.pop( closed_page_index )
-            
-            self._closed_page_keys.discard( page.GetPageKey() )
-            
+        ( time_closed, page ) = self._closed_pages.pop( closed_page_index )
+        
+        self._controller.UnclosePageKeys( page.GetPageKeys() )
         
         self._controller.pub( 'notify_page_unclosed', page )
         
@@ -3491,20 +3477,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def CurrentlyBusy( self ):
-        
-        return False
-        
-    
     def DeleteAllClosedPages( self ):
         
-        with self._lock:
-            
-            deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
-            
-            self._closed_pages = []
-            self._closed_page_keys = set()
-            
+        deletee_pages = [ page for ( time_closed, page ) in self._closed_pages ]
+        
+        self._closed_pages = []
         
         if len( deletee_pages ) > 0:
             
@@ -3524,32 +3501,27 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         timeout = 60 * 60
         
-        with self._lock:
+        deletee_pages = []
+        
+        old_closed_pages = self._closed_pages
+        
+        self._closed_pages = []
+        
+        for ( time_closed, page ) in old_closed_pages:
             
-            deletee_pages = []
-            
-            old_closed_pages = self._closed_pages
-            
-            self._closed_pages = []
-            self._closed_page_keys = set()
-            
-            for ( time_closed, page ) in old_closed_pages:
+            if time_closed + timeout < now:
                 
-                if time_closed + timeout < now:
-                    
-                    deletee_pages.append( page )
-                    
-                else:
-                    
-                    self._closed_pages.append( ( time_closed, page ) )
-                    self._closed_page_keys.add( page.GetPageKey() )
-                    
+                deletee_pages.append( page )
+                
+            else:
+                
+                self._closed_pages.append( ( time_closed, page ) )
                 
             
-            if len( old_closed_pages ) != len( self._closed_pages ):
-                
-                self._controller.pub( 'notify_new_undo' )
-                
+        
+        if len( old_closed_pages ) != len( self._closed_pages ):
+            
+            self._controller.pub( 'notify_new_undo' )
             
         
         self._DestroyPages( deletee_pages )
@@ -4000,7 +3972,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 else:
                     
-                    self._notebook.NewPageImportThreadWatcher( url, on_deepest_notebook = True )
+                    self._notebook.NewPageImportWatcher( url, on_deepest_notebook = True )
                     
                 
             
@@ -4046,11 +4018,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         close_time = HydrusData.GetNow()
         
-        with self._lock:
-            
-            self._closed_pages.append( ( close_time, page ) )
-            self._closed_page_keys.add( page.GetPageKey() )
-            
+        self._closed_pages.append( ( close_time, page ) )
+        
+        self._controller.ClosePageKeys( page.GetPageKeys() )
         
         if self._notebook.GetNumPages() == 0:
             
@@ -4137,24 +4107,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater.Update()
         
     
-    def PageCompletelyDestroyed( self, page_key ):
-        
-        with self._lock:
-            
-            return page_key in self._deleted_page_keys
-            
-        
-    
-    def PageClosedButNotDestroyed( self, page_key ):
-        
-        with self._lock:
-            
-            return page_key in self._closed_page_keys
-            
-        
-        return False
-        
-    
     def PresentImportedFilesToPage( self, hashes, page_name ):
         
         tlp = ClientGUICommon.GetTLP( self )
@@ -4209,7 +4161,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif action == 'new_watcher_downloader_page':
                 
-                self._notebook.NewPageImportThreadWatcher( on_deepest_notebook = True )
+                self._notebook.NewPageImportWatcher( on_deepest_notebook = True )
                 
             elif action == 'close_page':
                 
@@ -4391,11 +4343,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def SetStatusBarDirty( self ):
         
-        if not self:
-            
-            return
-            
-        
         self._statusbar_thread_updater.Update()
         
     
@@ -4509,7 +4456,7 @@ class FrameSplash( wx.Frame ):
         
         self._controller = controller
         
-        style = wx.FRAME_NO_TASKBAR
+        style = wx.CAPTION
         
         wx.Frame.__init__( self, None, style = style, title = 'hydrus client' )
         
@@ -4519,7 +4466,7 @@ class FrameSplash( wx.Frame ):
         
         self._bmp = wx.Bitmap( self.WIDTH, self.HEIGHT, 24 )
         
-        self.SetSize( ( self.WIDTH, self.HEIGHT ) )
+        self.SetClientSize( ( self.WIDTH, self.HEIGHT ) )
         
         self.Center()
         

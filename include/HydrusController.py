@@ -45,7 +45,8 @@ class HydrusController( object ):
         self._caches = {}
         self._managers = {}
         
-        self._job_scheduler = None
+        self._fast_job_scheduler = None
+        self._slow_job_scheduler = None
         
         self._call_to_threads = []
         self._long_running_call_to_threads = []
@@ -114,6 +115,18 @@ class HydrusController( object ):
             call_to_thread.start()
             
             return call_to_thread
+            
+        
+    
+    def _GetAppropriateJobScheduler( self, time_delta ):
+        
+        if time_delta < 1.0:
+            
+            return self._fast_job_scheduler
+            
+        else:
+            
+            return self._slow_job_scheduler
             
         
     
@@ -209,22 +222,26 @@ class HydrusController( object ):
     
     def CallLater( self, initial_delay, func, *args, **kwargs ):
         
+        job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
+        
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.SchedulableJob( self, self._job_scheduler, initial_delay, call )
+        job = HydrusThreading.SchedulableJob( self, job_scheduler, initial_delay, call )
         
-        self._job_scheduler.AddJob( job )
+        job_scheduler.AddJob( job )
         
         return job
         
     
     def CallRepeating( self, initial_delay, period, func, *args, **kwargs ):
         
+        job_scheduler = self._GetAppropriateJobScheduler( period )
+        
         call = HydrusData.Call( func, *args, **kwargs )
         
-        job = HydrusThreading.RepeatingJob( self, self._job_scheduler, initial_delay, period, call )
+        job = HydrusThreading.RepeatingJob( self, job_scheduler, initial_delay, period, call )
         
-        self._job_scheduler.AddJob( job )
+        job_scheduler.AddJob( job )
         
         return job
         
@@ -309,8 +326,14 @@ class HydrusController( object ):
     
     def DebugShowScheduledJobs( self ):
         
-        summary = self._job_scheduler.GetPrettyJobSummary()
+        summary = self._fast_job_scheduler.GetPrettyJobSummary()
         
+        HydrusData.ShowText( 'fast scheduler:' )
+        HydrusData.ShowText( summary )
+        
+        summary = self._slow_job_scheduler.GetPrettyJobSummary()
+        
+        HydrusData.ShowText( 'slow scheduler:' )
         HydrusData.ShowText( summary )
         
     
@@ -358,9 +381,11 @@ class HydrusController( object ):
     
     def InitModel( self ):
         
-        self._job_scheduler = HydrusThreading.JobScheduler( self )
+        self._fast_job_scheduler = HydrusThreading.JobScheduler( self )
+        self._slow_job_scheduler = HydrusThreading.JobScheduler( self )
         
-        self._job_scheduler.start()
+        self._fast_job_scheduler.start()
+        self._slow_job_scheduler.start()
         
         self.db = self._InitDB()
         
@@ -398,7 +423,8 @@ class HydrusController( object ):
         
         self.pub( 'memory_maintenance_pulse' )
         
-        self._job_scheduler.ClearOutDead()
+        self._fast_job_scheduler.ClearOutDead()
+        self._slow_job_scheduler.ClearOutDead()
         
     
     def MaintainMemorySlow( self ):
@@ -469,11 +495,18 @@ class HydrusController( object ):
                 
             
         
-        if self._job_scheduler is not None:
+        if self._fast_job_scheduler is not None:
             
-            self._job_scheduler.shutdown()
+            self._fast_job_scheduler.shutdown()
             
-            self._job_scheduler = None
+            self._fast_job_scheduler = None
+            
+        
+        if self._slow_job_scheduler is not None:
+            
+            self._slow_job_scheduler.shutdown()
+            
+            self._slow_job_scheduler = None
             
         
     

@@ -100,13 +100,13 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._dropdown_hidden = True
             
-            self._list_height = 250
+            self._list_height_num_chars = 19
             
         else:
             
             self._dropdown_window = wx.Panel( self )
             
-            self._list_height = 125
+            self._list_height_num_chars = 12
             
         
         self._dropdown_notebook = wx.Notebook( self._dropdown_window )
@@ -192,6 +192,13 @@ class AutoCompleteDropdown( wx.Panel ):
             
             self._refresh_list_job.Cancel()
             
+        
+    
+    def _ClearInput( self ):
+        
+        self._text_ctrl.SetValue( '' )
+        
+        self._ScheduleListRefresh( 0.0 )
         
     
     def _DropdownHideShow( self ):
@@ -895,12 +902,9 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _BroadcastChoices( self, predicates ):
         
-        if self._text_ctrl.GetValue() != '':
-            
-            self._text_ctrl.SetValue( '' )
-            
-        
         HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+        
+        self._ClearInput()
         
     
     def _BroadcastCurrentText( self ):
@@ -943,14 +947,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
     
     def _InitSearchResultsList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsACRead( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
     
     def _ParseSearchText( self ):
@@ -1300,17 +1304,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _BroadcastChoices( self, predicates ):
         
-        if self._text_ctrl.GetValue() != '':
-            
-            self._text_ctrl.SetValue( '' )
-            
-        
         tags = { predicate.GetValue() for predicate in predicates }
         
         if len( tags ) > 0:
             
             self._chosen_tag_callable( tags )
             
+        
+        self._ClearInput()
         
     
     def _ParseSearchText( self ):
@@ -1428,14 +1429,14 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        favs_list = ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
         return favs_list
         
     
     def _InitSearchResultsList( self ):
         
-        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, min_height = self._list_height )
+        return ClientGUIListBoxes.ListBoxTagsACWrite( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, height_num_chars = self._list_height_num_chars )
         
     
     def _PutAtTopOfMatches( self, matches, predicate ):

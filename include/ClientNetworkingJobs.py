@@ -427,19 +427,30 @@ class NetworkJob( object ):
                     
                 else:
                     
-                    waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
-                    
-                    if waiting_duration < 2:
+                    if self._bandwidth_manual_override_delayed_timestamp is not None and not HydrusData.TimeHasPassed( self._bandwidth_manual_override_delayed_timestamp ):
                         
-                        self._status_text = u'bandwidth free imminently\u2026'
+                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( self._bandwidth_manual_override_delayed_timestamp )
+                        
+                        self._status_text = u'overriding bandwidth ' + waiting_str + u'\u2026'
+                        
+                        waiting_duration = HydrusData.GetNow() - self._bandwidth_manual_override_delayed_timestamp
                         
                     else:
                         
-                        pending_timestamp = HydrusData.GetNow() + waiting_duration
+                        waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
                         
-                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( pending_timestamp )
-                        
-                        self._status_text = u'bandwidth free in ' + waiting_str + u'\u2026'
+                        if waiting_duration < 2:
+                            
+                            self._status_text = u'bandwidth free imminently\u2026'
+                            
+                        else:
+                            
+                            pending_timestamp = HydrusData.GetNow() + waiting_duration
+                            
+                            waiting_str = HydrusData.ConvertTimestampToPrettyPending( pending_timestamp )
+                            
+                            self._status_text = u'bandwidth free in ' + waiting_str + u'\u2026'
+                            
                         
                     
                     if waiting_duration > 1200:
@@ -1067,9 +1078,9 @@ class NetworkJobHydrus( NetworkJob ):
     
 class NetworkJobWatcherPage( NetworkJob ):
     
-    def __init__( self, thread_key, method, url, body = None, referral_url = None, temp_path = None ):
+    def __init__( self, watcher_key, method, url, body = None, referral_url = None, temp_path = None ):
         
-        self._thread_key = thread_key
+        self._watcher_key = watcher_key
         
         NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
         
@@ -1078,7 +1089,7 @@ class NetworkJobWatcherPage( NetworkJob ):
         
         network_contexts = NetworkJob._GenerateNetworkContexts( self )
         
-        network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE, self._thread_key ) )
+        network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_WATCHER_PAGE, self._watcher_key ) )
         
         return network_contexts
         

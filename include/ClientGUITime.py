@@ -19,19 +19,127 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', wx.Colour( 0, 0, 255 ) )
         
+        import ClientDefaults
+        
+        defaults_panel = ClientGUICommon.StaticBox( self, 'reasonable defaults' )
+        
+        defaults_1 = ClientGUICommon.BetterButton( defaults_panel, 'thread', self.SetValue, ClientDefaults.GetDefaultCheckerOptions( 'thread' ) )
+        defaults_2 = ClientGUICommon.BetterButton( defaults_panel, 'slow thread', self.SetValue, ClientDefaults.GetDefaultCheckerOptions( 'slow thread' ) )
+        defaults_3 = ClientGUICommon.BetterButton( defaults_panel, 'faster tag subscription', self.SetValue, ClientDefaults.GetDefaultCheckerOptions( 'fast tag subscription' ) )
+        defaults_4 = ClientGUICommon.BetterButton( defaults_panel, 'medium tag/artist subscription', self.SetValue, ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' ) )
+        defaults_5 = ClientGUICommon.BetterButton( defaults_panel, 'slower tag subscription', self.SetValue, ClientDefaults.GetDefaultCheckerOptions( 'slow tag subscription' ) )
+        
+        #
+        
         # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
         # or indeed this could just take the seed cache and last check of the caller, if there is one
         # this would be more useful to the user, to know 'right, on ok, it'll refresh in 30 mins'
+        # this is actually more complicated--it also needs last check time to calc a fresh file velocity based on new death_file_velocity
         
-        self._intended_files_per_check = wx.SpinCtrl( self, min = 1, max = 1000 )
-        
-        self._never_faster_than = TimeDeltaCtrl( self, min = 30, days = True, hours = True, minutes = True, seconds = True )
-        
-        self._never_slower_than = TimeDeltaCtrl( self, min = 600, days = True, hours = True, minutes = True )
+        #
         
         self._death_file_velocity = VelocityCtrl( self, min_time_delta = 60, days = True, hours = True, minutes = True, per_phrase = 'in', unit = 'files' )
         
+        self._flat_check_period_checkbox = wx.CheckBox( self )
+        
         #
+        
+        self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
+        
+        self._intended_files_per_check = wx.SpinCtrl( self._reactive_check_panel, min = 1, max = 1000 )
+        
+        self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = 30, days = True, hours = True, minutes = True, seconds = True )
+        
+        self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = 600, days = True, hours = True, minutes = True )
+        
+        #
+        
+        self._static_check_panel = ClientGUICommon.StaticBox( self, 'static checking' )
+        
+        self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = 180, days = True, hours = True, minutes = True )
+        
+        #
+        
+        self.SetValue( checker_options )
+        
+        #
+        
+        defaults_panel.Add( defaults_1, CC.FLAGS_EXPAND_PERPENDICULAR )
+        defaults_panel.Add( defaults_2, CC.FLAGS_EXPAND_PERPENDICULAR )
+        defaults_panel.Add( defaults_3, CC.FLAGS_EXPAND_PERPENDICULAR )
+        defaults_panel.Add( defaults_4, CC.FLAGS_EXPAND_PERPENDICULAR )
+        defaults_panel.Add( defaults_5, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'intended new files per check: ', self._intended_files_per_check ) )
+        rows.append( ( 'never check faster than once per: ', self._never_faster_than ) )
+        rows.append( ( 'never check slower than once per: ', self._never_slower_than ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._reactive_check_panel, rows )
+        
+        self._reactive_check_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'check period: ', self._flat_check_period ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._static_check_panel, rows )
+        
+        self._static_check_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'stop checking if new files found falls below: ', self._death_file_velocity ) )
+        rows.append( ( 'just check at a static, regular interval: ', self._flat_check_period_checkbox ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( defaults_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( self._reactive_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._static_check_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._flat_check_period_checkbox.Bind( wx.EVT_CHECKBOX, self.EventFlatPeriodCheck )
+        
+    
+    def _UpdateEnabledControls( self ):
+        
+        if self._flat_check_period_checkbox.GetValue() == True:
+            
+            self._reactive_check_panel.Hide()
+            self._static_check_panel.Show()
+            
+        else:
+            
+            self._reactive_check_panel.Show()
+            self._static_check_panel.Hide()
+            
+        
+        self.Layout()
+        
+        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
+        
+    
+    def EventFlatPeriodCheck( self, event ):
+        
+        self._UpdateEnabledControls()
+        
+    
+    def SetValue( self, checker_options ):
         
         ( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity ) = checker_options.ToTuple()
         
@@ -40,44 +148,50 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._never_slower_than.SetValue( never_slower_than )
         self._death_file_velocity.SetValue( death_file_velocity )
         
-        #
+        self._flat_check_period.SetValue( never_faster_than )
         
-        rows = []
+        self._flat_check_period_checkbox.SetValue( never_faster_than == never_slower_than )
         
-        rows.append( ( 'intended new files per check: ', self._intended_files_per_check ) )
-        rows.append( ( 'stop checking if new files found falls below: ', self._death_file_velocity ) )
-        rows.append( ( 'never check faster than once per: ', self._never_faster_than ) )
-        rows.append( ( 'never check slower than once per: ', self._never_slower_than ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self, rows )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( help_hbox, CC.FLAGS_BUTTON_SIZER )
-        vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self.SetSizer( vbox )
+        self._UpdateEnabledControls()
         
     
     def _ShowHelp( self ):
         
-        help = 'PROTIP: Do not change anything here unless you understand what it means!'
+        help = 'The intention of this object is to govern how frequently the watcher or subscription checks for new files--and when it should stop completely.'
         help += os.linesep * 2
-        help += 'After its initialisation check, the checker times future checks so that it will probably find the same specified number of new files each time. When files are being posted frequently, it will check more often. When things are slow, it will slow down as well.'
+        help += 'PROTIP: Do not change anything here unless you understand what it means!'
         help += os.linesep * 2
-        help += 'For instance, if it were set to try for 5 new files with every check, and at the last check it knew that the last 24 hours had produced 10 new files, it would check again 12 hours later. When that check was done and any new files found, it would then recalculate and repeat the process.'
+        help += 'In general, checkers can and should be set up to check faster or slower based on how fast new files are coming in. This is polite to the server you are talking to and saves you CPU and bandwidth. The rate of new files is called the \'file velocity\' and is based on how many files appeared in a certain period before the _most recent check time_.'
         help += os.linesep * 2
-        help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have been a rush of new files, hit the \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
+        help += 'Once the first check is done and an initial file velocity is established, the time to the next check will be based on what you set for the \'intended files per check\'. If the current file velocity is 10 files per 24 hours, and you set the intended files per check to 5 files, the checker will set the next check time to be 12 hours after the previous check time.'
+        help += os.linesep * 2
+        help += 'After a check is completed, the new file velocity and next check time is calculated, so when files are being posted frequently, it will check more often. When things are slow, it will slow down as well. There are also minimum and maximum check periods to smooth out the bumps.'
+        help += os.linesep * 2
+        help += 'But if you would rather just check at a fixed rate, check the checkbox and you will get a simpler \'static checking\' panel.'
+        help += os.linesep * 2
+        help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have since been a rush of new files, hit the watcher or subscription\'s \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
+        help += os.linesep * 2
+        help += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
         
         wx.MessageBox( help )
         
     
     def GetValue( self ):
         
-        intended_files_per_check = self._intended_files_per_check.GetValue()
-        never_faster_than = self._never_faster_than.GetValue()
-        never_slower_than = self._never_slower_than.GetValue()
         death_file_velocity = self._death_file_velocity.GetValue()
+        
+        intended_files_per_check = self._intended_files_per_check.GetValue()
+        
+        if self._flat_check_period_checkbox.GetValue() == True:
+            
+            never_faster_than = self._flat_check_period.GetValue()
+            never_slower_than = never_faster_than
+            
+        else:
+            
+            never_faster_than = self._never_faster_than.GetValue()
+            never_slower_than = self._never_slower_than.GetValue()
+            
         
         return ClientImportOptions.CheckerOptions( intended_files_per_check, never_faster_than, never_slower_than, death_file_velocity )
         

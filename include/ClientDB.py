@@ -10302,6 +10302,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 307:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'tumblr file page', 'artstation file page' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10933,10 +10963,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def publish_status_update( self ):
         
-        if self._controller.IsBooted() and self._controller.gui:
-            
-            self._controller.gui.SetStatusBarDirty()
-            
+        self._controller.pub( 'set_status_bar_dirty' )
         
     
     def GetInitialMessages( self ):

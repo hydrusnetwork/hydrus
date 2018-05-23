@@ -28,6 +28,7 @@ import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientImportOptions
+import ClientImportWatchers
 import ClientMedia
 import ClientParsing
 import ClientPaths
@@ -58,7 +59,7 @@ MANAGEMENT_TYPE_DUMPER = 0
 MANAGEMENT_TYPE_IMPORT_GALLERY = 1
 MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER = 2
 MANAGEMENT_TYPE_IMPORT_HDD = 3
-MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER = 4
+MANAGEMENT_TYPE_IMPORT_WATCHER = 4
 MANAGEMENT_TYPE_PETITIONS = 5
 MANAGEMENT_TYPE_QUERY = 6
 MANAGEMENT_TYPE_IMPORT_URLS = 7
@@ -128,30 +129,30 @@ def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_ta
     
     return management_controller
     
-def CreateManagementControllerImportThreadWatcher( thread_url = None ):
-    
-    if thread_url is None:
-        
-        thread_url = ''
-        
-    
-    management_controller = CreateManagementController( 'thread watcher', MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER )
-    
-    thread_watcher_import = ClientImporting.ThreadWatcherImport()
-    
-    thread_watcher_import.SetThreadURL( thread_url )
-    
-    management_controller.SetVariable( 'thread_watcher_import', thread_watcher_import )
-    
-    return management_controller
-    
-def CreateManagementControllerImportMultipleWatcher( thread_url = None ):
+def CreateManagementControllerImportMultipleWatcher( url = None ):
     
     management_controller = CreateManagementController( 'multiple watcher', MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
     
-    multiple_watcher_import = ClientImporting.MultipleWatcherImport( thread_url = thread_url )
+    multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
     management_controller.SetVariable( 'multiple_watcher_import', multiple_watcher_import )
+    
+    return management_controller
+    
+def CreateManagementControllerImportWatcher( url = None ):
+    
+    if url is None:
+        
+        url = ''
+        
+    
+    management_controller = CreateManagementController( 'watcher', MANAGEMENT_TYPE_IMPORT_WATCHER )
+    
+    watcher_import = ClientImportWatchers.WatcherImport()
+    
+    watcher_import.SetURL( url )
+    
+    management_controller.SetVariable( 'watcher_import', watcher_import )
     
     return management_controller
     
@@ -559,7 +560,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self, page_name = 'page' ):
         
@@ -695,6 +696,22 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if 'thread_watcher_import' in serialisable_serialisables:
+                
+                serialisable_serialisables[ 'watcher_import' ] = serialisable_serialisables[ 'thread_watcher_import' ]
+                
+                del serialisable_serialisables[ 'thread_watcher_import' ]
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def GetKey( self, name ):
         
@@ -739,11 +756,11 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 return multiple_watcher_import.GetValueRange()
                 
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER:
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_WATCHER:
                 
-                thread_watcher_import = self._serialisables[ 'thread_watcher_import' ]
+                watcher_import = self._serialisables[ 'watcher_import' ]
                 
-                return thread_watcher_import.GetValueRange()
+                return watcher_import.GetValueRange()
                 
             elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
                 
@@ -777,13 +794,13 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return name in self._simples or name in self._serialisables
         
     
-    def IsDeadThreadWatcher( self ):
+    def IsDeadWatcher( self ):
         
-        if self._management_type == MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER:
+        if self._management_type == MANAGEMENT_TYPE_IMPORT_WATCHER:
             
-            thread_watcher_import = self.GetVariable( 'thread_watcher_import' )
+            watcher_import = self.GetVariable( 'watcher_import' )
             
-            return thread_watcher_import.IsDead()
+            return watcher_import.IsDead()
             
         
         return False
@@ -791,7 +808,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def IsImporter( self ):
         
-        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_WATCHER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
         
     
     def SetKey( self, name, key ):
@@ -1469,14 +1486,14 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         #
         
-        button_sizer = wx.BoxSizer( wx.HORIZONTAL )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
         
-        button_sizer.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
-        button_sizer.Add( self._gallery_cancel_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._gallery_cancel_button, CC.FLAGS_VCENTER )
         
-        self._gallery_panel.Add( self._gallery_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_panel.Add( button_sizer, CC.FLAGS_LONE_BUTTON )
         
         #
         
@@ -1496,14 +1513,18 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         #
         
-        self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
+        
+        self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
         
         self._gallery_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._pending_queries_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._pending_queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1826,6 +1847,354 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImporterHDD
 
+class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
+    
+    def __init__( self, parent, page, controller, management_controller ):
+        
+        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        
+        self._last_watcher_keys = set()
+        self._next_update_time = 0
+        self._highlit_watcher = None
+        
+        self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
+        
+        #
+        
+        self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
+        
+        self._watchers_status_st_top = ClientGUICommon.BetterStaticText( self._watchers_panel )
+        self._watchers_status_st_bottom = ClientGUICommon.BetterStaticText( self._watchers_panel )
+        
+        self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
+        
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 6, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        
+        self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
+        
+        self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
+        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightWatcher, enabled_check_func = self._CanHighlight )
+        self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
+        
+        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
+        
+        self._watchers_listctrl.Sort( 0 )
+        
+        # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
+        
+        #
+        
+        self._watchers_panel.Add( self._watchers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._watchers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._collect_by.Hide()
+        
+        vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._UpdateStatus()
+        
+        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
+        
+    
+    def _AddURLs( self, urls ):
+        
+        for url in urls:
+            
+            self._multiple_watcher_import.AddURL( url )
+            
+        
+    
+    def _CanClearHighlight( self ):
+        
+        return self._highlit_watcher is not None
+        
+    
+    def _CanHighlight( self ):
+        
+        num_selected = len( self._watchers_listctrl.GetData( only_selected = True ) )
+        
+        return num_selected == 1
+        
+    
+    def _ClearExistingHighlight( self ):
+        
+        if self._highlit_watcher is not None:
+            
+            publish_to_page = False
+            
+            self._highlit_watcher.Repage( self._page_key, publish_to_page )
+            
+            self._highlit_watcher = None
+            
+            self._watchers_listctrl_panel.UpdateButtons()
+            
+        
+    
+    def _ClearExistingHighlightAndPanel( self ):
+        
+        self._ClearExistingHighlight()
+        
+        media_results = []
+        
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        
+        self._page.SwapMediaPanel( panel )
+        
+        self._watchers_listctrl.UpdateDatas()
+        
+    
+    def _ConvertDataToListCtrlTuples( self, watcher ):
+        
+        subject = watcher.GetSubject()
+        
+        if watcher == self._highlit_watcher:
+            
+            subject = '* ' + subject
+            
+        
+        status = watcher.GetSimpleStatus()
+        
+        ( value, range ) = watcher.GetValueRange()
+        
+        progress = ( range, value )
+        
+        pretty_subject = subject
+        pretty_status = status
+        
+        if value == range:
+            
+            if value == 0:
+                
+                pretty_progress = 'no files'
+                
+            else:
+                
+                pretty_progress = HydrusData.ConvertIntToPrettyString( value )
+                
+            
+        else:
+            
+            pretty_progress = HydrusData.ConvertValueRangeToPrettyString( value, range )
+            
+        
+        display_tuple = ( pretty_subject, pretty_status, pretty_progress )
+        sort_tuple = ( subject, status, progress )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _HighlightWatcher( self ):
+        
+        selected = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            new_highlight = selected[0]
+            
+            if new_highlight == self._highlit_watcher:
+                
+                self._ClearExistingHighlightAndPanel()
+                
+            else:
+                
+                self._ClearExistingHighlight()
+                
+                self._highlit_watcher = selected[0]
+                
+                hashes = self._highlit_watcher.GetPresentedHashes()
+                
+                media_results = HG.client_controller.Read( 'media_results', hashes )
+                
+                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+                
+                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+                
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+                
+                self._page.SwapMediaPanel( panel )
+                
+                publish_to_page = True
+                
+                self._highlit_watcher.Repage( self._page_key, publish_to_page )
+                
+                self._watchers_listctrl_panel.UpdateButtons()
+                
+                self._watchers_listctrl.UpdateDatas()
+                
+            
+        
+    
+    def _RemoveWatchers( self ):
+        
+        removees = list( self._watchers_listctrl.GetData( only_selected = True ) )
+        
+        if len( removees ) == 0:
+            
+            return
+            
+        
+        num_working = 0
+        num_alive = 0
+        
+        for watcher in removees:
+            
+            if watcher.CurrentlyWorking():
+                
+                num_working += 1
+                
+            
+            if watcher.CurrentlyAlive():
+                
+                num_alive += 1
+                
+            
+        
+        message = 'Remove the ' + HydrusData.ConvertIntToPrettyString( len( removees ) ) + ' selected watchers?'
+        
+        if num_working > 0:
+            
+            message += os.linesep * 2
+            message += HydrusData.ConvertIntToPrettyString( num_working ) + ' are still working.'
+            
+        
+        if num_alive > 0:
+            
+            message += os.linesep * 2
+            message += HydrusData.ConvertIntToPrettyString( num_alive ) + ' are not yet DEAD.'
+            
+        
+        if self._highlit_watcher is not None and self._highlit_watcher in removees:
+            
+            message += os.linesep * 2
+            message += 'The currently highlit watcher will be removed, and the media panel cleared.'
+            
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                highlight_was_included = False
+                
+                for watcher in removees:
+                    
+                    if self._highlit_watcher is not None and watcher == self._highlit_watcher:
+                        
+                        highlight_was_included = True
+                        
+                    
+                    self._multiple_watcher_import.RemoveWatcher( watcher.GetWatcherKey() )
+                    
+                
+                if highlight_was_included:
+                    
+                    self._ClearExistingHighlightAndPanel()
+                    
+                
+            
+        
+    
+    def _UpdateStatus( self ):
+        
+        if HydrusData.TimeHasPassed( self._next_update_time ):
+            
+            self._next_update_time = HydrusData.GetNow() + 1
+            
+            #
+            
+            watcher_keys = self._multiple_watcher_import.GetWatcherKeys()
+            
+            #
+            
+            if len( watcher_keys ) == 0:
+                
+                text_top = 'waiting for new watchers'
+                text_bottom = ''
+                
+            else:
+                
+                ( status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
+                
+                text_top = HydrusData.ConvertIntToPrettyString( len( watcher_keys ) ) + ' watchers - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_bottom = status
+                
+            
+            self._watchers_status_st_top.SetLabelText( text_top )
+            self._watchers_status_st_bottom.SetLabelText( text_bottom )
+            
+            #
+            
+            if self._last_watcher_keys == watcher_keys:
+                
+                sort_data_has_changed = self._watchers_listctrl.UpdateDatas()
+                
+                if sort_data_has_changed:
+                    
+                    self._watchers_listctrl.Sort()
+                    
+                
+            else:
+                
+                self._last_watcher_keys = watcher_keys
+                
+                watchers = self._multiple_watcher_import.GetWatchers()
+                
+                self._watchers_listctrl.SetData( watchers )
+                
+            
+        
+    
+    def CheckAbleToClose( self ):
+        
+        num_working = 0
+        
+        for watcher in self._multiple_watcher_import.GetWatchers():
+            
+            if watcher.CurrentlyWorking():
+                
+                num_working += 1
+                
+            
+        
+        if num_working > 0:
+            
+            raise HydrusExceptions.VetoException( HydrusData.ConvertIntToPrettyString( num_working ) + ' watchers are still importing.' )
+            
+        
+    
+    def PendURL( self, page_key, url ):
+        
+        if page_key == self._page_key:
+            
+            self._multiple_watcher_import.AddURL( url )
+            
+        
+    
+    def SetSearchFocus( self ):
+        
+        wx.CallAfter( self._watcher_url_input.SetFocus )
+        
+    
+    def Start( self ):
+        
+        self._multiple_watcher_import.Start( self._page_key )
+        
+    
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER ] = ManagementPanelImporterMultipleWatcher
+
 class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -1889,10 +2258,14 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         #
         
-        self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._pause_files_button, CC.FLAGS_VCENTER )
+        
+        self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._pause_files_button, CC.FLAGS_LONE_BUTTON )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -1910,12 +2283,16 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         formulae_hbox.Add( self._formulae, CC.FLAGS_EXPAND_BOTH_WAYS )
         formulae_hbox.Add( self._formula_cog, CC.FLAGS_VCENTER )
         
-        self._pending_jobs_panel.Add( self._parser_status, CC.FLAGS_EXPAND_PERPENDICULAR )
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._parser_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._pause_queue_button, CC.FLAGS_VCENTER )
+        
+        self._pending_jobs_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_jobs_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_jobs_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         self._pending_jobs_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pending_jobs_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_jobs_panel.Add( self._pause_queue_button, CC.FLAGS_LONE_BUTTON )
         
         #
         
@@ -2256,20 +2633,20 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER ] = ManagementPanelImporterSimpleDownloader
 
-class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
+class ManagementPanelImporterWatcher( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
-        self._thread_watcher_panel = ClientGUICommon.StaticBox( self, 'thread watcher' )
+        self._watcher_panel = ClientGUICommon.StaticBox( self, 'watcher' )
         
-        self._thread_subject = ClientGUICommon.BetterStaticText( self._thread_watcher_panel )
+        self._watcher_subject = ClientGUICommon.BetterStaticText( self._watcher_panel )
         
-        self._thread_input = wx.TextCtrl( self._thread_watcher_panel, style = wx.TE_PROCESS_ENTER )
-        self._thread_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._url_input = wx.TextCtrl( self._watcher_panel, style = wx.TE_PROCESS_ENTER )
+        self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
         
-        self._options_panel = wx.Panel( self._thread_watcher_panel )
+        self._options_panel = wx.Panel( self._watcher_panel )
         
         #
         
@@ -2288,36 +2665,35 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel )
         
-        self._thread_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
-        self._thread_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseThread )
+        self._checking_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
+        self._checking_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecker )
         
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel )
         
-        self._thread_check_now_button = wx.Button( checker_panel, label = 'check now' )
-        self._thread_check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
+        self._check_now_button = wx.Button( checker_panel, label = 'check now' )
+        self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
         self._checker_options_button = ClientGUICommon.BetterButton( checker_panel, 'edit check timings', self._EditCheckerOptions )
         
-        self._thread_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
+        self._checker_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
         
         #
         
-        self._thread_watcher_import = self._management_controller.GetVariable( 'thread_watcher_import' )
+        self._watcher_import = self._management_controller.GetVariable( 'watcher_import' )
         
-        ( thread_url, file_import_options, tag_import_options ) = self._thread_watcher_import.GetOptions()
+        ( url, file_import_options, tag_import_options ) = self._watcher_import.GetOptions()
         
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_WATCHER ) )
         
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._thread_watcher_panel, file_import_options, self._thread_watcher_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._thread_watcher_panel, namespaces, tag_import_options, self._thread_watcher_import.SetTagImportOptions )
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watcher_panel, file_import_options, self._watcher_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watcher_panel, namespaces, tag_import_options, self._watcher_import.SetTagImportOptions )
         
         #
         
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        
-        hbox.Add( self._files_pause_button, CC.FLAGS_LONE_BUTTON )
+        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
         
         imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         imports_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2330,13 +2706,13 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         gridbox.AddGrowableCol( 0, 1 )
         
         gridbox.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._thread_pause_button, CC.FLAGS_LONE_BUTTON )
+        gridbox.Add( self._checking_pause_button, CC.FLAGS_LONE_BUTTON )
         gridbox.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._thread_check_now_button, CC.FLAGS_VCENTER )
+        gridbox.Add( self._check_now_button, CC.FLAGS_VCENTER )
         
         checker_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.Add( self._thread_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2345,11 +2721,11 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._options_panel.SetSizer( vbox )
         
-        self._thread_watcher_panel.Add( self._thread_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.Add( self._thread_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._thread_watcher_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._thread_watcher_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watcher_panel.Add( self._watcher_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watcher_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watcher_panel.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._watcher_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watcher_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2359,7 +2735,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._collect_by.Hide()
         
-        vbox.Add( self._thread_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -2367,21 +2743,21 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         #
         
-        seed_cache = self._thread_watcher_import.GetSeedCache()
+        seed_cache = self._watcher_import.GetSeedCache()
         
         self._seed_cache_control.SetSeedCache( seed_cache )
         
-        self._thread_watcher_import.SetDownloadControlFile( self._file_download_control )
-        self._thread_watcher_import.SetDownloadControlThread( self._thread_download_control )
+        self._watcher_import.SetDownloadControlFile( self._file_download_control )
+        self._watcher_import.SetDownloadControlChecker( self._checker_download_control )
         
-        self._thread_input.SetValue( thread_url )
+        self._url_input.SetValue( url )
         
         self._UpdateStatus()
         
     
     def _EditCheckerOptions( self ):
         
-        checker_options = self._thread_watcher_import.GetCheckerOptions()
+        checker_options = self._watcher_import.GetCheckerOptions()
         
         with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
             
@@ -2393,7 +2769,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 
                 new_checker_options = panel.GetValue()
                 
-                self._thread_watcher_import.SetCheckerOptions( new_checker_options )
+                self._watcher_import.SetCheckerOptions( new_checker_options )
                 
                 self._UpdateStatus()
                 
@@ -2402,13 +2778,13 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     
     def _UpdateStatus( self ):
         
-        if self._thread_watcher_import.HasThread():
+        if self._watcher_import.HasURL():
             
-            self._thread_input.SetEditable( False )
+            self._url_input.SetEditable( False )
             
             if not self._options_panel.IsShown():
                 
-                self._thread_subject.Show()
+                self._watcher_subject.Show()
                 
                 self._options_panel.Show()
                 
@@ -2419,7 +2795,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
             
             if self._options_panel.IsShown():
                 
-                self._thread_subject.Hide()
+                self._watcher_subject.Hide()
                 
                 self._options_panel.Hide()
                 
@@ -2427,7 +2803,7 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 
             
         
-        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, thread_subject, thread_status, check_now, thread_paused ) = self._thread_watcher_import.GetStatus()
+        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher_import.GetStatus()
         
         if files_paused:
             
@@ -2451,14 +2827,14 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         self._file_velocity_status.SetLabelText( file_velocity_status )
         
-        if thread_paused:
+        if checking_paused:
             
             if watcher_status == '':
                 
                 watcher_status = 'paused'
                 
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._thread_pause_button, CC.GlobalBMPs.play )
+            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.play )
             
         else:
             
@@ -2467,46 +2843,46 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
                 watcher_status = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
                 
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._thread_pause_button, CC.GlobalBMPs.pause )
+            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
             
         
         self._watcher_status.SetLabelText( watcher_status )
         
-        if thread_status == ClientImporting.CHECKER_STATUS_404:
+        if checking_status == ClientImporting.CHECKER_STATUS_404:
             
-            self._thread_pause_button.Disable()
+            self._checking_pause_button.Disable()
             
-        elif thread_status == ClientImporting.CHECKER_STATUS_DEAD:
+        elif checking_status == ClientImporting.CHECKER_STATUS_DEAD:
             
-            self._thread_pause_button.Disable()
+            self._checking_pause_button.Disable()
             
         else:
             
-            self._thread_pause_button.Enable()
+            self._checking_pause_button.Enable()
             
         
-        if thread_subject in ( '', 'unknown subject' ):
+        if subject in ( '', 'unknown subject' ):
             
-            thread_subject = 'no subject'
+            subject = 'no subject'
             
         
-        self._thread_subject.SetLabelText( thread_subject )
+        self._watcher_subject.SetLabelText( subject )
         
         if check_now:
             
-            self._thread_check_now_button.Disable()
+            self._check_now_button.Disable()
             
         else:
             
-            self._thread_check_now_button.Enable()
+            self._check_now_button.Enable()
             
         
     
     def CheckAbleToClose( self ):
         
-        if self._thread_watcher_import.HasThread():
+        if self._watcher_import.HasURL():
             
-            if self._thread_watcher_import.CurrentlyWorking():
+            if self._watcher_import.CurrentlyWorking():
                 
                 raise HydrusExceptions.VetoException( 'This page is still importing.' )
                 
@@ -2515,21 +2891,21 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     
     def EventCheckNow( self, event ):
         
-        self._thread_watcher_import.CheckNow()
+        self._watcher_import.CheckNow()
         
         self._UpdateStatus()
         
     
     def EventPauseFiles( self, event ):
         
-        self._thread_watcher_import.PausePlayFiles()
+        self._watcher_import.PausePlayFiles()
         
         self._UpdateStatus()
         
     
-    def EventPauseThread( self, event ):
+    def EventPauseChecker( self, event ):
         
-        self._thread_watcher_import.PausePlayThread()
+        self._watcher_import.PausePlayChecker()
         
         self._UpdateStatus()
         
@@ -2540,20 +2916,20 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
         
         if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
             
-            thread_url = self._thread_input.GetValue()
+            url = self._url_input.GetValue()
             
-            if thread_url == '':
+            if url == '':
                 
                 return
                 
             
-            self._thread_input.SetEditable( False )
+            self._url_input.SetEditable( False )
             
-            self._thread_watcher_import.SetThreadURL( thread_url )
+            self._watcher_import.SetURL( url )
             
             publish_to_page = True
             
-            self._thread_watcher_import.Start( self._page_key, publish_to_page )
+            self._watcher_import.Start( self._page_key, publish_to_page )
             
         else:
             
@@ -2563,287 +2939,20 @@ class ManagementPanelImporterThreadWatcher( ManagementPanelImporter ):
     
     def SetSearchFocus( self ):
         
-        wx.CallAfter( self._thread_input.SetFocus )
+        wx.CallAfter( self._url_input.SetFocus )
         
     
     def Start( self ):
         
-        if self._thread_watcher_import.HasThread():
+        if self._watcher_import.HasURL():
             
             publish_to_page = True
             
-            self._thread_watcher_import.Start( self._page_key, publish_to_page )
+            self._watcher_import.Start( self._page_key, publish_to_page )
             
         
     
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_THREAD_WATCHER ] = ManagementPanelImporterThreadWatcher
-
-class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
-    
-    def __init__( self, parent, page, controller, management_controller ):
-        
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
-        
-        self._last_thread_keys = set()
-        self._next_update_time = 0
-        self._highlit_watcher = None
-        
-        #
-        
-        self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
-        
-        self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
-        
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 6, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
-        
-        self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
-        
-        self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
-        self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightWatcher, enabled_check_func = self._CanHighlight )
-        self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
-        
-        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
-        
-        self._watchers_listctrl.Sort( 0 )
-        
-        # suck up thread watchers from elsewhere in the program (presents a checklistboxdialog)
-        
-        #
-        
-        self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
-        
-        self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._collect_by.Hide()
-        
-        vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        self._UpdateStatus()
-        
-        HG.client_controller.sub( self, 'PendURL', 'pend_url' )
-        
-    
-    def _AddURLs( self, urls ):
-        
-        for url in urls:
-            
-            self._multiple_watcher_import.AddURL( url )
-            
-        
-    
-    def _CanClearHighlight( self ):
-        
-        return self._highlit_watcher is not None
-        
-    
-    def _CanHighlight( self ):
-        
-        num_selected = len( self._watchers_listctrl.GetData( only_selected = True ) )
-        
-        return num_selected == 1
-        
-    
-    def _ClearExistingHighlight( self ):
-        
-        if self._highlit_watcher is not None:
-            
-            publish_to_page = False
-            
-            self._highlit_watcher.Repage( self._page_key, publish_to_page )
-            
-            self._highlit_watcher = None
-            
-            self._watchers_listctrl_panel.UpdateButtons()
-            
-        
-    
-    def _ClearExistingHighlightAndPanel( self ):
-        
-        self._ClearExistingHighlight()
-        
-        media_results = []
-        
-        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
-        
-        self._page.SwapMediaPanel( panel )
-        
-        self._watchers_listctrl.UpdateDatas()
-        
-    
-    def _ConvertDataToListCtrlTuples( self, watcher ):
-        
-        subject = watcher.GetSubject()
-        
-        if watcher == self._highlit_watcher:
-            
-            subject = '* ' + subject
-            
-        
-        status = watcher.GetSimpleStatus()
-        
-        ( value, range ) = watcher.GetValueRange()
-        
-        progress = ( range, value )
-        
-        pretty_subject = subject
-        pretty_status = status
-        pretty_progress = HydrusData.ConvertValueRangeToPrettyString( value, range )
-        
-        display_tuple = ( pretty_subject, pretty_status, pretty_progress )
-        sort_tuple = ( subject, status, progress )
-        
-        return ( display_tuple, sort_tuple )
-        
-    
-    def _HighlightWatcher( self ):
-        
-        selected = self._watchers_listctrl.GetData( only_selected = True )
-        
-        if len( selected ) == 1:
-            
-            new_highlight = selected[0]
-            
-            if new_highlight == self._highlit_watcher:
-                
-                self._ClearExistingHighlightAndPanel()
-                
-            else:
-                
-                self._ClearExistingHighlight()
-                
-                self._highlit_watcher = selected[0]
-                
-                hashes = self._highlit_watcher.GetPresentedHashes()
-                
-                media_results = HG.client_controller.Read( 'media_results', hashes )
-                
-                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                
-                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
-                
-                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
-                
-                self._page.SwapMediaPanel( panel )
-                
-                publish_to_page = True
-                
-                self._highlit_watcher.Repage( self._page_key, publish_to_page )
-                
-                self._watchers_listctrl_panel.UpdateButtons()
-                
-                self._watchers_listctrl.UpdateDatas()
-                
-            
-        
-    
-    def _RemoveWatchers( self ):
-        
-        # should prob have some sort of 'three are still importing m8'
-        
-        message = 'Remove the selected watchers?'
-        
-        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_YES:
-                
-                highlight_was_included = False
-                
-                for watcher in self._watchers_listctrl.GetData( only_selected = True ):
-                    
-                    if watcher == self._highlit_watcher:
-                        
-                        highlight_was_included = True
-                        
-                    
-                    self._multiple_watcher_import.RemoveWatcher( watcher.GetThreadKey() )
-                    
-                
-                if highlight_was_included:
-                    
-                    self._ClearExistingHighlightAndPanel()
-                    
-                
-            
-        
-    
-    def _UpdateStatus( self ):
-        
-        if HydrusData.TimeHasPassed( self._next_update_time ):
-            
-            self._next_update_time = HydrusData.GetNow() + 1
-            
-            thread_keys = self._multiple_watcher_import.GetThreadKeys()
-            
-            if self._last_thread_keys != thread_keys:
-                
-                self._last_thread_keys = thread_keys
-                
-                watchers = self._multiple_watcher_import.GetWatchers()
-                
-                self._watchers_listctrl.SetData( watchers )
-                
-            
-            self._watchers_listctrl.UpdateDatas()
-            
-        
-        # something here to push a refreshpagename thing to update value/range values on any change. so maybe cache this number and then check on changes or whatever!
-        
-        # although I had to write a hook in the seedcachepanel thing so that it would do that even if page was hidden. this is not so available here, so think about it.
-        
-        pass
-        
-    
-    def CheckAbleToClose( self ):
-        
-        num_working = 0
-        
-        for watcher in self._multiple_watcher_import.GetWatchers():
-            
-            if watcher.CurrentlyWorking():
-                
-                num_working += 1
-                
-            
-        
-        if num_working > 0:
-            
-            raise HydrusExceptions.VetoException( HydrusData.ConvertIntToPrettyString( num_working ) + ' watchers are still importing.' )
-            
-        
-    
-    def PendURL( self, page_key, url ):
-        
-        if page_key == self._page_key:
-            
-            self._multiple_watcher_import.AddURL( url )
-            
-        
-    
-    def SetSearchFocus( self ):
-        
-        wx.CallAfter( self._watcher_url_input.SetFocus )
-        
-    
-    def Start( self ):
-        
-        self._multiple_watcher_import.Start( self._page_key )
-        
-    
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER ] = ManagementPanelImporterMultipleWatcher
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_WATCHER ] = ManagementPanelImporterWatcher
 
 class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
@@ -3589,7 +3698,7 @@ class ManagementPanelQuery( ManagementPanel ):
             hbox.Add( self._searchbox, CC.FLAGS_EXPAND_BOTH_WAYS )
             hbox.Add( self._cancel_search_button, CC.FLAGS_VCENTER )
             
-            self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._search_panel.Add( self._current_predicates_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
         

@@ -110,7 +110,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     def IsEphemeral( self ):
         
-        return self.context_type in ( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE )
+        return self.context_type in ( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_WATCHER_PAGE )
         
     
     def GetSummary( self ):

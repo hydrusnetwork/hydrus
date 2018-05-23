@@ -42,8 +42,7 @@ CHECKER_STATUS_404 = 2
 
 DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
-REPEATING_JOB_INITIAL_DELAY = 0.2
-REPEATING_JOB_TYPICAL_PERIOD = 5.0
+REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
 def GenerateDownloaderNetworkJobFactory( page_key ):
     
@@ -74,6 +73,67 @@ def GenerateMultiplePopupNetworkJobPresentationContextFactory( job_key ):
         
     
     return network_job_presentation_context_factory
+    
+def GenerateSeedCacheStatus( statuses_to_counts ):
+    
+    num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
+    num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
+    num_ignored = statuses_to_counts[ CC.STATUS_VETOED ]
+    num_deleted = statuses_to_counts[ CC.STATUS_DELETED ]
+    num_failed = statuses_to_counts[ CC.STATUS_ERROR ]
+    num_skipped = statuses_to_counts[ CC.STATUS_SKIPPED ]
+    num_unknown = statuses_to_counts[ CC.STATUS_UNKNOWN ]
+    
+    status_strings = []
+    
+    num_successful = num_successful_and_new + num_successful_but_redundant
+    
+    if num_successful > 0:
+        
+        s = HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful'
+        
+        if num_successful_and_new > 0:
+            
+            if num_successful_but_redundant > 0:
+                
+                s += ' (' + HydrusData.ConvertIntToPrettyString( num_successful_but_redundant ) + ' already in db)'
+                
+            
+        else:
+            
+            s += ' (all already in db)'
+            
+        
+        status_strings.append( s )
+        
+    
+    if num_ignored > 0:
+        
+        status_strings.append( HydrusData.ConvertIntToPrettyString( num_ignored ) + ' ignored' )
+        
+    
+    if num_deleted > 0:
+        
+        status_strings.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' previously deleted' )
+        
+    
+    if num_failed > 0:
+        
+        status_strings.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed' )
+        
+    
+    if num_skipped > 0:
+        
+        status_strings.append( HydrusData.ConvertIntToPrettyString( num_skipped ) + ' skipped' )
+        
+    
+    status = ', '.join( status_strings )
+    
+    total = sum( statuses_to_counts.values() )
+    
+    total_processed = total - num_unknown
+    
+    return ( status, ( total_processed, total ) )
     
 def GenerateSinglePopupNetworkJobPresentationContextFactory( job_key ):
     
@@ -107,20 +167,24 @@ def GenerateSubscriptionNetworkJobFactory( subscription_key ):
     
     return network_job_factory
     
-def GenerateWatcherNetworkJobFactory( thread_key ):
+def GenerateWatcherNetworkJobFactory( watcher_key ):
     
     def network_job_factory( *args, **kwargs ):
         
-        network_job = ClientNetworkingJobs.NetworkJobWatcherPage( thread_key, *args, **kwargs )
+        network_job = ClientNetworkingJobs.NetworkJobWatcherPage( watcher_key, *args, **kwargs )
         
         return network_job
         
     
     return network_job_factory
     
+def GetRepeatingJobInitialDelay():
+    
+    return 0.5 + ( random.random() * 0.5 )
+    
 def PageImporterShouldStopWorking( page_key ):
     
-    return HG.view_shutdown or HG.client_controller.PageCompletelyDestroyed( page_key )
+    return HG.view_shutdown or not HG.client_controller.PageAlive( page_key )
     
 def PublishPresentationHashes( name, hashes, publish_to_popup_button, publish_files_to_page ):
     
@@ -152,7 +216,7 @@ def THREADDownloadURL( job_key, url, url_string ):
         
         network_job = ClientNetworkingJobs.NetworkJob( *args, **kwargs )
         
-        network_job.OverrideBandwidth()
+        network_job.OverrideBandwidth( 30 )
         
         return network_job
         
@@ -562,6 +626,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._files_repeating_job = None
         self._gallery_repeating_job = None
         
+        HG.client_controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
+        
     
     def _GetSerialisableInfo( self ):
         
@@ -912,7 +978,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 network_job = ClientNetworkingJobs.NetworkJobDownloader( page_key, method, url, **kwargs )
                 
-                network_job.OverrideBandwidth()
+                network_job.OverrideBandwidth( 30 )
                 
                 wx.CallAfter( self._download_control_gallery_set, network_job )
                 
@@ -1176,6 +1242,14 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
+        
+        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+            
+            WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
     def PausePlayFiles( self ):
         
         with self._lock:
@@ -1247,8 +1321,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        self._files_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
-        self._gallery_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnGallery, page_key )
+        self._files_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
+        self._gallery_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnGallery, page_key )
         
     
     def REPEATINGWorkOnFiles( self, page_key ):
@@ -1395,6 +1469,8 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         self._lock = threading.Lock()
         
         self._files_repeating_job = None
+        
+        HG.client_controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
         
     
     def _GetSerialisableInfo( self ):
@@ -1574,6 +1650,14 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
+        
+        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+            
+            WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
     def PausePlay( self ):
         
         with self._lock:
@@ -1594,7 +1678,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        self._files_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
+        self._files_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
         
     
     def REPEATINGWorkOnFiles( self, page_key ):
@@ -2343,7 +2427,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         normalised_urls = { HG.client_controller.network_engine.domain_manager.NormaliseURL( url ) for url in urls }
         
-        associable_urls = { url for url in normalised_urls if url != self.seed_data and HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
+        associable_urls = { url for url in normalised_urls if HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
         
         return associable_urls
         
@@ -2366,6 +2450,8 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ) )
         
         associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
+        
+        associable_urls.discard( self.seed_data )
         
         self._urls.update( associable_urls )
         
@@ -2399,6 +2485,8 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         urls = ( url, )
         
         associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
+        
+        associable_urls.discard( self.seed_data )
         
         self._urls.update( associable_urls )
         
@@ -2992,12 +3080,12 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         urls = set( self._urls )
         
-        associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
-        
         if self.seed_type == SEED_TYPE_URL:
             
-            associable_urls.add( self.seed_data )
+            urls.add( self.seed_data )
             
+        
+        associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
         
         if len( associable_urls ) > 0:
             
@@ -3043,6 +3131,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         self._seed_cache_key = HydrusData.GenerateKey()
         
         self._status_cache = None
+        self._status_cache_generation_time = 0
         
         self._dirty = True
         
@@ -3056,6 +3145,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _GenerateStatus( self ):
         
+        statuses_to_counts = self._GetStatusesToCounts()
+        
+        self._status_cache = GenerateSeedCacheStatus( statuses_to_counts )
+        self._status_cache_generation_time = HydrusData.GetNow()
+        
+        self._dirty = False
+        
+    
+    def _GetStatusesToCounts( self ):
+        
         statuses_to_counts = collections.Counter()
         
         for seed in self._seeds:
@@ -3063,66 +3162,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             statuses_to_counts[ seed.status ] += 1
             
         
-        num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
-        num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
-        num_ignored = statuses_to_counts[ CC.STATUS_VETOED ]
-        num_deleted = statuses_to_counts[ CC.STATUS_DELETED ]
-        num_failed = statuses_to_counts[ CC.STATUS_ERROR ]
-        num_skipped = statuses_to_counts[ CC.STATUS_SKIPPED ]
-        num_unknown = statuses_to_counts[ CC.STATUS_UNKNOWN ]
-        
-        status_strings = []
-        
-        num_successful = num_successful_and_new + num_successful_but_redundant
-        
-        if num_successful > 0:
-            
-            s = HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful'
-            
-            if num_successful_and_new > 0:
-                
-                if num_successful_but_redundant > 0:
-                    
-                    s += ' (' + HydrusData.ConvertIntToPrettyString( num_successful_but_redundant ) + ' already in db)'
-                    
-                
-            else:
-                
-                s += ' (all already in db)'
-                
-            
-            status_strings.append( s )
-            
-        
-        if num_ignored > 0:
-            
-            status_strings.append( HydrusData.ConvertIntToPrettyString( num_ignored ) + ' ignored' )
-            
-        
-        if num_deleted > 0:
-            
-            status_strings.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' previously deleted' )
-            
-        
-        if num_failed > 0:
-            
-            status_strings.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed' )
-            
-        
-        if num_skipped > 0:
-            
-            status_strings.append( HydrusData.ConvertIntToPrettyString( num_skipped ) + ' skipped' )
-            
-        
-        status = ', '.join( status_strings )
-        
-        total = len( self._seeds )
-        
-        total_processed = total - num_unknown
-        
-        self._status_cache = ( status, ( total_processed, total ) )
-        
-        self._dirty = False
+        return statuses_to_counts
         
     
     def _GetSeeds( self, status = None ):
@@ -3447,6 +3487,63 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         self.NotifySeedsUpdated( ( seed, ) )
         
     
+    def CanCompact( self, compact_before_this_source_time ):
+        
+        with self._lock:
+            
+            if len( self._seeds ) <= 100:
+                
+                return False
+                
+            
+            for seed in self._seeds[:-100]:
+                
+                if seed.status == CC.STATUS_UNKNOWN:
+                    
+                    continue
+                    
+                
+                if self._GetSourceTimestamp( seed ) < compact_before_this_source_time:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def Compact( self, compact_before_this_source_time ):
+        
+        with self._lock:
+            
+            if len( self._seeds ) <= 100:
+                
+                return
+                
+            
+            new_seeds = HydrusSerialisable.SerialisableList()
+            
+            for seed in self._seeds[:-100]:
+                
+                still_to_do = seed.status == CC.STATUS_UNKNOWN
+                still_relevant = self._GetSourceTimestamp( seed ) > compact_before_this_source_time
+                
+                if still_to_do or still_relevant:
+                    
+                    new_seeds.append( seed )
+                    
+                
+            
+            new_seeds.extend( self._seeds[-100:] )
+            
+            self._seeds = new_seeds
+            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+            
+            self._SetDirty()
+            
+        
+    
     def DelaySeed( self, seed ):
         
         with self._lock:
@@ -3627,6 +3724,27 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetStatusGenerationTime( self ):
+        
+        with self._lock:
+            
+            if self._dirty:
+                
+                return HydrusData.GetNow()
+                
+            
+            return self._status_cache_generation_time
+            
+        
+    
+    def GetStatusesToCounts( self ):
+        
+        with self._lock:
+            
+            return self._GetStatusesToCounts()
+            
+        
+    
     def GetValueRange( self ):
         
         with self._lock:
@@ -3759,6 +3877,8 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         self._files_repeating_job = None
         self._queue_repeating_job = None
+        
+        HG.client_controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
         
     
     def _FileNetworkJobPresentationContextFactory( self, network_job ):
@@ -3947,7 +4067,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 network_job = ClientNetworkingJobs.NetworkJobDownloader( page_key, 'GET', url )
                 
-                network_job.OverrideBandwidth()
+                network_job.OverrideBandwidth( 30 )
                 
                 HG.client_controller.network_engine.AddJob( network_job )
                 
@@ -4128,6 +4248,14 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
+        
+        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+            
+            WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
     def PausePlayFiles( self ):
         
         with self._lock:
@@ -4197,8 +4325,8 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     def Start( self, page_key ):
         
-        self._files_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
-        self._queue_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnQueue, page_key )
+        self._files_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
+        self._queue_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnQueue, page_key )
         
     
     def REPEATINGWorkOnFiles( self, page_key ):
@@ -4264,7 +4392,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 if did_work:
                     
-                    time.sleep( 5 )
+                    time.sleep( DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
                     
                 else:
                     
@@ -4312,7 +4440,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         new_options = HG.client_controller.new_options
         
-        self._checker_options = ClientImportOptions.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        self._checker_options = ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' )
         
         if HC.options[ 'gallery_file_limit' ] is None:
             
@@ -4923,7 +5051,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     job_key.SetVariable( 'popup_network_job', network_job )
                     
-                    network_job.OverrideBandwidth()
+                    network_job.OverrideBandwidth( 30 )
                     
                     return network_job
                     
@@ -5109,6 +5237,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         return True in ( query.CanCheckNow() for query in self._queries )
         
     
+    def CanCompact( self ):
+        
+        return True in ( query.CanCompact( self._checker_options ) for query in self._queries )
+        
+    
     def CanReset( self ):
         
         return True in ( not query.IsInitialSync() for query in self._queries )
@@ -5132,6 +5265,14 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         self.ScrubDelay()
+        
+    
+    def Compact( self ):
+        
+        for query in self._queries:
+            
+            query.Compact( self._checker_options )
+            
         
     
     def GetBandwidthWaitingEstimate( self, query ):
@@ -5469,6 +5610,15 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         return not self._check_now
         
     
+    def CanCompact( self, checker_options ):
+        
+        death_period = checker_options.GetDeathFileVelocityPeriod()
+        
+        compact_before_this_source_time = self._last_check_time - ( death_period * 2 )
+        
+        return self._seed_cache.CanCompact( compact_before_this_source_time )
+        
+    
     def CanRetryFailed( self ):
         
         return self._seed_cache.GetSeedCount( CC.STATUS_ERROR ) > 0
@@ -5496,6 +5646,15 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
         
         self._next_check_time = 0
         self._status = CHECKER_STATUS_OK
+        
+    
+    def Compact( self, checker_options ):
+        
+        death_period = checker_options.GetDeathFileVelocityPeriod()
+        
+        compact_before_this_time = self._last_check_time - ( death_period * 2 )
+        
+        return self._seed_cache.Compact( compact_before_this_time )
         
     
     def GetLastChecked( self ):
@@ -5629,1082 +5788,6 @@ class SubscriptionQuery( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY ] = SubscriptionQuery
 
-class ThreadWatcherImport( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT
-    SERIALISABLE_NAME = 'Thread Watcher'
-    SERIALISABLE_VERSION = 4
-    
-    MIN_CHECK_PERIOD = 30
-    
-    def __init__( self ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        
-        new_options = HG.client_controller.new_options
-        
-        tag_import_options = new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_THREAD_WATCHER ) )
-        
-        self._page_key = HydrusData.GenerateKey()
-        self._publish_to_page = False
-        
-        self._thread_url = ''
-        self._seed_cache = SeedCache()
-        self._urls_to_filenames = {}
-        self._urls_to_md5_base64 = {}
-        self._checker_options = new_options.GetDefaultThreadCheckerOptions()
-        self._file_import_options = file_import_options
-        self._tag_import_options = tag_import_options
-        self._last_check_time = 0
-        self._thread_status = CHECKER_STATUS_OK
-        self._thread_subject = 'unknown subject'
-        
-        self._next_check_time = None
-        
-        self._download_control_file_set = None
-        self._download_control_file_clear = None
-        self._download_control_thread_set = None
-        self._download_control_thread_clear = None
-        
-        self._check_now = False
-        self._files_paused = False
-        self._thread_paused = False
-        
-        self._no_work_until = 0
-        self._no_work_until_reason = ''
-        
-        self._file_velocity_status = ''
-        self._current_action = ''
-        self._watcher_status = ''
-        
-        self._thread_key = HydrusData.GenerateKey()
-        
-        self._lock = threading.Lock()
-        
-        self._last_pubbed_page_name = ''
-        
-        self._files_repeating_job = None
-        self._thread_repeating_job = None
-        
-    
-    def _CheckThread( self ):
-        
-        error_occurred = False
-        watcher_status_should_stick = True
-        
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._thread_url )
-        
-        if url_type != HC.URL_TYPE_WATCHABLE:
-            
-            error_occurred = True
-            
-            watcher_status = 'Did not understand the given URL as watchable!'
-            
-        elif not can_parse:
-            
-            error_occurred = True
-            
-            watcher_status = 'Could not parse the given URL!'
-            
-        
-        if not error_occurred:
-            
-            # convert to API url as appropriate
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._thread_url )
-            
-            if parser is None:
-                
-                error_occurred = True
-                
-                watcher_status = 'Could not find a parser for the given URL!'
-                
-            
-        
-        if error_occurred:
-            
-            self._FinishCheck( watcher_status, error_occurred, watcher_status_should_stick )
-            
-            return
-            
-        
-        #
-        
-        with self._lock:
-            
-            self._watcher_status = 'checking thread'
-            
-        
-        try:
-            
-            network_job = ClientNetworkingJobs.NetworkJobWatcherPage( self._thread_key, 'GET', url_to_check )
-            
-            network_job.OverrideBandwidth()
-            
-            HG.client_controller.network_engine.AddJob( network_job )
-            
-            with self._ThreadNetworkJobPresentationContextFactory( network_job ):
-                
-                network_job.WaitUntilDone()
-                
-            
-            data = network_job.GetContent()
-            
-            parsing_context = {}
-            
-            parsing_context[ 'thread_url' ] = self._thread_url
-            parsing_context[ 'url' ] = url_to_check
-            
-            all_parse_results = parser.Parse( parsing_context, data )
-            
-            subject = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
-            
-            if subject is None:
-                
-                subject = ''
-                
-            
-            with self._lock:
-                
-                self._thread_subject = subject
-                
-            
-            ( num_new, num_already_in ) = UpdateSeedCacheWithAllParseResults( self._seed_cache, all_parse_results, source_url = self._thread_url, tag_import_options = self._tag_import_options )
-            
-            watcher_status = 'thread checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
-            watcher_status_should_stick = False
-            
-            if num_new > 0:
-                
-                WakeRepeatingJob( self._files_repeating_job )
-                
-            
-        except HydrusExceptions.ShutdownException:
-            
-            return
-            
-        except HydrusExceptions.ParseException as e:
-            
-            error_occurred = True
-            
-            watcher_status = 'Was unable to parse the returned data! Full error written to log!'
-            
-            HydrusData.PrintException( e )
-            
-        except HydrusExceptions.NotFoundException:
-            
-            error_occurred = True
-            
-            with self._lock:
-                
-                self._thread_status = CHECKER_STATUS_404
-                
-            
-            watcher_status = ''
-            
-        except HydrusExceptions.NetworkException as e:
-            
-            self._DelayWork( 4 * 3600, 'Network problem: ' + HydrusData.ToUnicode( e ) )
-            
-            watcher_status = ''
-            
-            HydrusData.PrintException( e )
-            
-        except Exception as e:
-            
-            error_occurred = True
-            
-            watcher_status = HydrusData.ToUnicode( e )
-            
-            HydrusData.PrintException( e )
-            
-        
-        self._FinishCheck( watcher_status, error_occurred, watcher_status_should_stick )
-        
-    
-    def _DelayWork( self, time_delta, reason ):
-        
-        self._no_work_until = HydrusData.GetNow() + time_delta
-        self._no_work_until_reason = reason
-        
-    
-    def _FileNetworkJobPresentationContextFactory( self, network_job ):
-        
-        def enter_call():
-            
-            with self._lock:
-                
-                if self._download_control_file_set is not None:
-                    
-                    wx.CallAfter( self._download_control_file_set, network_job )
-                    
-                
-            
-        
-        def exit_call():
-            
-            with self._lock:
-                
-                if self._download_control_file_clear is not None:
-                    
-                    wx.CallAfter( self._download_control_file_clear )
-                    
-                
-            
-        
-        return NetworkJobPresentationContext( enter_call, exit_call )
-        
-    
-    def _FinishCheck( self, watcher_status, error_occurred, watcher_status_should_stick ):
-        
-        if error_occurred:
-            
-            # the [DEAD] stuff can override watcher status, so let's give a brief time for this to display the error
-            
-            with self._lock:
-                
-                self._thread_paused = True
-                
-                self._watcher_status = watcher_status
-                
-            
-            time.sleep( 5 )
-            
-        
-        with self._lock:
-            
-            if self._check_now:
-                
-                self._check_now = False
-                
-            
-            self._watcher_status = watcher_status
-            
-            self._last_check_time = HydrusData.GetNow()
-            
-            self._UpdateFileVelocityStatus()
-            
-            self._UpdateNextCheckTime()
-            
-            self._PublishPageName()
-            
-        
-        if not watcher_status_should_stick:
-            
-            time.sleep( 5 )
-            
-            with self._lock:
-                
-                self._watcher_status = ''
-                
-            
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_seed_cache = self._seed_cache.GetSerialisableTuple()
-        serialisable_checker_options = self._checker_options.GetSerialisableTuple()
-        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
-        serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
-        
-        return ( self._thread_url, serialisable_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject, self._no_work_until, self._no_work_until_reason )
-        
-    
-    def _HasThread( self ):
-        
-        return self._thread_url != ''
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self._thread_url, serialisable_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._thread_paused, self._thread_status, self._thread_subject, self._no_work_until, self._no_work_until_reason ) = serialisable_info
-        
-        self._seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_seed_cache )
-        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
-        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
-        
-    
-    def _PublishPageName( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        cannot_rename = not new_options.GetBoolean( 'permit_watchers_to_name_their_pages' )
-        
-        if cannot_rename:
-            
-            page_name = 'thread watcher'
-            
-        elif self._thread_subject in ( '', 'unknown subject' ):
-            
-            page_name = 'thread watcher'
-            
-        else:
-            
-            page_name = self._thread_subject
-            
-        
-        if self._thread_status == CHECKER_STATUS_404:
-            
-            thread_watcher_not_found_page_string = new_options.GetNoneableString( 'thread_watcher_not_found_page_string' )
-            
-            if thread_watcher_not_found_page_string is not None:
-                
-                page_name = thread_watcher_not_found_page_string + ' ' + page_name
-                
-            
-        elif self._thread_status == CHECKER_STATUS_DEAD:
-            
-            thread_watcher_dead_page_string = new_options.GetNoneableString( 'thread_watcher_dead_page_string' )
-            
-            if thread_watcher_dead_page_string is not None:
-                
-                page_name = thread_watcher_dead_page_string + ' ' + page_name
-                
-            
-        elif self._thread_paused:
-            
-            thread_watcher_paused_page_string = new_options.GetNoneableString( 'thread_watcher_paused_page_string' )
-            
-            if thread_watcher_paused_page_string is not None:
-                
-                page_name = thread_watcher_paused_page_string + ' ' + page_name
-                
-            
-        
-        if page_name != self._last_pubbed_page_name:
-            
-            self._last_pubbed_page_name = page_name
-            
-            if self._publish_to_page:
-                
-                HG.client_controller.pub( 'rename_page', self._page_key, page_name )
-                
-            
-        
-        
-    
-    def _ThreadNetworkJobPresentationContextFactory( self, network_job ):
-        
-        def enter_call():
-            
-            with self._lock:
-                
-                if self._download_control_thread_set is not None:
-                    
-                    wx.CallAfter( self._download_control_thread_set, network_job )
-                    
-                
-            
-        
-        def exit_call():
-            
-            with self._lock:
-                
-                if self._download_control_thread_clear is not None:
-                    
-                    wx.CallAfter( self._download_control_thread_clear )
-                    
-                
-            
-        
-        return NetworkJobPresentationContext( enter_call, exit_call )
-        
-    
-    def _UpdateFileVelocityStatus( self ):
-        
-        self._file_velocity_status = self._checker_options.GetPrettyCurrentVelocity( self._seed_cache, self._last_check_time )
-        
-    
-    def _UpdateNextCheckTime( self ):
-        
-        if self._check_now:
-            
-            self._next_check_time = self._last_check_time + self.MIN_CHECK_PERIOD
-            
-        else:
-            
-            if not HydrusData.TimeHasPassed( self._no_work_until ):
-                
-                self._next_check_time = self._no_work_until + 1
-                
-            else:
-                
-                if self._thread_status != CHECKER_STATUS_404:
-                    
-                    if self._checker_options.IsDead( self._seed_cache, self._last_check_time ):
-                        
-                        self._thread_status = CHECKER_STATUS_DEAD
-                        
-                        self._thread_paused = True
-                        
-                    
-                
-                self._next_check_time = self._checker_options.GetNextCheckTime( self._seed_cache, self._last_check_time )
-                
-            
-        
-    
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
-        
-        if version == 1:
-            
-            ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_file_options, serialisable_tag_options, times_to_check, check_period, last_check_time, paused ) = old_serialisable_info
-            
-            checker_options = ClientImportOptions.CheckerOptions( intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) )
-            
-            serialisable_checker_options = checker_options.GetSerialisableTuple()
-            
-            files_paused = paused
-            thread_paused = paused
-            
-            new_serialisable_info = ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused )
-            
-            return ( 2, new_serialisable_info )
-            
-        
-        if version == 2:
-            
-            ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused ) = old_serialisable_info
-            
-            thread_status = CHECKER_STATUS_OK
-            thread_subject = 'unknown subject'
-            
-            new_serialisable_info = ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject )
-            
-            return ( 3, new_serialisable_info )
-            
-        
-        if version == 3:
-            
-            ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject ) = old_serialisable_info
-            
-            no_work_until = 0
-            no_work_until_reason = ''
-            
-            new_serialisable_info = ( thread_url, serialisable_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, thread_paused, thread_status, thread_subject, no_work_until, no_work_until_reason )
-            
-            return ( 4, new_serialisable_info )
-            
-        
-    
-    def _WorkOnFiles( self ):
-        
-        seed = self._seed_cache.GetNextSeed( CC.STATUS_UNKNOWN )
-        
-        if seed is None:
-            
-            return
-            
-        
-        did_substantial_work = False
-        
-        file_url = seed.seed_data
-        
-        try:
-            
-            def status_hook( text ):
-                
-                with self._lock:
-                    
-                    self._current_action = text
-                    
-                
-            
-            did_substantial_work = seed.WorkOnFileURL( self._file_import_options, status_hook, GenerateWatcherNetworkJobFactory( self._thread_key ), self._FileNetworkJobPresentationContextFactory, tag_import_options = self._tag_import_options )
-            
-            with self._lock:
-                
-                should_present = self._publish_to_page and seed.ShouldPresent( self._file_import_options )
-                
-                page_key = self._page_key
-                
-            
-            if should_present:
-                
-                seed.PresentToPage( page_key )
-                
-                did_substantial_work = True
-                
-            
-        except HydrusExceptions.ShutdownException:
-            
-            return
-            
-        except HydrusExceptions.VetoException as e:
-            
-            status = CC.STATUS_VETOED
-            
-            note = HydrusData.ToUnicode( e )
-            
-            seed.SetStatus( status, note = note )
-            
-            if isinstance( e, HydrusExceptions.CancelledException ):
-                
-                time.sleep( 2 )
-                
-            
-        except HydrusExceptions.NotFoundException:
-            
-            status = CC.STATUS_VETOED
-            note = '404'
-            
-            seed.SetStatus( status, note = note )
-            
-        except Exception as e:
-            
-            status = CC.STATUS_ERROR
-            
-            seed.SetStatus( status, exception = e )
-            
-            time.sleep( 3 )
-            
-        finally:
-            
-            self._seed_cache.NotifySeedsUpdated( ( seed, ) )
-            
-            with self._lock:
-                
-                self._current_action = ''
-                
-            
-        
-        if did_substantial_work:
-            
-            time.sleep( DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
-            
-        
-    
-    def CheckNow( self ):
-        
-        with self._lock:
-            
-            self._check_now = True
-            
-            self._thread_paused = False
-            
-            self._no_work_until = 0
-            self._no_work_until_reason = ''
-            
-            self._thread_status = CHECKER_STATUS_OK
-            
-            self._UpdateNextCheckTime()
-            
-            WakeRepeatingJob( self._thread_repeating_job )
-            
-        
-    
-    def CurrentlyWorking( self ):
-        
-        with self._lock:
-            
-            finished = not self._seed_cache.WorkToDo()
-            
-            return not finished and not self._files_paused
-            
-        
-    
-    def GetCheckerOptions( self ):
-        
-        with self._lock:
-            
-            return self._checker_options
-            
-        
-    
-    def GetOptions( self ):
-        
-        with self._lock:
-            
-            return ( self._thread_url, self._file_import_options, self._tag_import_options )
-            
-        
-    
-    def GetPresentedHashes( self ):
-        
-        return self._seed_cache.GetPresentedHashes( self._file_import_options )
-        
-    
-    def GetSeedCache( self ):
-        
-        return self._seed_cache
-        
-    
-    def GetSimpleStatus( self ):
-        
-        with self._lock:
-            
-            if self._thread_status == CHECKER_STATUS_404:
-                
-                return '404'
-                
-            elif self._thread_status == CHECKER_STATUS_DEAD:
-                
-                return 'DEAD'
-                
-            elif self._thread_paused or self._files_paused:
-                
-                return 'paused'
-                
-            else:
-                
-                return ''
-                
-            
-        
-    
-    def GetStatus( self ):
-        
-        with self._lock:
-            
-            if not HydrusData.TimeHasPassed( self._no_work_until ):
-                
-                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
-                
-            elif self._thread_status == CHECKER_STATUS_404:
-                
-                watcher_status = 'Thread 404'
-                
-            elif self._thread_status == CHECKER_STATUS_DEAD:
-                
-                watcher_status = 'Thread dead'
-                
-            else:
-                
-                watcher_status = self._watcher_status
-                
-            
-            return ( self._current_action, self._files_paused, self._file_velocity_status, self._next_check_time, watcher_status, self._thread_subject, self._thread_status, self._check_now, self._thread_paused )
-            
-        
-    
-    def GetSubject( self ):
-        
-        with self._lock:
-            
-            if self._thread_subject in ( None, '' ):
-                
-                return 'unknown subject'
-                
-            else:
-                
-                return self._thread_subject
-                
-            
-        
-    
-    def GetThreadKey( self ):
-        
-        with self._lock:
-            
-            return self._thread_key
-            
-        
-    
-    def GetValueRange( self ):
-        
-        with self._lock:
-            
-            return self._seed_cache.GetValueRange()
-            
-        
-    
-    def HasThread( self ):
-        
-        with self._lock:
-            
-            return self._HasThread()
-            
-        
-    
-    def IsDead( self ):
-        
-        with self._lock:
-            
-            return self._thread_status in ( CHECKER_STATUS_404, CHECKER_STATUS_DEAD )
-            
-        
-    
-    def PausePlayFiles( self ):
-        
-        with self._lock:
-            
-            self._files_paused = not self._files_paused
-            
-            WakeRepeatingJob( self._files_repeating_job )
-            
-        
-    
-    def PausePlayThread( self ):
-        
-        with self._lock:
-            
-            if self._thread_paused and self._checker_options.IsDead( self._seed_cache, self._last_check_time ):
-                
-                return # thread is dead, so don't unpause until a checknow event
-                
-            else:
-                
-                self._thread_paused = not self._thread_paused
-                
-                WakeRepeatingJob( self._thread_repeating_job )
-                
-            
-        
-    
-    def Repage( self, page_key, publish_to_page ):
-        
-        with self._lock:
-            
-            self._page_key = page_key
-            self._publish_to_page = publish_to_page
-            
-        
-    
-    def SetDownloadControlFile( self, download_control ):
-        
-        with self._lock:
-            
-            self._download_control_file_set = download_control.SetNetworkJob
-            self._download_control_file_clear = download_control.ClearNetworkJob
-            
-        
-    
-    def SetDownloadControlThread( self, download_control ):
-        
-        with self._lock:
-            
-            self._download_control_thread_set = download_control.SetNetworkJob
-            self._download_control_thread_clear = download_control.ClearNetworkJob
-            
-        
-    
-    def SetFileImportOptions( self, file_import_options ):
-        
-        with self._lock:
-            
-            self._file_import_options = file_import_options
-            
-        
-    
-    def SetTagImportOptions( self, tag_import_options ):
-        
-        with self._lock:
-            
-            self._tag_import_options = tag_import_options
-            
-        
-    
-    def SetThreadURL( self, thread_url ):
-        
-        if thread_url is None:
-            
-            thread_url = ''
-            
-        
-        if thread_url != '':
-            
-            thread_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( thread_url )
-            
-        
-        with self._lock:
-            
-            self._thread_url = thread_url
-            
-            WakeRepeatingJob( self._thread_repeating_job )
-            
-        
-    
-    def SetCheckerOptions( self, checker_options ):
-        
-        with self._lock:
-            
-            self._checker_options = checker_options
-            
-            self._thread_paused = False
-            
-            self._UpdateNextCheckTime()
-            
-            self._UpdateFileVelocityStatus()
-            
-            WakeRepeatingJob( self._thread_repeating_job )
-            
-        
-    
-    def Start( self, page_key, publish_to_page ):
-        
-        self._page_key = page_key
-        self._publish_to_page = publish_to_page
-        
-        self._UpdateNextCheckTime()
-        
-        self._PublishPageName()
-        
-        self._UpdateFileVelocityStatus()
-        
-        self._files_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
-        self._thread_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnThread )
-        
-    
-    def REPEATINGWorkOnFiles( self ):
-        
-        with self._lock:
-            
-            if PageImporterShouldStopWorking( self._page_key ):
-                
-                self._files_repeating_job.Cancel()
-                
-                return
-                
-            
-            work_to_do = self._seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( self._page_key ) )
-            
-        
-        while work_to_do:
-            
-            try:
-                
-                self._WorkOnFiles()
-                
-                HG.client_controller.WaitUntilViewFree()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-            
-            with self._lock:
-                
-                if PageImporterShouldStopWorking( self._page_key ):
-                    
-                    self._files_repeating_job.Cancel()
-                    
-                    return
-                    
-                
-                work_to_do = self._seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( self._page_key ) )
-                
-            
-        
-    
-    def REPEATINGWorkOnThread( self ):
-        
-        with self._lock:
-            
-            if PageImporterShouldStopWorking( self._page_key ):
-                
-                self._thread_repeating_job.Cancel()
-                
-                return
-                
-            
-            able_to_check = self._HasThread() and not self._thread_paused
-            check_due = HydrusData.TimeHasPassed( self._next_check_time )
-            no_delays = HydrusData.TimeHasPassed( self._no_work_until )
-            page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
-            
-            time_to_check = able_to_check and check_due and no_delays and page_shown
-            
-        
-        if time_to_check:
-            
-            try:
-                
-                self._CheckThread()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-            
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_THREAD_WATCHER_IMPORT ] = ThreadWatcherImport
-
-class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_WATCHER_IMPORT
-    SERIALISABLE_NAME = 'Multiple Thread Watcher'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, thread_url = None ):
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self._lock = threading.Lock()
-        
-        self._page_key = HydrusData.GenerateKey()
-        
-        self._watchers = HydrusSerialisable.SerialisableList()
-        
-        self._thread_keys_to_watchers = {}
-        
-        self._threads_repeating_job = None
-        
-        #
-        
-        if thread_url is not None:
-            
-            watcher = ThreadWatcherImport()
-            
-            watcher.SetThreadURL( thread_url )
-            
-            self._AddWatcher( watcher )
-            
-        
-        self._last_pubbed_value_range = ( 0, 0 )
-        
-    
-    def _AddWatcher( self, watcher ):
-        
-        publish_to_page = False
-        
-        watcher.Repage( self._page_key, publish_to_page )
-        
-        self._watchers.append( watcher )
-        
-        thread_key = watcher.GetThreadKey()
-        
-        self._thread_keys_to_watchers[ thread_key ] = watcher
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        serialisable_watchers = self._watchers.GetSerialisableTuple()
-        
-        return serialisable_watchers
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        serialisable_watchers = serialisable_info
-        
-        self._watchers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchers )
-        
-        self._thread_keys_to_watchers = { watcher.GetThreadKey() : watcher for watcher in self._watchers }
-        
-    
-    def _RemoveWatcher( self, thread_key ):
-        
-        if thread_key not in self._thread_keys_to_watchers:
-            
-            return
-            
-        
-        watcher = self._thread_keys_to_watchers[ thread_key ]
-        
-        self._watchers.remove( watcher )
-        
-        del self._thread_keys_to_watchers[ thread_key ]
-        
-    
-    def AddURL( self, url ):
-        
-        watcher = ThreadWatcherImport()
-        
-        watcher.SetThreadURL( url )
-        
-        publish_to_page = False
-        
-        with self._lock:
-            
-            watcher.Start( self._page_key, publish_to_page )
-            
-            self._AddWatcher( watcher )
-            
-        
-    
-    def AddWatcher( self, watcher ):
-        
-        with self._lock:
-            
-            self._AddWatcher( watcher )
-            
-        
-    
-    def GetThreadKeys( self ):
-        
-        with self._lock:
-            
-            return set( self._thread_keys_to_watchers.keys() )
-            
-        
-    
-    def GetValueRange( self ):
-        
-        with self._lock:
-            
-            total_value = 0
-            total_range = 0
-            
-            for watcher in self._watchers:
-                
-                ( value, range ) = watcher.GetValueRange()
-                
-                if value != range:
-                    
-                    total_value += value
-                    total_range += range
-                    
-                
-            
-            return ( total_value, total_range )
-            
-        
-    
-    def GetWatchers( self ):
-        
-        with self._lock:
-            
-            return list( self._watchers )
-            
-        
-    
-    def RemoveWatcher( self, thread_key ):
-        
-        with self._lock:
-            
-            self._RemoveWatcher( thread_key )
-            
-        
-    
-    def Start( self, page_key ):
-        
-        with self._lock:
-            
-            self._page_key = page_key
-            
-        
-        # set a 1s period so the page value/range is snappy
-        self._threads_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, 1.0, self.REPEATINGWorkOnThreads )
-        
-        publish_to_page = False
-        
-        for watcher in self._watchers:
-            
-            watcher.Start( page_key, publish_to_page )
-            
-        
-    
-    def REPEATINGWorkOnThreads( self ):
-        
-        current_value_range = self.GetValueRange()
-        
-        if current_value_range != self._last_pubbed_value_range:
-            
-            self._last_pubbed_value_range = current_value_range
-            
-            HG.client_controller.pub( 'refresh_page_name', self._page_key )
-            
-        
-        # something like:
-            # if any threads are dead, do some stuff with them based on some options here
-            # might want to have this work on a 30s period or something
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_WATCHER_IMPORT ] = MultipleWatcherImport
-
 class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT
@@ -6728,6 +5811,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._lock = threading.Lock()
         
         self._files_repeating_job = None
+        
+        HG.client_controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
         
     
     def _GetSerialisableInfo( self ):
@@ -6926,6 +6011,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
+        
+        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+            
+            WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
     def PausePlay( self ):
         
         with self._lock:
@@ -6977,7 +6070,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             self._RegenerateSeedCacheStatus()
             
         
-        self._files_repeating_job = HG.client_controller.CallRepeating( REPEATING_JOB_INITIAL_DELAY, REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
+        self._files_repeating_job = HG.client_controller.CallRepeating( GetRepeatingJobInitialDelay(), REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles, page_key )
         
     
     def REPEATINGWorkOnFiles( self, page_key ):

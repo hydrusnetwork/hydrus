@@ -1683,7 +1683,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
     
     def ClearPageKey( self ):
         
-        self._page_key = HydrusData.GenerateKey()
+        self._page_key = 'dead media panel page key'
         
     
     def Collect( self, page_key, collect_by = -1 ):
@@ -4109,6 +4109,9 @@ class Thumbnail( Selectable ):
                 if len( upper_summary ) > 0:
                     
                     text_colour_with_alpha = upper_tag_summary_generator.GetTextColour()
+                    
+                    # protip, this renders unicode characters (such as \U0001f50a) in the Supplementary Multilingual Plane incorrectly, wew
+                    # DeviceContext does render them ok somehow
                     
                     gc.SetFont( wx.SystemSettings.GetFont( wx.SYS_DEFAULT_GUI_FONT ), text_colour_with_alpha )
                     

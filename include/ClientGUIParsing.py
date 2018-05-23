@@ -1424,7 +1424,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._content_type.Append( 'tags', HC.CONTENT_TYPE_MAPPINGS )
         self._content_type.Append( 'file hash', HC.CONTENT_TYPE_HASH )
         self._content_type.Append( 'timestamp', HC.CONTENT_TYPE_TIMESTAMP )
-        self._content_type.Append( 'thread watcher page title', HC.CONTENT_TYPE_TITLE )
+        self._content_type.Append( 'watcher page title', HC.CONTENT_TYPE_TITLE )
         self._content_type.Append( 'veto', HC.CONTENT_TYPE_VETO )
         
         self._content_type.Bind( wx.EVT_CHOICE, self.EventContentTypeChange )

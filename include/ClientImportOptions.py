@@ -66,6 +66,13 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity ) = serialisable_info
         
     
+    def GetDeathFileVelocityPeriod( self ):
+        
+        ( death_files_found, death_time_delta ) = self._death_file_velocity
+        
+        return death_time_delta
+        
+    
     def GetNextCheckTime( self, seed_cache, last_check_time ):
         
         if len( seed_cache ) == 0:
@@ -845,7 +852,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             bad_tags = HydrusTags.SortNumericTags( bad_tags )
             
-            raise HydrusExceptions.VetoException( ', '.join( bad_tags ) + ' are blacklisted!' )
+            raise HydrusExceptions.VetoException( ', '.join( bad_tags ) + ' is blacklisted!' )
             
         
     

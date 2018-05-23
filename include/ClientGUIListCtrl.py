@@ -644,7 +644,12 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for ( column_index, value ) in enumerate( display_tuple ):
             
-            self.SetItem( index, column_index, value )
+            existing_value = self.GetItem( index, column_index )
+            
+            if existing_value != value:
+                
+                self.SetItem( index, column_index, value )
+                
             
         
     
@@ -897,6 +902,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             datas = list( self._data_to_indices.keys() )
             
         
+        sort_data_has_changed = False
+        
         for data in datas:
             
             ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
@@ -905,7 +912,20 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
             index = self._data_to_indices[ data ]
             
-            if data_info != self._indices_to_data_info[ index ]:
+            existing_data_info = self._indices_to_data_info[ index ]
+            
+            if data_info != existing_data_info:
+                
+                if not sort_data_has_changed:
+                    
+                    ( existing_data, existing_display_tuple, existing_sort_tuple ) = existing_data_info
+                    
+                    if sort_tuple[ self._sort_column ] != existing_sort_tuple[ self._sort_column ]: # this does not govern secondary sorts, but let's not spam sorts m8
+                        
+                        sort_data_has_changed = True
+                        
+                    
+                
                 
                 self._indices_to_data_info[ index ] = data_info
                 
@@ -914,6 +934,8 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
             
         
         wx.QueueEvent( self.GetEventHandler(), ListCtrlEvent( -1 ) )
+        
+        return sort_data_has_changed
         
 
 class BetterListCtrlPanel( wx.Panel ):

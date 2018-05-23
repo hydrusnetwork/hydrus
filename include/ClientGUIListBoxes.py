@@ -804,7 +804,7 @@ class ListBox( wx.ScrolledWindow ):
     
     TEXT_X_PADDING = 3
     
-    def __init__( self, parent, min_height = 150 ):
+    def __init__( self, parent, height_num_chars = 10 ):
         
         wx.ScrolledWindow.__init__( self, parent, style = wx.VSCROLL | wx.BORDER_DOUBLE )
         
@@ -832,7 +832,9 @@ class ListBox( wx.ScrolledWindow ):
         
         self.SetScrollRate( 0, self._text_y )
         
-        self.SetMinSize( ( 50, min_height ) )
+        ( min_width, min_height ) = ClientGUICommon.ConvertTextToPixels( self, ( 16, height_num_chars ) )
+        
+        self.SetMinClientSize( ( min_width, min_height ) )
         
         self.Bind( wx.EVT_PAINT, self.EventPaint )
         self.Bind( wx.EVT_SIZE, self.EventResize )
@@ -1909,7 +1911,7 @@ class ListBoxTagsActiveSearchPredicates( ListBoxTagsPredicates ):
             initial_predicates = []
             
         
-        ListBoxTagsPredicates.__init__( self, parent, min_height = 100 )
+        ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
         
         self._page_key = page_key
         self._get_current_predicates_callable = self.GetPredicates
@@ -2543,7 +2545,7 @@ class ListBoxTagsSelection( ListBoxTags ):
     
     def __init__( self, parent, include_counts = True, collapse_siblings = False ):
         
-        ListBoxTags.__init__( self, parent, min_height = 200 )
+        ListBoxTags.__init__( self, parent, height_num_chars = 12 )
         
         self._sort = HC.options[ 'default_tag_sort' ]
         

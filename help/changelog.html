@@ -8,6 +8,48 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 308</h3></li>
+				<ul>
+					<li>the multiple watcher will now discard new urls if it is already watching them</li>
+					<li>the multiple watcher will list x/y progress as just 'x' if x==y (making it easier to scan the list)</li>
+					<li>the multiple watcher now lists a couple of 'total' summary lines on its ui--the top lists total number of watchers and queue progress, the bottom lists the usual '23 successful, 3 deleted' line, but summed for all watchers</li>
+					<li>the multiple watcher will now warn you if you try to remove the highlit, alive or un-caught-up watchers</li>
+					<li>the multiple watcher will now resort if the thread subject (or rather, any data in the current sort column) changes (which usually happens right after it is added, when you see it change from from 'unknown subject' to 'mlp is kino')</li>
+					<li>fixed an issue where multiple watchers were not unscheduling down their update job correctly on page close</li>
+					<li>the booru selector in the edit subscription panel should now be in the tab traversal order for keyboard/automated focusing tasks</li>
+					<li>the boorus in that selector are now alphabetised</li>
+					<li>tag import options namespaces are now alphabetised</li>
+					<li>removed/renamed pretty much all references to 'thread' in the watcher code and ui presentation, since it can now do a bunch of other stuff. it is now just the 'watcher' and the 'multiple watcher'</li>
+					<li>deleted a bunch of old static thread watcher and page of images code from the old downloading system</li>
+					<li>added an experimental 'compact' button to advanced mode users' manage subscriptions panels. this removes urls from the selected subscriptions' caches that are no longer useful, keeping their load/save snappy. this is still in testing--be careful with it!</li>
+					<li>the hydrus splash screen now has a bare frame caption and will appear in the taskbar--which helps with some alt-tab and 'where the hell did it go?' stuff if you need to enter a password</li>
+					<li>wrote five 'reasonable defaults' buttons for the 'check timings' options panel for quick entry for different thread/subscription scenarios.</li>
+					<li>added a checkbox to this panel that will swap the reactive options with a simpler single checkbox</li>
+					<li>also clarified/fleshed out the help button on this panel</li>
+					<li>fixed an important source of program instability related to page alive/dead status checking that was inadvertantly talking subtly to the main gui frame even on non ui threads</li>
+					<li>improved how some 'page is closed but not destroyed' test logic for pages inside a closed-but-not-destroyed notebook</li>
+					<li>fixed another small place where the db was talking to the main gui object about status bar updates in a potentially unstable way</li>
+					<li>fixed another small place where the foreground daemons were talking to the main gui frame in a trivial but potentially unstable way</li>
+					<li>played around with some taglist sizer and layout settings</li>
+					<li>the gallery and simple download pages are now a little shorter--the pause and cancel buttons are now just to the right of the status texts, rather than on their own row beneath the network job controls.</li>
+					<li>the various bandwidth-overriding network jobs in the download system--like gallery page downloading--now wait 30s before overriding their bandwidth. hence these jobs will now obey the usual bandwidth rules up to a point</li>
+					<li>the simple downloader also obeys the usual bandwidth rules for 30s but no longer has a static wait, so it can run much faster in certain situations</li>
+					<li>network jobs that will override bandwidth in the future will now report that countdown in their status texts</li>
+					<li>fixed a bug in the old booru code that meant some boorus were superfluously requesting the 0th indexed page of a gallery more frequently than needed in order to reestablish a 'page size' cache. this value is now cached globally and will be replaced by a completely different system in the new gallery downloader</li>
+					<li>added a decent tooltip to the 'gallery fixed delay' widgets in the options->downloading panel</li>
+					<li>the autocomplete input should clear itself after a 'broadcast' event a bit quicker and stop some dupe inputs in certain edge cases</li>
+					<li>the tumblr url class now recognises that tumblr posts can have multiple files, which helps some source url lookup logic</li>
+					<li>added a url class for artstation file pages</li>
+					<li>the primary file import url (the one listed in the file import list) will now correctly not associate with the resulting file if its url class is so set</li>
+					<li>all the import objects now have much lower idle CPU time and thread needs and start in slightly offset times, smoothing out the thread count spikes</li>
+					<li>all the import objects will now respond quickly to changes to the underlying file import cache (like right-click->try again events)</li>
+					<li>the new job scheduling system now uses two queues--fast and slow, in order to reduce some resort/insert overhead</li>
+					<li>a couple more improvements to the new job scheduling system to smooth out spikes</li>
+					<li>if the temporary path override does not exist, the client will now compain with spammy popup messages and fall back to the default</li>
+					<li>if the temporary path override does not exist or is not writeable-to on options dialog ok, a veto exception will be raised</li>
+					<li>refactored the watcher and multiple watcher to their own file, ClientImportWatchers</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 307</h3></li>
 				<ul>
 					<li>wrote a gelbooru 0.2.5 (which matches gelbooru itself) parser in the new system. it now has some more redundancy and produces md5 hash and source urls</li>

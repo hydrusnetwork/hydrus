@@ -1465,7 +1465,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if limited_types is None:
             
-            limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE )
+            limited_types = ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOMAIN, CC.NETWORK_CONTEXT_HYDRUS, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_SUBSCRIPTION, CC.NETWORK_CONTEXT_WATCHER_PAGE )
             
         
         self._context_type = ClientGUICommon.BetterChoice( self )
@@ -1558,7 +1558,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         self._context_data_services.Disable()
         self._context_data_subscriptions.Disable()
         
-        if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_THREAD_WATCHER_PAGE ):
+        if context_type in ( CC.NETWORK_CONTEXT_GLOBAL, CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_WATCHER_PAGE ):
             
             self._context_data_none.SetValue( True )
             
@@ -2209,6 +2209,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
         
+        self._booru_selector = wx.ListBox( self._query_panel )
+        self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
+        
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
         self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'urls', 8 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
@@ -2224,9 +2227,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._ListCtrlCanRetryFailed )
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
-        
-        self._booru_selector = wx.ListBox( self._query_panel )
-        self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
         
         self._checker_options_button = ClientGUICommon.BetterButton( self._query_panel, 'edit check timings', self._EditCheckerOptions )
         
@@ -2726,7 +2726,14 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 boorus = HG.client_controller.Read( 'remote_boorus' )
                 
-                for ( name, booru ) in boorus.items(): self._booru_selector.Append( name, booru )
+                names_and_boorus = list( boorus.items() )
+                
+                names_and_boorus.sort()
+                
+                for ( name, booru ) in names_and_boorus:
+                    
+                    self._booru_selector.Append( name, booru )
+                    
                 
                 self._booru_selector.Select( 0 )
                 
@@ -2987,6 +2994,12 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions_panel.AddButton( 'retry failures', self.RetryFailures, enabled_check_func = self._CanRetryFailures )
         subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
         subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
+        
+        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            
+            subscriptions_panel.AddButton( 'compact', self.Compact, enabled_check_func = self._CanCompact )
+            
+        
         subscriptions_panel.AddButton( 'reset', self.Reset, enabled_check_func = self._CanReset )
         
         subscriptions_panel.NewButtonRow()
@@ -3024,6 +3037,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
         return True in ( subscription.CanCheckNow() for subscription in subscriptions )
+        
+    
+    def _CanCompact( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanCompact() for subscription in subscriptions )
         
     
     def _CanMerge( self ):
@@ -3327,6 +3347,26 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._subscriptions.UpdateDatas( subscriptions )
+        
+    
+    def Compact( self ):
+        
+        message = 'WARNING! EXPERIMENTAL! This will tell all the select subscriptions to remove any processed urls old urls that it is no longer worth keeping around. It helps to keep subs clean and snappy on load/save.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                subscriptions = self._subscriptions.GetData( only_selected = True )
+                
+                for subscription in subscriptions:
+                    
+                    subscription.Compact()
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
         
     
     def Delete( self ):
@@ -3777,7 +3817,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def SetCheckerOptions( self ):
         
-        checker_options = ClientImportOptions.CheckerOptions( intended_files_per_check = 5, never_faster_than = 86400, never_slower_than = 90 * 86400, death_file_velocity = ( 1, 90 * 86400 ) )
+        checker_options = ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
             
@@ -4154,6 +4194,10 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def _InitialiseNamespaces( self, namespaces ):
+        
+        namespaces = list( namespaces )
+        
+        namespaces.sort()
         
         services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         

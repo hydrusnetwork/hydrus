@@ -2,6 +2,7 @@ import bisect
 import collections
 import HydrusExceptions
 import Queue
+import random
 import threading
 import time
 import traceback
@@ -381,11 +382,18 @@ class JobScheduler( threading.Thread ):
     
     def _StartWork( self ):
         
+        jobs_started = 0
+        
         while True:
             
             with self._waiting_lock:
                 
                 if len( self._waiting ) == 0:
+                    
+                    break
+                    
+                
+                if jobs_started >= 10: # try to avoid spikes
                     
                     break
                     
@@ -397,6 +405,8 @@ class JobScheduler( threading.Thread ):
                     next_job = self._waiting.pop( 0 )
                     
                     next_job.StartWork()
+                    
+                    jobs_started += 1
                     
                 else:
                     
@@ -587,9 +597,14 @@ class SchedulableJob( object ):
         self._BootWorker()
         
     
-    def Wake( self ):
+    def Wake( self, next_work_time = None ):
         
-        self._next_work_time = HydrusData.GetNowFloat()
+        if next_work_time is None:
+            
+            next_work_time = HydrusData.GetNowFloat()
+            
+        
+        self._next_work_time = next_work_time
         
         self._scheduler.WorkTimesHaveChanged()
         
@@ -640,6 +655,11 @@ class RepeatingJob( SchedulableJob ):
         
     
     def SetPeriod( self, period ):
+        
+        if period > 10.0:
+            
+            period += random.random() # smooth out future spikes if ten of these all fire at the same time
+            
         
         self._period = period
         

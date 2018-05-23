@@ -127,9 +127,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             button.SetLabelText( 'multiple watcher' )
             
-        elif entry_type == 'page_import_thread_watcher':
+        elif entry_type == 'page_import_watcher':
             
-            button.SetLabelText( 'thread watcher' )
+            button.SetLabelText( 'watcher' )
             
         elif entry_type == 'page_import_urls':
             
@@ -214,9 +214,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportMultipleWatcher() )
                     
-                elif entry_type == 'page_import_thread_watcher':
+                elif entry_type == 'page_import_watcher':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportThreadWatcher() )
+                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportWatcher() )
                     
                 elif entry_type == 'page_import_urls':
                     
@@ -269,7 +269,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         elif menu_keyword == 'download':
             
             entries.append( ( 'page_import_urls', None ) )
-            entries.append( ( 'page_import_thread_watcher', None ) )
+            entries.append( ( 'page_import_watcher', None ) )
             entries.append( ( 'menu', 'gallery' ) )
             entries.append( ( 'page_import_simple_downloader', None ) )
             
@@ -404,9 +404,9 @@ class Page( wx.SplitterWindow ):
         
         wx.SplitterWindow.__init__( self, parent )
         
-        self._page_key = HydrusData.GenerateKey()
-        
         self._controller = controller
+        
+        self._page_key = self._controller.AcquirePageKey()
         
         self._management_controller = management_controller
         
@@ -498,6 +498,8 @@ class Page( wx.SplitterWindow ):
     def CleanBeforeDestroy( self ):
         
         self._management_panel.CleanBeforeDestroy()
+        
+        self._controller.ReleasePageKey( self._page_key )
         
     
     def EventPreviewUnsplit( self, event ):
@@ -594,6 +596,11 @@ class Page( wx.SplitterWindow ):
     def GetPageKey( self ):
         
         return self._page_key
+        
+    
+    def GetPageKeys( self ):
+        
+        return { self._page_key }
         
     
     def GetPrettyStatus( self ):
@@ -858,6 +865,8 @@ class PagesNotebook( wx.Notebook ):
         
         self._controller = controller
         
+        self._page_key = self._controller.AcquirePageKey()
+        
         self._name = name
         
         self._next_new_page_index = None
@@ -865,8 +874,6 @@ class PagesNotebook( wx.Notebook ):
         self._potential_drag_page = None
         
         self._closed_pages = []
-        
-        self._page_key = HydrusData.GenerateKey()
         
         self._last_last_session_hash = None
         
@@ -1022,11 +1029,11 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def _GatherDeadThreadWatchers( self, insertion_page ):
+    def _GatherDeadWatchers( self, insertion_page ):
         
         top_notebook = self._GetTopNotebook()
         
-        gathered_pages = top_notebook.GetGatherPages( 'dead_thread_watchers' )
+        gathered_pages = top_notebook.GetGatherPages( 'dead_watchers' )
         
         self._MovePages( gathered_pages, insertion_page )
         
@@ -1515,7 +1522,7 @@ class PagesNotebook( wx.Notebook ):
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'dead thread watchers', 'Find all currently open dead thread watchers and move them to this page of pages.', self._GatherDeadThreadWatchers, page )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'dead watchers', 'Find all currently open dead watchers and move them to this page of pages.', self._GatherDeadWatchers, page )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'gather on this page of pages' )
             
@@ -1663,6 +1670,8 @@ class PagesNotebook( wx.Notebook ):
             
             page.CleanBeforeDestroy()
             
+        
+        self._controller.ReleasePageKey( self._page_key )
         
     
     def CloseCurrentPage( self, polite = True ):
@@ -1892,13 +1901,13 @@ class PagesNotebook( wx.Notebook ):
     
     def GetGatherPages( self, gather_type ):
         
-        if gather_type == 'dead_thread_watchers':
+        if gather_type == 'dead_watchers':
             
             def test( page ):
                 
                 management_controller = page.GetManagementController()
                 
-                return management_controller.IsDeadThreadWatcher()
+                return management_controller.IsDeadWatcher()
                 
             
         else:
@@ -2020,6 +2029,18 @@ class PagesNotebook( wx.Notebook ):
     def GetPageKey( self ):
         
         return self._page_key
+        
+    
+    def GetPageKeys( self ):
+        
+        page_keys = { self._page_key }
+        
+        for page in self._GetPages():
+            
+            page_keys.update( page.GetPageKeys() )
+            
+        
+        return page_keys
         
     
     def GetPages( self ):
@@ -2374,16 +2395,16 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportMultipleWatcher( self, thread_url = None, on_deepest_notebook = False ):
+    def NewPageImportMultipleWatcher( self, url = None, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( thread_url )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( url )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportThreadWatcher( self, thread_url = None, on_deepest_notebook = False ):
+    def NewPageImportWatcher( self, url = None, on_deepest_notebook = False ):
         
-        management_controller = ClientGUIManagement.CreateManagementControllerImportThreadWatcher( thread_url )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportWatcher( url )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         

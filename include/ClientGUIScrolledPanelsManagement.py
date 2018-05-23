@@ -1712,26 +1712,40 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            thread_checker = ClientGUICommon.StaticBox( self, 'thread checker' )
+            watchers = ClientGUICommon.StaticBox( self, 'watchers' )
             
-            self._permit_watchers_to_name_their_pages = wx.CheckBox( thread_checker )
+            self._permit_watchers_to_name_their_pages = wx.CheckBox( watchers )
             
-            self._use_multiple_watcher_for_drag_and_drops = wx.CheckBox( thread_checker )
+            self._use_multiple_watcher_for_drag_and_drops = wx.CheckBox( watchers )
             
-            self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
-            self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
-            self._thread_watcher_paused_page_string = ClientGUICommon.NoneableTextCtrl( thread_checker, none_phrase = 'do not show' )
+            self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
+            self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
+            self._thread_watcher_paused_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
             
-            checker_options = self._new_options.GetDefaultThreadCheckerOptions()
+            checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
             
-            self._thread_checker_options = ClientGUITime.EditCheckerOptions( thread_checker, checker_options )
+            self._watcher_checker_options = ClientGUITime.EditCheckerOptions( watchers, checker_options )
             
             #
             
+            gallery_page_tt = 'Gallery page fetches are heavy requests with unusual fetch-time requirements. It is important they not wait too long, but it is also useful to throttle them:'
+            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += '- So they do not compete with file downloads for bandwidth, leading to very unbalanced 20/4400-type queues.'
+            gallery_page_tt += os.linesep
+            gallery_page_tt += '- So you do not get 1000 items in your queue before realising you did not like that tag anyway.'
+            gallery_page_tt += os.linesep
+            gallery_page_tt += '- To give servers a break (some gallery pages can be CPU-expensive to generate).'
+            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += 'After this fixed wait has occurred, the gallery download job will run like any other network job, except that it will ignore bandwidth limits after thirty seconds to guarantee throughput and to stay synced with the source.'
+            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += 'If you do not understand this stuff, you can just leave it alone.'
+            
             self._gallery_page_wait_period_pages.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_pages' ) )
+            self._gallery_page_wait_period_pages.SetToolTip( gallery_page_tt )
             self._gallery_file_limit.SetValue( HC.options[ 'gallery_file_limit' ] )
             
             self._gallery_page_wait_period_subscriptions.SetValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
+            self._gallery_page_wait_period_subscriptions.SetToolTip( gallery_page_tt )
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
@@ -1747,7 +1761,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
+            rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_pages ) )
             rows.append( ( 'By default, stop searching once this many files are found:', self._gallery_file_limit ) )
             
             gridbox = ClientGUICommon.WrapInGrid( gallery_downloader, rows )
@@ -1758,7 +1772,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_subscriptions ) )
+            rows.append( ( 'Additional fixed time (in seconds) to wait between gallery page fetches:', self._gallery_page_wait_period_subscriptions ) )
             rows.append( ( 'Maximum number of subscriptions that can sync simultaneously:', self._max_simultaneous_subscriptions ) )
             rows.append( ( 'Sync subscriptions in random order:', self._process_subs_in_random_order ) )
             
@@ -1777,10 +1791,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Prepend dead thread checker page names with this:', self._thread_watcher_dead_page_string ) )
             rows.append( ( 'Prepend paused thread checker page names with this:', self._thread_watcher_paused_page_string ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( thread_checker, rows )
+            gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
             
-            thread_checker.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-            thread_checker.Add( self._thread_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+            watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            watchers.Add( self._watcher_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1788,7 +1802,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox.Add( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( thread_checker, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -1810,7 +1824,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
             self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
             
-            self._new_options.SetDefaultThreadCheckerOptions( self._thread_checker_options.GetValue() )
+            self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             
         
     
@@ -1898,7 +1912,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_identifiers = []
             
-            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_THREAD_WATCHER ]:
+            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_WATCHER ]:
                 
                 gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
                 
@@ -2459,6 +2473,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             if temp_path_override == '':
                 
                 temp_path_override = None
+                
+            else:
+                
+                if not HydrusPaths.DirectoryIsWritable( temp_path_override ):
+                    
+                    raise HydrusExceptions.VetoException( 'The temporary path override either did not exist or was not writeable-to! Please change it or fix its permissions!' )
+                    
                 
             
             self._new_options.SetNoneableString( 'temp_path_override', temp_path_override )

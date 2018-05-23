@@ -1,6 +1,8 @@
 import HydrusConstants as HC
+import HydrusData
 import HydrusGlobals as HG
 import HydrusPaths
+import os
 import webbrowser
 
 def DeletePath( path ):
@@ -16,7 +18,7 @@ def DeletePath( path ):
     
 def GetCurrentTempDir():
     
-    temp_path_override = HG.client_controller.new_options.GetNoneableString( 'temp_path_override' )
+    temp_path_override = GetTempPathOverride()
     
     if temp_path_override is None:
         
@@ -29,13 +31,13 @@ def GetCurrentTempDir():
     
 def GetTempDir():
     
-    temp_path_override = HG.client_controller.new_options.GetNoneableString( 'temp_path_override' )
+    temp_path_override = GetTempPathOverride()
     
     return HydrusPaths.GetTempDir( dir = temp_path_override ) # none means default
     
 def GetTempPath( suffix = '' ):
     
-    temp_path_override = HG.client_controller.new_options.GetNoneableString( 'temp_path_override' )
+    temp_path_override = GetTempPathOverride()
     
     return HydrusPaths.GetTempPath( suffix = suffix, dir = temp_path_override )
     
@@ -55,4 +57,17 @@ def LaunchURLInWebBrowser( url ):
         
         HydrusPaths.LaunchFile( url, launch_path = web_browser_path )
         
+    
+def GetTempPathOverride():
+    
+    temp_path_override = HG.client_controller.new_options.GetNoneableString( 'temp_path_override' )
+    
+    if temp_path_override is not None and not os.path.exists( temp_path_override ):
+        
+        HydrusData.ShowText( 'The temp path ' + temp_path_override + ' does not exist! Please either create it or change the option!' )
+        
+        return None
+        
+    
+    return temp_path_override
     

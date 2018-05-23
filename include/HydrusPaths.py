@@ -244,6 +244,11 @@ def DeletePath( path ):
     
 def DirectoryIsWritable( path ):
     
+    if not os.path.exists( path ):
+        
+        return False
+        
+    
     try:
         
         t = tempfile.TemporaryFile( dir = path )
