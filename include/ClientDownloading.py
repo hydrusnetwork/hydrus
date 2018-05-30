@@ -1481,6 +1481,19 @@ class GalleryTumblr( Gallery ):
         
         definitely_no_more_pages = False
         
+        if data.startswith( '<!DOCTYPE html>' ):
+            
+            message = 'The tumblr downloader received an unexpected HTML page when it tried to download JSON post information. It is likely that you are an EU/EEA user and have been hit by a GDPR click-through issue.'
+            message += os.linesep * 2
+            message += 'In order to get the hydrus client to \'click ok\' on that page, please hit _network->DEBUG: misc->do tumblr GDPR click-through_ and try this gallery search again.'
+            message += os.linesep * 2
+            message += 'If you still have problems, please let hydrus dev know.'
+            
+            HydrusData.ShowText( message )
+            
+            raise Exception( 'Tumblr GDPR issue.' )
+            
+        
         processed_raw_json = data.split( 'var tumblr_api_read = ' )[1][:-2] # -1 takes a js ';' off the end
         
         json_object = json.loads( processed_raw_json )

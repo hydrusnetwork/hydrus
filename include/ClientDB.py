@@ -327,43 +327,37 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.executemany( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_tag_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( child_tag_id, parent_tag_id ) in pairs ) )
         
-        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
-        
-        mappings_ids = []
-        special_content_updates = []
+        tag_ids = set()
         
         for ( child_tag_id, parent_tag_id ) in pairs:
             
-            child_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( child_tag_id, ) ) }
-            parent_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( parent_tag_id, ) ) }
-            
-            needed_hash_ids = child_hash_ids.difference( parent_hash_ids )
-            
-            mappings_ids.append( ( parent_tag_id, needed_hash_ids ) )
-            
-            if make_content_updates:
-                
-                parent_tag = self._GetTag( parent_tag_id )
-                
-                needed_hashes = self._GetHashes( needed_hash_ids )
-                
-                special_content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, needed_hashes ) )
-                
-                special_content_updates.append( special_content_update )
-                
+            tag_ids.add( child_tag_id )
             
         
-        self._UpdateMappings( service_id, mappings_ids = mappings_ids )
-        
-        return special_content_updates
+        for tag_id in tag_ids:
+            
+            self._FillInParents( service_id, tag_id, make_content_updates = make_content_updates )
+            
         
     
-    def _AddTagSiblings( self, service_id, pairs ):
+    def _AddTagSiblings( self, service_id, pairs, make_content_updates = False ):
         
         self._c.executemany( 'DELETE FROM tag_siblings WHERE service_id = ? AND bad_tag_id = ?;', ( ( service_id, bad_tag_id ) for ( bad_tag_id, good_tag_id ) in pairs ) )
         self._c.executemany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, HC.CONTENT_STATUS_PENDING ) for ( bad_tag_id, good_tag_id ) in pairs ) )
         
         self._c.executemany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        
+        tag_ids = set()
+        
+        for ( bad_tag_id, good_tag_id ) in pairs:
+            
+            tag_ids.add( bad_tag_id )
+            
+        
+        for tag_id in tag_ids:
+            
+            self._FillInParents( service_id, tag_id, make_content_updates = make_content_updates )
+            
         
     
     def _AnalyzeStaleBigTables( self, stop_time = None, only_when_idle = False, force_reanalyze = False ):
@@ -2843,8 +2837,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._c.execute( 'CREATE TABLE tag_sibling_petitions ( service_id INTEGER REFERENCES services ON DELETE CASCADE, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );' )
         
-        self._c.execute( 'CREATE TABLE urls ( hash_id INTEGER, url TEXT, PRIMARY KEY ( hash_id, url ) );' )
-        self._CreateIndex( 'urls', [ 'url' ] )
+        self._c.execute( 'CREATE TABLE url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
+        self._CreateIndex( 'url_map', [ 'url_id' ] )
         
         self._c.execute( 'CREATE TABLE vacuum_timestamps ( name TEXT, timestamp INTEGER );' )
         
@@ -2875,6 +2869,9 @@ class DB( HydrusDB.HydrusDB ):
         self._CreateIndex( 'external_master.tags', [ 'subtag_id', 'namespace_id' ] )
         
         self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.texts ( text_id INTEGER PRIMARY KEY, text TEXT UNIQUE );' )
+        
+        self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain TEXT, url TEXT UNIQUE );' )
+        self._CreateIndex( 'external_master.urls', [ 'domain' ] )
         
         # inserts
         
@@ -3415,6 +3412,96 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.Print( job_key.ToString() )
             
             job_key.Finish()
+            
+        
+    
+    def _FillInParents( self, service_id, fill_in_tag_id, make_content_updates = False ):
+        
+        sibling_tag_ids = set()
+        
+        search_tag_ids = [ fill_in_tag_id ]
+        
+        while len( search_tag_ids ) > 0:
+            
+            tag_id = search_tag_ids.pop()
+            
+            sibling_tag_ids.add( tag_id )
+            
+            for ( tag_id_a, tag_id_b ) in self._c.execute( 'SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE ( bad_tag_id = ? OR good_tag_id = ? ) AND status = ?;', ( tag_id, tag_id, HC.CONTENT_STATUS_CURRENT ) ):
+                
+                if tag_id_a not in sibling_tag_ids:
+                    
+                    search_tag_ids.append( tag_id_a )
+                    
+                
+                if tag_id_b not in sibling_tag_ids:
+                    
+                    search_tag_ids.append( tag_id_b )
+                    
+                
+                sibling_tag_ids.add( tag_id_a )
+                sibling_tag_ids.add( tag_id_b )
+                
+            
+        
+        # we now have all the siblings, worse or better, of fill_in_tag_id
+        
+        parent_tag_ids = set()
+        
+        search_tag_ids = list( sibling_tag_ids )
+        
+        while len( search_tag_ids ) > 0:
+            
+            tag_id = search_tag_ids.pop()
+            
+            for parent_tag_id in self._STI( self._c.execute( 'SELECT parent_tag_id FROM tag_parents WHERE child_tag_id = ? AND status = ?;', ( tag_id, HC.CONTENT_STATUS_CURRENT ) ) ):
+                
+                if parent_tag_id not in parent_tag_ids:
+                    
+                    search_tag_ids.append( parent_tag_id )
+                    
+                
+                parent_tag_ids.add( parent_tag_id )
+                
+            
+        
+        # we now have all parents and grandparents of all siblings
+        # all parents should apply to all siblings
+        
+        mappings_ids = []
+        content_updates = []
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateMappingsTableNames( service_id )
+        
+        child_hash_ids = self._STS( self._SelectFromList( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id IN %s;', sibling_tag_ids ) )
+        
+        for parent_tag_id in parent_tag_ids:
+            
+            parent_hash_ids = { hash_id for ( hash_id, ) in self._c.execute( 'SELECT hash_id FROM ' + current_mappings_table_name + ' WHERE tag_id = ?;', ( parent_tag_id, ) ) }
+            
+            needed_hash_ids = child_hash_ids.difference( parent_hash_ids )
+            
+            mappings_ids.append( ( parent_tag_id, needed_hash_ids ) )
+            
+            if make_content_updates:
+                
+                parent_tag = self._GetTag( parent_tag_id )
+                
+                needed_hashes = self._GetHashes( needed_hash_ids )
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( parent_tag, needed_hashes ) )
+                
+                content_updates.append( content_update )
+                
+            
+        
+        self._UpdateMappings( service_id, mappings_ids = mappings_ids )
+        
+        if len( content_updates ) > 0:
+            
+            service_key = self._GetService( service_id ).GetServiceKey()
+            
+            self.pub_content_updates_after_commit( { service_key : content_updates } )
             
         
     
@@ -4957,11 +5044,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if hash_ids is None:
             
-            query = self._c.execute( 'SELECT hash_id, url FROM urls;' )
+            query = self._c.execute( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls;' )
             
         else:
             
-            query = self._SelectFromList( 'SELECT hash_id, url FROM urls WHERE hash_id in %s;', hash_ids )
+            query = self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id in %s;', hash_ids )
             
         
         result_hash_ids = set()
@@ -5407,7 +5494,7 @@ class DB( HydrusDB.HydrusDB ):
         
         hash_ids_to_petitioned_file_service_ids = HydrusData.BuildKeyToListDict( self._SelectFromList( 'SELECT hash_id, service_id FROM file_petitions WHERE hash_id IN %s;', hash_ids ) )
         
-        hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM urls WHERE hash_id IN %s;', hash_ids ) )
+        hash_ids_to_urls = HydrusData.BuildKeyToSetDict( self._SelectFromList( 'SELECT hash_id, url FROM url_map NATURAL JOIN urls WHERE hash_id IN %s;', hash_ids ) )
         
         hash_ids_to_service_ids_and_filenames = HydrusData.BuildKeyToListDict( ( ( hash_id, ( service_id, filename ) ) for ( hash_id, service_id, filename ) in self._SelectFromList( 'SELECT hash_id, service_id, filename FROM service_filenames WHERE hash_id IN %s;', hash_ids ) ) )
         
@@ -6287,7 +6374,10 @@ class DB( HydrusDB.HydrusDB ):
             
             site_id = self._c.lastrowid
             
-        else: ( site_id, ) = result
+        else:
+            
+            ( site_id, ) = result
+            
         
         return site_id
         
@@ -6437,7 +6527,7 @@ class DB( HydrusDB.HydrusDB ):
                     namespace_id = self._GetNamespaceId( namespace )
                     subtag_id = self._GetSubtagId( subtag )
                     
-                    self._c.execute( 'INSERT INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
+                    self._c.execute( 'REPLACE INTO tags ( tag_id, namespace_id, subtag_id ) VALUES ( ?, ?, ? );', ( tag_id, namespace_id, subtag_id ) )
                     
                     tag_id = self._c.lastrowid
                     
@@ -6665,6 +6755,26 @@ class DB( HydrusDB.HydrusDB ):
         return self._GetHashes( hash_ids )
         
     
+    def _GetURLId( self, url ):
+        
+        result = self._c.execute( 'SELECT url_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
+        
+        if result is None:
+            
+            domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
+            
+            self._c.execute( 'INSERT INTO urls ( domain, url ) VALUES ( ?, ? );', ( domain, url ) )
+            
+            url_id = self._c.lastrowid
+            
+        else:
+            
+            ( url_id, ) = result
+            
+        
+        return url_id
+        
+    
     def _GetURLStatuses( self, url ):
         
         search_urls = ClientNetworkingDomain.GetSearchURLs( url )
@@ -6673,7 +6783,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for search_url in search_urls:
             
-            results = self._STS( self._c.execute( 'SELECT hash_id FROM urls WHERE url = ?;', ( search_url, ) ) )
+            results = self._STS( self._c.execute( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE url = ?;', ( search_url, ) ) )
             
             hash_ids.update( results )
             
@@ -7347,23 +7457,19 @@ class DB( HydrusDB.HydrusDB ):
                             
                             ( urls, hashes ) = row
                             
-                            for hash in hashes:
-                                
-                                hash_id = self._GetHashId( hash )
-                                
-                                self._c.executemany( 'INSERT OR IGNORE INTO urls ( hash_id, url ) VALUES ( ?, ? );', ( ( hash_id, url ) for url in urls ) )
-                                
+                            url_ids = { self._GetURLId( url ) for url in urls }
+                            hash_ids = self._GetHashIds( hashes )
+                            
+                            self._c.executemany( 'INSERT OR IGNORE INTO url_map ( hash_id, url_id ) VALUES ( ?, ? );', itertools.product( hash_ids, url_ids ) )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
                             ( urls, hashes ) = row
                             
-                            for hash in hashes:
-                                
-                                hash_id = self._GetHashId( hash )
-                                
-                                self._c.executemany( 'DELETE FROM urls WHERE hash_id = ? AND url = ?;', ( ( hash_id, url ) for url in urls ) )
-                                
+                            url_ids = { self._GetURLId( url ) for url in urls }
+                            hash_ids = self._GetHashIds( hashes )
+                            
+                            self._c.executemany( 'DELETE FROM url_map WHERE hash_id = ? AND url_id = ?;', itertools.product( hash_ids, url_ids ) )
                             
                         
                     
@@ -7591,9 +7697,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if action == HC.CONTENT_UPDATE_ADD:
                                 
-                                special_content_updates = self._AddTagParents( service_id, pairs, make_content_updates = True )
-                                
-                                self.pub_content_updates_after_commit( { service_key : special_content_updates } )
+                                self._AddTagParents( service_id, pairs, make_content_updates = True )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
                                 
@@ -7684,7 +7788,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if action == HC.CONTENT_UPDATE_ADD:
                                 
-                                self._AddTagSiblings( service_id, pairs )
+                                self._AddTagSiblings( service_id, pairs, make_content_updates = True )
                                 
                             elif action == HC.CONTENT_UPDATE_DELETE:
                                 
@@ -8711,7 +8815,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if mime in HC.MIMES_WITH_THUMBNAILS:
                     
-                    thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime )
+                    percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+                    
+                    thumbnail = HydrusFileHandling.GenerateThumbnail( path, mime, percentage_in = percentage_in )
                     
                     client_files_manager.LocklessAddFullSizeThumbnail( hash, thumbnail )
                     
@@ -10129,7 +10235,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                self._controller.pub( 'splash_set_status_subtext', 'generating normalised uls: initialising' )
+                self._controller.pub( 'splash_set_status_subtext', 'generating normalised urls: initialising' )
                 
                 domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
                 
@@ -10330,6 +10436,91 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 308:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'inkbunny file page' ) )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'inkbunny file page parser', 'gelbooru 0.2.0 file page parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            def get_url_id( url ):
+                
+                result = self._c.execute( 'SELECT url_id FROM urls WHERE url = ?;', ( url, ) ).fetchone()
+                
+                if result is None:
+                    
+                    domain = ClientNetworkingDomain.ConvertURLIntoDomain( url )
+                    
+                    self._c.execute( 'INSERT INTO urls ( domain, url ) VALUES ( ?, ? );', ( domain, url ) )
+                    
+                    url_id = self._c.lastrowid
+                    
+                else:
+                    
+                    ( url_id, ) = result
+                    
+                
+                return url_id
+                
+            
+            self._controller.pub( 'splash_set_status_subtext', 'moving urls to better storage' )
+            
+            old_data = self._c.execute( 'SELECT hash_id, url FROM urls;' ).fetchall()
+            
+            self._c.execute( 'DROP TABLE urls;' )
+            
+            #
+            
+            self._c.execute( 'CREATE TABLE url_map ( hash_id INTEGER, url_id INTEGER, PRIMARY KEY ( hash_id, url_id ) );' )
+            self._CreateIndex( 'url_map', [ 'url_id' ] )
+            
+            self._c.execute( 'CREATE TABLE IF NOT EXISTS external_master.urls ( url_id INTEGER PRIMARY KEY, domain TEXT, url TEXT UNIQUE );' )
+            self._CreateIndex( 'external_master.urls', [ 'domain' ] )
+            
+            #
+            
+            for ( hash_id, url ) in old_data:
+                
+                url_id = get_url_id( url )
+                
+                self._c.execute( 'INSERT OR IGNORE INTO url_map ( hash_id, url_id ) VALUES ( ?, ? );', ( hash_id, url_id ) )
+                
+            
+            #
+            
+            message = 'If you are an EU/EEA user and are subject to GDPR, the tumblr downloader has likely broken for you. If so, please hit _network->DEBUG: misc->do tumblr GDPR click-through_ to restore tumblr downloader functionality.'
+            
+            self.pub_initial_message( message )
             
         
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )

@@ -158,11 +158,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetWatcherKeys( self ):
+    def GetNumDead( self ):
         
         with self._lock:
             
-            return set( self._watcher_keys_to_watchers.keys() )
+            return len( [ watcher for watcher in self._watchers if watcher.IsDead() ] )
             
         
     
@@ -209,6 +209,14 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetWatcherKeys( self ):
+        
+        with self._lock:
+            
+            return set( self._watcher_keys_to_watchers.keys() )
+            
+        
+    
     def RemoveWatcher( self, watcher_key ):
         
         with self._lock:
@@ -226,8 +234,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._page_key = page_key
             
         
-        # set a 1s period so the page value/range is breddy snappy
-        self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 1.0, self.REPEATINGWorkOnWatchers )
+        # set a 2s period so the page value/range is breddy snappy
+        self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
         
         publish_to_page = False
         
@@ -369,10 +377,12 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if not error_occurred:
             
-            # convert to API url as appropriate
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._url )
-            
-            if parser is None:
+            try:
+                
+                # convert to API url as appropriate
+                ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self._url )
+                
+            except HydrusExceptions.URLMatchException:
                 
                 error_occurred = True
                 
@@ -758,8 +768,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         did_substantial_work = False
         
-        file_url = seed.seed_data
-        
         try:
             
             def status_hook( text ):
@@ -924,17 +932,17 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if not HydrusData.TimeHasPassed( self._no_work_until ):
-                
-                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
-                
-            elif self._checking_status == ClientImporting.CHECKER_STATUS_404:
+            if self._checking_status == ClientImporting.CHECKER_STATUS_404:
                 
                 watcher_status = 'URL 404'
                 
             elif self._checking_status == ClientImporting.CHECKER_STATUS_DEAD:
                 
                 watcher_status = 'URL DEAD'
+                
+            elif not HydrusData.TimeHasPassed( self._no_work_until ):
+                
+                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
                 
             else:
                 
@@ -992,11 +1000,16 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def _IsDead( self ):
+        
+        return self._checking_status in ( ClientImporting.CHECKER_STATUS_404, ClientImporting.CHECKER_STATUS_DEAD )
+        
+    
     def IsDead( self ):
         
         with self._lock:
             
-            return self._checking_status in ( ClientImporting.CHECKER_STATUS_404, ClientImporting.CHECKER_STATUS_DEAD )
+            return self._IsDead()
             
         
     
@@ -1012,7 +1025,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if self._checking_paused and self._checker_options.IsDead( self._seed_cache, self._last_check_time ):
+            if self._checking_paused and self._IsDead():
                 
                 return # watcher is dead, so don't unpause until a checknow event
                 
@@ -1032,6 +1045,33 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             self._files_paused = not self._files_paused
             
             ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+            
+        
+    
+    def PausePlay( self ):
+        
+        with self._lock:
+            
+            if self._checking_paused:
+                
+                if self._IsDead(): # can't unpause checker until a checknow event
+                    
+                    self._files_paused = not self._files_paused
+                    
+                else:
+                    
+                    self._checking_paused = False
+                    self._files_paused = False
+                    
+                
+                ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
+                ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+                
+            else:
+                
+                self._checking_paused = True
+                self._files_paused = True
+                
             
         
     

@@ -851,11 +851,11 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
     def SetData( self, datas ):
         
-        datas = set( datas )
         existing_datas = set( self._data_to_indices.keys() )
         
-        datas_to_add = datas.difference( existing_datas )
-        datas_to_update = datas.intersection( existing_datas )
+        # useful to preserve order here sometimes (e.g. export file path generation order)
+        datas_to_add = [ data for data in datas if data not in existing_datas ]
+        datas_to_update = [ data for data in datas if data in existing_datas ]
         datas_to_delete = existing_datas.difference( datas )
         
         if len( datas_to_delete ) > 0:
@@ -899,7 +899,13 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         if datas is None:
             
-            datas = list( self._data_to_indices.keys() )
+            # keep it sorted here, which is sometimes useful
+            
+            indices_and_datas = [ ( index, data ) for ( data, index ) in self._data_to_indices.items() ]
+            
+            indices_and_datas.sort()
+            
+            datas = [ data for ( index, data ) in indices_and_datas ]
             
         
         sort_data_has_changed = False

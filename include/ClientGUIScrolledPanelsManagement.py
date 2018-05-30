@@ -1786,7 +1786,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
-            rows.append( ( 'When drag-and-dropping, use the Multiple Watcher (advanced!):', self._use_multiple_watcher_for_drag_and_drops ) )
+            rows.append( ( 'When drag-and-dropping, use the Multiple Watcher:', self._use_multiple_watcher_for_drag_and_drops ) )
             rows.append( ( 'Prepend 404 thread checker page names with this:', self._thread_watcher_not_found_page_string ) )
             rows.append( ( 'Prepend dead thread checker page names with this:', self._thread_watcher_dead_page_string ) )
             rows.append( ( 'Prepend paused thread checker page names with this:', self._thread_watcher_paused_page_string ) )
@@ -2790,6 +2790,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = HG.client_controller.new_options
             
             self._animation_start_position = wx.SpinCtrl( self, min = 0, max = 100 )
+            self._video_thumbnail_percentage_in = wx.SpinCtrl( self, min = 0, max = 100 )
             
             self._disable_cv_for_gifs = wx.CheckBox( self )
             self._disable_cv_for_gifs.SetToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
@@ -2815,6 +2816,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._animation_start_position.SetValue( int( HC.options[ 'animation_start_position' ] * 100.0 ) )
+            self._video_thumbnail_percentage_in.SetValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
             self._disable_cv_for_gifs.SetValue( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.SetValue( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.SetValue( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
@@ -2846,6 +2848,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Start animations this % in: ', self._animation_start_position ) )
+            rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Prefer system FFMPEG: ', self._use_system_ffmpeg ) )
             rows.append( ( 'Media zooms: ', self._media_zooms ) )
             rows.append( ( 'WINDOWS ONLY: Hide and anchor mouse cursor on slow canvas drags: ', self._anchor_and_hide_canvas_drags ) )
@@ -2942,6 +2945,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'animation_start_position' ] = float( self._animation_start_position.GetValue() ) / 100.0
+            
+            self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.GetValue() )
             
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.GetValue() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.GetValue() )
@@ -5258,6 +5263,11 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
     
     def EventServiceChanged( self, event ):
+        
+        if not self: # actually did get a runtime error here, on some Linux WM dialog shutdown
+            
+            return
+            
         
         page = self._tag_repositories.GetCurrentPage()
         

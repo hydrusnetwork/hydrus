@@ -904,7 +904,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         pass
         
     
-    def TIMERPageUpdate( self ):
+    def REPEATINGPageUpdate( self ):
         
         pass
         
@@ -1418,7 +1418,7 @@ class ManagementPanelImporter( ManagementPanel ):
             
         
     
-    def TIMERPageUpdate( self ):
+    def REPEATINGPageUpdate( self ):
         
         self._UpdateStatus()
         
@@ -1874,6 +1874,10 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
         self._watchers_listctrl_panel.AddButton( 'highlight', self._HighlightWatcher, enabled_check_func = self._CanHighlight )
+        
+        self._watchers_listctrl_panel.NewButtonRow()
+        
+        self._watchers_listctrl_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
@@ -1959,11 +1963,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _ConvertDataToListCtrlTuples( self, watcher ):
         
-        subject = watcher.GetSubject()
+        pretty_subject = watcher.GetSubject()
         
         if watcher == self._highlit_watcher:
             
-            subject = '* ' + subject
+            pretty_subject = '* ' + pretty_subject
             
         
         status = watcher.GetSimpleStatus()
@@ -1972,7 +1976,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         progress = ( range, value )
         
-        pretty_subject = subject
+        subject = pretty_subject.lower()
         pretty_status = status
         
         if value == range:
@@ -2035,6 +2039,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 self._watchers_listctrl.UpdateDatas()
                 
+            
+        
+    
+    def _PausePlay( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            watcher.PausePlay()
             
         
     
@@ -2126,9 +2138,20 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             else:
                 
+                num_dead = self._multiple_watcher_import.GetNumDead()
+                
+                if num_dead == 0:
+                    
+                    num_dead_text = ''
+                    
+                else:
+                    
+                    num_dead_text = HydrusData.ConvertIntToPrettyString( num_dead ) + ' DEAD - '
+                    
+                
                 ( status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
                 
-                text_top = HydrusData.ConvertIntToPrettyString( len( watcher_keys ) ) + ' watchers - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_top = HydrusData.ConvertIntToPrettyString( len( watcher_keys ) ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
                 text_bottom = status
                 
             
@@ -3970,7 +3993,7 @@ class ManagementPanelQuery( ManagementPanel ):
         wx.CallAfter( wx_code )
         
     
-    def TIMERPageUpdate( self ):
+    def REPEATINGPageUpdate( self ):
         
         self._UpdateCancelButton()
         

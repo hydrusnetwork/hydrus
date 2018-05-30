@@ -218,7 +218,7 @@ class FileDropTarget( wx.DropTarget ):
     
     def OnDrop( self, x, y ):
         
-        screen_position = self._parent.ClientToScreen( ( x, y ) )
+        screen_position = ClientGUICommon.ClientToScreen( self._parent, ( x, y ) )
         
         drop_tlp = ClientGUICommon.GetXYTopTLP( screen_position )
         my_tlp = ClientGUICommon.GetTLP( self._parent )

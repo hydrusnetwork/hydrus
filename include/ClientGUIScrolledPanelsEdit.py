@@ -4174,7 +4174,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag blacklist' ) as dlg:
             
-            message = 'Blacklists are managed by this tag filtering object, which has an overcomplicated ui for this typically simple job.'
+            message = 'Blacklists are managed by the tag filtering object, which has an overcomplicated ui for this typically simple job.'
             message += os.linesep * 2
             message += 'Any tag that this filter excludes will be considered a blacklisted tag and will stop the file importing.'
             message += os.linesep * 2

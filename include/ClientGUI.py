@@ -53,8 +53,6 @@ import types
 import wx
 import wx.adv
 
-ID_TIMER_GUI_BANDWIDTH = wx.NewId()
-ID_TIMER_PAGE_UPDATE = wx.NewId()
 ID_TIMER_UI_UPDATE = wx.NewId()
 ID_TIMER_ANIMATION_UPDATE = wx.NewId()
 
@@ -112,9 +110,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventFrameNotebookMenu )
         self.Bind( wx.EVT_CLOSE, self.EventClose )
         self.Bind( wx.EVT_SET_FOCUS, self.EventFocus )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventBandwidth, id = ID_TIMER_GUI_BANDWIDTH )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventPageUpdate, id = ID_TIMER_PAGE_UPDATE )
-        self.Bind( wx.EVT_TIMER, self.TIMEREventUIUpdate, id = ID_TIMER_UI_UPDATE )
         self.Bind( wx.EVT_TIMER, self.TIMEREventAnimationUpdate, id = ID_TIMER_ANIMATION_UPDATE )
         
         self.Bind( wx.EVT_MOVE, self.EventMove )
@@ -160,15 +155,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         wx.CallAfter( self._InitialiseSession ) # do this in callafter as some pages want to talk to controller.gui, which doesn't exist yet!
         
-        self._bandwidth_timer = wx.Timer( self, id = ID_TIMER_GUI_BANDWIDTH )
+        self._bandwidth_repeating_job = self._controller.CallRepeatingWXSafe( self, 1.0, 1.0, self.REPEATINGBandwidth )
         
-        self._bandwidth_timer.Start( 1000, wx.TIMER_CONTINUOUS )
+        self._page_update_repeating_job = self._controller.CallRepeatingWXSafe( self, 0.25, 0.25, self.REPEATINGPageUpdate )
         
-        self._page_update_timer = wx.Timer( self, id = ID_TIMER_PAGE_UPDATE )
-        
-        self._page_update_timer.Start( 250, wx.TIMER_CONTINUOUS )
-        
-        self._ui_update_timer = wx.Timer( self, id = ID_TIMER_UI_UPDATE )
+        self._ui_update_repeating_job = None
         
         self._ui_update_windows = set()
         
@@ -702,7 +693,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         if self._controller.options[ 'pause_import_folders_sync' ]:
             
-            HydrusData.ShowText( 'Import folders are currently paused under the \'services\' menu. Please unpause them and try this again.' )
+            HydrusData.ShowText( 'Import folders are currently paused under the \'file\' menu. Please unpause them and try this again.' )
             
         
         if name is None:
@@ -969,27 +960,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
     
     def _DestroyTimers( self ):
-        
-        if self._bandwidth_timer is not None:
-            
-            self._bandwidth_timer.Stop()
-            
-            self._bandwidth_timer = None
-            
-        
-        if self._page_update_timer is not None:
-            
-            self._page_update_timer.Stop()
-            
-            self._page_update_timer = None
-            
-        
-        if self._ui_update_timer is not None:
-            
-            self._ui_update_timer.Stop()
-            
-            self._ui_update_timer = None
-            
         
         if self._animation_update_timer is not None:
             
@@ -1634,6 +1604,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: reset login' )
             
+            submenu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: misc' )
+            
             ClientGUIMenus.AppendSeparator( menu )
             
             ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
@@ -1833,21 +1809,33 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, report_modes, 'report modes' )
             
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'force a gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'force a layout for all non-gui tlws now', 'Tell all sub-frames to relayout--useful to test some layout issues.', self._ForceLayoutAllNonGUITLWs )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'force a fit for all non-gui tlws now', 'Tell all sub-frames to refit--useful to test some layout issues.', self._ForceFitAllNonGUITLWs )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
-            ClientGUIMenus.AppendMenuItem( self, debug, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
+            gui_actions = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', CC.LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'make a parentless text ctrl dialog', 'Make a parentless text control in a dialog to test some character event catching.', self._DebugMakeParentlessTextCtrl )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.Layout )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'force a layout for all non-main-gui tlws now', 'Tell all sub-frames to relayout--useful to test some layout issues.', self._ForceLayoutAllNonGUITLWs )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'force a fit for all non-gui tlws now', 'Tell all sub-frames to refit--useful to test some layout issues.', self._ForceFitAllNonGUITLWs )
+            ClientGUIMenus.AppendMenuItem( self, gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self._notebook.SaveGUISession, 'last session' )
+            
+            ClientGUIMenus.AppendMenu( debug, gui_actions, 'gui actions' )
+            
+            data_actions = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'print garbage', 'Print some information about the python garbage to the log.', self._DebugPrintGarbage )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear image rendering cache', 'Tell the image rendering system to forget all current images. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'clear db service info cache', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+            ClientGUIMenus.AppendMenuItem( self, data_actions, 'load whole db in disk cache', 'Contiguously read as much of the db as will fit into memory. This will massively speed up any subsequent big job.', self._controller.CallToThread, self._controller.Read, 'load_into_disk_cache' )
+            
+            ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
+            
             ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
@@ -3635,85 +3623,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def TIMEREventBandwidth( self, event ):
-        
-        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
-        
-        boot_time = self._controller.GetBootTime()
-        
-        time_since_boot = max( 1, HydrusData.GetNow() - boot_time )
-        
-        usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
-        
-        bandwidth_status = HydrusData.ConvertIntToBytes( usage_since_boot )
-        
-        current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
-        
-        if current_usage > 0:
-            
-            bandwidth_status += ' (' + HydrusData.ConvertIntToBytes( current_usage ) + '/s)'
-            
-        
-        self._statusbar.SetStatusText( bandwidth_status, 1 )
-        
-    
-    def TIMEREventPageUpdate( self, event ):
-        
-        page = self.GetCurrentPage()
-        
-        if page is not None:
-            
-            if HG.ui_timer_profile_mode:
-                
-                summary = 'Profiling page timer: ' + repr( page )
-                
-                HydrusData.Profile( summary, 'page.TIMERPageUpdate()', globals(), locals(), min_duration_ms = 3 )
-                
-            else:
-                
-                page.TIMERPageUpdate()
-                
-            
-        
-    
-    def TIMEREventUIUpdate( self, event ):
-        
-        for window in list( self._ui_update_windows ):
-            
-            if not window:
-                
-                self._ui_update_windows.discard( window )
-                
-                continue
-                
-            
-            try:
-                
-                if HG.ui_timer_profile_mode:
-                    
-                    summary = 'Profiling ui update timer: ' + repr( window )
-                    
-                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3 )
-                    
-                else:
-                    
-                    window.TIMERUIUpdate()
-                    
-                
-            except Exception as e:
-                
-                self._ui_update_windows.discard( window )
-                
-                HydrusData.ShowException( e )
-                
-            
-        
-        if len( self._ui_update_windows ) == 0:
-            
-            self._ui_update_timer.Stop()
-            
-        
-    
     def Exit( self, restart = False ):
         
         # the return value here is 'exit allowed'
@@ -4313,15 +4222,96 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._ui_update_windows.add( window )
         
-        if self._ui_update_timer is not None and not self._ui_update_timer.IsRunning():
+        if self._ui_update_repeating_job is None:
             
-            self._ui_update_timer.Start( 100, wx.TIMER_CONTINUOUS )
+            self._ui_update_repeating_job = self._controller.CallRepeatingWXSafe( self, 0.0, 0.1, self.REPEATINGUIUpdate )
             
         
     
     def RenamePage( self, page_key, name ):
         
         self._notebook.RenamePage( page_key, name )
+        
+    
+    def REPEATINGBandwidth( self ):
+        
+        global_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
+        
+        boot_time = self._controller.GetBootTime()
+        
+        time_since_boot = max( 1, HydrusData.GetNow() - boot_time )
+        
+        usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
+        
+        bandwidth_status = HydrusData.ConvertIntToBytes( usage_since_boot )
+        
+        current_usage = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
+        
+        if current_usage > 0:
+            
+            bandwidth_status += ' (' + HydrusData.ConvertIntToBytes( current_usage ) + '/s)'
+            
+        
+        self._statusbar.SetStatusText( bandwidth_status, 1 )
+        
+    
+    def REPEATINGPageUpdate( self ):
+        
+        page = self.GetCurrentPage()
+        
+        if page is not None:
+            
+            if HG.ui_timer_profile_mode:
+                
+                summary = 'Profiling page timer: ' + repr( page )
+                
+                HydrusData.Profile( summary, 'page.REPEATINGPageUpdate()', globals(), locals(), min_duration_ms = 3 )
+                
+            else:
+                
+                page.REPEATINGPageUpdate()
+                
+            
+        
+    
+    def REPEATINGUIUpdate( self ):
+        
+        for window in list( self._ui_update_windows ):
+            
+            if not window:
+                
+                self._ui_update_windows.discard( window )
+                
+                continue
+                
+            
+            try:
+                
+                if HG.ui_timer_profile_mode:
+                    
+                    summary = 'Profiling ui update timer: ' + repr( window )
+                    
+                    HydrusData.Profile( summary, 'window.TIMERUIUpdate()', globals(), locals(), min_duration_ms = 3 )
+                    
+                else:
+                    
+                    window.TIMERUIUpdate()
+                    
+                
+            except Exception as e:
+                
+                self._ui_update_windows.discard( window )
+                
+                HydrusData.ShowException( e )
+                
+            
+        
+        if len( self._ui_update_windows ) == 0:
+            
+            self._ui_update_repeating_job.Cancel()
+            
+            self._ui_update_repeating_job = None
+            
         
     
     def SaveLastSession( self ):

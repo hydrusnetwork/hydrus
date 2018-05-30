@@ -534,16 +534,7 @@ class Page( wx.SplitterWindow ):
         
         if self._initialised:
             
-            media = self.GetMedia()
-            
-            hashes = []
-            
-            for m in media:
-                
-                hashes.extend( m.GetHashes() )
-                
-            
-            return hashes
+            return self._media_panel.GetHashes( ordered = True )
             
         else:
             
@@ -852,9 +843,9 @@ class Page( wx.SplitterWindow ):
         wx.CallAfter( wx_code_publish, sorted_initial_media_results )
         
     
-    def TIMERPageUpdate( self ):
+    def REPEATINGPageUpdate( self ):
         
-        self._management_panel.TIMERPageUpdate()
+        self._management_panel.REPEATINGPageUpdate()
         
     
 class PagesNotebook( wx.Notebook ):
@@ -1765,7 +1756,7 @@ class PagesNotebook( wx.Notebook ):
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                screen_position = self.ClientToScreen( position )
+                screen_position = ClientGUICommon.ClientToScreen( self, position )
                 
                 notebook = self._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1791,12 +1782,7 @@ class PagesNotebook( wx.Notebook ):
     
     def EventMenu( self, event ):
         
-        if not self.IsShown(): # can't clienttoscreen if not shown, like during init
-            
-            return
-            
-        
-        screen_position = self.ClientToScreen( event.GetPosition() )
+        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
         
         self._ShowMenu( screen_position )
         
@@ -1823,7 +1809,7 @@ class PagesNotebook( wx.Notebook ):
             
             if flags & wx.NB_HITTEST_NOWHERE and flags & wx.NB_HITTEST_ONPAGE:
                 
-                screen_position = self.ClientToScreen( position )
+                screen_position = ClientGUICommon.ClientToScreen( self, position )
                 
                 notebook = self._GetNotebookFromScreenPosition( screen_position )
                 
@@ -1983,6 +1969,13 @@ class PagesNotebook( wx.Notebook ):
         
     
     def GetOrMakeMultipleWatcherPage( self ):
+        
+        current_page = self.GetCurrentPage()
+        
+        if current_page is not None and isinstance( current_page, Page ) and current_page.IsMultipleWatcherPage():
+            
+            return current_page
+            
         
         for page in self._GetPages():
             
@@ -2862,7 +2855,7 @@ class PagesNotebook( wx.Notebook ):
             self._last_last_session_hash = session_hash
             
         
-        self._controller.Write( 'serialisable', session )
+        self._controller.WriteSynchronous( 'serialisable', session )
         
         self._controller.pub( 'notify_new_sessions' )
         
@@ -2949,7 +2942,7 @@ class PagesNotebook( wx.Notebook ):
             
             with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                 
-                if dlg.ShowModal() == wx.ID_NO:
+                if dlg.ShowModal() != wx.ID_YES:
                     
                     raise HydrusExceptions.VetoException()
                     
@@ -2957,7 +2950,7 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def TIMERPageUpdate( self ):
+    def REPEATINGPageUpdate( self ):
         
         pass
         

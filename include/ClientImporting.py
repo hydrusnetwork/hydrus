@@ -553,7 +553,9 @@ class FileImportJob( object ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime )
+            percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+            
+            self._thumbnail = HydrusFileHandling.GenerateThumbnail( self._temp_path, mime, percentage_in = percentage_in )
             
         
         if mime in HC.MIMES_WE_CAN_PHASH:
@@ -2535,7 +2537,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         pass
         
     
-    def PredictPreImportStatus( self, file_import_options ):
+    def PredictPreImportStatus( self, file_import_options, file_url = None ):
         
         if self.status != CC.STATUS_UNKNOWN:
             
@@ -2548,32 +2550,12 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         # urls
         
-        def select_best_url_result( url_results ):
-            
-            # most of the time, this is just going to be selecting the one and only interesting result
-            # but if there are 1->n conflicts in url->hash mappings due to dupe/sample/cloudflare gubbins, we'll prefer redundant results over deleted
-            # if nothing interesting, default back to unknown
-            
-            for ( status, hash, note ) in url_results:
-                
-                if status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
-                    
-                    return ( status, hash, note )
-                    
-                
-            
-            for ( status, hash, note ) in url_results:
-                
-                if status == CC.STATUS_DELETED:
-                    
-                    return ( status, hash, note )
-                    
-                
-            
-            return UNKNOWN_DEFAULT
-            
-        
         urls = set( self._urls )
+        
+        if file_url is not None:
+            
+            urls.add( file_url )
+            
         
         if self.seed_type == SEED_TYPE_URL:
             
@@ -2589,54 +2571,30 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            results = HG.client_controller.Read( 'url_statuses', url )
+            # we now only trust url-matched single urls and the post/file urls
+            # trusting unmatched source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
             
-            if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ):
+            if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) or url in ( self.seed_data, file_url ):
                 
-                ( status, hash, note ) = select_best_url_result( results )
+                results = HG.client_controller.Read( 'url_statuses', url )
                 
-                if status != CC.STATUS_UNKNOWN:
-                    
-                    break # if a known one-file url gives a clear result, that result is reliable
-                    
-                
-            else:
-                
-                if len( results ) == 0: # this url has no result, so it is a vote, absent clear evidence otherwise, for 'this is a new unknown thing'
-                    
-                    result = UNKNOWN_DEFAULT
-                    
-                elif len( results ) == 1: # this url is possibly a one-file url
-                    
-                    result = results[0]
-                    
-                else: # this url is likely a gallery url, which are useless for determining url status
+                if len( results ) == 0: # if no match found, no useful data discovered
                     
                     continue
                     
-                
-                unrecognised_url_results.add( result )
-                
-            
-        
-        if status == CC.STATUS_UNKNOWN and len( unrecognised_url_results ) > 0:
-            
-            # no known one-file url gave us a response, so let's check our unrecognised urls
-            # these are likely one-file urls but could also be gallery urls, so if they have non-unknown results, we should nonetheless proceed with the least certain scenario
-            # if any of them say unknown, the whole thing should stay unknown
-            # but if they are all known, we are probably in luck
-            
-            unrecognised_url_results = list( unrecognised_url_results )
-            
-            seen_statuses = { status for ( status, hash, note ) in unrecognised_url_results }
-            
-            if CC.STATUS_UNKNOWN in seen_statuses:
-                
-                ( status, hash, note ) = UNKNOWN_DEFAULT
-                
-            else:
-                
-                ( status, hash, note ) = select_best_url_result( unrecognised_url_results )
+                elif len( results ) > 1: # if more than one file claims this url, it cannot be relied on to guess the file
+                    
+                    continue
+                    
+                else: # i.e. 1 match found
+                    
+                    ( status, hash, note ) = results[0]
+                    
+                    if status != CC.STATUS_UNKNOWN:
+                        
+                        break # if a known one-file url gives a single clear result, that result is reliable
+                        
+                    
                 
             
         
@@ -2923,11 +2881,6 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 
                 ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                 
-                if parser is None:
-                    
-                    raise HydrusExceptions.ParseException( 'Could not find a parser for the given URL!' )
-                    
-                
                 status_hook( 'downloading page' )
                 
                 network_job = network_job_factory( 'GET', url_to_check )
@@ -2960,20 +2913,19 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 
                 self.CheckPreFetchMetadata( tag_import_options )
                 
-                self.PredictPreImportStatus( file_import_options )
+                file_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_FILE, ), only_get_top_priority = True )
                 
-                if self.ShouldDownloadFile():
+                if len( file_urls ) == 0:
                     
-                    file_urls = ClientParsing.GetURLsFromParseResults( parse_results, ( HC.URL_TYPE_FILE, ), only_get_top_priority = True )
+                    raise HydrusExceptions.VetoException( 'Could not file a file URL!' )
                     
-                    if len( file_urls ) == 0:
-                        
-                        raise HydrusExceptions.VetoException( 'Could not file a file URL!' )
-                        
+                elif len( file_urls ) == 1 or True: # let's still mandata this for a bit
                     
-                    if len( file_urls ) == 1 or HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( post_url ) or True: # leave this mandatory for now
-                        
-                        file_url = file_urls[0]
+                    file_url = file_urls[0]
+                    
+                    self.PredictPreImportStatus( file_import_options, file_url )
+                    
+                    if self.ShouldDownloadFile():
                         
                         status_hook( 'downloading file' )
                         
@@ -2981,21 +2933,35 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                         
                         did_substantial_work = True
                         
-                    else:
+                    
+                else:
+                    
+                    raise HydrusExceptions.VetoException( 'Multiple-file post pages are not yet supported!' )
+                    
+                    for file_url in file_urls:
                         
-                        # we have a tweet with multiple images
-                        # seeds can't represent more than one file
-                        # so, spawn a bunch more seeds via duplication, each with a sub-index and the file url associated
-                        # insert them into the seed cache
-                        # set my own note as 'generated 10 sub jobs' and ignored (or succesful and alter all gethash stuff to deal with hash being none off a success result
+                        duplicate_seed = self.Duplicate() # inherits all urls and tags from here
                         
-                        # then alter seeds so:
-                        # if the sub-index is set and we have a file url, just go straight to the DownloadAndImportRawFile in this method.
-                        # alter seed presentation in the file import cache column
-                        # sub-index should be in seed.__hash__ as well
+                        duplicate_seed.seed_data = file_url
                         
-                        pass
+                        duplicate_seed.AddURL( self.seed_data )
                         
+                        # set referral url as my seed_data--this should probably auto-do AddURL( self.seed_data ) tbh
+                        
+                        # insert in my seed cache just after me
+                        
+                    
+                    status = CC.STATUS_SUCCESSFUL_AND_NEW
+                    note = 'Found ' + HydrusData.ConvertIntToPrettyString( len( file_urls ) ) + ' File URLs in this page.'
+                    
+                    self.SetStatus( status, note = note )
+                    
+                    # alter seeds so:
+                    # referral url is saved and used in workonfileurl and workonposturl
+                    # gallery/sub import loops can now handle workonfileurl
+                    
+                    # there is also the question of pixiv manga pages, which may need linking from the mode=medium page, which is two jumps
+                    # this presumably means adding a new url content type to the parser like 'addable post url' or something
                     
                 
             

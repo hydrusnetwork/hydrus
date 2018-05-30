@@ -399,6 +399,55 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         time.sleep( 1 )
         
     
+    def LoginTumblrGDPR( self ):
+        
+        # t-thanks, EU
+        # this is cribbed from poking around here https://github.com/johanneszab/TumblThree/commit/3563d6cebf1a467151d6b8d6eee9806ddd6e6364
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', 'http://www.tumblr.com/' )
+        
+        network_job.SetForLogin( True )
+        
+        self.engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        html = network_job.GetContent()
+        
+        formula = ClientParsing.ParseFormulaHTML( tag_rules = [ ClientParsing.ParseRuleHTML( rule_type = ClientParsing.HTML_RULE_TYPE_DESCENDING, tag_name = 'meta', tag_attributes = { 'id' : 'tumblr_form_key' } ) ], content_to_fetch = ClientParsing.HTML_CONTENT_ATTRIBUTE, attribute_to_fetch = "content" )
+        
+        results = formula.Parse( {}, html )
+        
+        if len( results ) != 1:
+            
+            raise HydrusExceptions.ParseException( 'Could not figure out the tumblr form key for the GDPR click-through.' )
+            
+        
+        tumblr_form_key = results[0]
+        
+        #
+        
+        body = '{\"eu_resident\":true,\"gdpr_is_acceptable_age\":true,\"gdpr_consent_core\":true,\"gdpr_consent_first_party_ads\":true,\"gdpr_consent_third_party_ads\":true,\"gdpr_consent_search_history\":true,\"redirect_to\":\"\"}'
+        referral_url = 'https://www.tumblr.com/privacy/consent?redirect='
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'POST', 'https://www.tumblr.com/svc/privacy/consent', body = body, referral_url = referral_url )
+        
+        network_job.SetForLogin( True )
+        
+        network_job.AddAdditionalHeader( 'Accept', 'application/json, text/javascript, */*; q=0.01')
+        network_job.AddAdditionalHeader( 'Content-Type', 'application/json' )
+        network_job.AddAdditionalHeader( 'X-Requested-With', 'XMLHttpRequest' )
+        network_job.AddAdditionalHeader( 'X-tumblr-form-key', tumblr_form_key )
+        
+        self.engine.AddJob( network_job )
+        
+        network_job.WaitUntilDone()
+        
+        # test cookies here or something
+        
+        HydrusData.ShowText( 'Looks like tumblr GDPR click-through worked! You should be good for a year, at which point we should have an automatic solution for this!' )
+        
+    
     def TestPixiv( self, pixiv_id, password ):
         
         # this is just an ugly copy, but fuck it for the minute

@@ -20,6 +20,10 @@ def DeserialiseNewlinedTexts( text ):
     
     return texts
     
+def SortStringsIgnoringCase( list_of_strings ):
+    
+    list_of_strings.sort( key = lambda s: s.lower() )
+    
 def StripTrailingAndLeadingSpaces( t ):
     
     t = re_leading_byte_order_mark.sub( '', t )

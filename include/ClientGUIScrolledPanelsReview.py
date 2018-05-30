@@ -1455,6 +1455,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._paths = ClientGUIListCtrl.BetterListCtrl( self, 'export_files', 24, 64, [ ( 'number', 8 ), ( 'mime', 20 ), ( 'expected path', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self.DeletePaths )
         
+        self._paths.Sort( 0 )
+        
         self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
         
         self._directory_picker = wx.DirPickerCtrl( self._export_path_box )

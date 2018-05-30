@@ -55,7 +55,7 @@ class FullscreenHoverFrame( wx.Frame ):
     
     def _SizeAndPosition( self ):
         
-        if self.GetParent().IsShown(): # Can't ClientToScreen if not shown, like in init
+        if self.GetParent().IsShown():
             
             ( should_resize, my_ideal_size, my_ideal_position ) = self._GetIdealSizeAndPosition()
             
@@ -103,7 +103,7 @@ class FullscreenHoverFrame( wx.Frame ):
                 
             
         
-        if self._current_media is None or not self.GetParent().IsShown(): # Can't ClientToScreen if not shown, like in init
+        if self._current_media is None or not self.GetParent().IsShown():
             
             if self.IsShown():
                 
@@ -286,7 +286,7 @@ class FullscreenHoverFrameTop( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width
         
         ideal_size = ( my_ideal_width, -1 )
-        ideal_position = parent.ClientToScreen( ( int( parent_width * 0.2 ), 0 ) )
+        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.2 ), 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -863,7 +863,7 @@ class FullscreenHoverFrameTopRight( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width
         
         ideal_size = ( my_ideal_width, -1 )
-        ideal_position = parent.ClientToScreen( ( int( parent_width * 0.8 ), 0 ) )
+        ideal_position = ClientGUICommon.ClientToScreen( parent, ( int( parent_width * 0.8 ), 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -1020,7 +1020,7 @@ class FullscreenHoverFrameTags( FullscreenHoverFrame ):
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = ( my_ideal_width, my_ideal_height )
-        ideal_position = parent.ClientToScreen( ( 0, 0 ) )
+        ideal_position = ClientGUICommon.ClientToScreen( parent, ( 0, 0 ) )
         
         return ( should_resize, ideal_size, ideal_position )
         

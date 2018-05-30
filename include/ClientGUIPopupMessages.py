@@ -773,7 +773,7 @@ class PopupMessageManager( wx.Frame ):
                 
                 if parent.IsShown():
                     
-                    my_position = parent.ClientToScreen( ( my_x, my_y ) )
+                    my_position = ClientGUICommon.ClientToScreen( parent, ( my_x, my_y ) )
                     
                     if my_position != self.GetPosition():
                         

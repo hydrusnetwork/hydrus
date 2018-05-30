@@ -643,7 +643,7 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        ( rule_type, tag_name, tag_attributes, tag_index, tag_depth ) = tag_rule.ToTuple()
+        ( rule_type, tag_name, tag_attributes, tag_index, tag_depth, should_test_tag_string, tag_string_string_match ) = tag_rule.ToTuple()
         
         if tag_name is None:
             
@@ -675,12 +675,17 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_depth = wx.SpinCtrl( self, min = 1, max = 255 )
         
+        self._should_test_tag_string = wx.CheckBox( self )
+        
+        self._tag_string_string_match = StringMatchButton( self, tag_string_string_match )
+        
         #
         
         self._rule_type.SelectClientData( rule_type )
         self._tag_name.SetValue( tag_name )
         self._tag_index.SetValue( tag_index )
         self._tag_depth.SetValue( tag_depth )
+        self._should_test_tag_string.SetValue( should_test_tag_string )
         
         self._UpdateTypeControls()
         
@@ -702,13 +707,23 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox_2 = ClientGUICommon.WrapInGrid( self, rows )
         
+        rows = []
+        
+        rows.append( ( 'should test tag string: ', self._should_test_tag_string ) )
+        rows.append( ( 'tag string match: ', self._tag_string_string_match ) )
+        
+        gridbox_3 = ClientGUICommon.WrapInGrid( self, rows )
+        
         vbox.Add( self._current_description, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.Add( gridbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         vbox.Add( self._tag_attributes, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( gridbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.Add( gridbox_3, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
+        
+        self._UpdateShouldTest()
         
         #
         
@@ -717,6 +732,20 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._tag_attributes.Bind( ClientGUIListCtrl.EVT_LIST_CTRL, self.EventVariableChanged)
         self._tag_index.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
         self._tag_depth.Bind( wx.EVT_SPINCTRL, self.EventVariableChanged )
+        
+        self._should_test_tag_string.Bind( wx.EVT_CHECKBOX, self.EventShouldTestChanged )
+        
+    
+    def _UpdateShouldTest( self ):
+        
+        if self._should_test_tag_string.GetValue():
+            
+            self._tag_string_string_match.Enable()
+            
+        else:
+            
+            self._tag_string_string_match.Disable()
+            
         
     
     def _UpdateTypeControls( self ):
@@ -750,16 +779,21 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         self._current_description.SetLabelText( label )
         
     
-    def EventVariableChanged( self, event ):
+    def EventShouldTestChanged( self, event ):
         
-        self._UpdateDescription()
-        
-        event.Skip()
+        self._UpdateShouldTest()
         
     
     def EventTypeChanged( self, event ):
         
         self._UpdateTypeControls()
+        
+        event.Skip()
+        
+    
+    def EventVariableChanged( self, event ):
+        
+        self._UpdateDescription()
         
         event.Skip()
         
@@ -775,18 +809,21 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
             tag_name = None
             
         
+        should_test_tag_string = self._should_test_tag_string.GetValue()
+        tag_string_string_match = self._tag_string_string_match.GetValue()
+        
         if rule_type == ClientParsing.HTML_RULE_TYPE_DESCENDING:
             
             tag_attributes = self._tag_attributes.GetValue()
             tag_index = self._tag_index.GetValue()
             
-            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_attributes = tag_attributes, tag_index = tag_index )
+            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_attributes = tag_attributes, tag_index = tag_index, should_test_tag_string = should_test_tag_string, tag_string_string_match = tag_string_string_match )
             
         elif rule_type == ClientParsing.HTML_RULE_TYPE_ASCENDING:
             
             tag_depth = self._tag_depth.GetValue()
             
-            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_depth = tag_depth )
+            tag_rule = ClientParsing.ParseRuleHTML( rule_type = rule_type, tag_name = tag_name, tag_depth = tag_depth, should_test_tag_string = should_test_tag_string, tag_string_string_match = tag_string_string_match )
             
         
         return tag_rule
@@ -2769,6 +2806,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             def wx_tidy_up( example_data ):
                 
+                if not self:
+                    
+                    return
+                    
+                
                 self._test_panel.SetExampleData( example_data )
                 
                 self._test_network_job_control.ClearNetworkJob()
@@ -4617,6 +4659,11 @@ class TestPanel( wx.Panel ):
     def _FetchFromURL( self ):
         
         def wx_code( example_data ):
+            
+            if not self:
+                
+                return
+                
             
             self._SetExampleData( example_data )
             

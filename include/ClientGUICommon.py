@@ -227,6 +227,26 @@ def ApplyContentApplicationCommandToMedia( parent, command, media ):
     
     return True
     
+def ClientToScreen( win, pos ):
+    
+    if isinstance( win, wx.TopLevelWindow ):
+        
+        tlp = win
+        
+    else:
+        
+        tlp = win.GetTopLevelParent()
+        
+    
+    if win.IsShown() and tlp.IsShown():
+        
+        return win.ClientToScreen( pos )
+        
+    else:
+        
+        return ( 50, 50 )
+        
+    
 def ConvertTextToPixels( window, ( char_cols, char_rows ) ):
     
     dialog_units = ( char_cols * 4, char_rows * 8 )

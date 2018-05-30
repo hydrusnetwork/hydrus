@@ -120,7 +120,7 @@ class HydrusController( object ):
     
     def _GetAppropriateJobScheduler( self, time_delta ):
         
-        if time_delta < 1.0:
+        if time_delta <= 1.0:
             
             return self._fast_job_scheduler
             

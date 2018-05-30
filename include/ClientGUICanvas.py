@@ -286,14 +286,20 @@ class Animation( wx.Window ):
         
         if self._frame_bmp is not None:
             
-            wx.CallAfter( self._frame_bmp.Destroy )
+            if wx.App.IsMainLoopRunning():
+                
+                wx.CallAfter( self._frame_bmp.Destroy )
+                
             
             self._frame_bmp = None
             
         
         if self._canvas_bmp is not None:
             
-            wx.CallAfter( self._canvas_bmp.Destroy )
+            if wx.App.IsMainLoopRunning():
+                
+                wx.CallAfter( self._canvas_bmp.Destroy )
+                
             
             self._canvas_bmp = None
             
@@ -450,17 +456,14 @@ class Animation( wx.Window ):
                 
             
         
-        if self.IsShown(): # Can't ClientToScreen if not shown, like in init
-            
-            screen_position = self.ClientToScreen( event.GetPosition() )
-            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-            
-            event.SetX( x )
-            event.SetY( y )
-            
-            event.ResumePropagation( 1 )
-            event.Skip()
-            
+        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+        
+        event.SetX( x )
+        event.SetY( y )
+        
+        event.ResumePropagation( 1 )
+        event.Skip()
         
     
     def EventResize( self, event ):
@@ -5129,13 +5132,13 @@ class MediaContainer( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self._media is not None and self.IsShown(): # Can't ClientToScreen if not shown, like in init
+        if self._media is not None:
             
             mime = self._media.GetMime()
             
             if mime in HC.IMAGES or mime in HC.VIDEO:
                 
-                screen_position = self.ClientToScreen( event.GetPosition() )
+                screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
                 ( x, y ) = self.GetParent().ScreenToClient( screen_position )
                 
                 event.SetX( x )
@@ -5629,17 +5632,14 @@ class StaticImage( wx.Window ):
     
     def EventPropagateMouse( self, event ):
         
-        if self.IsShown(): # Can't ClientToScreen if not shown, like in init
-            
-            screen_position = self.ClientToScreen( event.GetPosition() )
-            ( x, y ) = self.GetParent().ScreenToClient( screen_position )
-            
-            event.SetX( x )
-            event.SetY( y )
-            
-            event.ResumePropagation( 1 )
-            event.Skip()
-            
+        screen_position = ClientGUICommon.ClientToScreen( self, event.GetPosition() )
+        ( x, y ) = self.GetParent().ScreenToClient( screen_position )
+        
+        event.SetX( x )
+        event.SetY( y )
+        
+        event.ResumePropagation( 1 )
+        event.Skip()
         
     
     def EventResize( self, event ):

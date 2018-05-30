@@ -281,7 +281,9 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path, mime )
+            percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+            
+            thumbnail = HydrusFileHandling.GenerateThumbnail( file_path, mime, percentage_in = percentage_in )
             
         except Exception as e:
             

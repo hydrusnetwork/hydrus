@@ -35,16 +35,7 @@ def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
     ( y, x, depth ) = numpy_image.shape
     
-    if depth == 4:
-        
-        buffer_format = wx.BitmapBufferFormat_RGBA
-        
-    else:
-        
-        buffer_format = wx.BitmapBufferFormat_RGB
-        
-    
-    return HydrusBitmap( numpy_image.data, buffer_format, ( x, y ), compressed = compressed )
+    return HydrusBitmap( numpy_image.data, ( x, y ), depth, compressed = compressed )
     
 def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
@@ -52,14 +43,14 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
     if pil_image.mode == 'RGBA':
         
-        buffer_format = wx.BitmapBufferFormat_RGBA
+        depth = 4
         
     elif pil_image.mode == 'RGB':
         
-        buffer_format = wx.BitmapBufferFormat_RGB
+        depth = 3
         
     
-    return HydrusBitmap( pil_image.tobytes(), buffer_format, pil_image.size, compressed = compressed )
+    return HydrusBitmap( pil_image.tobytes(), pil_image.size, depth, compressed = compressed )
     
 class ImageRenderer( object ):
     
@@ -595,7 +586,7 @@ class RasterContainerVideo( RasterContainer ):
     
 class HydrusBitmap( object ):
     
-    def __init__( self, data, format, size, compressed = True ):
+    def __init__( self, data, size, depth, compressed = True ):
         
         if not LZ4_OK:
             
@@ -613,8 +604,8 @@ class HydrusBitmap( object ):
             self._data = data
             
         
-        self._format = format
         self._size = size
+        self._depth = depth
         
     
     def _GetData( self ):
@@ -629,32 +620,39 @@ class HydrusBitmap( object ):
             
         
     
+    def _GetWXBitmapFormat( self ):
+        
+        if self._depth == 3:
+            
+            return wx.BitmapBufferFormat_RGB
+            
+        elif self._depth == 4:
+            
+            return wx.BitmapBufferFormat_RGBA
+            
+        
+    
     def CopyToWxBitmap( self, wx_bmp ):
         
-        wx_bmp.CopyFromBuffer( self._GetData(), self._format )
+        fmt = self._GetWXBitmapFormat()
+        
+        wx_bmp.CopyFromBuffer( self._GetData(), fmt )
         
     
     def GetDepth( self ):
         
-        if self._format == wx.BitmapBufferFormat_RGB:
-            
-            return 3
-            
-        elif self._format == wx.BitmapBufferFormat_RGBA:
-            
-            return 4
-            
+        return self._depth
         
     
     def GetWxBitmap( self ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB:
+        if self._depth == 3:
             
             return wx.Bitmap.FromBuffer( width, height, self._GetData() )
             
-        else:
+        elif self._depth == 4:
             
             return wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
             
@@ -664,11 +662,11 @@ class HydrusBitmap( object ):
         
         ( width, height ) = self._size
         
-        if self._format == wx.BitmapBufferFormat_RGB:
+        if self._depth == 3:
             
             return wx.ImageFromBuffer( width, height, self._GetData() )
             
-        else:
+        elif self._depth == 4:
             
             bitmap = wx.Bitmap.FromBufferRGBA( width, height, self._GetData() )
             

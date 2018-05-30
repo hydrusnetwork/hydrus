@@ -229,6 +229,21 @@ def GetHashesFromParseResults( results ):
     
     return hash_results
     
+def GetHTMLTagString( tag ):
+    
+    all_strings = [ s for s in tag.strings if len( s ) > 0 ]
+    
+    if len( all_strings ) == 0:
+        
+        result = ''
+        
+    else:
+        
+        result = all_strings[0]
+        
+    
+    return result
+    
 def GetNamespacesFromParsableContent( parsable_content ):
     
     content_type_to_additional_infos = HydrusData.BuildKeyToSetDict( ( ( content_type, additional_infos ) for ( name, content_type, additional_infos ) in parsable_content ) )
@@ -804,16 +819,7 @@ class ParseFormulaHTML( ParseFormula ):
             
         elif self._content_to_fetch == HTML_CONTENT_STRING:
             
-            all_strings = [ s for s in tag.strings if len( s ) > 0 ]
-            
-            if len( all_strings ) == 0:
-                
-                result = ''
-                
-            else:
-                
-                result = all_strings[0]
-                
+            result = GetHTMLTagString( tag )
             
         elif self._content_to_fetch == HTML_CONTENT_HTML:
             
@@ -1048,9 +1054,9 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML
     SERIALISABLE_NAME = 'HTML Parsing Rule'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, rule_type = None, tag_name = None, tag_attributes = None, tag_index = None, tag_depth = None ):
+    def __init__( self, rule_type = None, tag_name = None, tag_attributes = None, tag_index = None, tag_depth = None, should_test_tag_string = False, tag_string_string_match = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -1079,21 +1085,51 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        if tag_string_string_match is None:
+            
+            tag_string_string_match = StringMatch()
+            
+        
         self._rule_type = rule_type
         self._tag_name = tag_name
         self._tag_attributes = tag_attributes
         self._tag_index = tag_index
         self._tag_depth = tag_depth
+        self._should_test_tag_string = should_test_tag_string
+        self._tag_string_string_match = tag_string_string_match
+        
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth )
+        serialisable_tag_string_string_match = self._tag_string_string_match.GetSerialisableTuple()
+        
+        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth ) = serialisable_info
+        ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match ) = serialisable_info
+        
+        self._tag_string_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_string_string_match )
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( rule_type, tag_name, tag_attributes, tag_index, tag_depth ) = old_serialisable_info
+            
+            should_test_tag_string = False
+            
+            tag_string_string_match = StringMatch()
+            
+            serialisable_tag_string_string_match = tag_string_string_match.GetSerialisableTuple()
+            
+            new_serialisable_info = ( rule_type, tag_name, tag_attributes, tag_index, tag_depth, should_test_tag_string, serialisable_tag_string_string_match )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetNodes( self, nodes ):
@@ -1163,6 +1199,23 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             new_nodes.extend( found_nodes )
             
         
+        if self._should_test_tag_string:
+            
+            potential_nodes = new_nodes
+            
+            new_nodes = []
+            
+            for node in potential_nodes:
+                
+                s = GetHTMLTagString( node )
+                
+                if self._tag_string_string_match.Matches( s ):
+                    
+                    new_nodes.append( node )
+                    
+                
+            
+        
         return new_nodes
         
     
@@ -1209,12 +1262,17 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        if self._should_test_tag_string:
+            
+            s += ' with strings that match ' + self._tag_string_string_match.ToUnicode()
+            
+        
         return s
         
     
     def ToTuple( self ):
         
-        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth )
+        return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, self._tag_string_string_match )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML ] = ParseRuleHTML

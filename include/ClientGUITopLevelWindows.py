@@ -471,6 +471,11 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
     
     def EventOK( self, event ):
         
+        if not self:
+            
+            return
+            
+        
         self.DoOK()
         
     

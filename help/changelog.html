@@ -8,6 +8,45 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 309</h3></li>
+				<ul>
+					<li>wrote a fix for the tumblr GDPR issue under _network->DEBUG: misc->do tumblr GDPR click-through_. you will also get a popup about this on update</li>
+					<li>the tumblr downloader will try to detect the GDPR problem and present a similar popup guiding you to the GDPR click-through solution</li>
+					<li>the client and server now generate video (but not gif yet) thumbnails 35% in by default. the client can now change this percentage value under options->media. this was highly requested and was being put off for a longer rewrite, but I figured out a simple way to hack it in. please let me know if you get failures</li>
+					<li>on adding a parent, all files with the child tag will now also get all applicable grandparents (with no limit on recursive generations and dealing with accidental loops)</li>
+					<li>on adding a sibling, all files with any of the siblings will now also get all applicable parents and grandparents for the whole group. a maintenance call to retroactively fill in the sibling/parent gaps that are now filled will also come soon</li>
+					<li>this logic still does not apply in cross-service situations, which _will_ likely have to wait for a big data/gui overhaul and us figuring out what we actually want here</li>
+					<li>added a simple pause/play button to the multiple watcher</li>
+					<li>if the multiple watcher is set to catch watchable url drag and drop events and the current page is a multiple watcher, this current page will catch those new urls (as opposed to the _leftmost_ multiple watcher)</li>
+					<li>improved some thread unpause logic which was failing to lock pause during 404 status</li>
+					<li>the multiple watcher should now ignore case when it sorts by subject</li>
+					<li>added url class and file page parser for inkbunny (so this site is now supported in drag and drop!). it fetches creator tag, some artist-made unnamespaced tags, source time, and md5</li>
+					<li>added file page parser for gelbooru 0.2.0, which by default works for rule34.xxx, tbib, xbooru but certainly should work for a bunch of others. it fetches source time and source url</li>
+					<li>html formula parsing rules can now additionally test the tag 'string' using a standard StringMatch object. this greatly helps to parse otherwise indistinguishable 'a' tags that have string 'Original image' and so on</li>
+					<li>the 'have I seen this url's file before?' pre-import test is now much more strict and will cause fewer accidental false-positive 'already in db'/'deleted' results:</li>
+					<li>the url pre-import test now does not trust source urls if they do not have a url class</li>
+					<li>the url pre-import test now no longer trusts urls that are supposed to only be mapped to one file but are actually mapped to multiple</li>
+					<li>this url pre-import test now treats url-classless original post urls and intended file urls with a special level of trust</li>
+					<li>urls are now stored in the db in a more powerful and in-future easily searchable way--your db will take a moment to convert to the new format on update</li>
+					<li>did some prep work for multi-file post urls (like pixiv manga) but did not have time to finish it</li>
+					<li>the filename tagging options panel (in the 'add tags based on filename' of file import dialog and import folder dialog) now updates its tags/list 0.5s after the last change event, which means typing on a giant list will not cause megalag</li>
+					<li>improved stability of some client-screen coordinate conversion</li>
+					<li>misc bmp handling stability improvements</li>
+					<li>improved some parsing ui stability when example data gets set after the dialog is closed</li>
+					<li>improved some misc dialog close stability</li>
+					<li>converted all but one final ui update timer to the new job scheduling system</li>
+					<li>there are still problems with linux stability--I will continue to work on it</li>
+					<li>an ugly (but basically harmless) shutdown exception sometimes caused by Animations being a bit slow on deleting their underlying bmps _should_ be fixed</li>
+					<li>the export files dialog now generates its paths in sort order, meaning (1), (2) de-dupe filename suffixes should now be generated nicely in order</li>
+					<li>the network domain manager should now always chase API URL links to get the right parser</li>
+					<li>made some 'the db is broke, let's try to fix it' tag recovery code more forgiving</li>
+					<li>misc improvements to some media indexing backend, which may fix some unusual session ghost files</li>
+					<li>fixed the 'sure it is ok to close this importing page' dialog to also veto on a 'cancel' event, rather than just a 'no'</li>
+					<li>added a guide to database_migration.html on how to move the db from just an HDD to straddle both an SSD and HDD.</li>
+					<li>cleaned up the help->debug menu a bunch</li>
+					<li>added run fast/slow memory maintenance calls to help->debug->data actions</li>
+					<li>misc cleanup</li>
+				</ul>
 				<li><h3>version 308</h3></li>
 				<ul>
 					<li>the multiple watcher will now discard new urls if it is already watching them</li>

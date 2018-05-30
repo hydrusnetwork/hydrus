@@ -667,22 +667,6 @@ class MediaList( object ):
         
         return medias
         
-        '''
-        if discriminator is None:
-            
-            medias = self._sorted_media
-            
-        elif discriminator == 'singletons':
-            
-            medias = self._singleton_media
-            
-        elif discriminator == 'collections':
-            
-            medias = self._collected_media
-            
-        
-        return [ media for media in medias if media.HasAnyOfTheseHashes( hashes ) ]
-        '''
     
     def _GetNext( self, media ):
         
@@ -709,8 +693,14 @@ class MediaList( object ):
         
         previous_index = self._sorted_media.index( media ) - 1
         
-        if previous_index == -1: return self._GetLast()
-        else: return self._sorted_media[ previous_index ]
+        if previous_index == -1:
+            
+            return self._GetLast()
+            
+        else:
+            
+            return self._sorted_media[ previous_index ]
+            
         
     
     def _HasHashes( self, hashes ):
@@ -1051,6 +1041,37 @@ class MediaList( object ):
         return flat_media
         
     
+    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
+        
+        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered:
+            
+            return self._hashes
+            
+        else:
+            
+            if ordered:
+                
+                result = []
+                
+                for media in self._sorted_media:
+                    
+                    result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    
+                
+            else:
+                
+                result = set()
+                
+                for media in self._sorted_media:
+                    
+                    result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
+                    
+                
+            
+            return result
+            
+        
+    
     def GetLast( self ):
         
         return self._GetLast()
@@ -1339,37 +1360,6 @@ class MediaCollection( MediaList, Media ):
     def GetDuration( self ): return self._duration
     
     def GetHash( self ): return self.GetDisplayMedia().GetHash()
-    
-    def GetHashes( self, has_location = None, discriminant = None, not_uploaded_to = None, ordered = False ):
-        
-        if has_location is None and discriminant is None and not_uploaded_to is None and not ordered:
-            
-            return self._hashes
-            
-        else:
-            
-            if ordered:
-                
-                result = []
-                
-                for media in self._sorted_media:
-                    
-                    result.extend( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
-                    
-                
-            else:
-                
-                result = set()
-                
-                for media in self._sorted_media:
-                    
-                    result.update( media.GetHashes( has_location, discriminant, not_uploaded_to, ordered ) )
-                    
-                
-            
-            return result
-            
-        
     
     def GetLocationsManager( self ): return self._locations_manager
     
@@ -2189,10 +2179,16 @@ class SortedList( object ):
         
         self._sorted_list = list( initial_items )
         
-        self._items_to_indices = None
+        self._items_to_indices = {}
+        self._indices_dirty = True
         
     
     def __contains__( self, item ):
+        
+        if self._indices_dirty:
+            
+            self._RecalcIndices()
+            
         
         return self._items_to_indices.__contains__( item )
         
@@ -2214,17 +2210,19 @@ class SortedList( object ):
     
     def _DirtyIndices( self ):
         
-        self._items_to_indices = None
+        self._indices_dirty = True
         
     
     def _RecalcIndices( self ):
         
         self._items_to_indices = { item : index for ( index, item ) in enumerate( self._sorted_list ) }
         
+        self._indices_dirty = False
+        
     
     def append_items( self, items ):
         
-        if self._items_to_indices is None:
+        if self._indices_dirty is None:
             
             self._RecalcIndices()
             
@@ -2239,7 +2237,7 @@ class SortedList( object ):
     
     def index( self, item ):
         
-        if self._items_to_indices is None:
+        if self._indices_dirty:
             
             self._RecalcIndices()
             
@@ -2267,9 +2265,7 @@ class SortedList( object ):
         
         deletee_indices = [ self.index( item ) for item in items ]
         
-        deletee_indices.sort()
-        
-        deletee_indices.reverse()
+        deletee_indices.sort( reverse = True )
         
         for index in deletee_indices:
             

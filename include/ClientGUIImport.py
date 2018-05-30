@@ -878,7 +878,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._filename_tagging_panel = FilenameTaggingOptionsPanel( self, self._service_key, self.RefreshFileList, present_for_accompanying_file_list = True )
+            self._filename_tagging_panel = FilenameTaggingOptionsPanel( self, self._service_key, self.ScheduleRefreshFileList, present_for_accompanying_file_list = True )
+            
+            self._schedule_refresh_file_list_job = None
             
             #
             
@@ -948,6 +950,19 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._paths_list.UpdateDatas()
             
         
+        def ScheduleRefreshFileList( self ):
+            
+            if self._schedule_refresh_file_list_job is not None:
+                
+                self._schedule_refresh_file_list_job.Cancel()
+                
+                self._schedule_refresh_file_list_job = None
+                
+            
+            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.RefreshFileList )
+            
+        
+    
 class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, service_key, filename_tagging_options ):
@@ -959,7 +974,9 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._example_path_input = wx.TextCtrl( self )
         self._example_output = wx.TextCtrl( self )
         
-        self._filename_tagging_options_panel = FilenameTaggingOptionsPanel( self, self._service_key, self.RefreshTags, filename_tagging_options = filename_tagging_options, present_for_accompanying_file_list = False )
+        self._filename_tagging_options_panel = FilenameTaggingOptionsPanel( self, self._service_key, self.ScheduleRefreshTags, filename_tagging_options = filename_tagging_options, present_for_accompanying_file_list = False )
+        
+        self._schedule_refresh_tags_job = None
         
         #
         
@@ -983,7 +1000,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def EventText( self, event ):
         
-        self.RefreshTags()
+        self.ScheduleRefreshTags()
         
     
     def GetValue( self ):
@@ -1007,6 +1024,18 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._example_output.SetValue( ', '.join( tags ) )
+        
+    
+    def ScheduleRefreshTags( self ):
+        
+        if self._schedule_refresh_tags_job is not None:
+            
+            self._schedule_refresh_tags_job.Cancel()
+            
+            self._schedule_refresh_tags_job = None
+            
+        
+        self._schedule_refresh_tags_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.RefreshTags )
         
     
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):

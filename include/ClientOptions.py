@@ -179,6 +179,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
         
+        self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
+        
         #
         
         self._dictionary[ 'keys' ] = {}
