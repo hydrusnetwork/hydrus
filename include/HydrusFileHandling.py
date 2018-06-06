@@ -111,20 +111,13 @@ def GenerateThumbnail( path, mime, dimensions = HC.UNSCALED_THUMBNAIL_DIMENSIONS
             
             renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, cropped_dimensions )
             
+            renderer.read_frame() # this initialises the renderer and loads the first frame as a fallback
+            
             desired_thumb_frame = int( ( percentage_in / 100.0 ) * num_frames )
             
             renderer.set_position( desired_thumb_frame )
             
             numpy_image = renderer.read_frame()
-            
-            if numpy_image is None and desired_thumb_frame != 0:
-                
-                desired_thumb_frame = 0
-                
-                renderer.set_position( desired_thumb_frame )
-                
-                numpy_image = renderer.read_frame()
-                
             
             if numpy_image is None:
                 

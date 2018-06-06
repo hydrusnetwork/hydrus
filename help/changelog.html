@@ -8,6 +8,57 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 310</h3></li>
+				<ul>
+					<li>updated the inkbunny file page url class to acknowledge that inbunny pages can have multiple files</li>
+					<li>updated the inkbunny file page parser to handle multiple file urls (although they may be out of order and possibly sometimes include the artist profile image--this was not super easy)</li>
+					<li>added a parser for twitter tweets (only images supported atm, but it can handle multiple!) (hence tweet drag and drop now works!)</li>
+					<li>updated the artstation file page url class to redirect to a new api url class</li>
+					<li>wrote an artstation file page parser that also handles multiple file urls</li>
+					<li>updated/added pixiv file page, manga page, and mange_big url classes</li>
+					<li>updated pixiv file page parsers to be ok with manga links</li>
+					<li>wrote parsers for pixiv manga and manga_big pages to fetch manga files (with page tags)!</li>
+					<li>file import objects can now create semi-duplicate children for multi-file post urls and insert them just after themselves in the file import queue.</li>
+					<li>file import objects can now receive and remember referral urls. this referral url is associated with the file if appropriate. the watcher and simple downloader now uses this in addition to the multi-file post system</li>
+					<li>jumbled around some parameters and merged the two new file import url commands (import 'file' vs import 'post') into one single simple 'work on this url, thanks' call that is now used across the program</li>
+					<li>the parsing system's 'content parser' no longer fetches file urls and post urls, but 'download urls' and 'source urls'. this helps some pipeline logic and also lets post urls be download urls</li>
+					<li>when file import objects parse post urls as the urls to download, it now creates 1-n new import objects, just like if multiple file urls.</li>
+					<li>improved some file import object file association code</li>
+					<li>the new parsing system will de-dupe parsed urls</li>
+					<li>refactored the 'seed' code, which handles all basic file import objects, to the new ClientImportSeeds.py</li>
+					<li>added a new string transformation type, 'integer addition', for shifting page number tags up and down</li>
+					<li>fixed thumbnail generation for some videos that failed to do the new x%-in generation--it reverts more reliably just to the old frame 0 method</li>
+					<li>file reparsing popup now has a stop button</li>
+					<li>fixed an issue where extremely thin or wide (ratio > 200:1) images would not generate a full-size or resized thumbnail</li>
+					<li>the file reparsing/re-thumbnailing now reports errors better (including with full path) and does not abandon the larger job as it works</li>
+					<li>misc thumbnail generation code improvements</li>
+					<li>improved some thumbnail and file regeneration/moving code when the existing file has read-only status</li>
+					<li>the multiple watcher now has a 'check now' button</li>
+					<li>added a checkbox to options->gui that will put new notebook page tabs on the left</li>
+					<li>for all file download network jobs working in the new download system, the file import options for min size, max size, and max size (gifs) are now applied _during the download_! if the server tells the client the exact file size in the response headers, it will test max and min size before the content is actually downloaded--otherwise, it will test the max size as it downloads. if the server clearly says the file is a gif, the max gif size rules will also be tested in the same way</li>
+					<li>cleaned up some bandwidth announcement code--now, if bandwidth is due in less time than override time, that will now correctly be the status text</li>
+					<li>the bandwidth status no longer says 'in in' typo</li>
+					<li>fixed up some tag repair code from last week</li>
+					<li>the 'print garbage' debug function now dumps a whole bunch more data to the log</li>
+					<li>the thumbnail cache should now be a bit more stoic about missing repository thumbnails--it should now just present the hydrus default backup without error popup spam</li>
+					<li>the repository thumbnail sync will now get as thumbs in blocks as high as 10k at a time, rather than the old 100</li>
+					<li>hydrus network requests no longer generate web domain network contexts (and so won't have a default one-request-per-second bandwidth limit and should stream through thumbnails a bit faster)</li>
+					<li>hydrus network services are now willing to wait longer for bandwidth, so big thumbnail queues should keep working even if other bottlenecks pause them for a bit</li>
+					<li>hydrus network services will no longer sometimes have double-sync popups if synced from the advanced 'sync now' button in review services</li>
+					<li>changed the default global 'stop-accidents' bandwidth rule of 120rqs per minute to 512MB per minute. this only affects new users, but users trying to sync to large file repos might like to make a similar change manually</li>
+					<li>doing giant full file delete (i.e. purge from trash) jobs should now be a bit gentler on the gui</li>
+					<li>improved how the client deletes paths, clarifying in the code when and when not to allow recycle (usually disabled for thumb disposal)</li>
+					<li>switched the hacky text widgets on the popup system to a newer object. seems to still render ok, so lets see if it fixes some unusual layout issues some users have seen</li>
+					<li>if the temp folder cannot be created on boot, the client will continue anyway</li>
+					<li>fixed some url-domain text handling in db storage that was also breaking v309 update for some users</li>
+					<li>fixed some additional domain generation error handling at the db level</li>
+					<li>the list of url classes in the system:url panel is now the list of all url classes that are considered associable (before, it was file and post urls)</li>
+					<li>if a url class now api-links to itself or otherwise forms a loop with n other api url classes, the client will now throw an error (rather than lock up in an infinite loop!)</li>
+					<li>in the parsing ui, tag parse test results are now cleaned before being displayed</li>
+					<li>fixed misc url matching error reporting bug</li>
+					<li>when consulting the current file limit, the gallery page downloader will now try, when it has that number, to consult the total number of urls found it the current search (old behaviour is to only consult the number of _new_ urls, which lead to some bad edge-case workflows)</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 309</h3></li>
 				<ul>
 					<li>wrote a fix for the tumblr GDPR issue under _network->DEBUG: misc->do tumblr GDPR click-through_. you will also get a popup about this on update</li>

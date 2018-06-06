@@ -741,7 +741,7 @@ def SetDefaultBandwidthManagerRules( bandwidth_manager ):
     rules = HydrusNetworking.BandwidthRules()
     
     rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 1, 5 ) # stop accidental spam
-    rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, 60, 120 ) # smooth out heavy usage/bugspam. db and gui prob need a break
+    rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 60, 512 * MB ) # smooth out heavy usage. db and gui prob need a break
     
     rules.AddRule( HC.BANDWIDTH_TYPE_DATA, 86400, 10 * GB ) # check your inbox lad
     

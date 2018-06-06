@@ -98,6 +98,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'use_multiple_watcher_for_drag_and_drops' ] = False
         
+        self._dictionary[ 'booleans' ][ 'notebook_tabs_on_left' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()

@@ -313,13 +313,13 @@ class Gallery( object ):
         
         ( page_of_urls_and_tags, definitely_no_more_pages ) = self._ParseGalleryPage( data, gallery_url )
         
-        import ClientImporting
+        import ClientImportSeeds
         
         page_of_seeds = []
         
         for ( url, tags ) in page_of_urls_and_tags:
             
-            seed = ClientImporting.Seed( ClientImporting.SEED_TYPE_URL, url )
+            seed = ClientImportSeeds.Seed( ClientImportSeeds.SEED_TYPE_URL, url )
             
             seed.AddTags( tags )
             

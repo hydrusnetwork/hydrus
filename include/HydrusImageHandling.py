@@ -331,8 +331,8 @@ def GetThumbnailResolution( ( im_x, im_y ), ( target_x, target_y ) ):
         target_x = im_x / y_ratio
         
     
-    target_x = int( target_x )
-    target_y = int( target_y )
+    target_x = max( int( target_x ), 1 )
+    target_y = max( int( target_y ), 1 )
     
     return ( target_x, target_y )
     

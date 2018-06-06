@@ -49,7 +49,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 18
-SOFTWARE_VERSION = 309
+SOFTWARE_VERSION = 310
 
 UNSCALED_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -677,7 +677,9 @@ URL_TYPE_FILE = 2
 URL_TYPE_GALLERY = 3
 URL_TYPE_WATCHABLE = 4
 URL_TYPE_UNKNOWN = 5
-URL_TYPE_NEXT = 5
+URL_TYPE_NEXT = 6
+URL_TYPE_DESIRED = 7
+URL_TYPE_SOURCE = 8
 
 url_type_string_lookup = {}
 
@@ -687,6 +689,9 @@ url_type_string_lookup[ URL_TYPE_FILE ] = 'file url'
 url_type_string_lookup[ URL_TYPE_GALLERY ] = 'gallery url'
 url_type_string_lookup[ URL_TYPE_WATCHABLE ] = 'watchable url'
 url_type_string_lookup[ URL_TYPE_UNKNOWN ] = 'unknown url'
+url_type_string_lookup[ URL_TYPE_NEXT ] = 'next page url'
+url_type_string_lookup[ URL_TYPE_DESIRED ] = 'downloadable/pursuable url'
+url_type_string_lookup[ URL_TYPE_SOURCE ] = 'associable/source url'
 
 # default options
 

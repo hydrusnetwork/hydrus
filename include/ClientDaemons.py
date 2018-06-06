@@ -1,5 +1,6 @@
 import ClientImporting
 import ClientImportOptions
+import ClientImportSeeds
 import ClientPaths
 import ClientThreading
 import HydrusConstants as HC
@@ -144,7 +145,7 @@ def DAEMONDownloadFiles( controller ):
                                 file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
                                 file_import_options.SetPostImportOptions( automatic_archive )
                                 
-                                file_import_job = ClientImporting.FileImportJob( temp_path, file_import_options )
+                                file_import_job = ClientImportSeeds.FileImportJob( temp_path, file_import_options )
                                 
                                 client_files_manager.ImportFile( file_import_job )
                                 

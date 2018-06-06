@@ -135,6 +135,11 @@ class HydrusController( object ):
         raise NotImplementedError()
         
     
+    def _InitTempDir( self ):
+        
+        self.temp_dir = HydrusPaths.GetTempDir()
+        
+    
     def _MaintainCallToThreads( self ):
         
         # we don't really want to hang on to threads that are done as event.wait() has a bit of idle cpu
@@ -381,6 +386,15 @@ class HydrusController( object ):
     
     def InitModel( self ):
         
+        try:
+            
+            self._InitTempDir()
+            
+        except:
+            
+            HydrusData.Print( 'Failed to initialise temp folder.' )
+            
+        
         self._fast_job_scheduler = HydrusThreading.JobScheduler( self )
         self._slow_job_scheduler = HydrusThreading.JobScheduler( self )
         
@@ -507,6 +521,11 @@ class HydrusController( object ):
             self._slow_job_scheduler.shutdown()
             
             self._slow_job_scheduler = None
+            
+        
+        if hasattr( self, 'temp_dir' ):
+            
+            HydrusPaths.DeletePath( self.temp_dir )
             
         
     

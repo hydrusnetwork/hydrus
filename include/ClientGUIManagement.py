@@ -1878,6 +1878,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl_panel.NewButtonRow()
         
         self._watchers_listctrl_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
@@ -1932,6 +1933,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         num_selected = len( self._watchers_listctrl.GetData( only_selected = True ) )
         
         return num_selected == 1
+        
+    
+    def _CheckNow( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            watcher.CheckNow()
+            
         
     
     def _ClearExistingHighlight( self ):

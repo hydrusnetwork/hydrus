@@ -871,7 +871,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
         
         HydrusData.ShowText( 'Printing garbage to log' )
         
+        HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        
+        old_debug = gc.get_debug()
+        
+        gc.set_debug( gc.DEBUG_LEAK | gc.DEBUG_STATS )
+        
         gc.collect()
+        
+        HydrusData.Print( 'all garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
+        
+        del gc.garbage[:]
+        
+        gc.set_debug( old_debug )
+        
+        #
         
         count = collections.Counter()
         
@@ -905,8 +919,6 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 HydrusData.Print( ( k, v ) )
                 
             
-        
-        HydrusData.Print( 'uncollectable garbage: ' + HydrusData.ToUnicode( gc.garbage ) )
         
         HydrusData.DebugPrint( 'garbage printing finished' )
         

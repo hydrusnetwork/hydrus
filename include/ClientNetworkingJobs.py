@@ -133,6 +133,8 @@ class NetworkJob( object ):
         self._num_bytes_read = 0
         self._num_bytes_to_read = 1
         
+        self._file_import_options = None
+        
         self._network_contexts = self._GenerateNetworkContexts()
         
         ( self._session_network_context, self._login_network_context ) = self._GenerateSpecificNetworkContexts()
@@ -312,13 +314,29 @@ class NetworkJob( object ):
         
         with self._lock:
             
+            if self._content_type is not None and self._content_type in HC.mime_enum_lookup:
+                
+                mime = HC.mime_enum_lookup[ self._content_type ]
+                
+            else:
+                
+                mime = None
+                
+            
             if 'content-length' in response.headers:
             
                 self._num_bytes_to_read = int( response.headers[ 'content-length' ] )
                 
                 if max_allowed is not None and self._num_bytes_to_read > max_allowed:
                     
-                    raise HydrusExceptions.NetworkException( 'The url ' + self._url + ' looks too large!' )
+                    raise HydrusExceptions.NetworkException( 'The url was apparently ' + HydrusData.ConvertIntToBytes( self._num_bytes_to_read ) + ' but the max network size for this type of job is ' + HydrusData.ConvertIntToBytes( max_allowed ) + '!' )
+                    
+                
+                if self._file_import_options is not None:
+                    
+                    certain = True
+                    
+                    self._file_import_options.CheckNetworkDownload( mime, self._num_bytes_to_read, certain )
                     
                 
             else:
@@ -344,7 +362,14 @@ class NetworkJob( object ):
                 
                 if max_allowed is not None and self._num_bytes_read > max_allowed:
                     
-                    raise HydrusExceptions.NetworkException( 'The url ' + self._url + ' was too large!' )
+                    raise HydrusExceptions.NetworkException( 'The url exceeded the max network size for this type of job, which is ' + HydrusData.ConvertIntToBytes( max_allowed ) + '!' )
+                    
+                
+                if self._file_import_options is not None:
+                    
+                    certain = False
+                    
+                    self._file_import_options.CheckNetworkDownload( mime, self._num_bytes_to_read, certain )
                     
                 
             
@@ -427,31 +452,42 @@ class NetworkJob( object ):
                     
                 else:
                     
-                    if self._bandwidth_manual_override_delayed_timestamp is not None and not HydrusData.TimeHasPassed( self._bandwidth_manual_override_delayed_timestamp ):
+                    bandwidth_waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
+                    
+                    will_override = self._bandwidth_manual_override_delayed_timestamp is not None
+                    
+                    override_coming_first = False
+                    
+                    if will_override:
+                        
+                        override_waiting_duration = HydrusData.GetNow() - self._bandwidth_manual_override_delayed_timestamp
+                        
+                        override_coming_first = override_waiting_duration < bandwidth_waiting_duration
+                        
+                    
+                    if override_coming_first:
+                        
+                        waiting_duration = override_waiting_duration
+                        
+                        prefix = 'overriding bandwidth '
                         
                         waiting_str = HydrusData.ConvertTimestampToPrettyPending( self._bandwidth_manual_override_delayed_timestamp )
                         
-                        self._status_text = u'overriding bandwidth ' + waiting_str + u'\u2026'
-                        
-                        waiting_duration = HydrusData.GetNow() - self._bandwidth_manual_override_delayed_timestamp
-                        
                     else:
                         
-                        waiting_duration = self.engine.bandwidth_manager.GetWaitingEstimate( self._network_contexts )
+                        waiting_duration = bandwidth_waiting_duration
                         
-                        if waiting_duration < 2:
-                            
-                            self._status_text = u'bandwidth free imminently\u2026'
-                            
-                        else:
-                            
-                            pending_timestamp = HydrusData.GetNow() + waiting_duration
-                            
-                            waiting_str = HydrusData.ConvertTimestampToPrettyPending( pending_timestamp )
-                            
-                            self._status_text = u'bandwidth free in ' + waiting_str + u'\u2026'
-                            
+                        prefix = 'bandwidth free '
                         
+                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( HydrusData.GetNow() + waiting_duration )
+                        
+                    
+                    if waiting_duration < 2:
+                        
+                        waiting_str = 'imminently'
+                        
+                    
+                    self._status_text = prefix + waiting_str + u'\u2026'
                     
                     if waiting_duration > 1200:
                         
@@ -710,6 +746,14 @@ class NetworkJob( object ):
             
         
     
+    def SetFileImportOptions( self, file_import_options ):
+        
+        with self._lock:
+            
+            self._file_import_options = file_import_options
+            
+        
+    
     def SetForLogin( self, for_login ):
         
         with self._lock:
@@ -754,6 +798,11 @@ class NetworkJob( object ):
                             
                         
                     
+                    if 'Content-Type' in response.headers:
+                        
+                        self._content_type = response.headers[ 'Content-Type' ]
+                        
+                    
                     if response.ok:
                         
                         with self._lock:
@@ -785,7 +834,7 @@ class NetworkJob( object ):
                             self._status_text = str( response.status_code ) + ' - ' + str( response.reason )
                             
                         
-                        self._ReadResponse( response, self._stream_io )
+                        self._ReadResponse( response, self._stream_io, 104857600 )
                         
                         with self._lock:
                             
@@ -797,11 +846,6 @@ class NetworkJob( object ):
                             
                             self._SetError( e, error_text )
                             
-                        
-                    
-                    if 'Content-Type' in response.headers:
-                        
-                        self._content_type = response.headers[ 'Content-Type' ]
                         
                     
                     request_completed = True
@@ -1020,8 +1064,9 @@ class NetworkJobHydrus( NetworkJob ):
     
     def _GenerateNetworkContexts( self ):
         
-        network_contexts = NetworkJob._GenerateNetworkContexts( self )
+        network_contexts = []
         
+        network_contexts.append( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT )
         network_contexts.append( ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_HYDRUS, self._service_key ) )
         
         return network_contexts

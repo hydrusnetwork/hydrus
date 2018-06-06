@@ -83,7 +83,7 @@ class PopupMessage( PopupWindow ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        self._title = ClientGUICommon.FitResistantStaticText( self, style = wx.ALIGN_CENTER )
+        self._title = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_CENTER )
         
         popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
@@ -93,7 +93,7 @@ class PopupMessage( PopupWindow ):
         self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._title.Hide()
         
-        self._text_1 = ClientGUICommon.FitResistantStaticText( self )
+        self._text_1 = ClientGUICommon.BetterStaticText( self )
         self._text_1.Wrap( wrap_width )
         self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_1.Hide()
@@ -102,7 +102,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_1.Hide()
         
-        self._text_2 = ClientGUICommon.FitResistantStaticText( self )
+        self._text_2 = ClientGUICommon.BetterStaticText( self )
         self._text_2.Wrap( wrap_width )
         self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_2.Hide()
@@ -111,7 +111,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._gauge_2.Hide()
         
-        self._text_yes_no = ClientGUICommon.FitResistantStaticText( self )
+        self._text_yes_no = ClientGUICommon.BetterStaticText( self )
         self._text_yes_no.Wrap( wrap_width )
         self._text_yes_no.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_yes_no.Hide()
@@ -137,7 +137,7 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._show_tb_button.Hide()
         
-        self._tb_text = ClientGUICommon.FitResistantStaticText( self )
+        self._tb_text = ClientGUICommon.BetterStaticText( self )
         self._tb_text.Wrap( wrap_width )
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()

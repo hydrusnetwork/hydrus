@@ -44,13 +44,13 @@ def ConvertParseResultToPrettyString( result ):
         
         ( url_type, priority ) = additional_info
         
-        if url_type == HC.URL_TYPE_FILE:
+        if url_type == HC.URL_TYPE_DESIRED:
             
-            return 'file url: ' + parsed_text
+            return 'downloadable/pursuable url: ' + parsed_text
             
-        elif url_type == HC.URL_TYPE_POST:
+        elif url_type == HC.URL_TYPE_SOURCE:
             
-            return 'post url: ' + parsed_text
+            return 'associable/source url: ' + parsed_text
             
         elif url_type == HC.URL_TYPE_NEXT:
             
@@ -59,7 +59,16 @@ def ConvertParseResultToPrettyString( result ):
         
     elif content_type == HC.CONTENT_TYPE_MAPPINGS:
         
-        return 'tag: ' + HydrusTags.CombineTag( additional_info, parsed_text )
+        try:
+            
+            tag = HydrusTags.CleanTag( HydrusTags.CombineTag( additional_info, parsed_text ) )
+            
+        except:
+            
+            tag = 'unparsable tag, will likely be discarded'
+            
+        
+        return 'tag: ' + tag
         
     elif content_type == HC.CONTENT_TYPE_HASH:
         
@@ -114,13 +123,13 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
             
             for ( url_type, priority ) in additional_infos:
                 
-                if url_type == HC.URL_TYPE_FILE:
+                if url_type == HC.URL_TYPE_DESIRED:
                     
-                    pretty_strings.append( 'file url' )
+                    pretty_strings.append( 'downloadable/pursuable url' )
                     
-                elif url_type == HC.URL_TYPE_POST:
+                elif url_type == HC.URL_TYPE_SOURCE:
                     
-                    pretty_strings.append( 'post url' )
+                    pretty_strings.append( 'associable/source url' )
                     
                 elif url_type == HC.URL_TYPE_NEXT:
                     
@@ -402,6 +411,22 @@ def GetURLsFromParseResults( results, desired_url_types, only_get_top_priority =
         for u_l in url_results.values():
             
             url_list.extend( u_l )
+            
+        
+    
+    urls_seen = set()
+    
+    possible_dupe_urls = url_list
+    
+    url_list = []
+    
+    for url in possible_dupe_urls:
+        
+        if url not in urls_seen:
+            
+            urls_seen.add( url )
+            
+            url_list.append( url )
             
         
     
@@ -1516,7 +1541,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
     SERIALISABLE_NAME = 'Content Parser'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, name = None, content_type = None, formula = None, additional_info = None ):
         
@@ -1619,6 +1644,35 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( name, content_type, serialisable_formula, additional_info ) = old_serialisable_info
+            
+            if content_type == HC.CONTENT_TYPE_URLS:
+                
+                ( url_type, priority ) = additional_info
+                
+                if url_type == HC.URL_TYPE_FILE:
+                    
+                    url_type = HC.URL_TYPE_DESIRED
+                    
+                elif url_type == HC.URL_TYPE_POST:
+                    
+                    url_type = HC.URL_TYPE_SOURCE
+                    
+                else:
+                    
+                    url_type = HC.URL_TYPE_NEXT
+                    
+                
+                additional_info = ( url_type, priority )
+                
+            
+            new_serialisable_info = ( name, content_type, serialisable_formula, additional_info )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -2430,6 +2484,7 @@ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END = 7
 STRING_TRANSFORMATION_REVERSE = 8
 STRING_TRANSFORMATION_REGEX_SUB = 9
 STRING_TRANSFORMATION_DATE_DECODE = 10
+STRING_TRANSFORMATION_INTEGER_ADDITION = 11
 
 transformation_type_str_lookup = {}
 
@@ -2444,6 +2499,7 @@ transformation_type_str_lookup[ STRING_TRANSFORMATION_CLIP_TEXT_FROM_END ] = 'ta
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REVERSE ] = 'reverse text'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_REGEX_SUB ] = 'regex substitution'
 transformation_type_str_lookup[ STRING_TRANSFORMATION_DATE_DECODE ] = 'date decode'
+transformation_type_str_lookup[ STRING_TRANSFORMATION_INTEGER_ADDITION ] = 'integer addition'
 
 class StringConverter( HydrusSerialisable.SerialisableBase ):
     
@@ -2593,10 +2649,16 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
                     
                     s = str( timestamp )
                     
+                elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
+                    
+                    delta = data
+                    
+                    s = str( int( s ) + int( delta ) )
+                    
                 
-            except:
+            except Exception as e:
                 
-                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.TransformationToUnicode( transformation ) + '" to string "' + repr( s ) + '".' )
+                raise HydrusExceptions.StringConvertException( 'ERROR: Could not apply "' + self.TransformationToUnicode( transformation ) + '" to string "' + repr( s ) + '":' + HydrusData.ToUnicode( e ) )
                 
             
             if max_steps_allowed is not None and i + 1 >= max_steps_allowed:
@@ -2666,6 +2728,10 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         elif transformation_type == STRING_TRANSFORMATION_DATE_DECODE:
             
             return 'date decode: ' + repr( data )
+            
+        elif transformation_type == STRING_TRANSFORMATION_INTEGER_ADDITION:
+            
+            return 'integer addition: add ' + HydrusData.ToUnicode( data )
             
         else:
             

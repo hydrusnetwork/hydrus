@@ -333,6 +333,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             raise HydrusExceptions.URLMatchException( 'Could not find a URL Class for ' + url + '!' )
             
         
+        seen_url_matches = set()
+        
+        seen_url_matches.add( url_match )
+        
         api_url_match = url_match
         api_url = url
         
@@ -346,6 +350,28 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 raise HydrusExceptions.URLMatchException( 'Could not find an API URL Class for ' + api_url + ' URL, which originally came from ' + url + '!' )
                 
+            
+            if api_url_match in seen_url_matches:
+                
+                loop_size = len( seen_url_matches )
+                
+                if loop_size == 1:
+                    
+                    message = 'Could not find an API URL Class for ' + url + ' as the url class API-linked to itself!'
+                    
+                elif loop_size == 2:
+                    
+                    message = 'Could not find an API URL Class for ' + url + ' as the url class and its API url class API-linked to each other!'
+                    
+                else:
+                    
+                    message = 'Could not find an API URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ConvertIntToPrettyString( loop_size ) + '!'
+                    
+                
+                raise HydrusExceptions.URLMatchException( message )
+                
+            
+            seen_url_matches.add( api_url_match )
             
         
         api_url = api_url_match.Normalise( api_url )
@@ -366,7 +392,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if parser_url_match is None:
                 
-                raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + parser_url_match.GetName() + ' URL Class!' )
+                raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + url_match.GetName() + ' URL Class!' )
                 
             
         
@@ -715,7 +741,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_match is None:
                 
-                raise HydrusExceptions.URLMatchException( 'Could not find a URL class for ' + url + ', so could not figure out tag import options!' )
+                import ClientImportOptions
+                
+                return ClientImportOptions.TagImportOptions()
                 
             
             tag_import_options = self._GetDefaultTagImportOptionsForURLMatch( url_match, url )

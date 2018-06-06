@@ -287,8 +287,6 @@ class ClientFilesManager( object ):
             
         except Exception as e:
             
-            HydrusData.ShowException( e )
-            
             raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It could not be regenerated from the original file for the above reason. This event could indicate hard drive corruption. Please check everything is ok.' )
             
         
@@ -296,14 +294,14 @@ class ClientFilesManager( object ):
         
         try:
             
+            HydrusPaths.MakeFileWritable( full_size_path )
+            
             with open( full_size_path, 'wb' ) as f:
                 
                 f.write( thumbnail )
                 
             
         except Exception as e:
-            
-            HydrusData.ShowException( e )
             
             raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.encode( 'hex' ) + ' was missing. It was regenerated from the original file, but hydrus could not write it to the location ' + full_size_path + ' for the above reason. This event could indicate hard drive corruption, and it also suggests that hydrus does not have permission to write to its thumbnail folder. Please check everything is ok.' )
             
@@ -332,7 +330,7 @@ class ClientFilesManager( object ):
             
             try:
                 
-                HydrusPaths.DeletePath( full_size_path )
+                ClientPaths.DeletePath( full_size_path, always_delete_fully = True )
                 
             except:
                 
@@ -347,6 +345,8 @@ class ClientFilesManager( object ):
         resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
         
         try:
+            
+            HydrusPaths.MakeFileWritable( resized_path )
             
             with open( resized_path, 'wb' ) as f:
                 
@@ -689,6 +689,8 @@ class ClientFilesManager( object ):
         
         dest_path = self._GenerateExpectedFilePath( hash, mime )
         
+        HydrusPaths.MakeFileWritable( dest_path )
+        
         with open( dest_path, 'wb' ) as f:
             
             f.write( data )
@@ -722,6 +724,8 @@ class ClientFilesManager( object ):
         
         path = self._GenerateExpectedFullSizeThumbnailPath( hash )
         
+        HydrusPaths.MakeFileWritable( path )
+        
         with open( path, 'wb' ) as f:
             
             f.write( thumbnail )
@@ -731,7 +735,7 @@ class ClientFilesManager( object ):
         
         if os.path.exists( resized_path ):
             
-            HydrusPaths.DeletePath( resized_path )
+            ClientPaths.DeletePath( resized_path, always_delete_fully = True )
             
         
         self._controller.pub( 'clear_thumbnails', { hash } )
@@ -878,7 +882,7 @@ class ClientFilesManager( object ):
                     
                     job_key.SetVariable( 'popup_text_1', status )
                     
-                    HydrusPaths.DeletePath( path )
+                    ClientPaths.DeletePath( path )
                     
                 
             
@@ -905,7 +909,7 @@ class ClientFilesManager( object ):
                     
                     HydrusData.Print( 'Deleting the orphan ' + path )
                     
-                    HydrusPaths.DeletePath( path )
+                    ClientPaths.DeletePath( path, always_delete_fully = True )
                     
                 
             
@@ -933,6 +937,8 @@ class ClientFilesManager( object ):
             time.sleep( 0.5 )
             
         
+        big_pauser = HydrusData.BigJobPauser( period = 1 )
+        
         with self._lock:
             
             for hash in hashes:
@@ -948,6 +954,8 @@ class ClientFilesManager( object ):
                 
                 ClientPaths.DeletePath( path )
                 
+                big_pauser.Pause()
+                
             
     
     def DelayedDeleteThumbnails( self, hashes, time_to_delete ):
@@ -959,13 +967,17 @@ class ClientFilesManager( object ):
         
         with self._lock:
             
+            big_pauser = HydrusData.BigJobPauser( period = 1 )
+            
             for hash in hashes:
                 
                 path = self._GenerateExpectedFullSizeThumbnailPath( hash )
                 resized_path = self._GenerateExpectedResizedThumbnailPath( hash )
                 
-                HydrusPaths.DeletePath( path )
-                HydrusPaths.DeletePath( resized_path )
+                ClientPaths.DeletePath( path, always_delete_fully = True )
+                ClientPaths.DeletePath( resized_path, always_delete_fully = True )
+                
+                big_pauser.Pause()
                 
             
         
@@ -1235,7 +1247,7 @@ class ClientFilesManager( object ):
                         
                         if os.path.exists( thumbnail_resized_path ):
                             
-                            HydrusPaths.DeletePath( thumbnail_resized_path )
+                            ClientPaths.DeletePath( thumbnail_resized_path, always_delete_fully = True )
                             
                         
                     
@@ -1886,8 +1898,6 @@ class ThumbnailCache( object ):
             
         except Exception as e:
             
-            HydrusData.ShowException( e )
-            
             try:
                 
                 self._controller.client_files_manager.RegenerateResizedThumbnail( hash, mime )
@@ -1963,7 +1973,7 @@ class ThumbnailCache( object ):
             
             self._special_thumbs = {}
             
-            names = [ 'hydrus', 'flash', 'pdf', 'audio', 'video', 'zip' ]
+            names = [ 'hydrus', 'pdf', 'audio', 'video', 'zip' ]
             
             ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
             
@@ -2027,7 +2037,9 @@ class ThumbnailCache( object ):
             return self._special_thumbs[ 'hydrus' ]
             
         
-        if display_media.GetLocationsManager().ShouldHaveThumbnail():
+        locations_manager = display_media.GetLocationsManager()
+        
+        if locations_manager.ShouldIdeallyHaveThumbnail():
             
             mime = display_media.GetMime()
             
@@ -2039,7 +2051,25 @@ class ThumbnailCache( object ):
                 
                 if result is None:
                     
-                    hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                    if locations_manager.ShouldDefinitelyHaveThumbnail():
+                        
+                        # local file, should be able to regen if needed
+                        
+                        hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                        
+                    else:
+                        
+                        # repository file, maybe not actually available yet
+                        
+                        try:
+                            
+                            hydrus_bitmap = self._GetResizedHydrusBitmapFromHardDrive( display_media )
+                            
+                        except:
+                            
+                            hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
+                            
+                        
                     
                     self._data_cache.AddData( hash, hydrus_bitmap )
                     
@@ -2052,7 +2082,6 @@ class ThumbnailCache( object ):
                 
             elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
             elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
-            elif mime == HC.APPLICATION_FLASH: return self._special_thumbs[ 'flash' ]
             elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
             elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
             else: return self._special_thumbs[ 'hydrus' ]

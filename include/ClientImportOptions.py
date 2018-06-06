@@ -565,6 +565,41 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def CheckNetworkDownload( self, possible_mime, size, certain ):
+        
+        if certain:
+            
+            # by certain, we really mean 'content-length said', hence the 'apparently'
+            
+            error_prefix = 'Download was apparently '
+            
+        else:
+            
+            error_prefix = 'Download was at least '
+            
+        
+        if possible_mime is not None:
+            
+            if possible_mime == HC.IMAGE_GIF and self._max_gif_size is not None and size > self._max_gif_size:
+                
+                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ConvertIntToBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ConvertIntToBytes( self._max_gif_size ) + '.' )
+                
+            
+        
+        if self._max_size is not None and size > self._max_size:
+            
+            raise HydrusExceptions.SizeException( error_prefix + HydrusData.ConvertIntToBytes( size ) + ' but the upper limit is ' + HydrusData.ConvertIntToBytes( self._max_size ) + '.' )
+            
+        
+        if certain:
+            
+            if self._min_size is not None and size < self._min_size:
+                
+                raise HydrusExceptions.SizeException( error_prefix + HydrusData.ConvertIntToBytes( size ) + ' but the lower limit is ' + HydrusData.ConvertIntToBytes( self._min_size ) + '.' )
+                
+            
+        
+    
     def ExcludesDeleted( self ):
         
         return self._exclude_deleted

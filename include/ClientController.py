@@ -93,6 +93,11 @@ class Controller( HydrusController.HydrusController ):
         return ClientDB.DB( self, self.db_dir, 'client', no_wal = self._no_wal )
         
     
+    def _InitTempDir( self ):
+        
+        self.temp_dir = ClientPaths.GetTempDir()
+        
+    
     def _DestroySplash( self ):
         
         if self._splash is not None:
@@ -572,8 +577,6 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.pub( 'splash_set_status_subtext', u'client files' )
-        
-        self.temp_dir = ClientPaths.GetTempDir()
         
         self.InitClientFilesManager()
         
@@ -1139,11 +1142,6 @@ class Controller( HydrusController.HydrusController ):
         if not HG.emergency_exit:
             
             self.SaveDirtyObjects()
-            
-        
-        if hasattr( self, 'temp_dir' ):
-            
-            HydrusPaths.DeletePath( self.temp_dir )
             
         
         HydrusController.HydrusController.ShutdownModel( self )

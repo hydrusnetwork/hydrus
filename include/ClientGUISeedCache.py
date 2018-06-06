@@ -6,7 +6,7 @@ import ClientGUIMenus
 import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
-import ClientImporting
+import ClientImportSeeds
 import ClientPaths
 import ClientSerialisable
 import ClientThreading
@@ -424,14 +424,14 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         if sources[0].startswith( 'http' ):
             
-            seed_type = ClientImporting.SEED_TYPE_URL
+            seed_type = ClientImportSeeds.SEED_TYPE_URL
             
         else:
             
-            seed_type = ClientImporting.SEED_TYPE_HDD
+            seed_type = ClientImportSeeds.SEED_TYPE_HDD
             
         
-        seeds = [ ClientImporting.Seed( seed_type, source ) for source in sources ]
+        seeds = [ ClientImportSeeds.Seed( seed_type, source ) for source in sources ]
         
         seed_cache.AddSeeds( seeds )
         

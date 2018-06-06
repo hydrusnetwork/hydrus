@@ -489,6 +489,11 @@ def MakeSureDirectoryExists( path ):
     
 def MakeFileWritable( path ):
     
+    if not os.path.exists( path ):
+        
+        return
+        
+    
     try:
         
         os.chmod( path, stat.S_IWRITE | stat.S_IREAD )
@@ -636,6 +641,8 @@ def MirrorFile( source, dest ):
     if not PathsHaveSameSizeAndDate( source, dest ):
         
         try:
+            
+            MakeFileWritable( dest )
             
             # this overwrites on conflict without hassle
             shutil.copy2( source, dest )

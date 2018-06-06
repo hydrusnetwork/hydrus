@@ -518,7 +518,7 @@ class PanelPredicateSystemKnownURLsURLMatch( PanelPredicateSystem ):
         
         for url_match in HG.client_controller.network_engine.domain_manager.GetURLMatches():
             
-            if url_match.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+            if url_match.ShouldAssociateWithFiles():
                 
                 self._url_matches.Append( url_match.GetName(), url_match )
                 

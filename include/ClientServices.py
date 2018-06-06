@@ -525,7 +525,7 @@ class ServiceRemote( Service ):
         
         example_nj = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, 'GET', self._GetBaseURL() )
         
-        can_start = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts() )
+        can_start = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_nj.GetNetworkContexts(), threshold = 60 )
         
         if not can_start:
             
@@ -986,6 +986,13 @@ class ServiceRestricted( ServiceRemote ):
     
 class ServiceRepository( ServiceRestricted ):
     
+    def __init__( self, service_key, service_type, name, dictionary = None ):
+        
+        ServiceRestricted.__init__( self, service_key, service_type, name, dictionary = dictionary )
+        
+        self._sync_lock = threading.Lock()
+        
+    
     def _CanSyncDownload( self ):
         
         try:
@@ -1145,21 +1152,24 @@ class ServiceRepository( ServiceRestricted ):
     
     def Sync( self, only_process_when_idle = False, stop_time = None ):
         
-        try:
+        with self._sync_lock: # to stop sync_now button clicks from stomping over the regular daemon and vice versa
             
-            self.SyncDownloadMetadata()
-            
-            self.SyncDownloadUpdates( stop_time )
-            
-            self.SyncProcessUpdates( only_process_when_idle, stop_time )
-            
-            self.SyncThumbnails( stop_time )
-            
-        finally:
-            
-            if self.IsDirty():
+            try:
                 
-                HG.client_controller.pub( 'important_dirt_to_clean' )
+                self.SyncDownloadMetadata()
+                
+                self.SyncDownloadUpdates( stop_time )
+                
+                self.SyncProcessUpdates( only_process_when_idle, stop_time )
+                
+                self.SyncThumbnails( stop_time )
+                
+            finally:
+                
+                if self.IsDirty():
+                    
+                    HG.client_controller.pub( 'important_dirt_to_clean' )
+                    
                 
             
         

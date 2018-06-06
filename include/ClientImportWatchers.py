@@ -2,6 +2,7 @@ import ClientConstants as CC
 import ClientDownloading
 import ClientImporting
 import ClientImportOptions
+import ClientImportSeeds
 import ClientNetworkingJobs
 import ClientParsing
 import collections
@@ -77,7 +78,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             statuses_to_counts.update( seed_cache.GetStatusesToCounts() )
             
         
-        self._status_cache = ClientImporting.GenerateSeedCacheStatus( statuses_to_counts )
+        self._status_cache = ClientImportSeeds.GenerateSeedCacheStatus( statuses_to_counts )
         
         self._status_dirty = False
         self._status_cache_generation_time = HydrusData.GetNow()
@@ -315,7 +316,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._publish_to_page = False
         
         self._url = ''
-        self._seed_cache = ClientImporting.SeedCache()
+        self._seed_cache = ClientImportSeeds.SeedCache()
         self._urls_to_filenames = {}
         self._urls_to_md5_base64 = {}
         self._checker_options = new_options.GetDefaultWatcherCheckerOptions()
@@ -778,7 +779,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            did_substantial_work = seed.WorkOnFileURL( self._file_import_options, status_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._FileNetworkJobPresentationContextFactory, tag_import_options = self._tag_import_options )
+            did_substantial_work = seed.WorkOnURL( self._seed_cache, status_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
             
             with self._lock:
                 

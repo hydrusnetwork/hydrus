@@ -5,9 +5,9 @@ import HydrusPaths
 import os
 import webbrowser
 
-def DeletePath( path ):
+def DeletePath( path, always_delete_fully = False ):
     
-    if HC.options[ 'delete_to_recycle_bin' ] == True:
+    if HC.options[ 'delete_to_recycle_bin' ] == True and not always_delete_fully:
         
         HydrusPaths.RecyclePath( path )
         

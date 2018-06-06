@@ -545,7 +545,12 @@ class LocationsManager( object ):
         self._petitioned.discard( service_key )
         
     
-    def ShouldHaveThumbnail( self ):
+    def ShouldDefinitelyHaveThumbnail( self ): # local only
+        
+        return HC.COMBINED_LOCAL_FILE in self._current
+        
+    
+    def ShouldIdeallyHaveThumbnail( self ): # file repo or local
         
         return len( self._current ) > 0
         

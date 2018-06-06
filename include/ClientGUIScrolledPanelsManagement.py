@@ -2519,6 +2519,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._default_new_page_goes.Append( CC.new_page_goes_string_lookup[ value ], value )
                 
             
+            self._notebook_tabs_on_left = wx.CheckBox( self )
+            
             self._confirm_client_exit = wx.CheckBox( self )
             self._confirm_trash = wx.CheckBox( self )
             self._confirm_archive = wx.CheckBox( self )
@@ -2602,6 +2604,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
+            self._notebook_tabs_on_left.SetValue( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
+            
             self._confirm_client_exit.SetValue( HC.options[ 'confirm_client_exit' ] )
             
             self._confirm_trash.SetValue( HC.options[ 'confirm_trash' ] )
@@ -2653,7 +2657,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
             rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
-            rows.append( ( 'By default, new page tabs: ', self._default_new_page_goes ) )
+            rows.append( ( 'By default, put page tabs on the left (requires restart): ', self._default_new_page_goes ) )
+            rows.append( ( 'Put notebook tabs on the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
             rows.append( ( 'Confirm sending files to trash: ', self._confirm_trash ) )
             rows.append( ( 'Confirm sending more than one file to archive or inbox: ', self._confirm_archive ) )
@@ -2739,6 +2744,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
             HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
+            
+            self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.GetValue() )
             
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
             

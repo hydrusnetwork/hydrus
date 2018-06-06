@@ -852,7 +852,16 @@ class PagesNotebook( wx.Notebook ):
     
     def __init__( self, parent, controller, name ):
         
-        wx.Notebook.__init__( self, parent )
+        if controller.new_options.GetBoolean( 'notebook_tabs_on_left' ):
+            
+            style = wx.NB_LEFT
+            
+        else:
+            
+            style = wx.NB_TOP
+            
+        
+        wx.Notebook.__init__( self, parent, style = style )
         
         self._controller = controller
         
