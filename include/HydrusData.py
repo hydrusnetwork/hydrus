@@ -874,6 +874,17 @@ def GetTimeDeltaUntilTimePrecise( t ):
     
     return max( time_remaining, 0.0 )
     
+def GetTypeName( obj_type ):
+    
+    if hasattr( obj_type, '__name__' ):
+        
+        return obj_type.__name__
+        
+    else:
+        
+        return repr( obj_type )
+        
+    
 def IntelligentMassIntersect( sets_to_reduce ):
     
     answer = None

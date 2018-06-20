@@ -243,7 +243,7 @@ class AddEditDeleteListBox( wx.Panel ):
         import ClientGUITopLevelWindows
         import ClientGUISerialisable
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
             panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
             
@@ -333,7 +333,7 @@ class AddEditDeleteListBox( wx.Panel ):
     
     def _ImportObject( self, obj ):
         
-        bad_object_types = set()
+        bad_object_type_names = set()
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
             
@@ -350,19 +350,19 @@ class AddEditDeleteListBox( wx.Panel ):
                 
             else:
                 
-                bad_object_types.add( type( obj ).__name__ )
+                bad_object_type_names.add( HydrusData.GetTypeName( type( obj ) ) )
                 
             
         
-        if len( bad_object_types ) > 0:
+        if len( bad_object_type_names ) > 0:
             
             message = 'The imported objects included these types:'
             message += os.linesep * 2
-            message += os.linesep.join( bad_object_types )
+            message += os.linesep.join( bad_object_type_names )
             message += os.linesep * 2
             message += 'Whereas this control only allows:'
             message += os.linesep * 2
-            message += os.linesep.join( ( o.__name__ for o in self._permitted_object_types ) )
+            message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
             wx.MessageBox( message )
             

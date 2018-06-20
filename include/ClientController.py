@@ -800,6 +800,11 @@ class Controller( HydrusController.HydrusController ):
         
         if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
             
+            self.WriteInterruptable( 'maintain_file_reparsing', stop_time = stop_time )
+            
+        
+        if stop_time is None or not HydrusData.TimeHasPassed( stop_time ):
+            
             self.WriteInterruptable( 'vacuum', stop_time = stop_time )
             
         

@@ -2814,7 +2814,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if len( potential_clean_indices_to_steal ) > 0:
                         
-                        index_to_steal = potential_clean_indices_to_steal.pop( 0 )
+                        index_to_steal = potential_clean_indices_to_steal.pop()
                         
                         self._DirtyPage( index_to_steal )
                         
@@ -2824,7 +2824,7 @@ class MediaPanelThumbnails( MediaPanel ):
                         
                     
                 
-                bmp = self._dirty_canvas_pages.pop( 0 )
+                bmp = self._dirty_canvas_pages.pop()
                 
                 self._DrawCanvasPage( page_index, bmp )
                 
@@ -3455,7 +3455,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if self._focussed_media.GetMime() in HC.IMAGES and self._focussed_media.GetDuration() is None:
                     
-                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
+                    ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy the selected file\'s image data to the clipboard (as a bmp).', self._CopyBMPToClipboard )
                     
                 
                 ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy the selected file\'s path to the clipboard.', self._CopyPathToClipboard )

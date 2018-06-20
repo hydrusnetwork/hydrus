@@ -1053,7 +1053,7 @@ class FrameInputLocalFiles( wx.Frame ):
     
     def THREADParseImportablePaths( self, unparsed_paths_queue, currently_parsing, work_to_do, parsed_path_queue, progress_updater, pause_event, cancel_event ):
         
-        unparsed_paths = []
+        unparsed_paths = collections.deque()
         
         num_files_done = 0
         num_good_files = 0
@@ -1206,7 +1206,7 @@ class FrameInputLocalFiles( wx.Frame ):
                 continue # either we added some or didn't--in any case, restart the cycle
                 
             
-            path = unparsed_paths.pop( 0 )
+            path = unparsed_paths.popleft()
             
             currently_parsing.set()
             

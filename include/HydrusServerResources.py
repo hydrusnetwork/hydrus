@@ -198,7 +198,7 @@ def GenerateEris( service, domain ):
                                      <font color="gray">MMMM</font>
 </pre></body></html>'''
     
-def ParseFileArguments( path ):
+def ParseFileArguments( path, decompression_bombs_ok = False ):
     
     HydrusImageHandling.ConvertToPngIfBmp( path )
     
@@ -208,9 +208,12 @@ def ParseFileArguments( path ):
         
         mime = HydrusFileHandling.GetMime( path )
         
-        if mime in HC.IMAGES and HydrusImageHandling.IsDecompressionBomb( path ):
+        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not decompression_bombs_ok:
             
-            raise HydrusExceptions.ForbiddenException( 'File seemed to be a Decompression Bomb!' )
+            if HydrusImageHandling.IsDecompressionBomb( path ):
+                
+                raise HydrusExceptions.ForbiddenException( 'File seemed to be a Decompression Bomb!' )
+                
             
         
         ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
@@ -417,7 +420,9 @@ class HydrusResource( Resource ):
                         
                     
                 
-                hydrus_args = ParseFileArguments( temp_path )
+                decompression_bombs_ok = self._DecompressionBombsOK( request )
+                
+                hydrus_args = ParseFileArguments( temp_path, decompression_bombs_ok )
                 
             
             self._reportDataUsed( request, total_bytes_read )
@@ -546,6 +551,11 @@ class HydrusResource( Resource ):
         d.addCallback( wrap_thread_result )
         
         return d
+        
+    
+    def _DecompressionBombsOK( self, request ):
+        
+        return False
         
     
     def _errbackDisconnected( self, failure, request_deferred ):

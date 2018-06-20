@@ -28,6 +28,11 @@ if not os.path.exists( FFMPEG_PATH ):
     
 def CheckFFMPEGError( lines ):
     
+    if len( lines ) == 0:
+        
+        raise HydrusExceptions.MimeException( 'Could not parse that file--no FFMPEG output given.' )
+        
+    
     if "No such file or directory" in lines[-1]:
         
         raise IOError( "File not found!" )

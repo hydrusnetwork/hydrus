@@ -4215,7 +4215,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         url = ''
         query_type = HC.GET
         file_identifier_type = ClientParsing.FILE_IDENTIFIER_TYPE_MD5
-        file_identifier_string_converter = ClientParsing.StringConverter( ( [ ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ] ), 'some hash bytes' )
+        file_identifier_string_converter = ClientParsing.StringConverter( ( ( ClientParsing.STRING_TRANSFORMATION_ENCODE, 'hex' ), ), 'some hash bytes' )
         file_identifier_arg_name = 'md5'
         static_args = {}
         children = []

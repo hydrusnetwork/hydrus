@@ -37,7 +37,7 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._AddSeeds( self._seed_cache.GetSeeds() )
+        self._list_ctrl.AddDatas( self._seed_cache.GetSeeds() )
         
         self._list_ctrl.Sort( 0 )
         
@@ -55,11 +55,6 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         self._controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
         
         wx.CallAfter( self._UpdateText )
-        
-    
-    def _AddSeeds( self, seeds ):
-        
-        self._list_ctrl.AddDatas( seeds )
         
     
     def _ConvertSeedToListCtrlTuples( self, seed ):
@@ -289,9 +284,18 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl.DeleteDatas( seeds_to_delete )
         
-        self._list_ctrl.UpdateDatas( seeds_to_update )
-        
-        self._AddSeeds( seeds_to_add )
+        if len( seeds_to_add ) > 0:
+            
+            self._list_ctrl.AddDatas( seeds_to_add )
+            
+            # if seeds are inserted, then all subsequent indices need to be shuffled up, hence just update all here
+            
+            self._list_ctrl.UpdateDatas()
+            
+        else:
+            
+            self._list_ctrl.UpdateDatas( seeds_to_update )
+            
         
     
     def _UpdateText( self ):

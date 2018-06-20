@@ -19,11 +19,13 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._payload_obj = payload_obj
         
-        self._filepicker = wx.FilePickerCtrl( self, style = wx.FLP_SAVE, wildcard = 'PNG (*.png)|*.png' )
-        self._filepicker.Bind( wx.EVT_FILEPICKER_CHANGED, self.EventChanged )
+        self._filepicker = wx.FilePickerCtrl( self, style = wx.FLP_SAVE | wx.FLP_USE_TEXTCTRL, wildcard = 'PNG (*.png)|*.png' )
+        
+        flp_width = ClientGUICommon.ConvertTextToPixelWidth( self._filepicker, 64 )
+        
+        self._filepicker.SetMinSize( ( flp_width, -1 ) )
         
         self._title = wx.TextCtrl( self )
-        self._title.Bind( wx.EVT_TEXT, self.EventChanged )
         
         self._payload_description = wx.TextCtrl( self )
         
@@ -43,9 +45,26 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._width.SetValue( 512 )
         
+        last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
+        
         if isinstance( self._payload_obj, HydrusSerialisable.SerialisableBaseNamed ):
             
-            self._title.SetValue( self._payload_obj.GetName() )
+            name = self._payload_obj.GetName()
+            
+        else:
+            
+            name = payload_description
+            
+        
+        self._title.SetValue( name )
+        
+        if last_png_export_dir is not None:
+            
+            filename = name + '.png'
+            
+            path = os.path.join( last_png_export_dir, filename )
+            
+            self._filepicker.SetPath( path )
             
         
         self._Update()
@@ -64,6 +83,9 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         self.SetSizer( gridbox )
+        
+        self._filepicker.Bind( wx.EVT_FILEPICKER_CHANGED, self.EventChanged )
+        self._title.Bind( wx.EVT_TEXT, self.EventChanged )
         
     
     def _Update( self ):
@@ -111,6 +133,13 @@ class PngExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         text = self._text.GetValue()
         path = HydrusData.ToUnicode( self._filepicker.GetPath() )
         
+        if path is not None and path != '':
+            
+            base_dir = os.path.dirname( path )
+            
+            HG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', base_dir )
+            
+        
         if not path.endswith( '.png' ):
             
             path += '.png'
@@ -132,13 +161,23 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._payload_objs = payload_objs
         
         self._directory_picker = wx.DirPickerCtrl( self )
-        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventChanged )
+        
+        dp_width = ClientGUICommon.ConvertTextToPixelWidth( self._directory_picker, 52 )
+        
+        self._directory_picker.SetMinSize( ( dp_width, -1 ) )
         
         self._width = wx.SpinCtrl( self, min = 100, max = 4096 )
         
         self._export = ClientGUICommon.BetterButton( self, 'export', self.Export )
         
         #
+        
+        last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
+        
+        if last_png_export_dir is not None:
+            
+            self._directory_picker.SetPath( last_png_export_dir )
+            
         
         self._width.SetValue( 512 )
         
@@ -156,6 +195,8 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.SetSizer( gridbox )
         
+        self._directory_picker.Bind( wx.EVT_DIRPICKER_CHANGED, self.EventChanged )
+        
     
     def _Update( self ):
         
@@ -163,7 +204,7 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         path = self._directory_picker.GetPath()
         
-        if path == '' or path is None:
+        if path is None or path == '':
             
             problems.append( 'select a path' )
             
@@ -192,6 +233,13 @@ class PngsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         width = self._width.GetValue()
         
         directory = HydrusData.ToUnicode( self._directory_picker.GetPath() )
+        
+        last_png_export_dir = directory
+        
+        if last_png_export_dir is not None and last_png_export_dir != '':
+            
+            HG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', last_png_export_dir )
+            
         
         for obj in self._payload_objs:
             

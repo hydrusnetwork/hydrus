@@ -4098,6 +4098,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
+        self._service_keys_to_get_all_checkboxes = {}
         self._service_keys_to_checkbox_info = {}
         self._service_keys_to_additional_button_info = {}
         
@@ -4121,7 +4122,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         
-        self._InitialiseNamespaces( namespaces )
+        self._InitialiseCheckboxes( namespaces )
         self._SetOptions( tag_import_options )
         
         #
@@ -4193,7 +4194,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _InitialiseNamespaces( self, namespaces ):
+    def _InitialiseCheckboxes( self, namespaces ):
         
         namespaces = list( namespaces )
         
@@ -4210,6 +4211,28 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._service_keys_to_checkbox_info[ service_key ] = []
                 
                 panel = ClientGUICommon.StaticBox( self, service.GetName() )
+                
+                if len( namespaces ) > 0:
+                    
+                    label = 'get all tags (works better than \'select all\' for the new downloader system)'
+                    
+                else:
+                    
+                    label = 'get all tags'
+                    
+                
+                get_all_checkbox = wx.CheckBox( panel, label = label )
+                
+                get_all_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetAllCheckbox )
+                
+                self._service_keys_to_get_all_checkboxes[ service_key ] = get_all_checkbox
+                
+                panel.Add( get_all_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+                if len( namespaces ) == 1:
+                    
+                    panel.Add( ClientGUICommon.BetterStaticText( panel, '----' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+                    
                 
                 if len( namespaces ) > 1:
                     
@@ -4262,9 +4285,24 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         
+        get_all_service_keys = tag_import_options.GetGetAllServiceKeys()
+        
+        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
+            
+            if service_key in get_all_service_keys:
+                
+                checkbox.SetValue( service_key in get_all_service_keys )
+                
+            
+        
         service_keys_to_namespaces = tag_import_options.GetServiceKeysToNamespaces()
         
         for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            if service_key in get_all_service_keys:
+                
+                continue
+                
             
             if service_key in service_keys_to_namespaces:
                 
@@ -4277,14 +4315,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( namespace, checkbox ) in checkbox_info:
                 
-                if namespace in namespaces_to_set:
-                    
-                    checkbox.SetValue( True )
-                    
-                else:
-                    
-                    checkbox.SetValue( False )
-                    
+                checkbox.SetValue( namespace in namespaces_to_set )
                 
             
         
@@ -4314,6 +4345,8 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._service_keys_to_additional_button_info = new_service_keys_to_additional_button_info
         
+        self._UpdateGetAllCheckboxes()
+        
     
     def _ShowHelp( self ):
         
@@ -4334,13 +4367,48 @@ Please note that you can set up 'default' values for these tag import options in
         wx.MessageBox( message )
         
     
+    def _UpdateGetAllCheckboxes( self ):
+        
+        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
+            
+            get_all = checkbox.GetValue()
+            
+            should_enable = not get_all
+            
+            for ( namespace, namespace_checkbox ) in self._service_keys_to_checkbox_info[ service_key ]:
+                
+                namespace_checkbox.Enable( should_enable )
+                
+            
+        
+    
+    def EventGetAllCheckbox( self, event ):
+        
+        self._UpdateGetAllCheckboxes()
+        
+    
     def GetValue( self ):
         
         fetch_tags_even_if_url_known_and_file_already_in_db = self._fetch_tags_even_if_url_known_and_file_already_in_db.GetValue()
         
+        get_all_service_keys = set()
+        
+        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
+            
+            if checkbox.GetValue():
+                
+                get_all_service_keys.add( service_key )
+                
+            
+        
         service_keys_to_namespaces = {}
         
         for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
+            
+            if service_key in get_all_service_keys:
+                
+                continue
+                
             
             namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
             
@@ -4349,7 +4417,7 @@ Please note that you can set up 'default' values for these tag import options in
         
         service_keys_to_additional_tags = { service_key : additional_tags for ( service_key, ( additional_tags, additional_button ) ) in self._service_keys_to_additional_button_info.items() }
         
-        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = self._tag_filter, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = self._tag_filter, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
         
         return tag_import_options
         

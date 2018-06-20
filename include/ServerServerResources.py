@@ -349,6 +349,11 @@ class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
     
+    def _DecompressionBombsOK( self, request ):
+        
+        return request.hydrus_account.HasPermission( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE )
+        
+    
     def _threadDoGETJob( self, request ):
         
         self._checkBandwidth( request )

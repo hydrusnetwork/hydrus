@@ -46,15 +46,15 @@ def ConvertParseResultToPrettyString( result ):
         
         if url_type == HC.URL_TYPE_DESIRED:
             
-            return 'downloadable/pursuable url: ' + parsed_text
+            return 'downloadable/pursuable url (priority ' + str( priority ) + '): ' + parsed_text
             
         elif url_type == HC.URL_TYPE_SOURCE:
             
-            return 'associable/source url: ' + parsed_text
+            return 'associable/source url (priority ' + str( priority ) + '): ' + parsed_text
             
         elif url_type == HC.URL_TYPE_NEXT:
             
-            return 'next page url: ' + parsed_text
+            return 'next page url (priority ' + str( priority ) + '): ' + parsed_text
             
         
     elif content_type == HC.CONTENT_TYPE_MAPPINGS:
@@ -1910,6 +1910,8 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def Parse( self, parsing_context, page_data ):
+        
+        page_data = HydrusData.ToUnicode( page_data )
         
         try:
             

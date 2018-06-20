@@ -2156,7 +2156,7 @@ class ThumbnailCache( object ):
                         break
                         
                     
-                    result = self._waterfall_queue_random.pop( 0 )
+                    result = self._waterfall_queue_random.pop()
                     
                     self._waterfall_queue_quick.discard( result )
                     

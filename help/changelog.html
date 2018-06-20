@@ -8,6 +8,51 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 311</h3></li>
+				<ul>
+					<li>wrote a new parser that muddles its way through pixiv's new dynamic javascript layout. it seems to get everything working again. it gets tags in kanji, although the unnamespaced pixiv tags remain low quality, and you may wish to just not parse them at all anyway</li>
+					<li>fixed some misc parser text handling, unicode conversion etc...</li>
+					<li>the new pixiv parser has a 'page' tag stub that should inform tag import options in the old downloader</li>
+					<li>the multiple watcher now remembers the highlighted watcher through a session restart</li>
+					<li>the multiple watcher now shows the highlighted watcher's url up top</li>
+					<li>the multiple watcher now has checker, file import, and tag import options, which it will assign to all new watchers it creates</li>
+					<li>the multiple watcher now has a 'set options to watchers' button that will force-set the current options to all the selected watchers</li>
+					<li>the multiple watcher now has an 'added' column with watcher creation time listed. storing this creation time is new, so any existing watchers will get a new creation time of their next load time, but it is remembered henceforth. the listctrl here is now pretty crushed for width, so maybe we'll rejigger some stuff here</li>
+					<li>watchers added to a multiple watcher will now have a status of 'just added' for five seconds</li>
+					<li>watchers that are added to a multiple watcher that is already watching them will now have the status of 'already watching' for five seconds</li>
+					<li>the multiple watcher list now has a much taller minimum height--layout here is another work in progress</li>
+					<li>fixed the inkbunny parser (and a related tweak to the inkbunny url class)--it now uses the new 'multiple-file-per-post' import object generation to actually walk through the pages of the mini-gallery (which for inkbunny have -p2- suffixes on the url) to fetch only the correct files and url-associate them neatly</li>
+					<li>tag import options now has a 'get all tags' checkbox, which can override the normal namespace checkboxes. it gets all tags, even those with namespaces not listed, which happens for several reasons in the new download system. (eventually, the namespace list may be replaced with a slightly different system)</li>
+					<li>watcher tag import options no longer list 'filename' under their namespace checkboxes--they just have this 'get all tags', which works for everything (so watching yiff.party pages should now get tags)</li>
+					<li>simplified and sped up similar files search at the db level</li>
+					<li>sped up some ratings search code</li>
+					<li>generalised some common file search optimisations, meaning they now apply in more situations and can take advantage of some other speed-ups:</li>
+					<li>similar files system predicate is now faster</li>
+					<li>inclusive ratings searches are now faster</li>
+					<li>duplicate relationship count searches with non-zero-inclusive count are now faster</li>
+					<li>removed some clumsy old ratings search optimisation code</li>
+					<li>exporting serialised objects as pngs is a bit easier--now, it displays current export path better, will remember the last export location used, and for single png exports will pre-fill the filename and 'title' value with a reasonable default</li>
+					<li>the content parser, page parser, and url class listctrls now accept serialised png files when drag and dropped!</li>
+					<li>the simple downloader should recover and continue better from malformed urls during a page parse</li>
+					<li>the url downloader should now recover better from various situations where it cannot not derive some tag import options (including urls with a 'file' url class, such as 4ch/8ch direct file links)</li>
+					<li>parse test results will now state the priority value of urls</li>
+					<li>gave the 'updating' section of help a pass and wrote a little more on how to do a big-version-gap update</li>
+					<li>when a new multi-file import object inserts its child file import objects while being looked at in the ui, the listctrl should now correctly refresh the displayed indices</li>
+					<li>subscriptions will now wait up to 90s for bandwidth (was 30s before, I think) before quitting, which should avoid a few more early-quit events</li>
+					<li>cleaned up some server decompression bomb testing</li>
+					<li>users with admin-level accounts can now upload decompression bombs to file repositories, better options on this will be avaliable in future</li>
+					<li>the manage urls dialog will now OK on the same 'manage_file_urls' shortcut action that can open it (like manage tags and ratings already do)</li>
+					<li>fixed the string converter for new file lookup parsing scripts</li>
+					<li>started work on some in-the-background mass file reparsing, but I want to get some nicer ui going before I pull the trigger on any of it</li>
+					<li>file reparsing now repopulates the table for md5, sha1, and sha512 hashes if they are missing</li>
+					<li>improved some ffmpeg error parsing</li>
+					<li>moved from basic list to a pop-faster collections.deque for importable path parsing and duplicate search branch regen</li>
+					<li>added a BUGFIX option to options->gui that forces minimum width for popup messages in the continuing attempt to deal with some funny fit/layout calculation in certain Linux WMs</li>
+					<li>fixed how some 'unrepairable db' error messages are displayed in Linux systems</li>
+					<li>cleaned up a ton of old tuple-stripping code from the db</li>
+					<li>updated to new sqlite for windows build</li>
+					<li>misc improvements</li>
+				</ul>
 				<li><h3>version 310</h3></li>
 				<ul>
 					<li>updated the inkbunny file page url class to acknowledge that inbunny pages can have multiple files</li>

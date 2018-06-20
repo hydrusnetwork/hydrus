@@ -234,7 +234,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
     elif site_type in ( HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ):
         
-        namespaces = [ 'creator', 'title', '' ]
+        namespaces = [ 'creator', 'title', 'page', '' ]
         
         if site_type == HC.SITE_TYPE_PIXIV:
             
@@ -256,7 +256,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
     elif site_type == HC.SITE_TYPE_WATCHER:
         
-        namespaces = [ 'filename' ]
+        namespaces = []
         search_value = 'thread url'
         
     

@@ -89,6 +89,11 @@ class PopupMessage( PopupWindow ):
         
         wrap_width = ClientGUICommon.ConvertTextToPixelWidth( self._title, popup_message_character_width )
         
+        if HG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
+            
+            self.SetMinClientSize( ( wrap_width, -1 ) )
+            
+        
         self._title.Wrap( wrap_width )
         self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._title.Hide()
@@ -762,6 +767,8 @@ class PopupMessageManager( wx.Frame ):
                 if best_size != self.GetSize():
                     
                     self.Fit()
+                    
+                    self.Layout()
                     
                 
                 ( parent_width, parent_height ) = parent.GetClientSize()

@@ -2547,6 +2547,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_character_width = wx.SpinCtrl( self, min = 16, max = 256 )
             
+            self._popup_message_force_min_width = wx.CheckBox( self )
+            
             self._thumbnail_fill = wx.CheckBox( self )
             
             self._thumbnail_visibility_scroll_percent = wx.SpinCtrl( self, min = 1, max = 99 )
@@ -2628,6 +2630,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._popup_message_character_width.SetValue( self._new_options.GetInteger( 'popup_message_character_width' ) )
             
+            self._popup_message_force_min_width.SetValue( self._new_options.GetBoolean( 'popup_message_force_min_width' ) )
+            
             self._thumbnail_fill.SetValue( self._new_options.GetBoolean( 'thumbnail_fill' ) )
             
             self._thumbnail_visibility_scroll_percent.SetValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
@@ -2670,6 +2674,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
+            rows.append( ( 'BUGFIX: Force this width as the minimum width for all popup messages: ', self._popup_message_force_min_width ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Zoom thumbnails so they \'fill\' their space: ', self._thumbnail_fill ) )
             rows.append( ( 'BUGFIX: Discord file drag-and-drop fix (works for <=10, <50MB file DnDs): ', self._discord_dnd_fix ) )
@@ -2750,6 +2755,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'hide_preview' ] = self._hide_preview.GetValue()
             
             self._new_options.SetInteger( 'popup_message_character_width', self._popup_message_character_width.GetValue() )
+            
+            self._new_options.SetBoolean( 'popup_message_force_min_width', self._popup_message_force_min_width.GetValue() )
             
             title = self._main_gui_title.GetValue()
             
@@ -5975,7 +5982,9 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self.SetSizer( vbox )
         
-        wx.CallAfter( self._url_input.SetFocus )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'main_gui' ] )
+        
+        wx.CallAfter( self._SetSearchFocus )
         
     
     def _Copy( self ):
@@ -6059,6 +6068,11 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    def _SetSearchFocus( self ):
+        
+        self._url_input.SetFocus()
+        
+    
     def EventListDoubleClick( self, event ):
         
         selection = self._urls_listbox.GetSelection()
@@ -6129,6 +6143,38 @@ class ManageURLsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
+        
+    
+    def ProcessApplicationCommand( self, command ):
+        
+        command_processed = True
+        
+        command_type = command.GetCommandType()
+        data = command.GetData()
+        
+        if command_type == CC.APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            action = data
+            
+            if action == 'manage_file_urls':
+                
+                self._OKParent()
+                
+            elif action == 'set_search_focus':
+                
+                self._SetSearchFocus()
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        return command_processed
         
     
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):

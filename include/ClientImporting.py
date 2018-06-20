@@ -2380,13 +2380,24 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 parsing_formula = simple_downloader_formula.GetFormula()
                 
-                file_urls = [ urlparse.urljoin( url, parsed_text ) for parsed_text in parsing_formula.Parse( parsing_context, data ) ]
+                seeds = []
                 
-                seeds = [ ClientImportSeeds.Seed( ClientImportSeeds.SEED_TYPE_URL, file_url ) for file_url in file_urls ]
-                
-                for seed in seeds:
+                for parsed_text in parsing_formula.Parse( parsing_context, data ):
                     
-                    seed.SetReferralURL( url )
+                    try:
+                        
+                        file_url = urlparse.urljoin( url, parsed_text )
+                        
+                        seed = ClientImportSeeds.Seed( ClientImportSeeds.SEED_TYPE_URL, file_url )
+                        
+                        seed.SetReferralURL( url )
+                        
+                        seeds.append( seed )
+                        
+                    except:
+                        
+                        continue
+                        
                     
                 
                 num_new = self._seed_cache.AddSeeds( seeds )
@@ -2398,7 +2409,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 parser_status = 'page checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
                 
-                num_already_in_seed_cache = len( file_urls ) - num_new
+                num_already_in_seed_cache = len( seeds ) - num_new
                 
                 if num_already_in_seed_cache > 0:
                     
@@ -2853,7 +2864,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         # just a little padding here
         expected_requests = 3
         expected_bytes = 1048576
-        threshold = 30
+        threshold = 90
         
         result = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, expected_requests = expected_requests, expected_bytes = expected_bytes, threshold = threshold )
         

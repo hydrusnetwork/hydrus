@@ -1855,20 +1855,27 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._last_watcher_keys = set()
         self._next_update_time = 0
-        self._highlit_watcher = None
         
         self._multiple_watcher_import = self._management_controller.GetVariable( 'multiple_watcher_import' )
+        
+        self._highlighted_watcher = self._multiple_watcher_import.GetHighlightedWatcher()
+        
+        ( self._checker_options, file_import_options, tag_import_options ) = self._multiple_watcher_import.GetOptions()
         
         #
         
         self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
+        
+        self._highlighted_watcher_url = wx.TextCtrl( self._watchers_panel )
+        
+        self._highlighted_watcher_url.SetEditable( False )
         
         self._watchers_status_st_top = ClientGUICommon.BetterStaticText( self._watchers_panel )
         self._watchers_status_st_bottom = ClientGUICommon.BetterStaticText( self._watchers_panel )
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 6, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 13 ), ( 'added', 10 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -1881,18 +1888,33 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
-        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
+        self._watchers_listctrl_panel.NewButtonRow()
+        
+        self._watchers_listctrl_panel.AddButton( 'set options to watchers', self._SetOptionsToWatchers, enabled_only_on_selection = True )
         
         self._watchers_listctrl.Sort( 0 )
+        
+        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
+        
+        self._checker_options_button = ClientGUICommon.BetterButton( self._watchers_panel, 'check timings', self._EditCheckerOptions )
+        
+        namespaces = []
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, self._OptionsUpdated )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, namespaces, tag_import_options, self._OptionsUpdated )
         
         # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
         
         #
         
+        self._watchers_panel.Add( self._highlighted_watcher_url, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._watchers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._watchers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1910,6 +1932,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
+        self._UpdateHighlightedWatcherURL()
+        
         self._UpdateStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
@@ -1925,7 +1949,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _CanClearHighlight( self ):
         
-        return self._highlit_watcher is not None
+        return self._highlighted_watcher is not None
         
     
     def _CanHighlight( self ):
@@ -1945,13 +1969,15 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _ClearExistingHighlight( self ):
         
-        if self._highlit_watcher is not None:
+        if self._highlighted_watcher is not None:
             
             publish_to_page = False
             
-            self._highlit_watcher.Repage( self._page_key, publish_to_page )
+            self._highlighted_watcher.Repage( self._page_key, publish_to_page )
             
-            self._highlit_watcher = None
+            self._highlighted_watcher = None
+            
+            self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
             
             self._watchers_listctrl_panel.UpdateButtons()
             
@@ -1969,21 +1995,27 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl.UpdateDatas()
         
+        self._UpdateHighlightedWatcherURL()
+        
     
     def _ConvertDataToListCtrlTuples( self, watcher ):
         
         pretty_subject = watcher.GetSubject()
         
-        if watcher == self._highlit_watcher:
+        if watcher == self._highlighted_watcher:
             
             pretty_subject = '* ' + pretty_subject
             
         
-        status = watcher.GetSimpleStatus()
+        status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
         ( value, range ) = watcher.GetValueRange()
         
         progress = ( range, value )
+        
+        added = watcher.GetCreationTime()
+        
+        pretty_added = HydrusData.ConvertTimestampToHumanPrettyTime( added )
         
         subject = pretty_subject.lower()
         pretty_status = status
@@ -2004,10 +2036,27 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             pretty_progress = HydrusData.ConvertValueRangeToPrettyString( value, range )
             
         
-        display_tuple = ( pretty_subject, pretty_status, pretty_progress )
-        sort_tuple = ( subject, status, progress )
+        display_tuple = ( pretty_subject, pretty_status, pretty_progress, pretty_added )
+        sort_tuple = ( subject, status, progress, added )
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _EditCheckerOptions( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
+            
+            panel = ClientGUITime.EditCheckerOptions( dlg, self._checker_options )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._checker_options = panel.GetValue()
+                
+                self._OptionsUpdated()
+                
+            
         
     
     def _HighlightWatcher( self ):
@@ -2018,7 +2067,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             new_highlight = selected[0]
             
-            if new_highlight == self._highlit_watcher:
+            if new_highlight == self._highlighted_watcher:
                 
                 self._ClearExistingHighlightAndPanel()
                 
@@ -2026,9 +2075,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 self._ClearExistingHighlight()
                 
-                self._highlit_watcher = selected[0]
+                self._highlighted_watcher = selected[0]
                 
-                hashes = self._highlit_watcher.GetPresentedHashes()
+                self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
+                
+                hashes = self._highlighted_watcher.GetPresentedHashes()
                 
                 media_results = HG.client_controller.Read( 'media_results', hashes )
                 
@@ -2042,13 +2093,20 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 publish_to_page = True
                 
-                self._highlit_watcher.Repage( self._page_key, publish_to_page )
+                self._highlighted_watcher.Repage( self._page_key, publish_to_page )
                 
                 self._watchers_listctrl_panel.UpdateButtons()
                 
                 self._watchers_listctrl.UpdateDatas()
                 
+                self._UpdateHighlightedWatcherURL()
+                
             
+        
+    
+    def _OptionsUpdated( self, *args, **kwargs ):
+        
+        self._multiple_watcher_import.SetOptions( self._checker_options, self._file_import_options.GetValue(), self._tag_import_options.GetValue() )
         
     
     def _PausePlay( self ):
@@ -2098,10 +2156,10 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             message += HydrusData.ConvertIntToPrettyString( num_alive ) + ' are not yet DEAD.'
             
         
-        if self._highlit_watcher is not None and self._highlit_watcher in removees:
+        if self._highlighted_watcher is not None and self._highlighted_watcher in removees:
             
             message += os.linesep * 2
-            message += 'The currently highlit watcher will be removed, and the media panel cleared.'
+            message += 'The currently highlighted watcher will be removed, and the media panel cleared.'
             
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
@@ -2112,7 +2170,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 for watcher in removees:
                     
-                    if self._highlit_watcher is not None and watcher == self._highlit_watcher:
+                    if self._highlighted_watcher is not None and watcher == self._highlighted_watcher:
                         
                         highlight_was_included = True
                         
@@ -2125,6 +2183,46 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     self._ClearExistingHighlightAndPanel()
                     
                 
+            
+        
+    
+    def _SetOptionsToWatchers( self ):
+        
+        watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        if len( watchers ) == 0:
+            
+            return
+            
+        
+        message = 'Set the current checker, file import, and tag import options to all the selected watchers? (by default, these options are only applied to new watchers)'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                file_import_options = self._file_import_options.GetValue()
+                tag_import_options = self._tag_import_options.GetValue()
+                
+                for watcher in self._watchers:
+                    
+                    watcher.SetCheckerOptions( self._checker_options )
+                    watcher.SetFileImportOptions( file_import_options )
+                    watcher.SetTagImportOptions( tag_import_options )
+                    
+                
+            
+        
+    
+    def _UpdateHighlightedWatcherURL( self ):
+        
+        if self._highlighted_watcher is None:
+            
+            self._highlighted_watcher_url.SetValue( '' )
+            
+        else:
+            
+            self._highlighted_watcher_url.SetValue( self._highlighted_watcher.GetURL() )
             
         
     

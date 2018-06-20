@@ -2545,7 +2545,7 @@ class CanvasPanel( Canvas ):
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
                 
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
                 
             
             ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
@@ -4894,7 +4894,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._current_media.GetMime() in HC.IMAGES and self._current_media.GetDuration() is None:
                 
-                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( self, copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
                 
             
             ClientGUIMenus.AppendMenuItem( self, copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )

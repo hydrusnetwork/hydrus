@@ -1,5 +1,6 @@
 import ClientConstants as CC
 import ClientData
+import ClientDragDrop
 import ClientGUICommon
 import ClientSerialisable
 import ClientGUIShortcuts
@@ -1078,7 +1079,7 @@ class BetterListCtrlPanel( wx.Panel ):
         import ClientGUITopLevelWindows
         import ClientGUISerialisable
         
-        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to png' ) as dlg:
+        with ClientGUITopLevelWindows.DialogNullipotent( self, 'export to pngs' ) as dlg:
             
             panel = ClientGUISerialisable.PngsExportPanel( dlg, export_object )
             
@@ -1141,34 +1142,9 @@ class BetterListCtrlPanel( wx.Panel ):
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                for path in dlg.GetPaths():
-                    
-                    path = HydrusData.ToUnicode( path )
-                    
-                    try:
-                        
-                        payload = ClientSerialisable.LoadFromPng( path )
-                        
-                    except Exception as e:
-                        
-                        wx.MessageBox( HydrusData.ToUnicode( e ) )
-                        
-                        return
-                        
-                    
-                    try:
-                        
-                        obj = HydrusSerialisable.CreateFromNetworkString( payload )
-                        
-                        self._ImportObject( obj )
-                        
-                    except:
-                        
-                        wx.MessageBox( 'I could not understand what was encoded in the png!' )
-                        
-                        return
-                        
-                    
+                paths = dlg.GetPaths()
+                
+                self._ImportPngs( paths )
                 
             
         
@@ -1177,7 +1153,7 @@ class BetterListCtrlPanel( wx.Panel ):
     
     def _ImportObject( self, obj ):
         
-        bad_object_types = set()
+        bad_object_type_names = set()
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
             
@@ -1194,21 +1170,53 @@ class BetterListCtrlPanel( wx.Panel ):
                 
             else:
                 
-                bad_object_types.add( type( obj ).__name__ )
+                bad_object_type_names.add( HydrusData.GetTypeName( type( obj ) ) )
                 
             
         
-        if len( bad_object_types ) > 0:
+        if len( bad_object_type_names ) > 0:
             
             message = 'The imported objects included these types:'
             message += os.linesep * 2
-            message += os.linesep.join( bad_object_types )
+            message += os.linesep.join( bad_object_type_names )
             message += os.linesep * 2
             message += 'Whereas this control only allows:'
             message += os.linesep * 2
-            message += os.linesep.join( ( o.__name__ for o in self._permitted_object_types ) )
+            message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
             wx.MessageBox( message )
+            
+        
+    
+    def _ImportPngs( self, paths ):
+        
+        for path in paths:
+            
+            path = HydrusData.ToUnicode( path )
+            
+            try:
+                
+                payload = ClientSerialisable.LoadFromPng( path )
+                
+            except Exception as e:
+                
+                wx.MessageBox( HydrusData.ToUnicode( e ) )
+                
+                return
+                
+            
+            try:
+                
+                obj = HydrusSerialisable.CreateFromNetworkString( payload )
+                
+                self._ImportObject( obj )
+                
+            except:
+                
+                wx.MessageBox( 'I could not understand what was encoded in the file!' )
+                
+                return
+                
             
         
     
@@ -1269,11 +1277,13 @@ class BetterListCtrlPanel( wx.Panel ):
         import_menu_items = []
         
         import_menu_items.append( ( 'normal', 'from clipboard', 'Load a data from text in your clipboard.', self._ImportFromClipboard ) )
-        import_menu_items.append( ( 'normal', 'from pngs', 'Load a data from an encoded png.', self._ImportFromPng ) )
+        import_menu_items.append( ( 'normal', 'from pngs (note you can also drag and drop pngs onto this list)', 'Load a data from an encoded png.', self._ImportFromPng ) )
         
         self.AddMenuButton( 'export', export_menu_items, enabled_only_on_selection = True )
         self.AddMenuButton( 'import', import_menu_items )
         self.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
+        
+        self.SetDropTarget( ClientDragDrop.FileDropTarget( self, filenames_callable = self.ImportFromDragDrop ) )
         
     
     def AddMenuButton( self, label, menu_items, enabled_only_on_selection = False, enabled_check_func = None ):
@@ -1317,6 +1327,21 @@ class BetterListCtrlPanel( wx.Panel ):
         self._UpdateButtons()
         
         event.Skip()
+        
+    
+    def ImportFromDragDrop( self, paths ):
+        
+        import ClientGUIDialogs
+        
+        message = 'Try to import the ' + HydrusData.ConvertIntToPrettyString( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._ImportPngs( paths )
+                
+            
         
     
     def NewButtonRow( self ):

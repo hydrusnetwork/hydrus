@@ -100,6 +100,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'notebook_tabs_on_left' ] = False
         
+        self._dictionary[ 'booleans' ][ 'popup_message_force_min_width' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -226,6 +228,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'thread_watcher_paused_page_string' ] = u'\u23F8'
         self._dictionary[ 'noneable_strings' ][ 'temp_path_override' ] = None
         self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
+        self._dictionary[ 'noneable_strings' ][ 'last_png_export_dir' ] = None
         
         self._dictionary[ 'strings' ] = {}
         
@@ -707,6 +710,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     tag_blacklist = None
                     
+                    get_all_service_keys = set()
                     service_keys_to_namespaces = {}
                     service_keys_to_additional_tags = {}
                     
@@ -715,6 +719,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                         fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
                         
                         tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
+                        
+                        get_all_service_keys = guidance_tag_import_options.GetGetAllServiceKeys()
                         
                         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
                         
@@ -737,7 +743,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     import ClientImportOptions
                     
-                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
                     
                 
                 return tag_import_options

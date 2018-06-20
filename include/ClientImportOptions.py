@@ -780,15 +780,20 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Tag Import Options'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
-    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, tag_blacklist = None, service_keys_to_namespaces = None, service_keys_to_additional_tags = None ):
+    def __init__( self, fetch_tags_even_if_url_known_and_file_already_in_db = False, tag_blacklist = None, get_all_service_keys = None, service_keys_to_namespaces = None, service_keys_to_additional_tags = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         if tag_blacklist is None:
             
             tag_blacklist = ClientTags.TagFilter()
+            
+        
+        if get_all_service_keys is None:
+            
+            get_all_service_keys = set()
             
         
         if service_keys_to_namespaces is None:
@@ -803,6 +808,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         self._fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db
         self._tag_blacklist = tag_blacklist
+        self._get_all_service_keys = set( get_all_service_keys )
         self._service_keys_to_namespaces = service_keys_to_namespaces
         self._service_keys_to_additional_tags = service_keys_to_additional_tags
         
@@ -824,17 +830,19 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
         serialisable_tag_blacklist = self._tag_blacklist.GetSerialisableTuple()
+        serialisable_get_all_service_keys = [ service_key.encode( 'hex' ) for service_key in self._get_all_service_keys ]
         safe_service_keys_to_namespaces = { service_key.encode( 'hex' ) : list( namespaces ) for ( service_key, namespaces ) in self._service_keys_to_namespaces.items() if test_func( service_key ) }
         safe_service_keys_to_additional_tags = { service_key.encode( 'hex' ) : list( tags ) for ( service_key, tags ) in self._service_keys_to_additional_tags.items() if test_func( service_key ) }
         
-        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
+        return ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, serialisable_get_all_service_keys, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = serialisable_info
+        ( self._fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, serialisable_get_all_service_keys, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = serialisable_info
         
         self._tag_blacklist = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_blacklist )
+        self._get_all_service_keys = { encoded_service_key.decode( 'hex' ) for encoded_service_key in serialisable_get_all_service_keys }
         self._service_keys_to_namespaces = { service_key.decode( 'hex' ) : set( namespaces ) for ( service_key, namespaces ) in safe_service_keys_to_namespaces.items() }
         self._service_keys_to_additional_tags = { service_key.decode( 'hex' ) : set( tags ) for ( service_key, tags ) in safe_service_keys_to_additional_tags.items() }
         
@@ -876,6 +884,17 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags ) = old_serialisable_info
+            
+            serialisable_get_all_service_keys = []
+            
+            new_serialisable_info = ( fetch_tags_even_if_url_known_and_file_already_in_db, serialisable_tag_blacklist, serialisable_get_all_service_keys, safe_service_keys_to_namespaces, safe_service_keys_to_additional_tags )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def CheckBlacklist( self, tags ):
         
@@ -891,9 +910,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB( self ):
+    def GetGetAllServiceKeys( self ):
         
-        return self._fetch_tags_even_if_url_known_and_file_already_in_db
+        return set( self._get_all_service_keys )
         
     
     def GetServiceKeysToAdditionalTags( self ):
@@ -912,10 +931,17 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         service_keys_to_tags = collections.defaultdict( set )
         
-        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
-        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        for service_key in self._get_all_service_keys:
+            
+            service_keys_to_tags[ service_key ].update( tags )
+            
         
         for ( service_key, namespaces ) in self._service_keys_to_namespaces.items():
+            
+            if service_key in self._get_all_service_keys:
+                
+                continue
+                
             
             if len( namespaces ) == 0:
                 
@@ -925,9 +951,6 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             tags_to_add_here = [ tag for tag in tags if HydrusTags.SplitTag( tag )[0] in namespaces ]
             
             if len( tags_to_add_here ) > 0:
-                
-                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
-                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
                 
                 service_keys_to_tags[ service_key ].update( tags_to_add_here )
                 
@@ -939,11 +962,19 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( tags_to_add_here ) > 0:
                 
-                tags_to_add_here = siblings_manager.CollapseTags( service_key, tags_to_add_here )
-                tags_to_add_here = parents_manager.ExpandTags( service_key, tags_to_add_here )
-                
                 service_keys_to_tags[ service_key ].update( tags_to_add_here )
                 
+            
+        
+        siblings_manager = HG.client_controller.GetManager( 'tag_siblings' )
+        parents_manager = HG.client_controller.GetManager( 'tag_parents' )
+        
+        for ( service_key, tags ) in list( service_keys_to_tags.items() ):
+            
+            tags = siblings_manager.CollapseTags( service_key, tags )
+            tags = parents_manager.ExpandTags( service_key, tags )
+            
+            service_keys_to_tags[ service_key ] = tags
             
         
         service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
@@ -955,7 +986,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         statements = []
         
-        service_keys_to_do = set( self._service_keys_to_additional_tags.keys() ).union( self._service_keys_to_namespaces.keys() )
+        service_keys_to_do = set( self._get_all_service_keys ).union( self._service_keys_to_additional_tags.keys() ).union( self._service_keys_to_namespaces.keys() )
         
         service_keys_to_do = list( service_keys_to_do )
         
@@ -965,7 +996,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             sub_statements = []
             
-            if service_key in self._service_keys_to_namespaces:
+            if service_key in self._get_all_service_keys:
+                
+                sub_statements.append( 'all tags' )
+                
+            elif service_key in self._service_keys_to_namespaces:
                 
                 namespaces = list( self._service_keys_to_namespaces[ service_key ] )
                 
@@ -1038,6 +1073,11 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     def GetTagBlacklist( self ):
         
         return self._tag_blacklist
+        
+    
+    def ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB( self ):
+        
+        return self._fetch_tags_even_if_url_known_and_file_already_in_db
         
     
     def WorthFetchingTags( self ):

@@ -161,13 +161,15 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
     
     guidance_tag_import_options = url_types_to_guidance_tag_import_options[ url_type ]
     
-    service_keys_to_namespaces = {}
+    fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
     
     tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
     
-    fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+    get_all_service_keys = guidance_tag_import_options.GetGetAllServiceKeys()
     
     guidance_service_keys_to_namespaces = guidance_tag_import_options.GetServiceKeysToNamespaces()
+    
+    service_keys_to_namespaces = {}
     
     for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
         
@@ -177,10 +179,6 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
             
         else:
             
-            # this is an artifact of the old system that I have copied over nonetheless.
-            # perhaps a future system will support more than 'all namespaces' in the form of tag censorship rules or similar
-            # "I always want any 'series' namespace, but I don't care for 'species'," for instance.
-            
             service_keys_to_namespaces[ service_key ] = [ namespace for namespace in namespaces if namespace in guidance_namespaces ]
             
         
@@ -189,7 +187,7 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
     
     import ClientImportOptions
     
-    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
     
     return tag_import_options
     
@@ -314,9 +312,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             url_types_to_guidance_tag_import_options[ HC.URL_TYPE_POST ] = self._file_post_default_tag_import_options
             url_types_to_guidance_tag_import_options[ HC.URL_TYPE_WATCHABLE ] = self._watchable_default_tag_import_options
             
-            parser = self._GetParser( url_match, url )
-            
-            namespaces = parser.GetNamespaces()
+            try:
+                
+                parser = self._GetParser( url_match, url )
+                
+                namespaces = parser.GetNamespaces()
+                
+            except HydrusExceptions.URLMatchException:
+                
+                namespaces = []
+                
             
             tag_import_options = DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_tag_import_options, url_match )
             
@@ -739,7 +744,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             url_match = self._GetURLMatch( url )
             
-            if url_match is None:
+            if url_match is None or url_match.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
                 
                 import ClientImportOptions
                 
@@ -797,6 +802,22 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             return dict( self._network_contexts_to_custom_header_dicts )
             
+        
+    
+    def GetParser( self, name ):
+        
+        with self._lock:
+            
+            for parser in self._parsers:
+                
+                if parser.GetName() == name:
+                    
+                    return parser
+                    
+                
+            
+        
+        return None
         
     
     def GetParsers( self ):
@@ -957,6 +978,17 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
         self.SetURLMatches( new_url_matches )
+        
+    
+    def OverwriteParserLink( self, url_match, parser ):
+        
+        with self._lock:
+            
+            url_match_key = url_match.GetMatchKey()
+            parser_key = parser.GetParserKey()
+            
+            self._url_match_keys_to_parser_keys[ url_match_key ] = parser_key
+            
         
     
     def SetClean( self ):
@@ -1308,7 +1340,7 @@ class DomainValidationPopupProcess( object ):
 class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_MATCH
-    SERIALISABLE_NAME = 'URL Match'
+    SERIALISABLE_NAME = 'URL Class'
     SERIALISABLE_VERSION = 4
     
     def __init__( self, name, url_match_key = None, url_type = None, preferred_scheme = 'https', netloc = 'hostname.com', match_subdomains = False, keep_matched_subdomains = False, path_components = None, parameters = None, api_lookup_converter = None, can_produce_multiple_files = False, should_be_associated_with_files = True, example_url = 'https://hostname.com/post/page.php?id=123456&s=view' ):

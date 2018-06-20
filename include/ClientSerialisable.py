@@ -268,7 +268,7 @@ def LoadFromPng( path ):
         
         HydrusData.ShowException( e )
         
-        raise Exception( 'The image was fine, but it did not seem to have hydrus data encoded in it!' )
+        raise Exception( 'The image loaded, but it did not seem to be a hydrus serialised png!' )
         
     
     return payload
