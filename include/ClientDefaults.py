@@ -171,7 +171,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
     
     if site_type == HC.SITE_TYPE_DEFAULT:
         
-        namespaces = [ 'all namespaces' ]
+        namespaces = []
         
         search_value = ''
         
@@ -181,7 +181,7 @@ def GetDefaultNamespacesAndSearchValue( gallery_identifier ):
         
         if name is None:
             
-            namespaces = [ 'all namespaces' ]
+            namespaces = []
             
         else:
             

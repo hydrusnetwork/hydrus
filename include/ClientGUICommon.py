@@ -970,6 +970,38 @@ class CheckboxManager( object ):
         raise NotImplementedError()
         
     
+class CheckboxManagerBoolean( CheckboxManager ):
+    
+    def __init__( self, obj, name ):
+        
+        CheckboxManager.__init__( self )
+        
+        self._obj = obj
+        self._name = name
+        
+    
+    def GetCurrentValue( self ):
+        
+        if not self._obj:
+            
+            return False
+            
+        
+        return getattr( self._obj, self._name )
+        
+    
+    def Invert( self ):
+        
+        if not self._obj:
+            
+            return
+            
+        
+        value = getattr( self._obj, self._name )
+        
+        setattr( self._obj, self._name, not value )
+        
+    
 class CheckboxManagerCalls( CheckboxManager ):
     
     def __init__( self, invert_call, value_call ):

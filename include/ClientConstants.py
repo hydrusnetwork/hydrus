@@ -566,7 +566,7 @@ class GlobalBMPs( object ):
         GlobalBMPs.play = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'play.png' ) )
         GlobalBMPs.stop = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'stop.png' ) )
         
-        GlobalBMPs.seed_cache = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'seed_cache.png' ) )
+        GlobalBMPs.listctrl = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'listctrl.png' ) )
         
         GlobalBMPs.copy = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'copy.png' ) )
         GlobalBMPs.paste = wx.Bitmap( os.path.join( HC.STATIC_DIR, 'paste.png' ) )

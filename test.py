@@ -24,6 +24,7 @@ from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientData
+from include import TestClientImportOptions
 from include import TestClientListBoxes
 from include import TestClientNetworking
 from include import TestConstants
@@ -453,6 +454,7 @@ class Controller( object ):
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientConstants ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientData ) )
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportOptions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestFunctions ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSerialisable ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusSessions ) )

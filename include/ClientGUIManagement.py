@@ -22,7 +22,7 @@ import ClientGUIMenus
 import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
-import ClientGUISeedCache
+import ClientGUIFileSeedCache
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
@@ -1436,7 +1436,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'imports' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
         self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
@@ -1519,7 +1519,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._gallery_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1545,9 +1545,9 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         #
         
-        seed_cache = self._gallery_import.GetSeedCache()
+        file_seed_cache = self._gallery_import.GetFileSeedCache()
         
-        self._seed_cache_control.SetSeedCache( seed_cache )
+        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
         self._query_input.SetValue( search_value )
         
@@ -1566,16 +1566,16 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         self._UpdateStatus()
         
     
-    def _SeedCache( self ):
+    def _FileSeedCache( self ):
         
-        seed_cache = self._gallery_import.GetSeedCache()
+        file_seed_cache = self._gallery_import.GetFileSeedCache()
         
         title = 'file import status'
         frame_key = 'file_import_status'
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUISeedCache.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
         
         frame.SetPanel( panel )
         
@@ -1758,7 +1758,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import summary' )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
         self._pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
@@ -1778,7 +1778,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._collect_by.Hide()
         
         self._import_queue_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._import_queue_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1790,9 +1790,9 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         #
         
-        seed_cache = self._hdd_import.GetSeedCache()
+        file_seed_cache = self._hdd_import.GetFileSeedCache()
         
-        self._seed_cache_control.SetSeedCache( seed_cache )
+        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
         self._UpdateStatus()
         
@@ -1892,7 +1892,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.AddButton( 'set options to watchers', self._SetOptionsToWatchers, enabled_only_on_selection = True )
         
-        self._watchers_listctrl.Sort( 0 )
+        self._watchers_listctrl.Sort( 1 )
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
@@ -1937,6 +1937,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._UpdateStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
+        HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
     
     def _AddURLs( self, urls ):
@@ -1985,6 +1986,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _ClearExistingHighlightAndPanel( self ):
         
+        if self._highlighted_watcher is None:
+            
+            return
+            
+        
         self._ClearExistingHighlight()
         
         media_results = []
@@ -2018,7 +2024,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         pretty_added = HydrusData.ConvertTimestampToHumanPrettyTime( added )
         
         subject = pretty_subject.lower()
+        
         pretty_status = status
+        
+        if status == '':
+            
+            status = 'zzz' # to sort _after_ DEAD and other interesting statuses on ascending sort
+            
         
         if value == range:
             
@@ -2204,7 +2216,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 file_import_options = self._file_import_options.GetValue()
                 tag_import_options = self._tag_import_options.GetValue()
                 
-                for watcher in self._watchers:
+                for watcher in watchers:
                     
                     watcher.SetCheckerOptions( self._checker_options )
                     watcher.SetFileImportOptions( file_import_options )
@@ -2345,7 +2357,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._pause_files_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
         
         #
@@ -2394,7 +2406,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         hbox.Add( self._pause_files_button, CC.FLAGS_VCENTER )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
@@ -2448,9 +2460,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._formulae.Bind( wx.EVT_CHOICE, self.EventFormulaChanged )
         
-        seed_cache = self._simple_downloader_import.GetSeedCache()
+        file_seed_cache = self._simple_downloader_import.GetFileSeedCache()
         
-        self._seed_cache_control.SetSeedCache( seed_cache )
+        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
         self._simple_downloader_import.SetDownloadControlFile( self._file_download_control )
         self._simple_downloader_import.SetDownloadControlPage( self._page_download_control )
@@ -2599,16 +2611,16 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
         
     
-    def _SeedCache( self ):
+    def _FileSeedCache( self ):
         
-        seed_cache = self._simple_downloader_import.GetSeedCache()
+        file_seed_cache = self._simple_downloader_import.GetFileSeedCache()
         
         title = 'file import status'
         frame_key = 'file_import_status'
         
         frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUISeedCache.EditSeedCachePanel( frame, self._controller, seed_cache )
+        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
         
         frame.SetPanel( panel )
         
@@ -2786,7 +2798,7 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( imports_panel )
-        self._seed_cache_control = ClientGUISeedCache.SeedCacheStatusControl( imports_panel, self._controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
         
         #
@@ -2826,7 +2838,7 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
         
         imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        imports_panel.Add( self._seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        imports_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         imports_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -2873,9 +2885,9 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         
         #
         
-        seed_cache = self._watcher_import.GetSeedCache()
+        file_seed_cache = self._watcher_import.GetFileSeedCache()
         
-        self._seed_cache_control.SetSeedCache( seed_cache )
+        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
         self._watcher_import.SetDownloadControlFile( self._file_download_control )
         self._watcher_import.SetDownloadControlChecker( self._checker_download_control )
@@ -3104,8 +3116,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
-        # replace all this with a seed cache panel sometime
-        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._url_panel, self._controller, self._urls_import.GetSeedCache )
+        # replace all this with a file_seed cache panel sometime
+        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._url_panel, self._controller, self._urls_import.GetFileSeedCache )
         
         self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
@@ -3119,7 +3131,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._url_panel.Add( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.Add( self._file_seed_cache_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )

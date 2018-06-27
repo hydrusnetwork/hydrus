@@ -9,7 +9,7 @@ import ClientGUIManagement
 import ClientGUIPages
 import ClientImporting
 import ClientImportOptions
-import ClientImportSeeds
+import ClientImportFileSeeds
 import ClientRatings
 import ClientSearch
 import ClientServices
@@ -101,7 +101,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportSeeds.FileImportJob( path )
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
         
         file_import_job.GenerateHashAndStatus()
         
@@ -315,7 +315,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportSeeds.FileImportJob( path )
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
         
         file_import_job.GenerateHashAndStatus()
         
@@ -600,7 +600,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportSeeds.FileImportJob( path )
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
         
         file_import_job.GenerateHashAndStatus()
         
@@ -775,7 +775,7 @@ class TestClientDB( unittest.TestCase ):
             
             hash = hex_hash.decode( 'hex' )
             
-            file_import_job = ClientImportSeeds.FileImportJob( path )
+            file_import_job = ClientImportFileSeeds.FileImportJob( path )
             
             file_import_job.GenerateHashAndStatus()
             
@@ -787,7 +787,7 @@ class TestClientDB( unittest.TestCase ):
             self.assertEqual( written_note, '' )
             self.assertEqual( file_import_job.GetHash(), hash )
             
-            file_import_job = ClientImportSeeds.FileImportJob( path )
+            file_import_job = ClientImportFileSeeds.FileImportJob( path )
             
             file_import_job.GenerateHashAndStatus()
             
@@ -909,7 +909,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_job = ClientImportSeeds.FileImportJob( path )
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
         
         file_import_job.GenerateHashAndStatus()
         
@@ -944,7 +944,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
-        file_import_job = ClientImportSeeds.FileImportJob( path )
+        file_import_job = ClientImportFileSeeds.FileImportJob( path )
         
         file_import_job.GenerateHashAndStatus()
         

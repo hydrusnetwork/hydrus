@@ -602,7 +602,7 @@ class ParseFormulaCompound( ParseFormula ):
                 
                 return ''
                 
-            elif len( s ) < index:
+            elif index >= len( s ):
                 
                 return s[-1]
                 

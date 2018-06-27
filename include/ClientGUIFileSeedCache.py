@@ -6,7 +6,7 @@ import ClientGUIMenus
 import ClientGUISerialisable
 import ClientGUIScrolledPanels
 import ClientGUITopLevelWindows
-import ClientImportSeeds
+import ClientImportFileSeeds
 import ClientPaths
 import ClientSerialisable
 import ClientThreading
@@ -18,26 +18,26 @@ import HydrusText
 import os
 import wx
 
-class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
+class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, seed_cache ):
+    def __init__( self, parent, controller, file_seed_cache ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._controller = controller
-        self._seed_cache = seed_cache
+        self._file_seed_cache = file_seed_cache
         
         self._text = ClientGUICommon.BetterStaticText( self, 'initialising' )
         
-        # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on seed add/remove
+        # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on file_seed add/remove
         
         columns = [ ( '#', 3 ), ( 'source', -1 ), ( 'status', 12 ), ( 'added', 23 ), ( 'last modified', 23 ), ( 'source time', 23 ), ( 'note', 20 ) ]
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'seed_cache', 30, 30, columns, self._ConvertSeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, 'file_seed_cache', 30, 30, columns, self._ConvertFileSeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
         
         #
         
-        self._list_ctrl.AddDatas( self._seed_cache.GetSeeds() )
+        self._list_ctrl.AddDatas( self._file_seed_cache.GetFileSeeds() )
         
         self._list_ctrl.Sort( 0 )
         
@@ -52,24 +52,31 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
-        self._controller.sub( self, 'NotifySeedsUpdated', 'seed_cache_seeds_updated' )
+        self._controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
         wx.CallAfter( self._UpdateText )
         
     
-    def _ConvertSeedToListCtrlTuples( self, seed ):
+    def _ConvertFileSeedToListCtrlTuples( self, file_seed ):
         
-        seed_index = self._seed_cache.GetSeedIndex( seed )
+        try:
+            
+            file_seed_index = self._file_seed_cache.GetFileSeedIndex( file_seed )
+            
+        except:
+            
+            file_seed_index = '--'
+            
         
-        seed_data = seed.seed_data
-        status = seed.status
-        added = seed.created
-        modified = seed.modified
-        source_time = seed.source_time
-        note = seed.note
+        file_seed_data = file_seed.file_seed_data
+        status = file_seed.status
+        added = file_seed.created
+        modified = file_seed.modified
+        source_time = file_seed.source_time
+        note = file_seed.note
         
-        pretty_seed_index = HydrusData.ConvertIntToPrettyString( seed_index )
-        pretty_seed_data = HydrusData.ToUnicode( seed_data )
+        pretty_file_seed_index = HydrusData.ConvertIntToPrettyString( file_seed_index )
+        pretty_file_seed_data = HydrusData.ToUnicode( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
         pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added ) + ' ago'
         pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( modified ) + ' ago'
@@ -85,8 +92,8 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_note = note.split( os.linesep )[0]
         
-        display_tuple = ( pretty_seed_index, pretty_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
-        sort_tuple = ( seed_index, seed_data, status, added, modified, source_time, note )
+        display_tuple = ( pretty_file_seed_index, pretty_file_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
+        sort_tuple = ( file_seed_index, file_seed_data, status, added, modified, source_time, note )
         
         return ( display_tuple, sort_tuple )
         
@@ -95,9 +102,9 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         notes = []
         
-        for seed in self._list_ctrl.GetData( only_selected = True ):
+        for file_seed in self._list_ctrl.GetData( only_selected = True ):
             
-            note = seed.note
+            note = file_seed.note
             
             if note != '':
                 
@@ -115,15 +122,15 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _CopySelectedSeedData( self ):
+    def _CopySelectedFileSeedData( self ):
         
-        seeds = self._list_ctrl.GetData( only_selected = True )
+        file_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        if len( seeds ) > 0:
+        if len( file_seeds ) > 0:
             
             separator = os.linesep * 2
             
-            text = separator.join( ( seed.seed_data for seed in seeds ) )
+            text = separator.join( ( file_seed.file_seed_data for file_seed in file_seeds ) )
             
             HG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -131,9 +138,9 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _DeleteSelected( self ):
         
-        seeds_to_delete = self._list_ctrl.GetData( only_selected = True )
+        file_seeds_to_delete = self._list_ctrl.GetData( only_selected = True )
         
-        if len( seeds_to_delete ) > 0:
+        if len( file_seeds_to_delete ) > 0:
             
             message = 'Are you sure you want to delete all the selected entries?'
             
@@ -141,19 +148,19 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if dlg.ShowModal() == wx.ID_YES:
                     
-                    self._seed_cache.RemoveSeeds( seeds_to_delete )
+                    self._file_seed_cache.RemoveFileSeeds( file_seeds_to_delete )
                     
                 
             
         
     
-    def _OpenSelectedSeedData( self ):
+    def _OpenSelectedFileSeedData( self ):
         
-        seeds = self._list_ctrl.GetData( only_selected = True )
+        file_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        if len( seeds ) > 0:
+        if len( file_seeds ) > 0:
             
-            if len( seeds ) > 10:
+            if len( file_seeds ) > 10:
                 
                 message = 'You have many objects selected--are you sure you want to open them all?'
                 
@@ -166,20 +173,20 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            if seeds[0].seed_data.startswith( 'http' ):
+            if file_seeds[0].file_seed_data.startswith( 'http' ):
                 
-                for seed in seeds:
+                for file_seed in file_seeds:
                     
-                    ClientPaths.LaunchURLInWebBrowser( seed.seed_data )
+                    ClientPaths.LaunchURLInWebBrowser( file_seed.file_seed_data )
                     
                 
             else:
                 
                 try:
                     
-                    for seed in seeds:
+                    for file_seed in file_seeds:
                         
-                        HydrusPaths.OpenFileLocation( seed.seed_data )
+                        HydrusPaths.OpenFileLocation( file_seed.file_seed_data )
                         
                     
                 except Exception as e:
@@ -192,25 +199,25 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SetSelected( self, status_to_set ):
         
-        seeds = self._list_ctrl.GetData( only_selected = True )
+        file_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        for seed in seeds:
+        for file_seed in file_seeds:
             
-            seed.SetStatus( status_to_set )
+            file_seed.SetStatus( status_to_set )
             
         
-        self._seed_cache.NotifySeedsUpdated( seeds )
+        self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
         
     
     def _ShowMenuIfNeeded( self ):
         
-        selected_seeds = self._list_ctrl.GetData( only_selected = True )
+        selected_file_seeds = self._list_ctrl.GetData( only_selected = True )
         
-        if len( selected_seeds ) > 0:
+        if len( selected_file_seeds ) > 0:
             
             menu = wx.Menu()
             
-            can_show_files_in_new_page = True in ( seed.HasHash() for seed in selected_seeds )
+            can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
             
             if can_show_files_in_new_page:
                 
@@ -219,12 +226,12 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 ClientGUIMenus.AppendSeparator( menu )
                 
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedSeedData )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
             ClientGUIMenus.AppendMenuItem( self, menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedSeedData )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -240,11 +247,11 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         hashes = []
         
-        for seed in self._list_ctrl.GetData( only_selected = True ):
+        for file_seed in self._list_ctrl.GetData( only_selected = True ):
             
-            if seed.HasHash():
+            if file_seed.HasHash():
                 
-                hashes.append( seed.GetHash() )
+                hashes.append( file_seed.GetHash() )
                 
             
         
@@ -254,53 +261,53 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _UpdateListCtrl( self, seeds ):
+    def _UpdateListCtrl( self, file_seeds ):
         
-        seeds_to_add = []
-        seeds_to_update = []
-        seeds_to_delete = []
+        file_seeds_to_add = []
+        file_seeds_to_update = []
+        file_seeds_to_delete = []
         
-        for seed in seeds:
+        for file_seed in file_seeds:
             
-            if self._seed_cache.HasSeed( seed ):
+            if self._file_seed_cache.HasFileSeed( file_seed ):
                 
-                if self._list_ctrl.HasData( seed ):
+                if self._list_ctrl.HasData( file_seed ):
                     
-                    seeds_to_update.append( seed )
+                    file_seeds_to_update.append( file_seed )
                     
                 else:
                     
-                    seeds_to_add.append( seed )
+                    file_seeds_to_add.append( file_seed )
                     
                 
             else:
                 
-                if self._list_ctrl.HasData( seed ):
+                if self._list_ctrl.HasData( file_seed ):
                     
-                    seeds_to_delete.append( seed )
+                    file_seeds_to_delete.append( file_seed )
                     
                 
             
         
-        self._list_ctrl.DeleteDatas( seeds_to_delete )
+        self._list_ctrl.DeleteDatas( file_seeds_to_delete )
         
-        if len( seeds_to_add ) > 0:
+        if len( file_seeds_to_add ) > 0:
             
-            self._list_ctrl.AddDatas( seeds_to_add )
+            self._list_ctrl.AddDatas( file_seeds_to_add )
             
-            # if seeds are inserted, then all subsequent indices need to be shuffled up, hence just update all here
+            # if file_seeds are inserted, then all subsequent indices need to be shuffled up, hence just update all here
             
             self._list_ctrl.UpdateDatas()
             
         else:
             
-            self._list_ctrl.UpdateDatas( seeds_to_update )
+            self._list_ctrl.UpdateDatas( file_seeds_to_update )
             
         
     
     def _UpdateText( self ):
         
-        ( status, ( total_processed, total ) ) = self._seed_cache.GetStatus()
+        ( status, ( total_processed, total ) ) = self._file_seed_cache.GetStatus()
         
         self._text.SetLabelText( status )
         
@@ -316,34 +323,34 @@ class EditSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        return self._seed_cache
+        return self._file_seed_cache
         
     
-    def NotifySeedsUpdated( self, seed_cache_key, seeds ):
+    def NotifyFileSeedsUpdated( self, file_seed_cache_key, file_seeds ):
         
-        if seed_cache_key == self._seed_cache.GetSeedCacheKey():
+        if file_seed_cache_key == self._file_seed_cache.GetFileSeedCacheKey():
             
             self._UpdateText()
-            self._UpdateListCtrl( seeds )
+            self._UpdateListCtrl( file_seeds )
             
         
     
-class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
+class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
-    def __init__( self, parent, controller, seed_cache_get_callable, seed_cache_set_callable = None ):
+    def __init__( self, parent, controller, file_seed_cache_get_callable, file_seed_cache_set_callable = None ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.seed_cache, self._ShowSeedCacheFrame )
+        ClientGUICommon.BetterBitmapButton.__init__( self, parent, CC.GlobalBMPs.listctrl, self._ShowFileSeedCacheFrame )
         
         self._controller = controller
-        self._seed_cache_get_callable = seed_cache_get_callable
-        self._seed_cache_set_callable = seed_cache_set_callable
+        self._file_seed_cache_get_callable = file_seed_cache_get_callable
+        self._file_seed_cache_set_callable = file_seed_cache_set_callable
         
         self.SetToolTip( 'open detailed file import status--right-click for quick actions, if applicable' )
         
         self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
         
     
-    def _ClearSeeds( self, statuses_to_remove ):
+    def _ClearFileSeeds( self, statuses_to_remove ):
         
         message = 'Are you sure you want to delete all the ' + '/'.join( ( CC.status_string_lookup[ status ] for status in statuses_to_remove ) ) + ' file import items? This is useful for cleaning up and de-laggifying a very large list, but be careful you aren\'t removing something you would want to revisit or what watcher/subscription may be using for future check time calculations.'
         
@@ -351,20 +358,20 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                seed_cache = self._seed_cache_get_callable()
+                file_seed_cache = self._file_seed_cache_get_callable()
                 
-                seed_cache.RemoveSeedsByStatus( statuses_to_remove )
+                file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
                 
             
         
     
     def _GetExportableSourcesString( self ):
         
-        seed_cache = self._seed_cache_get_callable()
+        file_seed_cache = self._file_seed_cache_get_callable()
         
-        seeds = seed_cache.GetSeeds()
+        file_seeds = file_seed_cache.GetFileSeeds()
         
-        sources = [ seed.seed_data for seed in seeds ]
+        sources = [ file_seed.file_seed_data for file_seed in file_seeds ]
         
         return os.linesep.join( sources )
         
@@ -424,20 +431,20 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
     
     def _ImportSources( self, sources ):
         
-        seed_cache = self._seed_cache_get_callable()
+        file_seed_cache = self._file_seed_cache_get_callable()
         
         if sources[0].startswith( 'http' ):
             
-            seed_type = ClientImportSeeds.SEED_TYPE_URL
+            file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_URL
             
         else:
             
-            seed_type = ClientImportSeeds.SEED_TYPE_HDD
+            file_seed_type = ClientImportFileSeeds.FILE_SEED_TYPE_HDD
             
         
-        seeds = [ ClientImportSeeds.Seed( seed_type, source ) for source in sources ]
+        file_seeds = [ ClientImportFileSeeds.FileSeed( file_seed_type, source ) for source in sources ]
         
-        seed_cache.AddSeeds( seeds )
+        file_seed_cache.AddFileSeeds( file_seeds )
         
     
     def _ExportToPng( self ):
@@ -469,57 +476,57 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                seed_cache = self._seed_cache_get_callable()
+                file_seed_cache = self._file_seed_cache_get_callable()
                 
-                seed_cache.RetryFailures()
+                file_seed_cache.RetryFailures()
                 
             
         
     
-    def _ShowSeedCacheFrame( self ):
+    def _ShowFileSeedCacheFrame( self ):
         
-        seed_cache = self._seed_cache_get_callable()
+        file_seed_cache = self._file_seed_cache_get_callable()
         
         tlp = ClientGUICommon.GetTLP( self )
         
         if isinstance( tlp, wx.Dialog ):
             
-            if self._seed_cache_set_callable is None: # throw up a dialog that edits the seed cache in place
+            if self._file_seed_cache_set_callable is None: # throw up a dialog that edits the file_seed cache in place
                 
                 with ClientGUITopLevelWindows.DialogNullipotent( self, 'file import status' ) as dlg:
                     
-                    panel = EditSeedCachePanel( dlg, self._controller, seed_cache )
+                    panel = EditFileSeedCachePanel( dlg, self._controller, file_seed_cache )
                     
                     dlg.SetPanel( panel )
                     
                     dlg.ShowModal()
                     
                 
-            else: # throw up a dialog that edits the seed cache but can be cancelled
+            else: # throw up a dialog that edits the file_seed cache but can be cancelled
                 
-                dupe_seed_cache = seed_cache.Duplicate()
+                dupe_file_seed_cache = file_seed_cache.Duplicate()
                 
                 with ClientGUITopLevelWindows.DialogEdit( self, 'file import status' ) as dlg:
                     
-                    panel = EditSeedCachePanel( dlg, self._controller, dupe_seed_cache )
+                    panel = EditFileSeedCachePanel( dlg, self._controller, dupe_file_seed_cache )
                     
                     dlg.SetPanel( panel )
                     
                     if dlg.ShowModal() == wx.ID_OK:
                         
-                        self._seed_cache_set_callable( dupe_seed_cache )
+                        self._file_seed_cache_set_callable( dupe_file_seed_cache )
                         
                     
                 
             
-        else: # throw up a frame that edits the seed cache in place
+        else: # throw up a frame that edits the file_seed cache in place
             
             title = 'file import status'
             frame_key = 'file_import_status'
             
             frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
             
-            panel = EditSeedCachePanel( frame, self._controller, seed_cache )
+            panel = EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
             
             frame.SetPanel( panel )
             
@@ -529,13 +536,13 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         menu = wx.Menu()
         
-        seed_cache = self._seed_cache_get_callable()
+        file_seed_cache = self._file_seed_cache_get_callable()
         
-        num_seeds = len( seed_cache )
-        num_successful = seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + seed_cache.GetSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-        num_deleted_and_vetoed = seed_cache.GetSeedCount( CC.STATUS_DELETED ) + seed_cache.GetSeedCount( CC.STATUS_VETOED )
-        num_errors = seed_cache.GetSeedCount( CC.STATUS_ERROR )
-        num_skipped = seed_cache.GetSeedCount( CC.STATUS_SKIPPED )
+        num_file_seeds = len( file_seed_cache )
+        num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+        num_deleted_and_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED ) + file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
+        num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
+        num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
             
@@ -546,26 +553,26 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
             num_deletees = num_successful
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
             
         
         if num_deleted_and_vetoed > 0:
             
             num_deletees = num_deleted_and_vetoed
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
             
         
         if num_errors + num_skipped > 0:
             
             num_deletees = num_errors + num_skipped
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out all non-unknown files, reducing the size of the queue.', self._ClearSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out all non-unknown files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        if len( seed_cache ) > 0:
+        if len( file_seed_cache ) > 0:
             
             submenu = wx.Menu()
             
@@ -585,7 +592,7 @@ class SeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         HG.client_controller.PopupMenu( self, menu )
         
     
-class SeedCacheStatusControl( wx.Panel ):
+class FileSeedCacheStatusControl( wx.Panel ):
     
     def __init__( self, parent, controller, page_key = None ):
         
@@ -594,12 +601,12 @@ class SeedCacheStatusControl( wx.Panel ):
         self._controller = controller
         self._page_key = page_key
         
-        self._seed_cache = None
+        self._file_seed_cache = None
         
         self._import_summary_st = ClientGUICommon.BetterStaticText( self )
         self._progress_st = ClientGUICommon.BetterStaticText( self )
         
-        self._seed_cache_button = SeedCacheButton( self, self._controller, self._GetSeedCache )
+        self._file_seed_cache_button = FileSeedCacheButton( self, self._controller, self._GetFileSeedCache )
         
         self._progress_gauge = ClientGUICommon.Gauge( self )
         
@@ -612,7 +619,7 @@ class SeedCacheStatusControl( wx.Panel ):
         hbox = wx.BoxSizer( wx.HORIZONTAL )
         
         hbox.Add( self._progress_st, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._seed_cache_button, CC.FLAGS_VCENTER )
+        hbox.Add( self._file_seed_cache_button, CC.FLAGS_VCENTER )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -627,28 +634,28 @@ class SeedCacheStatusControl( wx.Panel ):
         HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
-    def _GetSeedCache( self ):
+    def _GetFileSeedCache( self ):
         
-        return self._seed_cache
+        return self._file_seed_cache
         
     
     def _Update( self ):
         
-        if self._seed_cache is None:
+        if self._file_seed_cache is None:
             
             self._import_summary_st.SetLabelText( '' )
             self._progress_st.SetLabelText( '' )
             self._progress_gauge.SetRange( 1 )
             self._progress_gauge.SetValue( 0 )
             
-            if self._seed_cache_button.IsEnabled():
+            if self._file_seed_cache_button.IsEnabled():
                 
-                self._seed_cache_button.Disable()
+                self._file_seed_cache_button.Disable()
                 
             
         else:
             
-            ( import_summary, ( num_done, num_to_do ) ) = self._seed_cache.GetStatus()
+            ( import_summary, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
             
             self._import_summary_st.SetLabelText( import_summary )
             
@@ -664,30 +671,30 @@ class SeedCacheStatusControl( wx.Panel ):
             self._progress_gauge.SetRange( num_to_do )
             self._progress_gauge.SetValue( num_done )
             
-            if not self._seed_cache_button.IsEnabled():
+            if not self._file_seed_cache_button.IsEnabled():
                 
-                self._seed_cache_button.Enable()
+                self._file_seed_cache_button.Enable()
                 
             
         
     
-    def SetSeedCache( self, seed_cache ):
+    def SetFileSeedCache( self, file_seed_cache ):
         
         if not self:
             
             return
             
         
-        self._seed_cache = seed_cache
+        self._file_seed_cache = file_seed_cache
         
     
     def TIMERUIUpdate( self ):
         
         do_it_anyway = False
         
-        if self._seed_cache is not None:
+        if self._file_seed_cache is not None:
             
-            ( import_summary, ( num_done, num_to_do ) ) = self._seed_cache.GetStatus()
+            ( import_summary, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
             
             ( old_num_done, old_num_to_do ) = self._progress_gauge.GetValueRange()
             

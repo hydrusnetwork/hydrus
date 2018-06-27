@@ -165,6 +165,7 @@ class AutoCompleteDropdown( wx.Panel ):
         
         HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         HG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
+        HG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
         
         self._refresh_list_job = None
         
@@ -426,6 +427,11 @@ class AutoCompleteDropdown( wx.Panel ):
     def BroadcastChoices( self, predicates ):
         
         self._BroadcastChoices( predicates )
+        
+    
+    def DoDropdownHideShow( self ):
+        
+        self._DropdownHideShow()
         
     
     def EventCharHook( self, event ):

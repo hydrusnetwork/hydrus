@@ -658,6 +658,11 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
     
 def ConvertTimestampToHumanPrettyTime( timestamp ):
     
+    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
+        
+        return ConvertTimestampToPrettyTime( timestamp )
+        
+    
     now = GetNow()
     
     difference = now - timestamp

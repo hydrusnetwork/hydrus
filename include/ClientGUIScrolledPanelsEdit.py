@@ -12,7 +12,7 @@ import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIParsing
 import ClientGUIScrolledPanels
-import ClientGUISeedCache
+import ClientGUIFileSeedCache
 import ClientGUISerialisable
 import ClientGUIShortcuts
 import ClientGUITime
@@ -329,8 +329,8 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [ 'all namespaces' ], file_post_default_tag_import_options )
-        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [ 'all namespaces' ], watchable_default_tag_import_options )
+        self._file_post_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [], file_post_default_tag_import_options )
+        self._watchable_default_tag_import_options_button = ClientGUIImport.TagImportOptionsButton( self, [], watchable_default_tag_import_options )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -2225,6 +2225,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddSeparator()
         queries_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
         queries_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._ListCtrlCanRetryFailed )
+        queries_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._ListCtrlCanRetryIgnored )
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
         
@@ -2423,7 +2424,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertQueryToListCtrlTuples( self, query ):
         
-        ( query_text, check_now, last_check_time, next_check_time, paused, status, seed_cache ) = query.ToTuple()
+        ( query_text, check_now, last_check_time, next_check_time, paused, status, file_seed_cache ) = query.ToTuple()
         
         pretty_query_text = query_text
         
@@ -2445,7 +2446,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_status = 'dead'
             
         
-        last_new_file_time = seed_cache.GetLatestAddedTime()
+        last_new_file_time = file_seed_cache.GetLatestAddedTime()
         
         pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
         
@@ -2460,8 +2461,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_next_check_time = query.GetNextCheckStatusString()
         
-        file_velocity = self._checker_options.GetRawCurrentVelocity( query.GetSeedCache(), last_check_time )
-        pretty_file_velocity = self._checker_options.GetPrettyCurrentVelocity( query.GetSeedCache(), last_check_time, no_prefix = True )
+        file_velocity = self._checker_options.GetRawCurrentVelocity( query.GetFileSeedCache(), last_check_time )
+        pretty_file_velocity = self._checker_options.GetPrettyCurrentVelocity( query.GetFileSeedCache(), last_check_time, no_prefix = True )
         
         estimate = self._original_subscription.GetBandwidthWaitingEstimate( query )
         
@@ -2476,7 +2477,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             delay = estimate
             
         
-        ( file_status, ( num_done, num_total ) ) = seed_cache.GetStatus()
+        ( file_status, ( num_done, num_total ) ) = file_seed_cache.GetStatus()
         
         if num_total > 0:
             
@@ -2647,6 +2648,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
+    def _ListCtrlCanRetryIgnored( self ):
+        
+        for query in self._queries.GetData( only_selected = True ):
+            
+            if query.CanRetryIgnored():
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def _PasteQueries( self ):
         
         message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Is that ok?'
@@ -2786,6 +2800,18 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateDelayText()
         
     
+    def _RetryIgnored( self ):
+        
+        selected_queries = self._queries.GetData( only_selected = True )
+        
+        for query in selected_queries:
+            
+            query.RetryIgnored()
+            
+        
+        self._queries.UpdateDatas( selected_queries )
+        
+    
     def _UpdateDelayText( self ):
         
         if HydrusData.TimeHasPassed( self._no_work_until ):
@@ -2861,11 +2887,11 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._check_now = wx.CheckBox( self )
         self._paused = wx.CheckBox( self )
         
-        self._seed_cache_panel = ClientGUISeedCache.SeedCacheStatusControl( self, HG.client_controller )
+        self._file_seed_cache_panel = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
         
         #
         
-        ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status, seed_cache ) = self._original_query.ToTuple()
+        ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status, file_seed_cache ) = self._original_query.ToTuple()
         
         self._query_text.SetValue( query_text )
         
@@ -2873,9 +2899,9 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused.SetValue( paused )
         
-        self._seed_cache = seed_cache.Duplicate()
+        self._file_seed_cache = file_seed_cache.Duplicate()
         
-        self._seed_cache_panel.SetSeedCache( self._seed_cache )
+        self._file_seed_cache_panel.SetFileSeedCache( self._file_seed_cache )
         
         #
         
@@ -2890,7 +2916,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._seed_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_seed_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
@@ -2910,7 +2936,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query = self._original_query.Duplicate()
         
-        query.SetQueryAndSeedCache( self._query_text.GetValue(), self._seed_cache )
+        query.SetQueryAndFileSeedCache( self._query_text.GetValue(), self._file_seed_cache )
         
         query.SetPaused( self._paused.GetValue() )
         
@@ -2992,6 +3018,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel.AddButton( 'pause/resume', self.PauseResume, enabled_only_on_selection = True )
         subscriptions_panel.AddButton( 'retry failures', self.RetryFailures, enabled_check_func = self._CanRetryFailures )
+        subscriptions_panel.AddButton( 'retry ignored', self.RetryIgnored, enabled_check_func = self._CanRetryIgnored )
         subscriptions_panel.AddButton( 'scrub delays', self.ScrubDelays, enabled_check_func = self._CanScrubDelays )
         subscriptions_panel.AddButton( 'check queries now', self.CheckNow, enabled_check_func = self._CanCheckNow )
         
@@ -3073,6 +3100,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
         return True in ( subscription.CanRetryFailures() for subscription in subscriptions )
+        
+    
+    def _CanRetryIgnored( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        return True in ( subscription.CanRetryIgnored() for subscription in subscriptions )
         
     
     def _CanScrubDelays( self ):
@@ -3625,6 +3659,18 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions.UpdateDatas( subscriptions )
         
     
+    def RetryIgnored( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        for subscription in subscriptions:
+            
+            subscription.RetryIgnored()
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
     def ScrubDelays( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -4094,81 +4140,60 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, namespaces, tag_import_options, show_url_options = True ):
+    def __init__( self, parent, namespaces, tag_import_options, show_downloader_options = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._service_keys_to_get_all_checkboxes = {}
-        self._service_keys_to_checkbox_info = {}
-        self._service_keys_to_additional_button_info = {}
+        self._service_keys_to_service_tag_import_options_panels = {}
         
         #
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         help_button.SetToolTip( 'Show help regarding these tag options.' )
         
-        url_options_panel = ClientGUICommon.StaticBox( self, 'fetch options' )
+        downloader_options_panel = ClientGUICommon.StaticBox( self, 'fetch options' )
         
-        self._fetch_tags_even_if_url_known_and_file_already_in_db = wx.CheckBox( url_options_panel )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
         
-        self._tag_filter = tag_import_options.GetTagBlacklist()
+        self._tag_blacklist = tag_import_options.GetTagBlacklist()
         
-        self._tag_filter_button = ClientGUICommon.BetterButton( url_options_panel, self._tag_filter.ToBlacklistString()[:32], self._EditTagBlacklist )
+        self._tag_filter_button = ClientGUICommon.BetterButton( downloader_options_panel, self._tag_blacklist.ToBlacklistString()[:32], self._EditTagBlacklist )
         self._tag_filter_button.SetToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
         
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
         
         #
         
-        self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
-        self._InitialiseCheckboxes( namespaces )
-        self._SetOptions( tag_import_options )
+        self._InitialiseServices( tag_import_options, namespaces, show_downloader_options )
         
         #
         
         rows = []
         
-        rows.append( ( 'fetch tags even if url known and file already in db: ', self._fetch_tags_even_if_url_known_and_file_already_in_db ) )
+        rows.append( ( 'fetch tags even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
+        rows.append( ( 'fetch tags even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
         rows.append( ( 'set blacklist: ', self._tag_filter_button ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( url_options_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( downloader_options_panel, rows )
         
-        url_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        downloader_options_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        if not show_url_options:
+        if not show_downloader_options:
             
-            url_options_panel.Hide()
+            downloader_options_panel.Hide()
             
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
-        vbox.Add( url_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
-        
-    
-    def _DoAdditionalTags( self, service_key ):
-        
-        ( additional_tags, additional_button ) = self._service_keys_to_additional_button_info[ service_key ]
-        
-        message = 'Any tags you enter here will be applied to every file that passes through this import context.'
-        
-        with ClientGUIDialogs.DialogInputTags( self, service_key, additional_tags, message = message ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                additional_tags = dlg.GetTags()
-                
-            
-        
-        button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
-        
-        additional_button.SetLabelText( button_label )
-        
-        self._service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
         
     
     def _EditTagBlacklist( self ):
@@ -4181,20 +4206,20 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += os.linesep * 2
             message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the left column and hit ok.'
             
-            panel = EditTagFilterPanel( dlg, self._tag_filter, message )
+            panel = EditTagFilterPanel( dlg, self._tag_blacklist, message )
             
             dlg.SetPanel( panel )
             
             if dlg.ShowModal() == wx.ID_OK:
                 
-                self._tag_filter = panel.GetValue()
+                self._tag_blacklist = panel.GetValue()
                 
-                self._tag_filter_button.SetLabelText( self._tag_filter.ToBlacklistString()[:32] )
+                self._tag_filter_button.SetLabelText( self._tag_blacklist.ToBlacklistString()[:32] )
                 
             
         
     
-    def _InitialiseCheckboxes( self, namespaces ):
+    def _InitialiseServices( self, tag_import_options, namespaces, show_downloader_options ):
         
         namespaces = list( namespaces )
         
@@ -4202,150 +4227,18 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         services = HG.client_controller.services_manager.GetServices( HC.TAG_SERVICES, randomised = False )
         
-        if len( services ) > 0:
+        for service in services:
             
-            for service in services:
-                
-                service_key = service.GetServiceKey()
-                
-                self._service_keys_to_checkbox_info[ service_key ] = []
-                
-                panel = ClientGUICommon.StaticBox( self, service.GetName() )
-                
-                if len( namespaces ) > 0:
-                    
-                    label = 'get all tags (works better than \'select all\' for the new downloader system)'
-                    
-                else:
-                    
-                    label = 'get all tags'
-                    
-                
-                get_all_checkbox = wx.CheckBox( panel, label = label )
-                
-                get_all_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetAllCheckbox )
-                
-                self._service_keys_to_get_all_checkboxes[ service_key ] = get_all_checkbox
-                
-                panel.Add( get_all_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                if len( namespaces ) == 1:
-                    
-                    panel.Add( ClientGUICommon.BetterStaticText( panel, '----' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                if len( namespaces ) > 1:
-                    
-                    select_all_button = ClientGUICommon.BetterButton( panel, 'select all', self._SelectAll, service_key, True )
-                    select_none_button = ClientGUICommon.BetterButton( panel, 'select none', self._SelectAll, service_key, False )
-                    
-                    hbox = wx.BoxSizer( wx.HORIZONTAL )
-                    
-                    hbox.Add( select_all_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    hbox.Add( select_none_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-                    
-                    panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                    
-                
-                for namespace in namespaces:
-                    
-                    label = ClientTags.RenderNamespaceForUser( namespace )
-                    
-                    namespace_checkbox = wx.CheckBox( panel, label = label )
-                    
-                    self._service_keys_to_checkbox_info[ service_key ].append( ( namespace, namespace_checkbox ) )
-                    
-                    panel.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-                    
-                
-                additional_tags = set()
-                
-                button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
-                
-                additional_button = ClientGUICommon.BetterButton( panel, button_label, self._DoAdditionalTags, service_key )
-                
-                self._service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
-                
-                panel.Add( additional_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
-                self._services_vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-                
+            service_key = service.GetServiceKey()
             
-        
-    
-    def _SelectAll( self, service_key, value ):
-        
-        for ( namespace, namespace_checkbox ) in self._service_keys_to_checkbox_info[ service_key ]:
+            service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
             
-            namespace_checkbox.SetValue( value )
+            panel = EditServiceTagImportOptionsPanel( self, service_key, namespaces, service_tag_import_options, show_downloader_options = show_downloader_options )
             
-        
-    
-    def _SetOptions( self, tag_import_options ):
-        
-        self._fetch_tags_even_if_url_known_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        
-        get_all_service_keys = tag_import_options.GetGetAllServiceKeys()
-        
-        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
+            self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
             
-            if service_key in get_all_service_keys:
-                
-                checkbox.SetValue( service_key in get_all_service_keys )
-                
+            self._services_vbox.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-        
-        service_keys_to_namespaces = tag_import_options.GetServiceKeysToNamespaces()
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            if service_key in get_all_service_keys:
-                
-                continue
-                
-            
-            if service_key in service_keys_to_namespaces:
-                
-                namespaces_to_set = service_keys_to_namespaces[ service_key ]
-                
-            else:
-                
-                namespaces_to_set = set()
-                
-            
-            for ( namespace, checkbox ) in checkbox_info:
-                
-                checkbox.SetValue( namespace in namespaces_to_set )
-                
-            
-        
-        service_keys_to_additional_tags = tag_import_options.GetServiceKeysToAdditionalTags()
-        
-        new_service_keys_to_additional_button_info = {}
-        
-        for ( service_key, button_info ) in self._service_keys_to_additional_button_info.items():
-            
-            if service_key in service_keys_to_additional_tags:
-                
-                additional_tags = service_keys_to_additional_tags[ service_key ]
-                
-            else:
-                
-                additional_tags = set()
-                
-            
-            ( old_additional_tags, additional_button ) = button_info
-            
-            button_label = HydrusData.ConvertIntToPrettyString( len( additional_tags ) ) + ' additional tags'
-            
-            additional_button.SetLabelText( button_label )
-            
-            new_service_keys_to_additional_button_info[ service_key ] = ( additional_tags, additional_button )
-            
-        
-        self._service_keys_to_additional_button_info = new_service_keys_to_additional_button_info
-        
-        self._UpdateGetAllCheckboxes()
         
     
     def _ShowHelp( self ):
@@ -4367,18 +4260,182 @@ Please note that you can set up 'default' values for these tag import options in
         wx.MessageBox( message )
         
     
+    def GetValue( self ):
+        
+        fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.GetValue()
+        fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.GetValue()
+        
+        service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items() }
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = self._tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        return tag_import_options
+        
+    
+class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, service_key, possible_namespaces, service_tag_import_options, show_downloader_options = True ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._service_key = service_key
+        
+        self._namespaces_to_checkbox_info = {}
+        
+        name = HG.client_controller.services_manager.GetName( self._service_key )
+        
+        main_box = ClientGUICommon.StaticBox( self, name )
+        
+        #
+        
+        ( get_all, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags ) = service_tag_import_options.ToTuple()
+        
+        #
+        
+        menu_items = self._GetCogIconMenuItems()
+        
+        cog_button = ClientGUICommon.MenuBitmapButton( main_box, CC.GlobalBMPs.cog, menu_items )
+        
+        #
+        
+        downloader_options_panel = ClientGUICommon.StaticBox( main_box, 'tag parsing' )
+        
+        if len( possible_namespaces ) > 0:
+            
+            label = 'get all tags (works better than \'select all\' for the new downloader system)'
+            
+        else:
+            
+            label = 'get all tags'
+            
+        
+        self._get_all_checkbox = wx.CheckBox( downloader_options_panel, label = label )
+        
+        downloader_options_panel.Add( self._get_all_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if len( possible_namespaces ) == 1:
+            
+            downloader_options_panel.Add( ClientGUICommon.BetterStaticText( downloader_options_panel, '----' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        elif len( possible_namespaces ) > 1:
+            
+            select_all_button = ClientGUICommon.BetterButton( downloader_options_panel, 'select all', self._SelectAll, True )
+            select_none_button = ClientGUICommon.BetterButton( downloader_options_panel, 'select none', self._SelectAll, False )
+            
+            hbox = wx.BoxSizer( wx.HORIZONTAL )
+            
+            hbox.Add( select_all_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            hbox.Add( select_none_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+        
+        for possible_namespace in possible_namespaces:
+            
+            label = ClientTags.RenderNamespaceForUser( possible_namespace )
+            
+            namespace_checkbox = wx.CheckBox( downloader_options_panel, label = label )
+            
+            namespace_checkbox.SetValue( possible_namespace in namespaces )
+            
+            self._namespaces_to_checkbox_info[ possible_namespace ] = namespace_checkbox
+            
+            downloader_options_panel.Add( namespace_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+        #
+        
+        button_label = HydrusData.ConvertIntToPrettyString( len( self._additional_tags ) ) + ' additional tags'
+        
+        self._additional_button = ClientGUICommon.BetterButton( main_box, button_label, self._DoAdditionalTags )
+        
+        #
+        
+        self._get_all_checkbox.SetValue( get_all )
+        
+        #
+        
+        if not show_downloader_options:
+            
+            downloader_options_panel.Hide()
+            
+        
+        main_box.Add( cog_button, CC.FLAGS_LONE_BUTTON )
+        main_box.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        main_box.Add( self._additional_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( main_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.SetSizer( vbox )
+        
+        self._UpdateGetAllCheckboxes()
+        
+        #
+        
+        self._get_all_checkbox.Bind( wx.EVT_CHECKBOX, self.EventGetAllCheckbox )
+        
+    
+    def _DoAdditionalTags( self ):
+        
+        message = 'Any tags you enter here will be applied to every file that passes through this import context.'
+        
+        with ClientGUIDialogs.DialogInputTags( self, self._service_key, list( self._additional_tags ), message = message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._additional_tags = dlg.GetTags()
+                
+            
+        
+        button_label = HydrusData.ConvertIntToPrettyString( len( self._additional_tags ) ) + ' additional tags'
+        
+        self._additional_button.SetLabelText( button_label )
+        
+    
+    def _GetCogIconMenuItems( self ):
+        
+        menu_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_new_files' )
+        
+        menu_items.append( ( 'check', 'apply tags to new files', 'Apply tags to new files.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_already_in_inbox' )
+        
+        menu_items.append( ( 'check', 'apply tags to files already in inbox', 'Apply tags to files that are already in the db and in the inbox.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_already_in_archive' )
+        
+        menu_items.append( ( 'check', 'apply tags to files already in archive', 'Apply tags to files that are already in the db and archived.', check_manager ) )
+        
+        menu_items.append( ( 'separator', 0, 0, 0 ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_only_add_existing_tags' )
+        
+        menu_items.append( ( 'check', 'only add tags that already exist', 'Only add tags to this service if they have non-zero count.', check_manager ) )
+        
+        return menu_items
+        
+    
+    def _SelectAll( self, value ):
+        
+        for checkbox in self._namespaces_to_checkbox_info.values():
+            
+            checkbox.SetValue( value )
+            
+        
+    
     def _UpdateGetAllCheckboxes( self ):
         
-        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
+        get_all = self._get_all_checkbox.GetValue()
+        
+        should_enable = not get_all
+        
+        for checkbox in self._namespaces_to_checkbox_info.values():
             
-            get_all = checkbox.GetValue()
-            
-            should_enable = not get_all
-            
-            for ( namespace, namespace_checkbox ) in self._service_keys_to_checkbox_info[ service_key ]:
-                
-                namespace_checkbox.Enable( should_enable )
-                
+            checkbox.Enable( should_enable )
             
         
     
@@ -4389,37 +4446,12 @@ Please note that you can set up 'default' values for these tag import options in
     
     def GetValue( self ):
         
-        fetch_tags_even_if_url_known_and_file_already_in_db = self._fetch_tags_even_if_url_known_and_file_already_in_db.GetValue()
+        get_all = self._get_all_checkbox.GetValue()
+        namespaces = [ namespace for ( namespace, checkbox ) in self._namespaces_to_checkbox_info.items() if checkbox.GetValue() ]
         
-        get_all_service_keys = set()
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags )
         
-        for ( service_key, checkbox ) in self._service_keys_to_get_all_checkboxes.items():
-            
-            if checkbox.GetValue():
-                
-                get_all_service_keys.add( service_key )
-                
-            
-        
-        service_keys_to_namespaces = {}
-        
-        for ( service_key, checkbox_info ) in self._service_keys_to_checkbox_info.items():
-            
-            if service_key in get_all_service_keys:
-                
-                continue
-                
-            
-            namespaces = [ namespace for ( namespace, checkbox ) in checkbox_info if checkbox.GetValue() == True ]
-            
-            service_keys_to_namespaces[ service_key ] = namespaces
-            
-        
-        service_keys_to_additional_tags = { service_key : additional_tags for ( service_key, ( additional_tags, additional_button ) ) in self._service_keys_to_additional_button_info.items() }
-        
-        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = self._tag_filter, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
-        
-        return tag_import_options
+        return service_tag_import_options
         
     
 class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):

@@ -8,6 +8,39 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 312</h3></li>
+				<ul>
+					<li>converted much of the increasingly complicated tag import options to a new sub-object that simplifies a lot of code and makes things easier to serialise and update in future</li>
+					<li>tag import options now allows you to set whether tags should be applied to new files/already in inbox/already in archive, much like the file import options' 'presentation' checkboxes</li>
+					<li>tag import options now allows you to set whether tags should be filtered to only those that already have a non-zero current count on that tag service (i.e. only tags that 'already exist')</li>
+					<li>tag import options now has two 'fetch if already in db' checkboxes--for url and hash matches separately (the hash stuff is advanced, but this new distinction will be of increasing use in the future)</li>
+					<li>tag import options now applies sibling and parent collapse/expansion before tag filtering, which will improve filtering accuracy (so if you only want creator tags, and a sibling would convert an unnamespaced tag up to a creator, you will now get it)</li>
+					<li>the old 'all namespaces' checkbox is now removed from some 'defaults' areas, and any default tag import options that had it checked will instead get 'get all' checked as they update</li>
+					<li>caught up the ui and importer code to deal with these tag import option changes</li>
+					<li>improved how some 'should download metadata/file' pre-import checking works</li>
+					<li>moved all complicated 'let's derive some specific tag import options from these defaults' code to the tag import options object itself</li>
+					<li>wrote some decent unit tests for tag import options</li>
+					<li>wrote a parser for deviant art. it has source time now, and falls back to the embedded image if the artist has disabled high-res downloading. if it finds a mature content click-through (due to not being logged in), it will now veto and set 'ignored' status (we will revisit this and get high quality nsfw from DA when the login manager works.)</li>
+					<li>if a check timings object (like for a subscription or watcher) has a 'static' check interval, it will now apply that period to the 'last next check time', so if you set it to check every seven days, starting on Wednesday night, it will now repeatedly check on Wed night, not creep forward a few minutes/hours every time due to applying time to the 'last check completed time'. if you were hit by this, hit 'check now' to reset your next check time to now</li>
+					<li>the multiple watcher now sorts by status by default, and blank status now sorts below DEAD and the others, so you should get a neat subject-alphabetical sort grouped by interesting-status-first now right from the start</li>
+					<li>added 'clear all multiwatcher highlights' to 'pages' menu</li>
+					<li>fixed a typo bug in the new multiple watcher options-setting buttons</li>
+					<li>added 'retry ignored' buttons to edit subscription/subscriptions panels, so you can retry pixiv manga pages en masse</li>
+					<li>added 'always show iso time' checkbox to options->gui, which will stop replacing some recent timestamps with '5 minutes ago'</li>
+					<li>fixed an index-selection issue with compound formulae in the new parsing system</li>
+					<li>fixed a file progress count status error in subscriptions that was reducing progress rather than increasing range when the post urls created new urls</li>
+					<li>improved error handling when a file import object's index can't be figured out in the file import list</li>
+					<li>to clear up confusion, the crash recovery dialog now puts the name of the default session it would like to try loading on its ok button</li>
+					<li>the new listctrl class will now always sort strings in a case-insensitive way</li>
+					<li>wrote a simple 'fetch a url' debug routine for the help->debug menu that will help better diagnose various parse and login issues in future</li>
+					<li>fixed an issue where the autocomplete dropdown float window could sometimes get stuck in 'show float' mode when it spawned a new window while having focus (usually due to activating/right-clicking a tag in the list and hitting 'show in new page'). any other instances of the dropdown getting stuck on should now also be fixable/fixed with a simple page change</li>
+					<li>improved how some checkbox menu data is handled</li>
+					<li>started work on a gallery log, which will record and action gallery urls in the new system much like the file import status area</li>
+					<li>significant refactoring of file import objects--there are now 'file seeds' and 'gallery seeds'</li>
+					<li>added an interesting new 'alterate' duplicate example to duplicates help</li>
+					<li>brushed off and added some more examples to duplicates help, thanks to users for the contributions</li>
+					<li>misc refactoring</li>
+				</ul>
 				<li><h3>version 311</h3></li>
 				<ul>
 					<li>wrote a new parser that muddles its way through pixiv's new dynamic javascript layout. it seems to get everything working again. it gets tags in kanji, although the unnamespaced pixiv tags remain low quality, and you may wish to just not parse them at all anyway</li>

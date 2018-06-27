@@ -1867,6 +1867,8 @@ class PagesNotebook( wx.Notebook ):
             event.Skip() # need this or OS X spergs out and never .Show()s new page, wew
             
         
+        self._controller.pub( 'notify_page_change' )
+        
     
     def GetCurrentMediaPage( self ):
         

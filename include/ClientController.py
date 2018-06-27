@@ -736,7 +736,7 @@ class Controller( HydrusController.HydrusController ):
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
             message += os.linesep * 2
-            message += 'Don\'t forget to check out the help if you haven\'t already.'
+            message += 'Don\'t forget to check out the help if you haven\'t already--it has an extensive \'getting started\' section.'
             message += os.linesep * 2
             message += 'To dismiss popup messages like this, right-click them.'
             

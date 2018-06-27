@@ -282,11 +282,6 @@ class Gallery( object ):
             
         
     
-    def _GetGalleryPageURL( self, query, page_index ):
-        
-        raise NotImplementedError()
-        
-    
     def _ParseGalleryPage( self, data, url ):
         
         raise NotImplementedError()
@@ -305,28 +300,31 @@ class Gallery( object ):
         return tags
         
     
-    def GetPage( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
-        gallery_url = self._GetGalleryPageURL( query, page_index )
+        raise NotImplementedError()
+        
+    
+    def GetPage( self, gallery_url ):
         
         data = self._FetchData( gallery_url )
         
         ( page_of_urls_and_tags, definitely_no_more_pages ) = self._ParseGalleryPage( data, gallery_url )
         
-        import ClientImportSeeds
+        import ClientImportFileSeeds
         
-        page_of_seeds = []
+        page_of_file_seeds = []
         
         for ( url, tags ) in page_of_urls_and_tags:
             
-            seed = ClientImportSeeds.Seed( ClientImportSeeds.SEED_TYPE_URL, url )
+            file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
-            seed.AddTags( tags )
+            file_seed.AddTags( tags )
             
-            page_of_seeds.append( seed )
+            page_of_file_seeds.append( file_seed )
             
         
-        return ( page_of_seeds, definitely_no_more_pages )
+        return ( page_of_file_seeds, definitely_no_more_pages )
         
     
     def GetTags( self, url ):
@@ -359,65 +357,6 @@ class GalleryBooru( Gallery ):
         ( self._search_url, self._advance_by_page_num, self._search_separator, self._thumb_classname ) = self._booru.GetGalleryParsingInfo()
         
         Gallery.__init__( self )
-        
-    
-    def _GetGalleryPageURL( self, query, page_index ):
-        
-        if self._advance_by_page_num:
-            
-            url_index = page_index + 1
-            
-        else:
-            
-            if page_index == 0:
-                
-                url_index = 0
-                
-            else:
-                
-                if self._booru_name not in gallery_advance_nums:
-                    
-                    if page_index == 0:
-                        
-                        url_index = page_index
-                        
-                    else:
-                        
-                        self.GetPage( query, 0 )
-                        
-                        if self._booru_name not in gallery_advance_nums:
-                            
-                            raise Exception( 'Unable to calculate the booru\'s gallery advance number.' )
-                            
-                        
-                    
-                
-                url_index = page_index * gallery_advance_nums[ self._booru_name ]
-                
-            
-        
-        tags = query.split( ' ' )
-        
-        if 'e621' in self._search_url:
-            
-            tags_to_use = []
-            
-            for tag in tags:
-                
-                if '/' in tag:
-                    
-                    tag = tag.replace( '/', '%-2F' )
-                    
-                
-                tags_to_use.append( tag )
-                
-            
-            tags = tags_to_use
-            
-        
-        tags_replace = self._search_separator.join( [ urllib.quote( HydrusData.ToByteString( tag ), '' ) for tag in tags ] )
-        
-        return self._search_url.replace( '%tags%', tags_replace ).replace( '%index%', str( url_index ) )
         
     
     def _ParseGalleryPage( self, html, url_base ):
@@ -762,6 +701,67 @@ class GalleryBooru( Gallery ):
         return tags
         
     
+    def GetGalleryPageURL( self, query, page_index ):
+        
+        if self._advance_by_page_num:
+            
+            url_index = page_index + 1
+            
+        else:
+            
+            if page_index == 0:
+                
+                url_index = 0
+                
+            else:
+                
+                if self._booru_name not in gallery_advance_nums:
+                    
+                    if page_index == 0:
+                        
+                        url_index = page_index
+                        
+                    else:
+                        
+                        initial_gallery_page_url = self.GetGalleryPageURL( query, 0 )
+                        
+                        self.GetPage( initial_gallery_page_url )
+                        
+                        if self._booru_name not in gallery_advance_nums:
+                            
+                            raise Exception( 'Unable to calculate the booru\'s gallery advance number.' )
+                            
+                        
+                    
+                
+                url_index = page_index * gallery_advance_nums[ self._booru_name ]
+                
+            
+        
+        tags = query.split( ' ' )
+        
+        if 'e621' in self._search_url:
+            
+            tags_to_use = []
+            
+            for tag in tags:
+                
+                if '/' in tag:
+                    
+                    tag = tag.replace( '/', '%-2F' )
+                    
+                
+                tags_to_use.append( tag )
+                
+            
+            tags = tags_to_use
+            
+        
+        tags_replace = self._search_separator.join( [ urllib.quote( HydrusData.ToByteString( tag ), '' ) for tag in tags ] )
+        
+        return self._search_url.replace( '%tags%', tags_replace ).replace( '%index%', str( url_index ) )
+        
+    
     def GetTags( self, url ):
         
         ( file_url, tags ) = self._GetFileURLAndTags( url )
@@ -770,13 +770,6 @@ class GalleryBooru( Gallery ):
         
     
 class GalleryDeviantArt( Gallery ):
-    
-    def _GetGalleryPageURL( self, query, page_index ):
-        
-        artist = query
-        
-        return 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset=' + str( page_index * 24 )
-        
     
     def _ParseGalleryPage( self, html, url_base ):
         
@@ -902,6 +895,13 @@ class GalleryDeviantArt( Gallery ):
         file_url = self._GetFileURL( url )
         
         self._FetchData( file_url, referral_url = url, temp_path = temp_path )
+        
+    
+    def GetGalleryPageURL( self, query, page_index ):
+        
+        artist = query
+        
+        return 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset=' + str( page_index * 24 )
         
     
     def GetTags( self, url ):
@@ -1076,7 +1076,7 @@ class GalleryHentaiFoundry( Gallery ):
     
 class GalleryHentaiFoundryArtistPictures( GalleryHentaiFoundry ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         artist = query
         
@@ -1087,7 +1087,7 @@ class GalleryHentaiFoundryArtistPictures( GalleryHentaiFoundry ):
     
 class GalleryHentaiFoundryArtistScraps( GalleryHentaiFoundry ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         artist = query
         
@@ -1098,7 +1098,7 @@ class GalleryHentaiFoundryArtistScraps( GalleryHentaiFoundry ):
     
 class GalleryHentaiFoundryTags( GalleryHentaiFoundry ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         tags = query.split( ' ' )
         
@@ -1249,7 +1249,7 @@ class GalleryNewgrounds( Gallery ):
     
 class GalleryNewgroundsGames( GalleryNewgrounds ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         artist = query
         
@@ -1258,7 +1258,7 @@ class GalleryNewgroundsGames( GalleryNewgrounds ):
     
 class GalleryNewgroundsMovies( GalleryNewgrounds ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         artist = query
         
@@ -1393,7 +1393,7 @@ class GalleryPixiv( Gallery ):
     
 class GalleryPixivArtistID( GalleryPixiv ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         artist_id = query
         
@@ -1404,7 +1404,7 @@ class GalleryPixivArtistID( GalleryPixiv ):
     
 class GalleryPixivTag( GalleryPixiv ):
     
-    def _GetGalleryPageURL( self, query, page_index ):
+    def GetGalleryPageURL( self, query, page_index ):
         
         tag = query
         
@@ -1414,13 +1414,6 @@ class GalleryPixivTag( GalleryPixiv ):
         
     
 class GalleryTumblr( Gallery ):
-    
-    def _GetGalleryPageURL( self, query, page_index ):
-        
-        username = query
-        
-        return 'https://' + username + '.tumblr.com/api/read/json?start=' + str( page_index * 50 ) + '&num=50'
-        
     
     def _ParseGalleryPage( self, data, url_base ):
         
@@ -1594,6 +1587,13 @@ class GalleryTumblr( Gallery ):
             
         
         return ( urls_and_tags, definitely_no_more_pages )
+        
+    
+    def GetGalleryPageURL( self, query, page_index ):
+        
+        username = query
+        
+        return 'https://' + username + '.tumblr.com/api/read/json?start=' + str( page_index * 50 ) + '&num=50'
         
     
     def GetTags( self, url ):

@@ -2541,6 +2541,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._reverse_page_shift_drag_behaviour = wx.CheckBox( self )
             self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
+            self._always_show_iso_time = wx.CheckBox( self )
+            tt = 'For recent timestamps, the client will sometimes replace a standard ISO string, like "2018-03-01 12:40:23", with "five minutes ago". If you prefer just to have the ISO all the time, check this.'
+            self._always_show_iso_time.SetToolTip( tt )
+            
             self._always_embed_autocompletes = wx.CheckBox( self )
             
             self._hide_preview = wx.CheckBox( self )
@@ -2624,6 +2628,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._reverse_page_shift_drag_behaviour.SetValue( self._new_options.GetBoolean( 'reverse_page_shift_drag_behaviour' ) )
             
+            self._always_show_iso_time.SetValue( self._new_options.GetBoolean( 'always_show_iso_time' ) )
+            
             self._always_embed_autocompletes.SetValue( HC.options[ 'always_embed_autocompletes' ] )
             
             self._hide_preview.SetValue( HC.options[ 'hide_preview' ] )
@@ -2671,6 +2677,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
+            rows.append( ( 'Always show ISO time, never substitute \'human pretty\' time: ', self._always_show_iso_time ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
@@ -2748,6 +2755,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.GetValue()
             HC.options[ 'confirm_trash' ] = self._confirm_trash.GetValue()
             HC.options[ 'confirm_archive' ] = self._confirm_archive.GetValue()
+            
+            self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.GetValue() )
+            
             HC.options[ 'always_embed_autocompletes' ] = self._always_embed_autocompletes.GetValue()
             
             self._new_options.SetBoolean( 'notebook_tabs_on_left', self._notebook_tabs_on_left.GetValue() )

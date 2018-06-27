@@ -558,6 +558,27 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._data_to_indices[ data ] = index
         
     
+    def _GetDisplayAndSortTuples( self, data ):
+        
+        ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+        
+        better_sort = []
+        
+        for item in sort_tuple:
+            
+            if isinstance( item, ( str, unicode ) ):
+                
+                item = item.lower()
+                
+            
+            better_sort.append( item )
+            
+        
+        sort_tuple = tuple( better_sort )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
     def _GetSelected( self ):
         
         indices = []
@@ -658,7 +679,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for data in datas:
             
-            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( data )
             
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
             
@@ -913,7 +934,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         
         for data in datas:
             
-            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( data )
             
             data_info = ( data, display_tuple, sort_tuple )
             

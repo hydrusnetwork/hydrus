@@ -32,7 +32,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         #
         
         # add statictext or whatever that will update on any updates above to say 'given velocity of blah and last check at blah, next check in 5 mins'
-        # or indeed this could just take the seed cache and last check of the caller, if there is one
+        # or indeed this could just take the file_seed cache and last check of the caller, if there is one
         # this would be more useful to the user, to know 'right, on ok, it'll refresh in 30 mins'
         # this is actually more complicated--it also needs last check time to calc a fresh file velocity based on new death_file_velocity
         

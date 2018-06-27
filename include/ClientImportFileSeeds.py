@@ -19,7 +19,7 @@ import time
 import traceback
 import urlparse
 
-def GenerateSeedCacheStatus( statuses_to_counts ):
+def GenerateFileSeedCacheStatus( statuses_to_counts ):
     
     num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
     num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
@@ -225,31 +225,31 @@ class FileImportJob( object ):
         self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
     
-SEED_TYPE_HDD = 0
-SEED_TYPE_URL = 1
+FILE_SEED_TYPE_HDD = 0
+FILE_SEED_TYPE_URL = 1
 
-class Seed( HydrusSerialisable.SerialisableBase ):
+class FileSeed( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED
     SERIALISABLE_NAME = 'File Import'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, seed_type = None, seed_data = None ):
+    def __init__( self, file_seed_type = None, file_seed_data = None ):
         
-        if seed_type is None:
+        if file_seed_type is None:
             
-            seed_type = SEED_TYPE_URL
+            file_seed_type = FILE_SEED_TYPE_URL
             
         
-        if seed_data is None:
+        if file_seed_data is None:
             
-            seed_data = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
+            file_seed_data = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
             
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self.seed_type = seed_type
-        self.seed_data = seed_data
+        self.file_seed_type = file_seed_type
+        self.file_seed_data = file_seed_data
         
         self.created = HydrusData.GetNow()
         self.modified = self.created
@@ -271,7 +271,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self.seed_type, self.seed_data ).__hash__()
+        return ( self.file_seed_type, self.file_seed_data ).__hash__()
         
     
     def __ne__( self, other ):
@@ -290,12 +290,12 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         serialisable_tags = list( self._tags )
         serialisable_hashes = [ ( hash_type, hash.encode( 'hex' ) ) for ( hash_type, hash ) in self._hashes.items() if hash is not None ]
         
-        return ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
+        return ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.seed_type, self.seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
+        ( self.file_seed_type, self.file_seed_data, self.created, self.modified, self.source_time, self.status, self.note, self._referral_url, serialisable_urls, serialisable_tags, serialisable_hashes ) = serialisable_info
         
         self._urls = set( serialisable_urls )
         self._tags = set( serialisable_tags )
@@ -320,11 +320,11 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( seed_type, seed_data, created, modified, source_time, status, note, serialisable_urls, serialisable_tags, serialisable_hashes ) = old_serialisable_info
+            ( file_seed_type, file_seed_data, created, modified, source_time, status, note, serialisable_urls, serialisable_tags, serialisable_hashes ) = old_serialisable_info
             
             referral_url = None
             
-            new_serialisable_info = ( seed_type, seed_data, created, modified, source_time, status, note, referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
+            new_serialisable_info = ( file_seed_type, file_seed_data, created, modified, source_time, status, note, referral_url, serialisable_urls, serialisable_tags, serialisable_hashes )
             
             return ( 2, new_serialisable_info )
             
@@ -344,7 +344,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
         
-        associable_urls.discard( self.seed_data )
+        associable_urls.discard( self.file_seed_data )
         
         self._urls.update( associable_urls )
         
@@ -379,7 +379,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         associable_urls = self._NormaliseAndFilterAssociableURLs( urls )
         
-        associable_urls.discard( self.seed_data )
+        associable_urls.discard( self.file_seed_data )
         
         self._urls.update( associable_urls )
         
@@ -397,9 +397,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            if self.seed_data != file_url:
+            if self.file_seed_data != file_url:
                 
-                referral_url = self.seed_data
+                referral_url = self.file_seed_data
                 
             else:
                 
@@ -430,12 +430,178 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         pass
         
     
-    def PredictPreImportStatus( self, file_import_options, file_url = None ):
+    def GetHash( self ):
         
-        if self.status != CC.STATUS_UNKNOWN:
+        if 'sha256' in self._hashes:
             
-            return
+            return self._hashes[ 'sha256' ]
             
+        
+        return None
+        
+    
+    def GetSearchFileSeeds( self ):
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            search_urls = ClientNetworkingDomain.GetSearchURLs( self.file_seed_data )
+            
+            search_file_seeds = [ FileSeed( FILE_SEED_TYPE_URL, search_url ) for search_url in search_urls ]
+            
+        else:
+            
+            search_file_seeds = [ self ]
+            
+        
+        return search_file_seeds
+        
+    
+    def HasHash( self ):
+        
+        return self.GetHash() is not None
+        
+    
+    def Import( self, temp_path, file_import_options ):
+        
+        file_import_job = FileImportJob( temp_path, file_import_options )
+        
+        ( status, hash, note ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
+        
+        self.SetStatus( status, note = note )
+        self.SetHash( hash )
+        
+    
+    def ImportPath( self, file_import_options ):
+        
+        if self.file_seed_type != FILE_SEED_TYPE_HDD:
+            
+            raise Exception( 'Attempted to import as a path, but I do not think I am a path!' )
+            
+        
+        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+        
+        try:
+            
+            path = self.file_seed_data
+            
+            copied = HydrusPaths.MirrorFile( path, temp_path )
+            
+            if not copied:
+                
+                raise Exception( 'File failed to copy to temp path--see log for error.' )
+                
+            
+            self.Import( temp_path, file_import_options )
+            
+        finally:
+            
+            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+    
+    def IsAPostURL( self ):
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            
+            if url_type == HC.URL_TYPE_POST:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def Normalise( self ):
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            self.file_seed_data = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+            
+        
+    
+    def PredictPreImportStatus( self, file_import_options, tag_import_options, file_url = None ):
+        
+        # atm, if url recognised, then hash is always recognised because url sets sha256 hash wew
+        # however, we will move these to now be 'setting' methods soonish, and do the status/note/etc... set here, at which point this will be _more_ accurate, at least first time around
+        # the should_download_file test should take into account future url/hash checkboxes in a similar way, which this will matter more
+        # and in fact, it may be appropriate to not actually do/'trust' url/hash status sets if the file ones are checked
+        
+        url_recognised_and_file_already_in_db = self.PredictPreImportStatusURL( file_import_options, file_url = file_url )
+        hash_recognised_and_file_already_in_db = self.PredictPreImportStatusHash( file_import_options )
+        
+        should_download_metadata = self.status == CC.STATUS_UNKNOWN # if the file is unknown, we need the metadata to get the file_url!
+        
+        if not should_download_metadata and tag_import_options.WorthFetchingTags():
+            
+            url_override = url_recognised_and_file_already_in_db and tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+            hash_override = hash_recognised_and_file_already_in_db and tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB()
+            
+            if url_override or hash_override:
+                
+                should_download_metadata = True
+                
+            
+        
+        should_download_file = self.status == CC.STATUS_UNKNOWN
+        
+        return ( should_download_metadata, should_download_file )
+        
+    
+    def PredictPreImportStatusHash( self, file_import_options ):
+        
+        UNKNOWN_DEFAULT = ( CC.STATUS_UNKNOWN, None, '' )
+        
+        ( status, hash, note ) = UNKNOWN_DEFAULT
+        
+        # hashes
+        
+        if status == CC.STATUS_UNKNOWN:
+            
+            for ( hash_type, found_hash ) in self._hashes.items():
+                
+                ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash )
+                
+                if status != CC.STATUS_UNKNOWN:
+                    
+                    break
+                    
+                
+            
+        
+        hash_recognised_and_file_already_in_db = status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT
+        
+        #
+        
+        if status == CC.STATUS_DELETED:
+            
+            if not file_import_options.ExcludesDeleted():
+                
+                status = CC.STATUS_UNKNOWN
+                note = ''
+                
+            
+        
+        if self.status == CC.STATUS_UNKNOWN:
+            
+            self.status = status
+            
+            if hash is not None:
+                
+                self._hashes[ 'sha256' ] = hash
+                
+            
+            self.note = note
+            
+            self._UpdateModified()
+            
+        
+        return hash_recognised_and_file_already_in_db
+        
+    
+    def PredictPreImportStatusURL( self, file_import_options, file_url = None ):
         
         UNKNOWN_DEFAULT = ( CC.STATUS_UNKNOWN, None, '' )
         
@@ -450,9 +616,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
             urls.add( file_url )
             
         
-        if self.seed_type == SEED_TYPE_URL:
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            urls.add( self.seed_data )
+            urls.add( self.file_seed_data )
             
         
         unrecognised_url_results = set()
@@ -467,7 +633,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
             # we now only trust url-matched single urls and the post/file urls
             # trusting unmatched source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
             
-            if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) or url in ( self.seed_data, file_url ):
+            if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) or url in ( self.file_seed_data, file_url ):
                 
                 results = HG.client_controller.Read( 'url_statuses', url )
                 
@@ -491,20 +657,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        # hashes
-        
-        if status == CC.STATUS_UNKNOWN:
-            
-            for ( hash_type, found_hash ) in self._hashes.items():
-                
-                ( status, hash, note ) = HG.client_controller.Read( 'hash_status', hash_type, found_hash )
-                
-                if status != CC.STATUS_UNKNOWN:
-                    
-                    break
-                    
-                
-            
+        url_recognised_and_file_already_in_db = status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT
         
         #
         
@@ -517,108 +670,21 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        self.status = status
-        
-        if hash is not None:
+        if self.status == CC.STATUS_UNKNOWN:
             
-            self._hashes[ 'sha256' ] = hash
+            self.status = status
             
-        
-        self.note = note
-        
-        self._UpdateModified()
-        
-    
-    def GetHash( self ):
-        
-        if 'sha256' in self._hashes:
-            
-            return self._hashes[ 'sha256' ]
-            
-        
-        return None
-        
-    
-    def GetSearchSeeds( self ):
-        
-        if self.seed_type == SEED_TYPE_URL:
-            
-            search_urls = ClientNetworkingDomain.GetSearchURLs( self.seed_data )
-            
-            search_seeds = [ Seed( SEED_TYPE_URL, search_url ) for search_url in search_urls ]
-            
-        else:
-            
-            search_seeds = [ self ]
-            
-        
-        return search_seeds
-        
-    
-    def HasHash( self ):
-        
-        return self.GetHash() is not None
-        
-    
-    def Import( self, temp_path, file_import_options ):
-        
-        file_import_job = FileImportJob( temp_path, file_import_options )
-        
-        ( status, hash, note ) = HG.client_controller.client_files_manager.ImportFile( file_import_job )
-        
-        self.SetStatus( status, note = note )
-        self.SetHash( hash )
-        
-    
-    def ImportPath( self, file_import_options ):
-        
-        if self.seed_type != SEED_TYPE_HDD:
-            
-            raise Exception( 'Attempted to import as a path, but I do not think I am a path!' )
-            
-        
-        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
-        
-        try:
-            
-            path = self.seed_data
-            
-            copied = HydrusPaths.MirrorFile( path, temp_path )
-            
-            if not copied:
+            if hash is not None:
                 
-                raise Exception( 'File failed to copy to temp path--see log for error.' )
+                self._hashes[ 'sha256' ] = hash
                 
             
-            self.Import( temp_path, file_import_options )
+            self.note = note
             
-        finally:
-            
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            self._UpdateModified()
             
         
-    
-    def IsAPostURL( self ):
-        
-        if self.seed_type == SEED_TYPE_URL:
-            
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.seed_data )
-            
-            if url_type == HC.URL_TYPE_POST:
-                
-                return True
-                
-            
-        
-        return False
-        
-    
-    def Normalise( self ):
-        
-        if self.seed_type == SEED_TYPE_URL:
-            
-            self.seed_data = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.seed_data )
-            
+        return url_recognised_and_file_already_in_db
         
     
     def PresentToPage( self, page_key ):
@@ -656,7 +722,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
             note += os.linesep
             note += HydrusData.ToUnicode( traceback.format_exc() )
             
-            HydrusData.Print( 'Error when processing ' + self.seed_data + ' !' )
+            HydrusData.Print( 'Error when processing ' + self.file_seed_data + ' !' )
             HydrusData.Print( traceback.format_exc() )
             
         
@@ -664,29 +730,6 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         self.note = note
         
         self._UpdateModified()
-        
-    
-    def ShouldDownloadFile( self ):
-        
-        return self.status == CC.STATUS_UNKNOWN
-        
-    
-    def ShouldFetchPageMetadata( self, tag_import_options ):
-        
-        if self.status == CC.STATUS_UNKNOWN:
-            
-            return True
-            
-        
-        if self.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
-            
-            if tag_import_options.WorthFetchingTags() and tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB():
-                
-                return True
-                
-            
-        
-        return False
         
     
     def ShouldPresent( self, file_import_options ):
@@ -713,9 +756,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
     
     def WorksInNewSystem( self ):
         
-        if self.seed_type == SEED_TYPE_URL:
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.seed_data )
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type == HC.URL_TYPE_FILE:
                 
@@ -727,7 +770,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                 return True
                 
             
-            if url_type == HC.URL_TYPE_UNKNOWN and self._referral_url is not None: # this is likely be a multi-file child of a post url seed
+            if url_type == HC.URL_TYPE_UNKNOWN and self._referral_url is not None: # this is likely be a multi-file child of a post url file_seed
                 
                 ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
                 
@@ -741,7 +784,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, tag_import_options = None ):
+    def WorkOnURL( self, file_seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, tag_import_options ):
         
         did_substantial_work = False
         
@@ -749,20 +792,15 @@ class Seed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'checking url status' )
             
-            self.PredictPreImportStatus( file_import_options )
+            ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options )
             
             if self.IsAPostURL():
                 
-                if tag_import_options is None:
-                    
-                    tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( self.seed_data )
-                    
-                
-                if self.ShouldFetchPageMetadata( tag_import_options ):
+                if should_download_metadata:
                     
                     did_substantial_work = True
                     
-                    post_url = self.seed_data
+                    post_url = self.file_seed_data
                     
                     ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                     
@@ -824,9 +862,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                             
                             file_url = desired_url
                             
-                            self.PredictPreImportStatus( file_import_options, file_url )
+                            ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options, file_url )
                             
-                            if self.ShouldDownloadFile():
+                            if should_download_file:
                                 
                                 status_hook( 'downloading file' )
                                 
@@ -835,7 +873,7 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                             
                         elif url_type == HC.URL_TYPE_POST and can_parse:
                             
-                            # a pixiv mode=medium page has spawned a mode=manga page, so we need a new seed to go pursue that
+                            # a pixiv mode=medium page has spawned a mode=manga page, so we need a new file_seed to go pursue that
                             
                             child_urls = [ desired_url ]
                             
@@ -851,36 +889,36 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                     
                     if len( child_urls ) > 0:
                         
-                        child_seeds = []
+                        child_file_seeds = []
                         
                         for child_url in child_urls:
                             
-                            duplicate_seed = self.Duplicate() # inherits all urls and tags from here
+                            duplicate_file_seed = self.Duplicate() # inherits all urls and tags from here
                             
-                            duplicate_seed.seed_data = child_url
+                            duplicate_file_seed.file_seed_data = child_url
                             
-                            duplicate_seed.SetReferralURL( self.seed_data )
+                            duplicate_file_seed.SetReferralURL( self.file_seed_data )
                             
                             if self._referral_url is not None:
                                 
-                                duplicate_seed.AddURL( self._referral_url )
+                                duplicate_file_seed.AddURL( self._referral_url )
                                 
                             
-                            child_seeds.append( duplicate_seed )
+                            child_file_seeds.append( duplicate_file_seed )
                             
                         
                         try:
                             
-                            my_index = seed_cache.GetSeedIndex( self )
+                            my_index = file_seed_cache.GetFileSeedIndex( self )
                             
                             insertion_index = my_index + 1
                             
                         except:
                             
-                            insertion_index = len( seed_cache )
+                            insertion_index = len( file_seed_cache )
                             
                         
-                        seed_cache.InsertSeeds( insertion_index, child_seeds )
+                        file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_NEW
                         note = 'Found ' + HydrusData.ConvertIntToPrettyString( len( child_urls ) ) + ' new URLs.'
@@ -899,17 +937,17 @@ class Seed( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        tio_lookup_url = self.seed_data
+                        tio_lookup_url = self.file_seed_data
                         
                     
                     tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( tio_lookup_url )
                     
                 
-                if self.ShouldDownloadFile():
+                if should_download_file:
                     
                     did_substantial_work = True
                     
-                    file_url = self.seed_data
+                    file_url = self.file_seed_data
                     
                     status_hook( 'downloading file' )
                     
@@ -983,9 +1021,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         urls = set( self._urls )
         
-        if self.seed_type == SEED_TYPE_URL:
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            urls.add( self.seed_data )
+            urls.add( self.file_seed_data )
             
         
         if self._referral_url is not None:
@@ -1004,7 +1042,9 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         
         if tag_import_options is not None:
             
-            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( hash, set( self._tags ) ).items():
+            in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+            
+            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, in_inbox, hash, set( self._tags ) ).items():
                 
                 service_keys_to_content_updates[ service_key ].extend( content_updates )
                 
@@ -1020,11 +1060,11 @@ class Seed( HydrusSerialisable.SerialisableBase ):
         return did_work
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SEED ] = Seed
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED ] = FileSeed
 
-class SeedCache( HydrusSerialisable.SerialisableBase ):
+class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE
     SERIALISABLE_NAME = 'Import File Status Cache'
     SERIALISABLE_VERSION = 8
     
@@ -1032,11 +1072,11 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        self._seeds = HydrusSerialisable.SerialisableList()
+        self._file_seeds = HydrusSerialisable.SerialisableList()
         
-        self._seeds_to_indices = {}
+        self._file_seeds_to_indices = {}
         
-        self._seed_cache_key = HydrusData.GenerateKey()
+        self._file_seed_cache_key = HydrusData.GenerateKey()
         
         self._status_cache = None
         self._status_cache_generation_time = 0
@@ -1048,14 +1088,14 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
     
     def __len__( self ):
         
-        return len( self._seeds )
+        return len( self._file_seeds )
         
     
     def _GenerateStatus( self ):
         
         statuses_to_counts = self._GetStatusesToCounts()
         
-        self._status_cache = GenerateSeedCacheStatus( statuses_to_counts )
+        self._status_cache = GenerateFileSeedCacheStatus( statuses_to_counts )
         self._status_cache_generation_time = HydrusData.GetNow()
         
         self._status_dirty = False
@@ -1065,23 +1105,23 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         statuses_to_counts = collections.Counter()
         
-        for seed in self._seeds:
+        for file_seed in self._file_seeds:
             
-            statuses_to_counts[ seed.status ] += 1
+            statuses_to_counts[ file_seed.status ] += 1
             
         
         return statuses_to_counts
         
     
-    def _GetSeeds( self, status = None ):
+    def _GetFileSeeds( self, status = None ):
         
         if status is None:
             
-            return list( self._seeds )
+            return list( self._file_seeds )
             
         else:
             
-            return [ seed for seed in self._seeds if seed.status == status ]
+            return [ file_seed for file_seed in self._file_seeds if file_seed.status == status ]
             
         
     
@@ -1089,41 +1129,41 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._seeds.GetSerialisableTuple()
+            return self._file_seeds.GetSerialisableTuple()
             
         
     
-    def _GetSourceTimestamp( self, seed ):
+    def _GetSourceTimestamp( self, file_seed ):
         
-        source_timestamp = seed.source_time
+        source_timestamp = file_seed.source_time
         
         if source_timestamp is None:
             
             # decent fallback compromise
             # -30 since added and 'last check' timestamps are often the same, and this messes up calculations
             
-            source_timestamp = seed.created - 30
+            source_timestamp = file_seed.created - 30
             
         
         return source_timestamp
         
     
-    def _HasSeed( self, seed ):
+    def _HasFileSeed( self, file_seed ):
         
-        search_seeds = seed.GetSearchSeeds()
+        search_file_seeds = file_seed.GetSearchFileSeeds()
         
-        has_seed = True in ( search_seed in self._seeds_to_indices for search_seed in search_seeds )
+        has_file_seed = True in ( search_file_seed in self._file_seeds_to_indices for search_file_seed in search_file_seeds )
         
-        return has_seed
+        return has_file_seed
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         with self._lock:
             
-            self._seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+            self._file_seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
             
-            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
             
         
     
@@ -1138,14 +1178,14 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = []
             
-            for ( seed, seed_info ) in old_serialisable_info:
+            for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
-                if 'note' in seed_info:
+                if 'note' in file_seed_info:
                     
-                    seed_info[ 'note' ] = HydrusData.ToUnicode( seed_info[ 'note' ] )
+                    file_seed_info[ 'note' ] = HydrusData.ToUnicode( file_seed_info[ 'note' ] )
                     
                 
-                new_serialisable_info.append( ( seed, seed_info ) )
+                new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
             
             return ( 2, new_serialisable_info )
@@ -1160,14 +1200,14 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = []
             
-            for ( seed, seed_info ) in old_serialisable_info:
+            for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
-                if 'gelbooru.com/redirect.php' in seed:
+                if 'gelbooru.com/redirect.php' in file_seed:
                     
                     continue
                     
                 
-                new_serialisable_info.append( ( seed, seed_info ) )
+                new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
             
             return ( 4, new_serialisable_info )
@@ -1225,29 +1265,29 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = []
             
-            good_seeds = set()
+            good_file_seeds = set()
             
-            for ( seed, seed_info ) in old_serialisable_info:
+            for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
                 try:
                     
-                    parse = urlparse.urlparse( seed )
+                    parse = urlparse.urlparse( file_seed )
                     
                     if 'media.tumblr.com' in parse.netloc:
                         
-                        seed = Remove68Subdomain( seed )
+                        file_seed = Remove68Subdomain( file_seed )
                         
-                        seed = ConvertRegularToRawURL( seed )
+                        file_seed = ConvertRegularToRawURL( file_seed )
                         
-                        seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( seed )
+                        file_seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( file_seed )
                         
                     
                     if 'pixiv.net' in parse.netloc:
                         
-                        seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( seed )
+                        file_seed = ClientNetworkingDomain.ConvertHTTPToHTTPS( file_seed )
                         
                     
-                    if seed in good_seeds: # we hit a dupe, so skip it
+                    if file_seed in good_file_seeds: # we hit a dupe, so skip it
                         
                         continue
                         
@@ -1257,9 +1297,9 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     pass
                     
                 
-                good_seeds.add( seed )
+                good_file_seeds.add( file_seed )
                 
-                new_serialisable_info.append( ( seed, seed_info ) )
+                new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
             
             return ( 5, new_serialisable_info )
@@ -1269,11 +1309,11 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = []
             
-            for ( seed, seed_info ) in old_serialisable_info:
+            for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
-                seed_info[ 'source_timestamp' ] = None
+                file_seed_info[ 'source_timestamp' ] = None
                 
-                new_serialisable_info.append( ( seed, seed_info ) )
+                new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
             
             return ( 6, new_serialisable_info )
@@ -1283,16 +1323,16 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             new_serialisable_info = []
             
-            for ( seed, seed_info ) in old_serialisable_info:
+            for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
                 try:
                     
                     magic_phrase = '//media.tumblr.com'
                     replacement = '//data.tumblr.com'
                     
-                    if magic_phrase in seed:
+                    if magic_phrase in file_seed:
                         
-                        seed = seed.replace( magic_phrase, replacement )
+                        file_seed = file_seed.replace( magic_phrase, replacement )
                         
                     
                 except:
@@ -1300,7 +1340,7 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
                     pass
                     
                 
-                new_serialisable_info.append( ( seed, seed_info ) )
+                new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
             
             return ( 7, new_serialisable_info )
@@ -1308,110 +1348,110 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         if version == 7:
             
-            seeds = HydrusSerialisable.SerialisableList()
+            file_seeds = HydrusSerialisable.SerialisableList()
             
-            for ( seed_text, seed_info ) in old_serialisable_info:
+            for ( file_seed_text, file_seed_info ) in old_serialisable_info:
                 
-                if seed_text.startswith( 'http' ):
+                if file_seed_text.startswith( 'http' ):
                     
-                    seed_type = SEED_TYPE_URL
+                    file_seed_type = FILE_SEED_TYPE_URL
                     
                 else:
                     
-                    seed_type = SEED_TYPE_HDD
+                    file_seed_type = FILE_SEED_TYPE_HDD
                     
                 
-                seed = Seed( seed_type, seed_text )
+                file_seed = FileSeed( file_seed_type, file_seed_text )
                 
-                seed.status = seed_info[ 'status' ]
-                seed.created = seed_info[ 'added_timestamp' ]
-                seed.modified = seed_info[ 'last_modified_timestamp' ]
-                seed.source_time = seed_info[ 'source_timestamp' ]
-                seed.note = seed_info[ 'note' ]
+                file_seed.status = file_seed_info[ 'status' ]
+                file_seed.created = file_seed_info[ 'added_timestamp' ]
+                file_seed.modified = file_seed_info[ 'last_modified_timestamp' ]
+                file_seed.source_time = file_seed_info[ 'source_timestamp' ]
+                file_seed.note = file_seed_info[ 'note' ]
                 
-                seeds.append( seed )
+                file_seeds.append( file_seed )
                 
             
-            new_serialisable_info = seeds.GetSerialisableTuple()
+            new_serialisable_info = file_seeds.GetSerialisableTuple()
             
             return ( 8, new_serialisable_info )
             
         
     
-    def AddSeeds( self, seeds ):
+    def AddFileSeeds( self, file_seeds ):
         
-        if len( seeds ) == 0:
+        if len( file_seeds ) == 0:
             
             return 0 
             
         
-        new_seeds = []
+        new_file_seeds = []
         
         with self._lock:
             
-            for seed in seeds:
+            for file_seed in file_seeds:
                 
-                if self._HasSeed( seed ):
+                if self._HasFileSeed( file_seed ):
                     
                     continue
                     
                 
-                seed.Normalise()
+                file_seed.Normalise()
                 
-                new_seeds.append( seed )
+                new_file_seeds.append( file_seed )
                 
-                self._seeds.append( seed )
+                self._file_seeds.append( file_seed )
                 
-                self._seeds_to_indices[ seed ] = len( self._seeds ) - 1
+                self._file_seeds_to_indices[ file_seed ] = len( self._file_seeds ) - 1
                 
             
             self._SetStatusDirty()
             
         
-        self.NotifySeedsUpdated( new_seeds )
+        self.NotifyFileSeedsUpdated( new_file_seeds )
         
-        return len( new_seeds )
+        return len( new_file_seeds )
         
     
-    def AdvanceSeed( self, seed ):
+    def AdvanceFileSeed( self, file_seed ):
         
         with self._lock:
             
-            if seed in self._seeds_to_indices:
+            if file_seed in self._file_seeds_to_indices:
                 
-                index = self._seeds_to_indices[ seed ]
+                index = self._file_seeds_to_indices[ file_seed ]
                 
                 if index > 0:
                     
-                    self._seeds.remove( seed )
+                    self._file_seeds.remove( file_seed )
                     
-                    self._seeds.insert( index - 1, seed )
+                    self._file_seeds.insert( index - 1, file_seed )
                     
                 
-                self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+                self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
                 
             
         
-        self.NotifySeedsUpdated( ( seed, ) )
+        self.NotifyFileSeedsUpdated( ( file_seed, ) )
         
     
     def CanCompact( self, compact_before_this_source_time ):
         
         with self._lock:
             
-            if len( self._seeds ) <= 100:
+            if len( self._file_seeds ) <= 100:
                 
                 return False
                 
             
-            for seed in self._seeds[:-100]:
+            for file_seed in self._file_seeds[:-100]:
                 
-                if seed.status == CC.STATUS_UNKNOWN:
+                if file_seed.status == CC.STATUS_UNKNOWN:
                     
                     continue
                     
                 
-                if self._GetSourceTimestamp( seed ) < compact_before_this_source_time:
+                if self._GetSourceTimestamp( file_seed ) < compact_before_this_source_time:
                     
                     return True
                     
@@ -1425,80 +1465,126 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._seeds ) <= 100:
+            if len( self._file_seeds ) <= 100:
                 
                 return
                 
             
-            new_seeds = HydrusSerialisable.SerialisableList()
+            new_file_seeds = HydrusSerialisable.SerialisableList()
             
-            for seed in self._seeds[:-100]:
+            for file_seed in self._file_seeds[:-100]:
                 
-                still_to_do = seed.status == CC.STATUS_UNKNOWN
-                still_relevant = self._GetSourceTimestamp( seed ) > compact_before_this_source_time
+                still_to_do = file_seed.status == CC.STATUS_UNKNOWN
+                still_relevant = self._GetSourceTimestamp( file_seed ) > compact_before_this_source_time
                 
                 if still_to_do or still_relevant:
                     
-                    new_seeds.append( seed )
+                    new_file_seeds.append( file_seed )
                     
                 
             
-            new_seeds.extend( self._seeds[-100:] )
+            new_file_seeds.extend( self._file_seeds[-100:] )
             
-            self._seeds = new_seeds
-            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+            self._file_seeds = new_file_seeds
+            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
             
             self._SetStatusDirty()
             
         
     
-    def DelaySeed( self, seed ):
+    def DelayFileSeed( self, file_seed ):
         
         with self._lock:
             
-            if seed in self._seeds_to_indices:
+            if file_seed in self._file_seeds_to_indices:
                 
-                index = self._seeds_to_indices[ seed ]
+                index = self._file_seeds_to_indices[ file_seed ]
                 
-                if index < len( self._seeds ) - 1:
+                if index < len( self._file_seeds ) - 1:
                     
-                    self._seeds.remove( seed )
+                    self._file_seeds.remove( file_seed )
                     
-                    self._seeds.insert( index + 1, seed )
+                    self._file_seeds.insert( index + 1, file_seed )
                     
                 
-                self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+                self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
                 
             
         
-        self.NotifySeedsUpdated( ( seed, ) )
+        self.NotifyFileSeedsUpdated( ( file_seed, ) )
         
     
     def GetEarliestSourceTime( self ):
         
         with self._lock:
             
-            if len( self._seeds ) == 0:
+            if len( self._file_seeds ) == 0:
                 
                 return None
                 
             
-            earliest_timestamp = min( ( self._GetSourceTimestamp( seed ) for seed in self._seeds ) )
+            earliest_timestamp = min( ( self._GetSourceTimestamp( file_seed ) for file_seed in self._file_seeds ) )
             
         
         return earliest_timestamp
+        
+    
+    def GetFileSeedCacheKey( self ):
+        
+        return self._file_seed_cache_key
+        
+    
+    def GetFileSeedCount( self, status = None ):
+        
+        result = 0
+        
+        with self._lock:
+            
+            if status is None:
+                
+                result = len( self._file_seeds )
+                
+            else:
+                
+                for file_seed in self._file_seeds:
+                    
+                    if file_seed.status == status:
+                        
+                        result += 1
+                        
+                    
+                
+            
+        
+        return result
+        
+    
+    def GetFileSeeds( self, status = None ):
+        
+        with self._lock:
+            
+            return self._GetFileSeeds( status )
+            
+        
+    
+    def GetFileSeedIndex( self, file_seed ):
+        
+        with self._lock:
+            
+            return self._file_seeds_to_indices[ file_seed ]
+            
         
     
     def GetLatestAddedTime( self ):
         
         with self._lock:
             
-            if len( self._seeds ) == 0:
+            if len( self._file_seeds ) == 0:
                 
                 return 0
                 
             
-            latest_timestamp = max( ( seed.created for seed in self._seeds ) )
+            latest_timestamp = max( ( file_seed.created for file_seed in self._file_seeds ) )
             
         
         return latest_timestamp
@@ -1508,26 +1594,26 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if len( self._seeds ) == 0:
+            if len( self._file_seeds ) == 0:
                 
                 return 0
                 
             
-            latest_timestamp = max( ( self._GetSourceTimestamp( seed ) for seed in self._seeds ) )
+            latest_timestamp = max( ( self._GetSourceTimestamp( file_seed ) for file_seed in self._file_seeds ) )
             
         
         return latest_timestamp
         
     
-    def GetNextSeed( self, status ):
+    def GetNextFileSeed( self, status ):
         
         with self._lock:
             
-            for seed in self._seeds:
+            for file_seed in self._file_seeds:
                 
-                if seed.status == status:
+                if file_seed.status == status:
                     
-                    return seed
+                    return file_seed
                     
                 
             
@@ -1541,9 +1627,9 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            for seed in self._seeds:
+            for file_seed in self._file_seeds:
                 
-                source_timestamp = self._GetSourceTimestamp( seed )
+                source_timestamp = self._GetSourceTimestamp( file_seed )
                 
                 if source_timestamp >= since:
                     
@@ -1561,61 +1647,15 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
             hashes = []
             
-            for seed in self._seeds:
+            for file_seed in self._file_seeds:
                 
-                if seed.HasHash() and seed.ShouldPresent( file_import_options ):
+                if file_seed.HasHash() and file_seed.ShouldPresent( file_import_options ):
                     
-                    hashes.append( seed.GetHash() )
+                    hashes.append( file_seed.GetHash() )
                     
                 
             
             return hashes
-            
-        
-    
-    def GetSeedCacheKey( self ):
-        
-        return self._seed_cache_key
-        
-    
-    def GetSeedCount( self, status = None ):
-        
-        result = 0
-        
-        with self._lock:
-            
-            if status is None:
-                
-                result = len( self._seeds )
-                
-            else:
-                
-                for seed in self._seeds:
-                    
-                    if seed.status == status:
-                        
-                        result += 1
-                        
-                    
-                
-            
-        
-        return result
-        
-    
-    def GetSeeds( self, status = None ):
-        
-        with self._lock:
-            
-            return self._GetSeeds( status )
-            
-        
-    
-    def GetSeedIndex( self, seed ):
-        
-        with self._lock:
-            
-            return self._seeds_to_indices[ seed ]
             
         
     
@@ -1668,112 +1708,127 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def HasSeed( self, seed ):
+    def HasFileSeed( self, file_seed ):
         
         with self._lock:
             
-            return self._HasSeed( seed )
+            return self._HasFileSeed( file_seed )
             
         
     
-    def InsertSeeds( self, index, seeds ):
+    def InsertFileSeeds( self, index, file_seeds ):
         
-        if len( seeds ) == 0:
+        if len( file_seeds ) == 0:
             
             return 0 
             
         
-        new_seeds = []
+        new_file_seeds = []
         
         with self._lock:
             
-            index = min( index, len( self._seeds ) )
+            index = min( index, len( self._file_seeds ) )
             
-            for seed in seeds:
+            for file_seed in file_seeds:
                 
-                if self._HasSeed( seed ):
+                if self._HasFileSeed( file_seed ):
                     
                     continue
                     
                 
-                seed.Normalise()
+                file_seed.Normalise()
                 
-                new_seeds.append( seed )
+                new_file_seeds.append( file_seed )
                 
-                self._seeds.insert( index, seed )
+                self._file_seeds.insert( index, file_seed )
                 
                 index += 1
                 
             
-            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
             
             self._SetStatusDirty()
             
         
-        self.NotifySeedsUpdated( new_seeds )
+        self.NotifyFileSeedsUpdated( new_file_seeds )
         
-        return len( new_seeds )
+        return len( new_file_seeds )
         
     
-    def NotifySeedsUpdated( self, seeds ):
+    def NotifyFileSeedsUpdated( self, file_seeds ):
         
         with self._lock:
             
             self._SetStatusDirty()
             
         
-        HG.client_controller.pub( 'seed_cache_seeds_updated', self._seed_cache_key, seeds )
+        HG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
         
     
-    def RemoveSeeds( self, seeds ):
+    def RemoveFileSeeds( self, file_seeds ):
         
         with self._lock:
             
-            seeds_to_delete = set( seeds )
+            file_seeds_to_delete = set( file_seeds )
             
-            self._seeds = HydrusSerialisable.SerialisableList( [ seed for seed in self._seeds if seed not in seeds_to_delete ] )
+            self._file_seeds = HydrusSerialisable.SerialisableList( [ file_seed for file_seed in self._file_seeds if file_seed not in file_seeds_to_delete ] )
             
-            self._seeds_to_indices = { seed : index for ( index, seed ) in enumerate( self._seeds ) }
+            self._file_seeds_to_indices = { file_seed : index for ( index, file_seed ) in enumerate( self._file_seeds ) }
             
             self._SetStatusDirty()
             
         
-        self.NotifySeedsUpdated( seeds_to_delete )
+        self.NotifyFileSeedsUpdated( file_seeds_to_delete )
         
     
-    def RemoveSeedsByStatus( self, statuses_to_remove ):
+    def RemoveFileSeedsByStatus( self, statuses_to_remove ):
         
         with self._lock:
             
-            seeds_to_delete = [ seed for seed in self._seeds if seed.status in statuses_to_remove ]
+            file_seeds_to_delete = [ file_seed for file_seed in self._file_seeds if file_seed.status in statuses_to_remove ]
             
         
-        self.RemoveSeeds( seeds_to_delete )
+        self.RemoveFileSeeds( file_seeds_to_delete )
         
     
-    def RemoveAllButUnknownSeeds( self ):
+    def RemoveAllButUnknownFileSeeds( self ):
         
         with self._lock:
             
-            seeds_to_delete = [ seed for seed in self._seeds if seed.status != CC.STATUS_UNKNOWN ]
+            file_seeds_to_delete = [ file_seed for file_seed in self._file_seeds if file_seed.status != CC.STATUS_UNKNOWN ]
             
         
-        self.RemoveSeeds( seeds_to_delete )
+        self.RemoveFileSeeds( file_seeds_to_delete )
         
     
     def RetryFailures( self ):
         
         with self._lock:
             
-            failed_seeds = self._GetSeeds( CC.STATUS_ERROR )
+            failed_file_seeds = self._GetFileSeeds( CC.STATUS_ERROR )
             
-            for seed in failed_seeds:
+            for file_seed in failed_file_seeds:
                 
-                seed.SetStatus( CC.STATUS_UNKNOWN )
+                file_seed.SetStatus( CC.STATUS_UNKNOWN )
                 
             
         
-        self.NotifySeedsUpdated( failed_seeds )
+        self.NotifyFileSeedsUpdated( failed_file_seeds )
+        
+    
+    def RetryIgnored( self ):
+        
+        with self._lock:
+            
+            ignored_file_seeds = self._GetFileSeeds( CC.STATUS_VETOED )
+            
+            for file_seed in ignored_file_seeds:
+                
+                file_seed.SetStatus( CC.STATUS_UNKNOWN )
+                
+            
+        
+        self.NotifyFileSeedsUpdated( ignored_file_seeds )
         
     
     def WorkToDo( self ):
@@ -1791,4 +1846,4 @@ class SeedCache( HydrusSerialisable.SerialisableBase ):
             
         
     
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SEED_CACHE ] = SeedCache
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE ] = FileSeedCache

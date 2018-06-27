@@ -102,6 +102,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'popup_message_force_min_width' ] = False
         
+        self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -706,44 +708,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                         guidance_tag_import_options = default_tag_import_options[ default_gallery_identifier ]
                         
                     
-                    fetch_tags_even_if_url_known_and_file_already_in_db = False
-                    
-                    tag_blacklist = None
-                    
-                    get_all_service_keys = set()
-                    service_keys_to_namespaces = {}
-                    service_keys_to_additional_tags = {}
-                    
-                    if guidance_tag_import_options is not None:
+                    if guidance_tag_import_options is None:
                         
-                        fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+                        import ClientImportOptions
                         
-                        tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
+                        tag_import_options = ClientImportOptions.TagImportOptions()
                         
-                        get_all_service_keys = guidance_tag_import_options.GetGetAllServiceKeys()
+                    else:
                         
                         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
                         
-                        guidance_service_keys_to_namespaces = guidance_tag_import_options.GetServiceKeysToNamespaces()
+                        tag_import_options = guidance_tag_import_options.DeriveTagImportOptionsFromSelf( namespaces )
                         
-                        for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
-                            
-                            if 'all namespaces' in guidance_namespaces:
-                                
-                                service_keys_to_namespaces[ service_key ] = namespaces
-                                
-                            else:
-                                
-                                service_keys_to_namespaces[ service_key ] = [ namespace for namespace in namespaces if namespace in guidance_namespaces ]
-                                
-                            
-                        
-                        service_keys_to_additional_tags = guidance_tag_import_options.GetServiceKeysToAdditionalTags()
-                        
-                    
-                    import ClientImportOptions
-                    
-                    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
                     
                 
                 return tag_import_options

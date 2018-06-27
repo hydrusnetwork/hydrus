@@ -161,33 +161,7 @@ def DeriveDefaultTagImportOptionsForURLMatch( namespaces, url_types_to_guidance_
     
     guidance_tag_import_options = url_types_to_guidance_tag_import_options[ url_type ]
     
-    fetch_tags_even_if_url_known_and_file_already_in_db = guidance_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
-    
-    tag_blacklist = guidance_tag_import_options.GetTagBlacklist()
-    
-    get_all_service_keys = guidance_tag_import_options.GetGetAllServiceKeys()
-    
-    guidance_service_keys_to_namespaces = guidance_tag_import_options.GetServiceKeysToNamespaces()
-    
-    service_keys_to_namespaces = {}
-    
-    for ( service_key, guidance_namespaces ) in guidance_service_keys_to_namespaces.items():
-        
-        if 'all namespaces' in guidance_namespaces:
-            
-            service_keys_to_namespaces[ service_key ] = namespaces
-            
-        else:
-            
-            service_keys_to_namespaces[ service_key ] = [ namespace for namespace in namespaces if namespace in guidance_namespaces ]
-            
-        
-    
-    service_keys_to_additional_tags = guidance_tag_import_options.GetServiceKeysToAdditionalTags()
-    
-    import ClientImportOptions
-    
-    tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_known_and_file_already_in_db = fetch_tags_even_if_url_known_and_file_already_in_db, tag_blacklist = tag_blacklist, get_all_service_keys = get_all_service_keys, service_keys_to_namespaces = service_keys_to_namespaces, service_keys_to_additional_tags = service_keys_to_additional_tags )
+    tag_import_options = guidance_tag_import_options.DeriveTagImportOptionsFromSelf( namespaces )
     
     return tag_import_options
     

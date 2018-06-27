@@ -16,7 +16,7 @@ import ClientGUIOptionsPanels
 import ClientGUIPredicates
 import ClientGUIScrolledPanelsEdit
 import ClientGUIShortcuts
-import ClientGUISeedCache
+import ClientGUIFileSeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
@@ -2436,7 +2436,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         self._publish_files_to_popup_button = wx.CheckBox( self._folder_box )
         self._publish_files_to_page = wx.CheckBox( self._folder_box )
         
-        self._seed_cache_button = ClientGUISeedCache.SeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetSeedCache, seed_cache_set_callable = self._import_folder.SetSeedCache )
+        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
         
         #
         
@@ -2476,7 +2476,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         self._tag_box = ClientGUICommon.StaticBox( self._panel, 'tag options' )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, [], tag_import_options, show_url_options = False )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._tag_box, [], tag_import_options, show_downloader_options = False )
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._tag_box )
         
@@ -2558,7 +2558,7 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         rows.append( ( 'show a popup while working: ', self._show_working_popup ) )
         rows.append( ( 'if new files imported, publish them to a popup button: ', self._publish_files_to_popup_button ) )
         rows.append( ( 'if new files imported, publish them to a page: ', self._publish_files_to_page ) )
-        rows.append( ( 'review currently cached import paths: ', self._seed_cache_button ) )
+        rows.append( ( 'review currently cached import paths: ', self._file_seed_cache_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
         

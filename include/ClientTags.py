@@ -222,7 +222,6 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
     
 def RenderNamespaceForUser( namespace ):
     
-    # extend this to support ':' or whatever it was for 'all namespaces'
     if namespace == '' or namespace is None:
         
         return 'unnamespaced'

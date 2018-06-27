@@ -3502,6 +3502,21 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _FilterExistingTags( self, service_key, tags ):
+        
+        service_id = self._GetServiceId( service_key )
+        
+        tag_ids_to_tags = { self._GetTagId( tag ) : tag for tag in tags }
+        
+        counts = self._CacheCombinedFilesMappingsGetAutocompleteCounts( service_id, tag_ids_to_tags.keys() )
+        
+        existing_tag_ids = [ tag_id for ( tag_id, current_count, pending_count ) in counts if current_count > 0 ]
+        
+        filtered_tags = { tag_ids_to_tags[ tag_id ] for tag_id in existing_tag_ids }
+        
+        return filtered_tags
+        
+    
     def _FilterHashes( self, hashes, file_service_key ):
         
         if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
@@ -8527,6 +8542,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_notes': result = self._GetFileNotes( *args, **kwargs )
         elif action == 'file_query_ids': result = self._GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
+        elif action == 'filter_existing_tags': result = self._FilterExistingTags( *args, **kwargs )
         elif action == 'filter_hashes': result = self._FilterHashes( *args, **kwargs )
         elif action == 'hash_status': result = self._GetHashStatus( *args, **kwargs )
         elif action == 'hydrus_sessions': result = self._GetHydrusSessions( *args, **kwargs )
@@ -10445,6 +10461,36 @@ class DB( HydrusDB.HydrusDB ):
                         domain_manager.OverwriteParserLink( url_match, new_pixiv_parser )
                         
                     
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 311:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'deviant art file page parser', ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
                 
                 #
                 

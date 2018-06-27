@@ -771,6 +771,87 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
         
     
+    def _DebugFetchAURL( self ):
+        
+        def wx_code( network_job ):
+            
+            if not self:
+                
+                return
+                
+            
+            content = network_job.GetContent()
+            
+            text = 'Request complete. Length of response is ' + HydrusData.ConvertIntToBytes( len( content ) ) + '.'
+            
+            yes_tuples = []
+            
+            yes_tuples.append( ( 'save to file', 'file' ) )
+            yes_tuples.append( ( 'copy to clipboard', 'clipboard' ) )
+            
+            with ClientGUIDialogs.DialogYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' ) as dlg:
+                
+                if dlg.ShowModal() == wx.ID_YES:
+                    
+                    value = dlg.GetValue()
+                    
+                    if value == 'file':
+                        
+                        with wx.FileDialog( self, 'select where to save content', defaultFile = 'result.html', style = wx.FD_SAVE ) as f_dlg:
+                            
+                            if f_dlg.ShowModal() == wx.ID_OK:
+                                
+                                path = HydrusData.ToUnicode( f_dlg.GetPath() )
+                                
+                                with open( path, 'wb' ) as f:
+                                    
+                                    f.write( content )
+                                    
+                                
+                            
+                        
+                    elif value == 'clipboard':
+                        
+                        self._controller.pub( 'clipboard', 'text', content )
+                        
+                    
+                
+            
+        
+        def thread_wait( url ):
+            
+            import ClientNetworkingJobs
+            
+            network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
+            
+            job_key = ClientThreading.JobKey()
+            
+            job_key.SetVariable( 'popup_title', 'debug network job' )
+            
+            job_key.SetVariable( 'popup_network_job', network_job )
+            
+            self._controller.pub( 'message', job_key )
+            
+            self._controller.network_engine.AddJob( network_job )
+            
+            network_job.WaitUntilDone()
+            
+            job_key.Delete( seconds = 3 )
+            
+            wx.CallAfter( wx_code, network_job )
+            
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'Enter the URL.' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                url = dlg.GetValue()
+                
+                self._controller.CallToThread( thread_wait, url )
+                
+            
+        
+    
     def _DebugMakeDelayedModalPopup( self ):
         
         def do_it( controller ):
@@ -1415,6 +1496,16 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             #
             
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            special_command_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', HG.client_controller.pub, 'clear_multiwatcher_highlights' )
+            
+            ClientGUIMenus.AppendMenu( menu, special_command_menu, 'special commands' )
+            
+            #
+            
             return ( menu, '&pages', True )
             
         
@@ -1848,6 +1939,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenu( debug, data_actions, 'data actions' )
             
+            network_actions = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
+            
+            ClientGUIMenus.AppendMenu( debug, network_actions, 'network actions' )
+            
             ClientGUIMenus.AppendMenuItem( self, debug, 'run and initialise server for testing', 'This will try to boot the server in your install folder and initialise it. This is mostly here for testing purposes.', self._AutoServerSetup )
             
             ClientGUIMenus.AppendMenu( menu, debug, 'debug' )
@@ -2044,9 +2141,9 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 message = 'It looks like the last instance of the client did not shut down cleanly.'
                 message += os.linesep * 2
-                message += 'Would you like to try loading your default session \'' + default_gui_session + '\', or just a blank page?'
+                message += 'Would you like to try loading your default session "' + default_gui_session + '", or just a blank page?'
                 
-                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load the default session', no_label = 'just load a blank page' ) as dlg:
+                with ClientGUIDialogs.DialogYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page' ) as dlg:
                     
                     if dlg.ShowModal() == wx.ID_NO:
                         
@@ -3828,12 +3925,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportFiles( self, paths ):
         
-        # can more easily do this when seeds are doing their own tags
+        # can more easily do this when file_seeds are doing their own tags
         
         # get current media page
         # if it is an import page, ask user if they want to add it to the page or make a new one
         # if using existing, then load the panel without file import options
-        # think about how to merge 'delete_after_success' or not--maybe this can be handled by seeds as well
+        # think about how to merge 'delete_after_success' or not--maybe this can be handled by file_seeds as well
         
         paths = [ HydrusData.ToUnicode( path ) for path in paths ]
         
