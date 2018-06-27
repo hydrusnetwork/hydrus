@@ -78,17 +78,18 @@
 					</ul>
 					<p>However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. You really have to look at it and decide for yourself.</p>
 					<p>Here is a good example of a better/worse pair:</p>
-					<p><a href="dupe_better_1.png"><img src="dupe_better_1.png" /></a></p>
-					<p><a href="dupe_better_2.jpg"><img src="dupe_better_2.jpg" /></a></p>
+					<p><a href="dupe_better_1.png"><img src="dupe_better_1.png" /></a> <a href="dupe_better_2.jpg"><img src="dupe_better_2.jpg" /></a></p>
 					<p>The first image is better because it is a png (pixel-perfect pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts are on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, we do not care about being able to fit our images into monetised social media <i>&lt;div&gt;</i> elements nor about consuming a few more KB on our hard drives, so let's keep the first and drop the second.</p>
-					<p>The default action on setting a better/worse pair is to move all <i>local tags</i> from the worse file to the best (i.e. adding them to the better file and then deleting them from the worse) and then sending the worse file to the trash.</p>
+					<p>When both files are jpgs, differences in quality are very common and often significant:</p>
+					<p><a href="dupes_better_sg_a.jpg"><img src="dupes_better_sg_a.jpg" /></a> <a href="dupes_better_sg_b.jpg"><img src="dupes_better_sg_b.jpg" /></a></p>
+					<p>Again, this is mostly due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.</p>
+					<p>The default action on setting a better/worse pair is to move all <i>local tags</i> from the worse file to the best (i.e. adding them to the better file and then deleting them from the worse) and then send the worse file to the trash.</p>
 				</li>
 				<li>
 					<h3>same quality duplicates</h3>
 					<p>This tells the client that the pairs of files represent the exact same thing and that you cannot tell which is clearly better.</p>
 					<p>Here are two same quality duplicates:</p>
-					<p><a href="dupe_exact_match_1.png"><img src="dupe_exact_match_1.png" /></a></p>
-					<p><a href="dupe_exact_match_2.png"><img src="dupe_exact_match_2.png" /></a></p>
+					<p><a href="dupe_exact_match_1.png"><img src="dupe_exact_match_1.png" /></a> <a href="dupe_exact_match_2.png"><img src="dupe_exact_match_2.png" /></a></p>
 					<p>There is no obvious different between those two. The filesize is significantly different, so I suspect the smaller is a lossless png optimisation, but in the grand scheme of things, that doesn't matter so much. Many of the big content providers--Facebook, Google, Clouflare--automatically 'optimise' the data that goes through their networks in order to save bandwidth. With pngs it is usually mostly harmless, but jpegs can be a slaughterhouse.</p>
 					<p>Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. Sometimes you just want to keep both without a firm decision on which is best, in which case you can just set this 'same quality' status and move on.</p>
 					<p>The default action on setting a same quality pair is to copy all <i>local tags</i> between the two files in both directions.</p>
@@ -102,16 +103,23 @@
 						<li>iterations on a close template</li>
 						<li>different versions of a file's progress, such as the steps from the initial draft sketch to a final shaded version</li>
 					</ul>
-					<p>Here are two alternate files:</p>
-					<p><a href="dupe_mug_1.png"><img src="dupe_mug_1.png" /></a></p>
-					<p><a href="dupe_mug_2.png"><img src="dupe_mug_2.png" /></a></p>
-					<p>Though they are mostly similar, they are not duplicates. If one is not an edit of the other, they are certainly children of the same original.</p>
+					<p>Here are some recolours of the same image:</p>
+					<p><a href="dupe_alternates_recolours.png"><img src="dupe_alternates_recolours.png" /></a></p>
+					<p>And some WIP:</p>
+					<p><a href="dupe_alternates_progress.png"><img src="dupe_alternates_progress.png" /></a></p>
+					<p>And a costume change:</p>
+					<p><a href="dupe_alternates_costume.png"><img src="dupe_alternates_costume.png" /></a></p>
+					<p>None of these are exact duplicates, but they are obviously related. The duplicate search will notice they are similar, so we should let it know they are 'alternate'.</p>
+					<p>Here's a subtler case:</p>
+					<p><a href="dupe_alternate_boxer_a.jpg"><img src="dupe_alternate_boxer_a.jpg" /></a> <a href="dupe_alternate_boxer_b.jpg"><img src="dupe_alternate_boxer_b.jpg" /></a></p>
+					<p>These two files are very similar, but try opening both in separate tabs and then flicking back and forth: the second's glove-string is further into the mouth and has improved chin shading, a more refined eye shape, and shaved pubic hair. It is simple to spot these differences in the client's duplicate filter when you flick back and forth.</p>
+					<p>I believe the second is an improvement on the first by the same artist. You might consider it a 'better' improvement, or you might be interested in keeping both, in which case they are certainly 'alternates'.</p>
 					<p>Here are three files you might or might not consider to be alternates:</p>
 					<p><a href="dupe_alternate_1.jpg"><img src="dupe_alternate_1.jpg" /></a></p>
 					<p><a href="dupe_alternate_2.jpg"><img src="dupe_alternate_2.jpg" /></a></p>
 					<p><a href="dupe_alternate_3.jpg"><img src="dupe_alternate_3.jpg" /></a></p>
-					<p>These are all based on the same template--which is why the dupe filter found them--but they are not so closely related, and the last one is joking about a different ideology entirely and might deserve to be in its own group. Ultimately, you might prefer just to give them some shared tag and consider them not alternates <i>per se</i>.</p>
-					<p>The default action here is to do nothing but record the alternate status. A future version of the client will support revisiting the large unsorted archive you build here and adding file relationship metadata, but creating that will be a complicated job that was not in the scope of this initial duplicate management system.</p>
+					<p>These are all based on the same template--which is why the dupe filter found them--but they are not so closely related as those above, and the last one is joking about a different ideology entirely and might deserve to be in its own group. Ultimately, you might prefer just to give them some shared tag and consider them not alternates <i>per se</i>.</p>
+					<p><b>The default action here is to do nothing but record the alternate status. A future version of the client will support revisiting the large unsorted archive you build here and adding file relationship metadata, but creating that will be a complicated job that was not in the scope of this initial duplicate management system.</b></p>
 				</li>
 				<li>
 					<h3>not duplicates</h3>
