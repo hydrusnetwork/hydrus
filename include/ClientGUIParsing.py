@@ -74,7 +74,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
             
         else:
             
-            label = HydrusData.ConvertIntToPrettyString( num_rules ) + ' string transformations'
+            label = HydrusData.ToHumanInt( num_rules ) + ' string transformations'
             
         
         self.SetLabelText( label )
@@ -2244,9 +2244,9 @@ If your previous query result responds with links to where the actual content is
 
 The formula should attempt to parse full or relative urls. If the url is relative (like href="/page/123"), it will be appended to the referral url given by this node's parent. It will then attempt to GET them all.'''
         
-        info_st = wx.StaticText( info_panel, label = message )
+        info_st = ClientGUICommon.BetterStaticText( info_panel, label = message )
         
-        info_st.Wrap( 400 )
+        info_st.SetWrapWidth( 400 )
         
         #
         
@@ -2360,7 +2360,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 self._test_fetch_result.Enable()
                 
             
-            result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusData.ToHumanInt( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( parsed_urls )
             
@@ -3112,11 +3112,9 @@ http://www.file-lookup.com/form.php?q=getsometags&md5=[md5-in-hex]
 
 And pass that html to a number of 'parsing children' that will each look through it in turn and try to find tags.'''
         
-        info_st = wx.StaticText( info_panel )
+        info_st = ClientGUICommon.BetterStaticText( info_panel, label = message )
         
-        info_st.SetLabelText( message )
-        
-        info_st.Wrap( 400 )
+        info_st.SetWrapWidth( 400 )
         
         #
         
@@ -3273,7 +3271,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 return
                 
             
-            result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusData.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( ( ClientParsing.ConvertParseResultToPrettyString( result ) for result in results ) )
             
@@ -3471,7 +3469,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( number, transformation_type, data ) = transformation
         
-        pretty_number = HydrusData.ConvertIntToPrettyString( number )
+        pretty_number = HydrusData.ToHumanInt( number )
         pretty_transformation = ClientParsing.StringConverter.TransformationToUnicode( ( transformation_type, data ) )
         
         string_converter = self._GetValue()
@@ -4861,7 +4859,7 @@ class TestPanelSubsidiary( TestPanel ):
                 
                 posts = formula.Parse( example_parsing_context, self._example_data )
                 
-                description = HydrusData.ConvertIntToPrettyString( len( posts ) ) + ' subsidiary posts parsed'
+                description = HydrusData.ToHumanInt( len( posts ) ) + ' subsidiary posts parsed'
                 
             except HydrusExceptions.ParseException as e:
                 

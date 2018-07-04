@@ -525,7 +525,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         pretty_texts = [ MakeParsedTextPretty( text ) for text in texts ]
         
-        pretty_texts = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( pretty_texts ) ) + ' RESULTS BEGIN ***' ] + pretty_texts + [ '*** RESULTS END ***' ]
+        pretty_texts = [ '*** ' + HydrusData.ToHumanInt( len( pretty_texts ) ) + ' RESULTS BEGIN ***' ] + pretty_texts + [ '*** RESULTS END ***' ]
         
         separator = self._GetParsePrettySeparator()
         
@@ -651,7 +651,7 @@ class ParseFormulaCompound( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'COMPOUND with ' + HydrusData.ConvertIntToPrettyString( len( self._formulae ) ) + ' formulae.'
+        return 'COMPOUND with ' + HydrusData.ToHumanInt( len( self._formulae ) ) + ' formulae.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1036,7 +1036,7 @@ class ParseFormulaHTML( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'HTML with ' + HydrusData.ConvertIntToPrettyString( len( self._tag_rules ) ) + ' tag rules.'
+        return 'HTML with ' + HydrusData.ToHumanInt( len( self._tag_rules ) ) + ' tag rules.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1279,7 +1279,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             
             if self._tag_name is None:
                 
-                s += ' ' + HydrusData.ConvertIntToPrettyString( self._tag_depth ) + ' tag levels'
+                s += ' ' + HydrusData.ToHumanInt( self._tag_depth ) + ' tag levels'
                 
             else:
                 
@@ -1461,7 +1461,7 @@ class ParseFormulaJSON( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'JSON with ' + HydrusData.ConvertIntToPrettyString( len( self._parse_rules ) ) + ' parse rules.'
+        return 'JSON with ' + HydrusData.ToHumanInt( len( self._parse_rules ) ) + ' parse rules.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1740,7 +1740,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             results = [ 'veto: ' + HydrusData.ToUnicode( e ) ]
             
         
-        result_lines = [ '*** ' + HydrusData.ConvertIntToPrettyString( len( results ) ) + ' RESULTS BEGIN ***' ]
+        result_lines = [ '*** ' + HydrusData.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
         
         result_lines.extend( results )
         
@@ -2004,7 +2004,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         result_lines = []
         
-        result_lines.append( '*** ' + HydrusData.ConvertIntToPrettyString( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + os.linesep )
+        result_lines.append( '*** ' + HydrusData.ToHumanInt( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + os.linesep )
         
         result_lines.append( pretty_parse_result_text )
         
@@ -2452,7 +2452,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         else:
             
-            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ConvertIntToPrettyString( len( parse_results ) ) + ' rows.' )
+            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ToHumanInt( len( parse_results ) ) + ' rows.' )
             
         
         return parse_results
@@ -2689,19 +2689,19 @@ class StringConverter( HydrusSerialisable.SerialisableBase ):
         
         if transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_BEGINNING:
             
-            return 'remove the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            return 'remove the first ' + HydrusData.ToHumanInt( data ) + ' characters'
             
         elif transformation_type == STRING_TRANSFORMATION_REMOVE_TEXT_FROM_END:
             
-            return 'remove the last ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            return 'remove the last ' + HydrusData.ToHumanInt( data ) + ' characters'
             
         elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_BEGINNING:
             
-            return 'take the first ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            return 'take the first ' + HydrusData.ToHumanInt( data ) + ' characters'
             
         elif transformation_type == STRING_TRANSFORMATION_CLIP_TEXT_FROM_END:
             
-            return 'take the last ' + HydrusData.ConvertIntToPrettyString( data ) + ' characters'
+            return 'take the last ' + HydrusData.ToHumanInt( data ) + ' characters'
             
         elif transformation_type == STRING_TRANSFORMATION_PREPEND_TEXT:
             
@@ -2815,12 +2815,12 @@ class StringMatch( HydrusSerialisable.SerialisableBase ):
         
         if self._min_chars is not None and text_len < self._min_chars:
             
-            raise HydrusExceptions.StringMatchException( presentation_text + ' had fewer than ' + HydrusData.ConvertIntToPrettyString( self._min_chars ) + ' characters' )
+            raise HydrusExceptions.StringMatchException( presentation_text + ' had fewer than ' + HydrusData.ToHumanInt( self._min_chars ) + ' characters' )
             
         
         if self._max_chars is not None and text_len > self._max_chars:
             
-            raise HydrusExceptions.StringMatchException( presentation_text + ' had more than ' + HydrusData.ConvertIntToPrettyString( self._max_chars ) + ' characters' )
+            raise HydrusExceptions.StringMatchException( presentation_text + ' had more than ' + HydrusData.ToHumanInt( self._max_chars ) + ' characters' )
             
         
         if self._match_type == STRING_MATCH_FIXED:

@@ -138,7 +138,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if len( hashes ) > 1:
                     
-                    message = 'Archive ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files?'
+                    message = 'Archive ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files?'
                     
                     with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                         
@@ -383,17 +383,17 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 
                 if num_to_delete == 1: text = 'Send this file to the trash?'
-                else: text = 'Send these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files to the trash?'
+                else: text = 'Send these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files to the trash?'
                 
             elif file_service_key == CC.TRASH_SERVICE_KEY:
                 
                 if num_to_delete == 1: text = 'Permanently delete this file?'
-                else: text = 'Permanently delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                else: text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
                 
             else:
                 
                 if num_to_delete == 1: text = 'Admin-delete this file?'
-                else: text = 'Admin-delete these ' + HydrusData.ConvertIntToPrettyString( num_to_delete ) + ' files?'
+                else: text = 'Admin-delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files?'
                 
             
             if not do_it:
@@ -617,7 +617,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
         else:
             
-            num_files_string = HydrusData.ConvertIntToPrettyString( num_files ) + ' ' + num_files_descriptor + 's'
+            num_files_string = HydrusData.ToHumanInt( num_files ) + ' ' + num_files_descriptor + 's'
             
         
         s = num_files_string # 23 files
@@ -637,11 +637,11 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             if num_selected == 1 or selected_files_descriptor == num_files_descriptor:
                 
-                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected )
+                selected_files_string = HydrusData.ToHumanInt( num_selected )
                 
             else:
                 
-                selected_files_string = HydrusData.ConvertIntToPrettyString( num_selected ) + ' ' + selected_files_descriptor + 's'
+                selected_files_string = HydrusData.ToHumanInt( num_selected ) + ' ' + selected_files_descriptor + 's'
                 
             
             if num_selected == 1: # 23 files - 1 video selected, file_info
@@ -664,7 +664,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 else:
                     
-                    inbox_phrase = HydrusData.ConvertIntToPrettyString( num_inbox ) + ' in inbox and ' + HydrusData.ConvertIntToPrettyString( num_selected - num_inbox ) + ' archived, '
+                    inbox_phrase = HydrusData.ToHumanInt( num_inbox ) + ' in inbox and ' + HydrusData.ToHumanInt( num_selected - num_inbox ) + ' archived, '
                     
                 
                 pretty_total_size = self._GetPrettyTotalSize( only_selected = True )
@@ -911,7 +911,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
                 if len( hashes ) > 1:
                     
-                    message = 'Send ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to inbox?'
+                    message = 'Send ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files to inbox?'
                     
                     with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
                         
@@ -1012,7 +1012,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             
             num_files = self._GetNumSelected()
             
-            title = 'manage tags for ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+            title = 'manage tags for ' + HydrusData.ToHumanInt( num_files ) + ' files'
             frame_key = 'manage_tags_dialog'
             
             with ClientGUITopLevelWindows.DialogManage( self, title, frame_key ) as dlg:
@@ -1153,7 +1153,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                     
                 else:
                     
-                    message = 'Enter a reason for these ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files to be removed from ' + remote_service.GetName() + '.'
+                    message = 'Enter a reason for these ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files to be removed from ' + remote_service.GetName() + '.'
                     
                 
                 with ClientGUIDialogs.DialogTextEntry( self, message ) as dlg:
@@ -1247,7 +1247,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
         
         if len( hashes ) > 0:
             
-            text = 'This will reparse the ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' selected files\' metadata and regenerate their thumbnails.'
+            text = 'This will reparse the ' + HydrusData.ToHumanInt( len( hashes ) ) + ' selected files\' metadata and regenerate their thumbnails.'
             text += os.linesep * 2
             text += 'If the files were imported before some recent improvement in the parsing code (such as EXIF rotation or bad video resolution or duration or frame count calculation), this will update them.'
             text += os.linesep * 2
@@ -1417,7 +1417,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
                 
             
         
-        message = 'Are you sure you want to ' + yes_no_text + ' for the ' + HydrusData.ConvertIntToPrettyString( len( media_pairs ) ) + ' pairs?'
+        message = 'Are you sure you want to ' + yes_no_text + ' for the ' + HydrusData.ToHumanInt( len( media_pairs ) ) + ' pairs?'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             
@@ -1614,7 +1614,7 @@ class MediaPanel( ClientMedia.ListeningMediaList, wx.ScrolledWindow ):
             else:
                 
                 if num_to_undelete == 1: text = 'Are you sure you want to undelete this file?'
-                else: text = 'Are you sure you want to undelete these ' + HydrusData.ConvertIntToPrettyString( num_to_undelete ) + ' files?'
+                else: text = 'Are you sure you want to undelete these ' + HydrusData.ToHumanInt( num_to_undelete ) + ' files?'
                 
                 with ClientGUIDialogs.DialogYesNo( self, text ) as dlg:
                     
@@ -1974,11 +1974,11 @@ class MediaPanelLoading( MediaPanel ):
         
         if self._current is not None:
             
-            s += u' ' + HydrusData.ConvertIntToPrettyString( self._current )
+            s += u' ' + HydrusData.ToHumanInt( self._current )
             
             if self._max is not None:
                 
-                s += u' of ' + HydrusData.ConvertIntToPrettyString( self._max )
+                s += u' of ' + HydrusData.ToHumanInt( self._max )
                 
             
         
@@ -3103,7 +3103,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if multiple_selected:
                 
-                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ConvertIntToPrettyString( num_selected ) + ' files, ' + self._GetPrettyTotalSize( only_selected = True ) )
+                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ToHumanInt( num_selected ) + ' files, ' + self._GetPrettyTotalSize( only_selected = True ) )
                 
             else:
                 
@@ -3507,7 +3507,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if len( self._selected_media ) < len( self._sorted_media ):
                 
-                all_label = 'all (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) ) + ')'
+                all_label = 'all (' + HydrusData.ToHumanInt( len( self._sorted_media ) ) + ')'
                 
                 if media_has_archive and not media_has_inbox:
                     
@@ -3523,8 +3523,8 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if media_has_archive and media_has_inbox:
                 
-                inbox_label = 'inbox (' + HydrusData.ConvertIntToPrettyString( num_inbox ) + ')'
-                archive_label = 'archive (' + HydrusData.ConvertIntToPrettyString( num_archive ) + ')'
+                inbox_label = 'inbox (' + HydrusData.ToHumanInt( num_inbox ) + ')'
+                archive_label = 'archive (' + HydrusData.ToHumanInt( num_archive ) + ')'
                 
                 ClientGUIMenus.AppendMenuItem( self, select_menu, inbox_label, 'Select everything in the inbox.', self._Select, 'inbox' )
                 ClientGUIMenus.AppendMenuItem( self, select_menu, archive_label, 'Select everything that is archived.', self._Select, 'archive' )
@@ -3559,7 +3559,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 if len( self._selected_media ) < len( self._sorted_media ):
                 
-                    invert_label = 'invert (' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) - len( self._selected_media ) ) + ')'
+                    invert_label = 'invert (' + HydrusData.ToHumanInt( len( self._sorted_media ) - len( self._selected_media ) ) + ')'
                     
                     ClientGUIMenus.AppendMenuItem( self, select_menu, invert_label, 'Swap what is and is not selected.', self._Select, 'invert' )
                     
@@ -3590,7 +3590,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     duplicates_action_submenu = wx.Menu()
                     
-                    label = 'set this file as better than the ' + HydrusData.ConvertIntToPrettyString( num_selected - 1 ) + ' other selected'
+                    label = 'set this file as better than the ' + HydrusData.ToHumanInt( num_selected - 1 ) + ' other selected'
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, label, 'Set the focused media to be better than the other selected files.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_focused_better' ) )
                     
@@ -3598,7 +3598,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     num_pairs = num_files * ( num_files - 1 ) / 2 # combinations -- n!/2(n-2)!
                     
-                    num_pairs_text = HydrusData.ConvertIntToPrettyString( num_pairs ) + ' pairs'
+                    num_pairs_text = HydrusData.ToHumanInt( num_pairs ) + ' pairs'
                     
                     ClientGUIMenus.AppendMenuItem( self, duplicates_action_submenu, 'set all selected as same quality', 'Set all the selected files as same quality duplicates.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'duplicate_media_set_same_quality' ) )
                     
@@ -3648,7 +3648,7 @@ class MediaPanelThumbnails( MediaPanel ):
                                 
                                 count = duplicate_types_to_counts[ duplicate_type ]
                                 
-                                label = HydrusData.ConvertIntToPrettyString( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
+                                label = HydrusData.ToHumanInt( count ) + ' ' + HC.duplicate_type_string_lookup[ duplicate_type ]
                                 
                                 ClientGUIMenus.AppendMenuItem( self, duplicates_view_menu, label, 'Show these duplicates in a new page.', self._ShowDuplicatesInNewPage, focussed_hash, duplicate_type )
                                 

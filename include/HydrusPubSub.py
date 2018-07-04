@@ -108,7 +108,7 @@ class HydrusPubSub( object ):
                     
                     if HG.pubsub_profile_mode and pubsub_profilable:
                         
-                        summary = 'Profiling ' + HydrusData.ConvertIntToPrettyString( len( callables ) ) + ' x ' + topic
+                        summary = 'Profiling ' + HydrusData.ToHumanInt( len( callables ) ) + ' x ' + topic
                         
                         HydrusData.ShowText( summary )
                         

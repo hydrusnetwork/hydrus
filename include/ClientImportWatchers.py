@@ -3,6 +3,7 @@ import ClientDownloading
 import ClientImporting
 import ClientImportOptions
 import ClientImportFileSeeds
+import ClientImportGallerySeeds
 import ClientNetworkingJobs
 import ClientParsing
 import collections
@@ -128,16 +129,9 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _RegenerateStatus( self ):
         
-        statuses_to_counts = collections.Counter()
+        file_seed_caches = [ watcher.GetFileSeedCache() for watcher in self._watchers ]
         
-        for watcher in self._watchers:
-            
-            file_seed_cache = watcher.GetFileSeedCache()
-            
-            statuses_to_counts.update( file_seed_cache.GetStatusesToCounts() )
-            
-        
-        self._status_cache = ClientImportFileSeeds.GenerateFileSeedCacheStatus( statuses_to_counts )
+        self._status_cache = ClientImportFileSeeds.GenerateFileSeedCachesStatus( file_seed_caches )
         
         self._status_dirty = False
         self._status_cache_generation_time = HydrusData.GetNow()
@@ -477,7 +471,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_IMPORT
     SERIALISABLE_NAME = 'Watcher'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     MIN_CHECK_PERIOD = 30
     
@@ -495,7 +489,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._publish_to_page = False
         
         self._url = ''
+        
+        self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
+        
         self._urls_to_filenames = {}
         self._urls_to_md5_base64 = {}
         self._checker_options = new_options.GetDefaultWatcherCheckerOptions()
@@ -620,15 +617,21 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 self._subject = subject
                 
             
-            ( num_new, num_already_in ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( self._file_seed_cache, all_parse_results, source_url = self._url, tag_import_options = self._tag_import_options )
+            ( num_new, num_already_in, added_all_possible_urls ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( self._file_seed_cache, all_parse_results, self._url )
             
-            watcher_status = 'checked OK - ' + HydrusData.ConvertIntToPrettyString( num_new ) + ' new urls'
+            watcher_status = 'checked OK - ' + HydrusData.ToHumanInt( num_new ) + ' new urls'
             watcher_status_should_stick = False
             
             if num_new > 0:
                 
                 ClientImporting.WakeRepeatingJob( self._files_repeating_job )
                 
+            
+            gallery_seed = ClientImportGallerySeeds.GallerySeed( self._url, can_generate_more_pages = False )
+            
+            gallery_seed.SetStatus( CC.STATUS_SUCCESSFUL_AND_NEW, note = watcher_status )
+            
+            self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
             
         except HydrusExceptions.ShutdownException:
             
@@ -753,12 +756,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
+        serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
+        
         serialisable_checker_options = self._checker_options.GetSerialisableTuple()
         serialisable_file_options = self._file_import_options.GetSerialisableTuple()
         serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( self._url, serialisable_file_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._checking_paused, self._checking_status, self._subject, self._no_work_until, self._no_work_until_reason, self._creation_time )
+        return ( self._url, serialisable_gallery_seed_log, serialisable_file_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._checking_paused, self._checking_status, self._subject, self._no_work_until, self._no_work_until_reason, self._creation_time )
         
     
     def _HasURL( self ):
@@ -768,9 +773,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._url, serialisable_file_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._checking_paused, self._checking_status, self._subject, self._no_work_until, self._no_work_until_reason, self._creation_time ) = serialisable_info
+        ( self._url, serialisable_gallery_seed_log, serialisable_file_seed_cache, self._urls_to_filenames, self._urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, self._last_check_time, self._files_paused, self._checking_paused, self._checking_status, self._subject, self._no_work_until, self._no_work_until_reason, self._creation_time ) = serialisable_info
         
+        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+        
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
@@ -951,6 +958,19 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( url, serialisable_file_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, checking_paused, checking_status, subject, no_work_until, no_work_until_reason, creation_time ) = old_serialisable_info
+            
+            gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
+            
+            serialisable_gallery_seed_log = gallery_seed_log.GetSerialisableTuple()
+            
+            new_serialisable_info = ( url, serialisable_gallery_seed_log, serialisable_file_seed_cache, urls_to_filenames, urls_to_md5_base64, serialisable_checker_options, serialisable_file_options, serialisable_tag_options, last_check_time, files_paused, checking_paused, checking_status, subject, no_work_until, no_work_until_reason, creation_time )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def _WorkOnFiles( self ):
         
@@ -1108,6 +1128,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         return self._file_seed_cache
         
     
+    def GetGallerySeedLog( self ):
+        
+        return self._gallery_seed_log
+        
+    
     def GetSimpleStatus( self ):
         
         with self._lock:
@@ -1145,7 +1170,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             elif not HydrusData.TimeHasPassed( self._no_work_until ):
                 
-                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.ConvertTimestampToPrettyPending( self._next_check_time )
+                watcher_status = self._no_work_until_reason + ' - ' + 'next check ' + HydrusData.TimestampToPrettyTimeDelta( self._next_check_time )
                 
             else:
                 

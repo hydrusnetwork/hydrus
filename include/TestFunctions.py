@@ -45,7 +45,7 @@ class TestFunctions( unittest.TestCase ):
         
         i = 123456789
         
-        i_pretty = HydrusData.ConvertIntToPrettyString( i )
+        i_pretty = HydrusData.ToHumanInt( i )
         
         # this test only works on anglo computers; it is mostly so I can check it is working on mine
         
@@ -77,7 +77,7 @@ class TestFunctions( unittest.TestCase ):
         self.assertEqual( type( b ), str )
         self.assertEqual( b, '{}' )
         
-        pretty_num = HydrusData.ConvertIntToPrettyString( 123456789 )
+        pretty_num = HydrusData.ToHumanInt( 123456789 )
         
         self.assertEqual( type( pretty_num ), unicode )
         

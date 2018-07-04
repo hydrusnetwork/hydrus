@@ -1,4 +1,5 @@
 import ClientConstants as CC
+import ClientImporting
 import ClientNetworkingDomain
 import ClientParsing
 import collections
@@ -8,6 +9,7 @@ import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
+import itertools
 import os
 import threading
 import time
@@ -29,24 +31,29 @@ def GenerateGallerySeedLogStatus( statuses_to_counts ):
     
     if num_successful > 0:
         
-        s = HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful'
+        s = HydrusData.ToHumanInt( num_successful ) + ' successful'
         
         status_strings.append( s )
         
     
     if num_ignored > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_ignored ) + ' ignored' )
+        status_strings.append( HydrusData.ToHumanInt( num_ignored ) + ' ignored' )
         
     
     if num_failed > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed' )
+        status_strings.append( HydrusData.ToHumanInt( num_failed ) + ' failed' )
         
     
     if num_skipped > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_skipped ) + ' skipped' )
+        status_strings.append( HydrusData.ToHumanInt( num_skipped ) + ' skipped' )
+        
+    
+    if num_unknown > 0:
+        
+        status_strings.append( HydrusData.ToHumanInt( num_unknown ) + ' pending' )
         
     
     status = ', '.join( status_strings )
@@ -57,6 +64,271 @@ def GenerateGallerySeedLogStatus( statuses_to_counts ):
     
     return ( status, ( total_processed, total ) )
     
+class GallerySeed( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED
+    SERIALISABLE_NAME = 'Gallery Log Entry'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, url = None, can_generate_more_pages = True ):
+        
+        if url is None:
+            
+            url = 'https://nostrils-central.cx/index.php?post=s&tag=hyper_nostrils&page=3'
+            
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
+        
+        self.url = url
+        self._can_generate_more_pages = can_generate_more_pages
+        
+        self.created = HydrusData.GetNow()
+        self.modified = self.created
+        self.status = CC.STATUS_UNKNOWN
+        self.note = ''
+        
+        self._referral_url = None
+        
+    
+    def __eq__( self, other ):
+        
+        return self.__hash__() == other.__hash__()
+        
+    
+    def __hash__( self ):
+        
+        return ( self.url, self.created ).__hash__()
+        
+    
+    def __ne__( self, other ):
+        
+        return self.__hash__() != other.__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self.url, self._can_generate_more_pages, self.created, self.modified, self.status, self.note, self._referral_url )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.url, self._can_generate_more_pages, self.created, self.modified, self.status, self.note, self._referral_url ) = serialisable_info
+        
+    
+    def _UpdateModified( self ):
+        
+        self.modified = HydrusData.GetNow()
+        
+    
+    def Normalise( self ):
+        
+        self.url = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.url )
+        
+    
+    def SetReferralURL( self, referral_url ):
+        
+        self._referral_url = referral_url
+        
+    
+    def SetStatus( self, status, note = '', exception = None ):
+        
+        if exception is not None:
+            
+            first_line = HydrusData.ToUnicode( exception ).split( os.linesep )[0]
+            
+            note = first_line + u'\u2026 (Copy note to see full error)'
+            note += os.linesep
+            note += HydrusData.ToUnicode( traceback.format_exc() )
+            
+            HydrusData.Print( 'Error when processing ' + self.url + ' !' )
+            HydrusData.Print( traceback.format_exc() )
+            
+        
+        self.status = status
+        self.note = note
+        
+        self._UpdateModified()
+        
+    
+    def WorksInNewSystem( self ):
+        
+        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
+        
+        if url_type == HC.URL_TYPE_GALLERY and can_parse:
+            
+            return True
+            
+        
+        return False
+        
+    
+    def WorkOnURL( self, gallery_seed_log, file_seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, max_new_urls_allowed = None, gallery_urls_seen_before = None ):
+        
+        if gallery_urls_seen_before is None:
+            
+            gallery_urls_seen_before = set()
+            
+        
+        # maybe something like 'append urls' vs 'reverse-prepend' for subs or something
+        
+        # should also take--and populate--a set of urls we have seen this 'run', so we can bomb out if next_gallery_url ends up in some loop
+        
+        num_urls_added = 0
+        added_all_possible_urls = False
+        
+        try:
+            
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
+            
+            if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
+                
+                raise HydrusExceptions.VetoException( 'Did not recognise this URL!' )
+                
+            
+            if not can_parse:
+                
+                raise HydrusExceptions.VetoException( 'Did not have a parser for that URL!' )
+                
+            
+            did_substantial_work = True
+            
+            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
+            
+            status_hook( 'downloading page' )
+            
+            if self._referral_url not in ( self.url, url_to_check ):
+                
+                referral_url = self._referral_url
+                
+            else:
+                
+                referral_url = None
+                
+            
+            network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            
+            HG.client_controller.network_engine.AddJob( network_job )
+            
+            with network_job_presentation_context_factory( network_job ) as njpc:
+                
+                network_job.WaitUntilDone()
+                
+            
+            data = network_job.GetContent()
+            
+            parsing_context = {}
+            
+            parsing_context[ 'gallery_url' ] = self.url
+            parsing_context[ 'url' ] = url_to_check
+            
+            all_parse_results = parser.Parse( parsing_context, data )
+            
+            if len( all_parse_results ) == 0:
+                
+                raise HydrusExceptions.VetoException( 'Could not parse any data!' )
+                
+            
+            ( num_urls_added, num_urls_already_in, added_all_possible_urls ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.url, max_new_urls_allowed )
+            
+            # harvest file_seeds based on all_parse_results, append them to file_seed cache
+            
+            status = CC.STATUS_SUCCESSFUL_AND_NEW
+            note = 'checked OK - ' + HydrusData.ToHumanInt( num_urls_added ) + ' new urls'
+            
+            if num_urls_already_in > 0:
+                
+                note += ' (' + HydrusData.ToHumanInt( num_urls_already_in ) + ' already in)'
+                
+            
+            if self._can_generate_more_pages:
+                
+                flattened_results = list( itertools.chain( all_parse_results ) )
+                
+                next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
+                
+                if len( next_page_urls ) > 0:
+                    
+                    next_page_urls = HydrusData.DedupeList( next_page_urls )
+                    
+                    new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
+                    
+                    if len( new_next_page_urls ) > 0:
+                        
+                        gallery_urls_seen_before.update( new_next_page_urls )
+                        
+                        next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
+                        
+                        gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
+                        
+                        num_total = len( next_page_urls )
+                        num_new = len( new_next_page_urls )
+                        
+                        if num_new < num_total:
+                            
+                            num_dupes = num_total - num_new
+                            
+                            note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found, but ' + HydrusData.ToHumanInt( num_dupes ) + ' had already been visited this run and were not added'
+                            
+                        else:
+                            
+                            note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found'
+                            
+                        
+                    else:
+                        
+                        note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found, but they had already been visited this run and were not added'
+                        
+                    
+                
+            
+            self.SetStatus( status, note = note )
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
+        except HydrusExceptions.VetoException as e:
+            
+            status = CC.STATUS_VETOED
+            
+            note = HydrusData.ToUnicode( e )
+            
+            self.SetStatus( status, note = note )
+            
+            if isinstance( e, HydrusExceptions.CancelledException ):
+                
+                status_hook( 'cancelled!' )
+                
+                time.sleep( 2 )
+                
+            
+        except HydrusExceptions.NotFoundException:
+            
+            status = CC.STATUS_VETOED
+            note = '404'
+            
+            self.SetStatus( status, note = note )
+            
+            status_hook( '404' )
+            
+            time.sleep( 2 )
+            
+        except Exception as e:
+            
+            status = CC.STATUS_ERROR
+            
+            self.SetStatus( status, exception = e )
+            
+            status_hook( 'error!' )
+            
+            time.sleep( 3 )
+            
+        
+        return ( num_urls_added, added_all_possible_urls )
+        
+    
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed
+
 class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG
@@ -147,7 +419,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         
         if len( gallery_seeds ) == 0:
             
-            return 0 
+            return 0
             
         
         new_gallery_seeds = []
@@ -326,6 +598,17 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def HasGalleryURL( self, url ):
+        
+        search_gallery_seed = GallerySeed( url )
+        
+        search_gallery_seed.Normalise()
+        
+        search_url = search_gallery_seed.url
+        
+        return search_url in ( gallery_seed.url for gallery_seed in self._gallery_seeds )
+        
+    
     def NotifyGallerySeedsUpdated( self, gallery_seeds ):
         
         with self._lock:
@@ -396,216 +679,10 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 self._GenerateStatus()
                 
             
-            ( status, ( total_processed, total ) ) = self._status_cache
+            ( status, simple_status, ( total_processed, total ) ) = self._status_cache
             
             return total_processed < total
             
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG ] = GallerySeedLog
-
-class GallerySeed( HydrusSerialisable.SerialisableBase ):
-    
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED
-    SERIALISABLE_NAME = 'Gallery Log Entry'
-    SERIALISABLE_VERSION = 1
-    
-    def __init__( self, url = None, can_generate_more_pages = True ):
-        
-        if url is None:
-            
-            url = 'https://nostrils-central.cx/index.php?post=s&tag=hyper_nostrils&page=3'
-            
-        
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        
-        self.url = url
-        self._can_generate_more_pages = can_generate_more_pages
-        
-        self.created = HydrusData.GetNow()
-        self.modified = self.created
-        self.status = CC.STATUS_UNKNOWN
-        self.note = ''
-        
-        self._referral_url = None
-        
-    
-    def __eq__( self, other ):
-        
-        return self.__hash__() == other.__hash__()
-        
-    
-    def __hash__( self ):
-        
-        return ( self.url, self.created ).__hash__()
-        
-    
-    def __ne__( self, other ):
-        
-        return self.__hash__() != other.__hash__()
-        
-    
-    def _GetSerialisableInfo( self ):
-        
-        return ( self.url, self._can_generate_more_pages, self.created, self.modified, self.status, self.note, self._referral_url )
-        
-    
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
-        
-        ( self.url, self._can_generate_more_pages, self.created, self.modified, self.status, self.note, self._referral_url ) = serialisable_info
-        
-    
-    def _UpdateModified( self ):
-        
-        self.modified = HydrusData.GetNow()
-        
-    
-    def SetReferralURL( self, referral_url ):
-        
-        self._referral_url = referral_url
-        
-    
-    def SetStatus( self, status, note = '', exception = None ):
-        
-        if exception is not None:
-            
-            first_line = HydrusData.ToUnicode( exception ).split( os.linesep )[0]
-            
-            note = first_line + u'\u2026 (Copy note to see full error)'
-            note += os.linesep
-            note += HydrusData.ToUnicode( traceback.format_exc() )
-            
-            HydrusData.Print( 'Error when processing ' + self.url + ' !' )
-            HydrusData.Print( traceback.format_exc() )
-            
-        
-        self.status = status
-        self.note = note
-        
-        self._UpdateModified()
-        
-    
-    def WorksInNewSystem( self ):
-        
-        ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
-        
-        if url_type == HC.URL_TYPE_GALLERY and can_parse:
-            
-            return True
-            
-        
-        return False
-        
-    
-    def WorkOnURL( self, gallery_seed_log, file_seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, max_new_urls_allowed ):
-        
-        # likely some more params here for stuff like file_limit
-        # maybe something like 'append urls' vs 'reverse-prepend' for subs or something
-        # subs is tricky because before, we abandoned the whole sync if it was interrupted. this doesn't--so maybe I need to dupe the file_seed_cache and then only replace old with new on complete success
-        
-        did_substantial_work = False
-        
-        try:
-            
-            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
-            
-            if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
-                
-                raise HydrusExceptions.VetoException( 'Did not recognise this URL!' )
-                
-            
-            if not can_parse:
-                
-                raise HydrusExceptions.VetoException( 'Did not have a parser for that URL!' )
-                
-            
-            did_substantial_work = True
-            
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
-            
-            status_hook( 'downloading page' )
-            
-            if self._referral_url not in ( self.url, url_to_check ):
-                
-                referral_url = self._referral_url
-                
-            else:
-                
-                referral_url = None
-                
-            
-            network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
-            
-            HG.client_controller.network_engine.AddJob( network_job )
-            
-            with network_job_presentation_context_factory( network_job ) as njpc:
-                
-                network_job.WaitUntilDone()
-                
-            
-            data = network_job.GetContent()
-            
-            parsing_context = {}
-            
-            parsing_context[ 'gallery_url' ] = self.url
-            parsing_context[ 'url' ] = url_to_check
-            
-            all_parse_results = parser.Parse( parsing_context, data )
-            
-            if len( all_parse_results ) == 0:
-                
-                raise HydrusExceptions.VetoException( 'Could not parse any data!' )
-                
-            
-            # harvest file_seeds based on all_parse_results, append them to file_seed cache
-            
-            if self._can_generate_more_pages:
-                pass
-                # harvest next gallery page url(s!) and append them to the gallery log
-                
-            
-        except HydrusExceptions.ShutdownException:
-            
-            return False
-            
-        except HydrusExceptions.VetoException as e:
-            
-            status = CC.STATUS_VETOED
-            
-            note = HydrusData.ToUnicode( e )
-            
-            self.SetStatus( status, note = note )
-            
-            if isinstance( e, HydrusExceptions.CancelledException ):
-                
-                status_hook( 'cancelled!' )
-                
-                time.sleep( 2 )
-                
-            
-        except HydrusExceptions.NotFoundException:
-            
-            status = CC.STATUS_VETOED
-            note = '404'
-            
-            self.SetStatus( status, note = note )
-            
-            status_hook( '404' )
-            
-            time.sleep( 2 )
-            
-        except Exception as e:
-            
-            status = CC.STATUS_ERROR
-            
-            self.SetStatus( status, exception = e )
-            
-            status_hook( 'error!' )
-            
-            time.sleep( 3 )
-            
-        
-        return did_substantial_work
-        
-    
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed

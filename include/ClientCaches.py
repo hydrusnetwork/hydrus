@@ -775,7 +775,7 @@ class ClientFilesManager( object ):
                 
                 if i % 100 == 0:
                     
-                    status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' files, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans'
+                    status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
                     
                     job_key.SetVariable( 'popup_text_1', status )
                     
@@ -829,7 +829,7 @@ class ClientFilesManager( object ):
                 
                 if i % 100 == 0:
                     
-                    status = 'reviewed ' + HydrusData.ConvertIntToPrettyString( i ) + ' thumbnails, found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphans'
+                    status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
                     
                     job_key.SetVariable( 'popup_text_1', status )
                     
@@ -861,7 +861,7 @@ class ClientFilesManager( object ):
             
             if move_location is None and len( orphan_paths ) > 0:
                 
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphans, now deleting'
+                status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans, now deleting'
                 
                 job_key.SetVariable( 'popup_text_1', status )
                 
@@ -888,7 +888,7 @@ class ClientFilesManager( object ):
             
             if len( orphan_thumbnails ) > 0:
                 
-                status = 'found ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
+                status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                 
                 job_key.SetVariable( 'popup_text_1', status )
                 
@@ -919,7 +919,7 @@ class ClientFilesManager( object ):
                 
             else:
                 
-                final_text = HydrusData.ConvertIntToPrettyString( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ConvertIntToPrettyString( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
+                final_text = HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
                 
             
             job_key.SetVariable( 'popup_text_1', final_text )
@@ -1215,7 +1215,7 @@ class ClientFilesManager( object ):
                             
                         
                     
-                    job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( i ) + ' done' )
+                    job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( i ) + ' done' )
                     
                     ( base, filename ) = os.path.split( path )
                     
@@ -1262,7 +1262,7 @@ class ClientFilesManager( object ):
             
             if num_broken > 0:
                 
-                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( num_broken ) + ' files caused errors, which have been written to the log.' )
+                job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ToHumanInt( num_broken ) + ' files caused errors, which have been written to the log.' )
                 
             else:
                 

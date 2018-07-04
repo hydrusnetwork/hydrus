@@ -106,13 +106,13 @@ class ReviewServicePanel( wx.Panel ):
                 
                 num_ratings = service_info[ HC.SERVICE_INFO_NUM_FILES ]
                 
-                self._ratings_text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_ratings ) + ' files rated' )
+                self._ratings_text.SetLabelText( HydrusData.ToHumanInt( num_ratings ) + ' files rated' )
                 
             elif service_type == HC.LOCAL_BOORU:
                 
                 num_shares = service_info[ HC.SERVICE_INFO_NUM_SHARES ]
                 
-                self._num_shares.SetLabelText( HydrusData.ConvertIntToPrettyString( num_shares ) + ' shares currently active' )
+                self._num_shares.SetLabelText( HydrusData.ToHumanInt( num_shares ) + ' shares currently active' )
                 
             
         
@@ -166,7 +166,7 @@ class ReviewServicePanel( wx.Panel ):
                 
                 rows_s = weight / it_took
                 
-                update_speed_string = ' at ' + HydrusData.ConvertIntToPrettyString( rows_s ) + ' rows/s'
+                update_speed_string = ' at ' + HydrusData.ToHumanInt( rows_s ) + ' rows/s'
                 
                 c_u_p_total_weight_processed += weight
                 
@@ -175,7 +175,7 @@ class ReviewServicePanel( wx.Panel ):
             
             self._service.SyncThumbnails( job_key )
             
-            job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ConvertIntToPrettyString( c_u_p_num_rows ) + ' rows added.' )
+            job_key.SetVariable( 'popup_text_1', 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
             
             job_key.Finish()
             
@@ -336,13 +336,13 @@ class ReviewServicePanel( wx.Panel ):
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
             
-            text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size )
+            text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ConvertIntToBytes( total_size )
             
             if service.GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
                 
                 num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
                 
-                text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_files ) + ' deleted files'
+                text += ' - ' + HydrusData.ToHumanInt( num_deleted_files ) + ' deleted files'
                 
             
             wx.CallAfter( wx_code, text )
@@ -1009,7 +1009,7 @@ class ReviewServicePanel( wx.Panel ):
             ( multihash, num_files, total_size, note ) = sort_tuple
             
             pretty_multihash = multihash
-            pretty_num_files = HydrusData.ConvertIntToPrettyString( num_files )
+            pretty_num_files = HydrusData.ToHumanInt( num_files )
             pretty_total_size = HydrusData.ConvertIntToBytes( total_size )
             pretty_note = note
             
@@ -1212,7 +1212,7 @@ class ReviewServicePanel( wx.Panel ):
             pretty_name = name
             pretty_text = text
             pretty_timeout = HydrusData.ConvertTimestampToPrettyExpires( timeout )
-            pretty_hashes = HydrusData.ConvertIntToPrettyString( num_hashes )
+            pretty_hashes = HydrusData.ToHumanInt( num_hashes )
             
             display_tuple = ( pretty_name, pretty_text, pretty_timeout, pretty_hashes )
             sort_tuple = ( name, text, timeout, num_hashes )
@@ -1460,7 +1460,7 @@ class ReviewServicePanel( wx.Panel ):
             
             num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
             
-            text = HydrusData.ConvertIntToPrettyString( num_files ) + ' files are rated'
+            text = HydrusData.ToHumanInt( num_files ) + ' files are rated'
             
             wx.CallAfter( wx_code, text )
             
@@ -1546,13 +1546,13 @@ class ReviewServicePanel( wx.Panel ):
             num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
             num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
             
-            text = HydrusData.ConvertIntToPrettyString( num_mappings ) + ' total mappings involving ' + HydrusData.ConvertIntToPrettyString( num_tags ) + ' different tags on ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' different files'
+            text = HydrusData.ToHumanInt( num_mappings ) + ' total mappings involving ' + HydrusData.ToHumanInt( num_tags ) + ' different tags on ' + HydrusData.ToHumanInt( num_files ) + ' different files'
             
             if service.GetServiceType() == HC.TAG_REPOSITORY:
                 
                 num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
                 
-                text += ' - ' + HydrusData.ConvertIntToPrettyString( num_deleted_mappings ) + ' deleted mappings'
+                text += ' - ' + HydrusData.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
                 
             
             wx.CallAfter( wx_code, text )

@@ -394,7 +394,7 @@ class Account( object ):
             
             ( reason, created, expires ) = self._banned_info
             
-            return 'banned ' + HydrusData.ConvertTimestampToPrettyAge( created ) + ', ' + HydrusData.ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
+            return 'banned ' + HydrusData.TimestampToPrettyTimeDelta( created ) + ', ' + HydrusData.ConvertTimestampToPrettyExpires( expires ) + ' because: ' + reason
             
         
     
@@ -616,7 +616,7 @@ class Account( object ):
         
         with self._lock:
             
-            return HydrusData.ConvertTimestampToPrettyAge( self._created ) + ' ' + self._account_type.GetTitle()
+            return self._account_type.GetTitle() + ' -- created ' + HydrusData.TimestampToPrettyTimeDelta( self._created )
             
         
     
@@ -1157,7 +1157,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             hashes = self._content_data
             
-            text = 'FILES: ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            text = 'FILES: ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
             
         elif self._content_type == HC.CONTENT_TYPE_MAPPING:
             
@@ -1169,7 +1169,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, hashes ) = self._content_data
             
-            text = 'MAPPINGS: ' + tag + ' for ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            text = 'MAPPINGS: ' + tag + ' for ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
             
         elif self._content_type == HC.CONTENT_TYPE_TAG_PARENTS:
             
@@ -1707,7 +1707,16 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 update_due = self._GetNextUpdateDueTime( from_client )
                 
-                return 'next update due ' + HydrusData.ConvertTimestampToPrettyPending( update_due )
+                if HydrusData.TimeHasPassed( update_due ):
+                    
+                    s = 'imminently'
+                    
+                else:
+                    
+                    s = HydrusData.TimestampToPrettyTimeDelta( update_due )
+                    
+                
+                return 'next update due ' + s
                 
             
         
@@ -1794,7 +1803,16 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
                 
                 next_update_time = self._next_update_due + delay
                 
-                status = 'metadata synchronised up to ' + HydrusData.ConvertTimestampToPrettyAgo( biggest_end ) + ' ago, next update due ' + HydrusData.ConvertTimestampToPrettyPending( next_update_time )
+                if HydrusData.TimeHasPassed( next_update_time ):
+                    
+                    s = 'imminently'
+                    
+                else:
+                    
+                    s = HydrusData.TimestampToPrettyTimeDelta( next_update_time )
+                    
+                
+                status = 'metadata synchronised up to ' + HydrusData.TimestampToPrettyTimeDelta( biggest_end ) + ', next update due ' + s
                 
             
             return ( num_update_hashes, status )

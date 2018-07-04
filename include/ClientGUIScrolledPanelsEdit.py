@@ -13,10 +13,12 @@ import ClientGUIListCtrl
 import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIFileSeedCache
+import ClientGUIGallerySeedLog
 import ClientGUISerialisable
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
+import ClientImportFileSeeds
 import ClientImportOptions
 import ClientNetworkingContexts
 import ClientNetworkingDomain
@@ -167,7 +169,7 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             st = ClientGUICommon.BetterStaticText( self, summary )
             
-            st.Wrap( 250 )
+            st.SetWrapWidth( 250 )
             
             vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2214,7 +2216,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'urls', 8 ), ( 'file summary', -1 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -2424,7 +2426,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ConvertQueryToListCtrlTuples( self, query ):
         
-        ( query_text, check_now, last_check_time, next_check_time, paused, status, file_seed_cache ) = query.ToTuple()
+        ( query_text, check_now, last_check_time, next_check_time, paused, status ) = query.ToTuple()
         
         pretty_query_text = query_text
         
@@ -2446,17 +2448,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_status = 'dead'
             
         
+        file_seed_cache = query.GetFileSeedCache()
+        
         last_new_file_time = file_seed_cache.GetLatestAddedTime()
         
-        pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
+        pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
         
-        if last_check_time == 0:
+        if last_check_time == 0 or last_check_time is None:
             
-            pretty_last_check_time = 'initial check has not yet occured'
+            pretty_last_check_time = '(initial check has not yet occured)'
             
         else:
             
-            pretty_last_check_time = HydrusData.ConvertTimestampToPrettySync( last_check_time )
+            pretty_last_check_time = HydrusData.TimestampToPrettyTimeDelta( last_check_time )
             
         
         pretty_next_check_time = query.GetNextCheckStatusString()
@@ -2473,11 +2477,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_delay = 'bandwidth: ' + HydrusData.ConvertTimeDeltaToPrettyString( estimate )
+            pretty_delay = 'bandwidth: ' + HydrusData.TimeDeltaToPrettyTimeDelta( estimate )
             delay = estimate
             
         
-        ( file_status, ( num_done, num_total ) ) = file_seed_cache.GetStatus()
+        ( file_status, simple_status, ( num_done, num_total ) ) = file_seed_cache.GetStatus()
         
         if num_total > 0:
             
@@ -2488,21 +2492,12 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             sort_float = 0.0
             
         
-        urls = ( sort_float, num_total, num_done )
+        items = ( sort_float, num_total, num_done )
         
-        if num_done == num_total:
-            
-            pretty_urls = HydrusData.ConvertIntToPrettyString( num_total )
-            
-        else:
-            
-            pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_done, num_total )
-            
+        pretty_items = simple_status
         
-        pretty_file_status = file_status
-        
-        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_urls, pretty_file_status )
-        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, urls, file_status )
+        display_tuple = ( pretty_query_text, pretty_paused, pretty_status, pretty_last_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
+        sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, items )
         
         return ( display_tuple, sort_tuple )
         
@@ -2820,7 +2815,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( self._no_work_until, prefix = 'for' ) + ' because: ' + self._no_work_until_reason
+            status = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( self._no_work_until ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.SetLabelText( status )
@@ -2887,11 +2882,13 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._check_now = wx.CheckBox( self )
         self._paused = wx.CheckBox( self )
         
-        self._file_seed_cache_panel = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
+        
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, HG.client_controller, True )
         
         #
         
-        ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status, file_seed_cache ) = self._original_query.ToTuple()
+        ( query_text, check_now, self._last_check_time, self._next_check_time, paused, self._status ) = self._original_query.ToTuple()
         
         self._query_text.SetValue( query_text )
         
@@ -2899,9 +2896,13 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._paused.SetValue( paused )
         
-        self._file_seed_cache = file_seed_cache.Duplicate()
+        self._file_seed_cache = self._original_query.GetFileSeedCache().Duplicate()
         
-        self._file_seed_cache_panel.SetFileSeedCache( self._file_seed_cache )
+        self._file_seed_cache_control.SetFileSeedCache( self._file_seed_cache )
+        
+        self._gallery_seed_log = self._original_query.GetGallerySeedLog().Duplicate()
+        
+        self._gallery_seed_log_control.SetGallerySeedLog( self._gallery_seed_log )
         
         #
         
@@ -2916,7 +2917,8 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = wx.BoxSizer( wx.VERTICAL )
         
         vbox.Add( self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._file_seed_cache_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.SetSizer( vbox )
@@ -2936,7 +2938,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         query = self._original_query.Duplicate()
         
-        query.SetQueryAndFileSeedCache( self._query_text.GetValue(), self._file_seed_cache )
+        query.SetQueryAndSeeds( self._query_text.GetValue(), self._file_seed_cache, self._gallery_seed_log )
         
         query.SetPaused( self._paused.GetValue() )
         
@@ -2984,7 +2986,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'urls', 8 ), ( 'failures', 8 ), ( 'paused', 8 ) ]
+        columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
         
         self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -3147,10 +3149,10 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         if len( queries ) > 0:
             
             last_new_file_time = max( ( query.GetLatestAddedTime() for query in queries ) )
-            pretty_last_new_file_time = HydrusData.ConvertTimestampToPrettyAgo( last_new_file_time )
+            pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
             
             last_checked = max( ( query.GetLastChecked() for query in queries ) )
-            pretty_last_checked = HydrusData.ConvertTimestampToPrettyAgo( last_checked )
+            pretty_last_checked = HydrusData.TimestampToPrettyTimeDelta( last_checked )
             
         else:
             
@@ -3189,16 +3191,16 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status_components = [ HydrusData.ConvertIntToPrettyString( num_ok ) + ' working' ]
+            status_components = [ HydrusData.ToHumanInt( num_ok ) + ' working' ]
             
             if num_paused > 0:
                 
-                status_components.append( HydrusData.ConvertIntToPrettyString( num_paused ) + ' paused' )
+                status_components.append( HydrusData.ToHumanInt( num_paused ) + ' paused' )
                 
             
             if num_dead > 0:
                 
-                status_components.append( HydrusData.ConvertIntToPrettyString( num_dead ) + ' dead' )
+                status_components.append( HydrusData.ToHumanInt( num_dead ) + ' dead' )
                 
             
             pretty_status = ', '.join( status_components )
@@ -3217,65 +3219,45 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif min_estimate == 0: # some are good to go, but there are delays
                 
-                pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                pretty_delay = 'bandwidth: some ok, some up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
                 delay = max_estimate
                 
             else:
                 
                 if min_estimate == max_estimate: # probably just one query, and it is delayed
                     
-                    pretty_delay = 'bandwidth: up to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                    pretty_delay = 'bandwidth: up to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
                     delay = max_estimate
                     
                 else:
                     
-                    pretty_delay = 'bandwidth: from ' + HydrusData.ConvertTimeDeltaToPrettyString( min_estimate ) + ' to ' + HydrusData.ConvertTimeDeltaToPrettyString( max_estimate )
+                    pretty_delay = 'bandwidth: from ' + HydrusData.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusData.TimeDeltaToPrettyTimeDelta( max_estimate )
                     delay = max_estimate
                     
                 
             
         else:
             
-            pretty_delay = 'delaying ' + HydrusData.ConvertTimestampToPrettyPending( no_work_until, prefix = 'for' ) + ' - ' + no_work_until_reason
+            pretty_delay = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( no_work_until ) + ' - because: ' + no_work_until_reason
             delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
             
         
-        num_urls_done = 0
-        num_urls = 0
-        num_failed = 0
+        file_seed_caches = [ query.GetFileSeedCache() for query in queries ]
         
-        for query in queries:
-            
-            ( query_num_urls_unknown, query_num_urls, query_num_failed ) = query.GetNumURLsAndFailed()
-            
-            num_urls_done += query_num_urls - query_num_urls_unknown
-            
-            num_urls += query_num_urls
-            
-            num_failed += query_num_failed
-            
+        ( queries_status, queries_simple_status, ( num_done, num_total ) ) = ClientImportFileSeeds.GenerateFileSeedCachesStatus( file_seed_caches )
         
-        if num_urls_done == num_urls:
+        if num_total > 0:
             
-            pretty_urls = HydrusData.ConvertIntToPrettyString( num_urls )
-            
-        else:
-            
-            pretty_urls = HydrusData.ConvertValueRangeToPrettyString( num_urls_done, num_urls )
-            
-        
-        if num_urls > 0:
-            
-            sort_float = float( num_urls_done ) / num_urls
+            sort_float = float( num_done ) / num_total
             
         else:
             
             sort_float = 0.0
             
         
-        num_urls_sortable = ( sort_float, num_urls, num_urls_done )
+        items = ( sort_float, num_done, num_total )
         
-        pretty_failures = HydrusData.ConvertIntToPrettyString( num_failed )
+        pretty_items = queries_simple_status
         
         if paused:
             
@@ -3286,8 +3268,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_paused = ''
             
         
-        display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_urls, pretty_failures, pretty_paused )
-        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, num_urls_sortable, num_failed, paused )
+        display_tuple = ( name, pretty_site, pretty_status, pretty_last_new_file_time, pretty_last_checked, pretty_delay, pretty_items, pretty_paused )
+        sort_tuple = ( name, pretty_site, status, last_new_file_time, last_checked, delay, items, paused )
         
         return ( display_tuple, sort_tuple )
         
@@ -3581,7 +3563,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         primary_sub_name = primary_sub.GetName()
                         
-                        message = primary_sub_name + ' was able to merge ' + HydrusData.ConvertIntToPrettyString( num_merged ) + ' other subscriptions. Would you like to give the merged subscription a new name?'
+                        message = primary_sub_name + ' was able to merge ' + HydrusData.ToHumanInt( num_merged ) + ' other subscriptions. Would you like to give the merged subscription a new name?'
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
                             
@@ -4156,9 +4138,15 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
         
-        self._tag_blacklist = tag_import_options.GetTagBlacklist()
+        tag_blacklist = tag_import_options.GetTagBlacklist()
         
-        self._tag_filter_button = ClientGUICommon.BetterButton( downloader_options_panel, self._tag_blacklist.ToBlacklistString()[:32], self._EditTagBlacklist )
+        message = 'Blacklists are managed by the tag filtering object, which has an overcomplicated ui for this typically simple job.'
+        message += os.linesep * 2
+        message += 'Any tag that this filter excludes will be considered a blacklisted tag and will stop the file importing.'
+        message += os.linesep * 2
+        message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the left column and hit ok.'
+        
+        self._tag_filter_button = ClientGUICommon.TagFilterButton( downloader_options_panel, message, tag_blacklist, is_blacklist = True )
         self._tag_filter_button.SetToolTip( 'If a blacklist is set, any file that has any of the specified tags will not be imported. This typically avoids the bandwidth of downloading the file, as well.' )
         
         self._services_vbox = wx.BoxSizer( wx.VERTICAL )
@@ -4194,29 +4182,6 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.SetSizer( vbox )
-        
-    
-    def _EditTagBlacklist( self ):
-        
-        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag blacklist' ) as dlg:
-            
-            message = 'Blacklists are managed by the tag filtering object, which has an overcomplicated ui for this typically simple job.'
-            message += os.linesep * 2
-            message += 'Any tag that this filter excludes will be considered a blacklisted tag and will stop the file importing.'
-            message += os.linesep * 2
-            message += 'So if you only want to stop \'scat\' or \'gore\', just add them to the left column and hit ok.'
-            
-            panel = EditTagFilterPanel( dlg, self._tag_blacklist, message )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._tag_blacklist = panel.GetValue()
-                
-                self._tag_filter_button.SetLabelText( self._tag_blacklist.ToBlacklistString()[:32] )
-                
-            
         
     
     def _InitialiseServices( self, tag_import_options, namespaces, show_downloader_options ):
@@ -4267,7 +4232,9 @@ Please note that you can set up 'default' values for these tag import options in
         
         service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items() }
         
-        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = self._tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_blacklist = self._tag_filter_button.GetValue()
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         return tag_import_options
         
@@ -4288,7 +4255,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        ( get_all, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags ) = service_tag_import_options.ToTuple()
+        ( get_all, get_all_filter, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter ) = service_tag_import_options.ToTuple()
         
         #
         
@@ -4302,16 +4269,29 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( possible_namespaces ) > 0:
             
-            label = 'get all tags (works better than \'select all\' for the new downloader system)'
+            label = 'get tags (works better than \'select all\' for the new downloader system)'
             
         else:
             
-            label = 'get all tags'
+            label = 'get tags'
             
         
         self._get_all_checkbox = wx.CheckBox( downloader_options_panel, label = label )
         
-        downloader_options_panel.Add( self._get_all_checkbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        message = 'You can filter which tags are applied here. For instance, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'.'
+        message += os.linesep * 2
+        message += 'This panel can get pretty complicated--down to individual tags. You probably don\'t want the hassle of managing hundreds of individual tags in a whitelist here, but it is possible.'
+        message += os.linesep * 2
+        message += 'I recommend you stick to broad namespaces. The easy way to create a simple whitelist is to click \'block everything\' and then put in what you _want_ on the right.'
+        
+        self._get_all_filter_button = ClientGUICommon.TagFilterButton( downloader_options_panel, message, get_all_filter )
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._get_all_checkbox, CC.FLAGS_VCENTER )
+        hbox.Add( self._get_all_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if len( possible_namespaces ) == 1:
             
@@ -4345,7 +4325,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        button_label = HydrusData.ConvertIntToPrettyString( len( self._additional_tags ) ) + ' additional tags'
+        button_label = HydrusData.ToHumanInt( len( self._additional_tags ) ) + ' additional tags'
         
         self._additional_button = ClientGUICommon.BetterButton( main_box, button_label, self._DoAdditionalTags )
         
@@ -4389,9 +4369,34 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        button_label = HydrusData.ConvertIntToPrettyString( len( self._additional_tags ) ) + ' additional tags'
+        button_label = HydrusData.ToHumanInt( len( self._additional_tags ) ) + ' additional tags'
         
         self._additional_button.SetLabelText( button_label )
+        
+    
+    def _EditOnlyAddExistingTagsFilter( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit already-exist filter' ) as dlg:
+            
+            message = 'If you do not want the \'only add tags that already exist\' option to apply to all tags coming in, set a filter here for the tags you _want_ to be exposed to this filter.'
+            message += os.linesep * 2
+            message += 'For instance, if you only want the wash of messy unnamespaced tags to be filtered, then just add \':\' (for all namespaces) to the \'exclude\' box and you should be good.'
+            message += os.linesep * 2
+            message += 'This is obviously a complicated idea, so make sure you test it on a small scale before you try anything big.'
+            message += os.linesep * 2
+            message += 'Clicking ok on this dialog will automatically turn on the already-exists filter if it is off.'
+            
+            panel = EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, message )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._only_add_existing_tags_filter = panel.GetValue()
+                
+                self._only_add_existing_tags = True
+                
+            
         
     
     def _GetCogIconMenuItems( self ):
@@ -4416,6 +4421,8 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items.append( ( 'check', 'only add tags that already exist', 'Only add tags to this service if they have non-zero count.', check_manager ) )
         
+        menu_items.append( ( 'normal', 'set a filter for already-exist test', 'Tell the already-exist test to only work on a subset of tags.', self._EditOnlyAddExistingTagsFilter ) )
+        
         return menu_items
         
     
@@ -4431,11 +4438,15 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         get_all = self._get_all_checkbox.GetValue()
         
-        should_enable = not get_all
+        should_enable_filter = get_all
+        
+        self._get_all_filter_button.Enable( should_enable_filter )
+        
+        should_enable_checkboxes = not get_all
         
         for checkbox in self._namespaces_to_checkbox_info.values():
             
-            checkbox.Enable( should_enable )
+            checkbox.Enable( should_enable_checkboxes )
             
         
     
@@ -4449,7 +4460,9 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         get_all = self._get_all_checkbox.GetValue()
         namespaces = [ namespace for ( namespace, checkbox ) in self._namespaces_to_checkbox_info.items() if checkbox.GetValue() ]
         
-        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all, namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags )
+        get_all_filter = self._get_all_filter_button.GetValue()
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = get_all, get_all_filter = get_all_filter, namespaces = namespaces, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter )
         
         return service_tag_import_options
         

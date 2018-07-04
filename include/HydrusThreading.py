@@ -442,7 +442,7 @@ class JobScheduler( threading.Thread ):
             
             job_lines = [ repr( job ) for job in self._waiting ]
             
-            lines = [ HydrusData.ConvertIntToPrettyString( num_jobs ) + ' jobs:' ] + job_lines
+            lines = [ HydrusData.ToHumanInt( num_jobs ) + ' jobs:' ] + job_lines
             
             text = os.linesep.join( lines )
             
@@ -545,7 +545,7 @@ class SchedulableJob( object ):
     
     def __repr__( self ):
         
-        return repr( self.__class__ ) + ': ' + repr( self._work_callable ) + ' next in ' + HydrusData.ConvertTimeDeltaToPrettyString( self._next_work_time - HydrusData.GetNowFloat() )
+        return repr( self.__class__ ) + ': ' + repr( self._work_callable ) + ' next in ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._next_work_time - HydrusData.GetNowFloat() )
         
     
     def _BootWorker( self ):

@@ -3050,7 +3050,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if num_committable > 0:
             
-            label = 'commit ' + HydrusData.ConvertIntToPrettyString( num_committable ) + ' decisions?'
+            label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions?'
             
             with ClientGUIDialogs.DialogFinishFiltering( self, label ) as dlg:
                 
@@ -3399,7 +3399,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if len( self._unprocessed_pairs ) == 0 and num_committable > 0:
             
-            label = 'commit ' + HydrusData.ConvertIntToPrettyString( num_committable ) + ' decisions and continue?'
+            label = 'commit ' + HydrusData.ToHumanInt( num_committable ) + ' decisions and continue?'
             
             with ClientGUIDialogs.DialogCommitInterstitialFiltering( self, label ) as dlg:
                 
@@ -3861,7 +3861,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if self._current_media is None:
             
-            index_string = '-/' + HydrusData.ConvertIntToPrettyString( len( self._sorted_media ) )
+            index_string = '-/' + HydrusData.ToHumanInt( len( self._sorted_media ) )
             
         else:
             
@@ -4128,7 +4128,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             if len( self._kept ) > 0 or len( self._deleted ) > 0:
                 
-                label = 'keep ' + HydrusData.ConvertIntToPrettyString( len( self._kept ) ) + ' and delete ' + HydrusData.ConvertIntToPrettyString( len( self._deleted ) ) + ' files?'
+                label = 'keep ' + HydrusData.ToHumanInt( len( self._kept ) ) + ' and delete ' + HydrusData.ToHumanInt( len( self._deleted ) ) + ' files?'
                 
                 with ClientGUIDialogs.DialogFinishFiltering( self, label ) as dlg:
                     

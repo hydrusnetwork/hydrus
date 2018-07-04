@@ -44,6 +44,11 @@ class MockController( object ):
         return HG.test_controller.CallToThread( callable, *args, **kwargs )
         
     
+    def JustWokeFromSleep( self ):
+        
+        return False
+        
+    
     def ModelIsShutdown( self ):
         
         return self.model_is_shutdown or HG.test_controller.ModelIsShutdown()

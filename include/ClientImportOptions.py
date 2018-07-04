@@ -200,7 +200,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
             ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
             
-            pretty_current_velocity += HydrusData.ConvertIntToPrettyString( current_files_found ) + ' files in previous ' + HydrusData.ConvertTimeDeltaToPrettyString( current_time_delta )
+            pretty_current_velocity += HydrusData.ToHumanInt( current_files_found ) + ' files in previous ' + HydrusData.TimeDeltaToPrettyTimeDelta( current_time_delta )
             
         
         return pretty_current_velocity
@@ -710,14 +710,14 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             ( width, height ) = self._min_resolution
             
-            statements.append( 'excluding < ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
+            statements.append( 'excluding < ( ' + HydrusData.ToHumanInt( width ) + ' x ' + HydrusData.ToHumanInt( height ) + ' )' )
             
         
         if self._max_resolution is not None:
             
             ( width, height ) = self._max_resolution
             
-            statements.append( 'excluding > ( ' + HydrusData.ConvertIntToPrettyString( width ) + ' x ' + HydrusData.ConvertIntToPrettyString( height ) + ' )' )
+            statements.append( 'excluding > ( ' + HydrusData.ToHumanInt( width ) + ' x ' + HydrusData.ToHumanInt( height ) + ' )' )
             
         
         #
@@ -951,7 +951,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 
                 ( to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags ) = ( True, True, True, False )
                 
-                service_tag_import_options = ServiceTagImportOptions( get_all, namespaces, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags )
+                service_tag_import_options = ServiceTagImportOptions( get_all = get_all, namespaces = namespaces, additional_tags = additional_tags, to_new_files = to_new_files, to_already_in_inbox = to_already_in_inbox, to_already_in_archive = to_already_in_archive, only_add_existing_tags = only_add_existing_tags )
                 
                 service_keys_to_service_tag_import_options[ service_key ] = service_tag_import_options
                 
@@ -1116,9 +1116,14 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Service Tag Import Options'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, get_all = False, namespaces = None, additional_tags = None, to_new_files = True, to_already_in_inbox = True, to_already_in_archive = True, only_add_existing_tags = False ):
+    def __init__( self, get_all = False, get_all_filter = None, namespaces = None, additional_tags = None, to_new_files = True, to_already_in_inbox = True, to_already_in_archive = True, only_add_existing_tags = False, only_add_existing_tags_filter = None ):
+        
+        if get_all_filter is None:
+            
+            get_all_filter = ClientTags.TagFilter()
+            
         
         if namespaces is None:
             
@@ -1130,32 +1135,62 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             additional_tags = []
             
         
+        if only_add_existing_tags_filter is None:
+            
+            only_add_existing_tags_filter = ClientTags.TagFilter()
+            
+        
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self._get_all = get_all
+        self._get_all_filter = get_all_filter
         self._namespaces = namespaces
         self._additional_tags = additional_tags
         self._to_new_files = to_new_files
         self._to_already_in_inbox = to_already_in_inbox
         self._to_already_in_archive = to_already_in_archive
         self._only_add_existing_tags = only_add_existing_tags
+        self._only_add_existing_tags_filter = only_add_existing_tags_filter
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self._get_all, list( self._namespaces ), list( self._additional_tags ), self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags )
+        serialisable_get_all_filter = self._get_all_filter.GetSerialisableTuple()
+        serialisable_only_add_existing_tags_filter = self._only_add_existing_tags_filter.GetSerialisableTuple()
+        
+        return ( self._get_all, serialisable_get_all_filter, list( self._namespaces ), list( self._additional_tags ), self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._get_all, self._namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags ) = serialisable_info
+        ( self._get_all, serialisable_get_all_filter, self._namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, serialisable_only_add_existing_tags_filter ) = serialisable_info
+        
+        self._get_all_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_get_all_filter )
+        self._only_add_existing_tags_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_only_add_existing_tags_filter )
         
     
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( get_all, namespaces, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags ) = old_serialisable_info
+            
+            get_all_filter = ClientTags.TagFilter()
+            only_add_existing_tags_filter = ClientTags.TagFilter()
+            
+            serialisable_get_all_filter = get_all_filter.GetSerialisableTuple()
+            serialisable_only_add_existing_tags_filter = only_add_existing_tags_filter.GetSerialisableTuple()
+            
+            new_serialisable_info = ( get_all, serialisable_get_all_filter, namespaces, additional_tags, to_new_files, to_already_in_inbox, to_already_in_archive, only_add_existing_tags, serialisable_only_add_existing_tags_filter )
+            
+            return ( 2, new_serialisable_info )
+            
+        
     def DeriveTagImportOptionsFromSelf( self, namespaces ):
         
         derived_namespaces = [ namespace for namespace in namespaces if namespace in self._namespaces ]
         
-        service_tag_import_options = ServiceTagImportOptions( self._get_all, derived_namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags )
+        service_tag_import_options = ServiceTagImportOptions( get_all = self._get_all, get_all_filter = self._get_all_filter, namespaces = derived_namespaces, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter )
         
         return service_tag_import_options
         
@@ -1197,7 +1232,9 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if self._get_all:
                 
-                tags.update( parsed_tags )
+                filtered_tags = self._get_all_filter.Filter( parsed_tags )
+                
+                tags.update( filtered_tags )
                 
             else:
                 
@@ -1208,7 +1245,13 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if self._only_add_existing_tags:
                 
-                tags = HG.client_controller.Read( 'filter_existing_tags', service_key, tags )
+                applicable_tags = self._only_add_existing_tags_filter.Filter( tags )
+                
+                tags.difference_update( applicable_tags )
+                
+                existing_applicable_tags = HG.client_controller.Read( 'filter_existing_tags', service_key, tags )
+                
+                tags.update( existing_applicable_tags )
                 
             
         
@@ -1217,7 +1260,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def ToTuple( self ):
         
-        return ( self._get_all, self._namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags )
+        return ( self._get_all, self._get_all_filter, self._namespaces, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter )
         
     
     def WorthFetchingTags( self ):

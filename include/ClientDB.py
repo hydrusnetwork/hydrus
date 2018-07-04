@@ -118,7 +118,7 @@ def report_content_speed_to_job_key( job_key, rows_done, total_rows, precise_tim
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ConvertIntToPrettyString( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
     
     popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -129,7 +129,7 @@ def report_speed_to_job_key( job_key, precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ConvertIntToPrettyString( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
     
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -140,9 +140,9 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusData.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ConvertIntToPrettyString( num_rows / it_took )
+    rows_s = HydrusData.ToHumanInt( num_rows / it_took )
     
-    summary = 'processed ' + HydrusData.ConvertIntToPrettyString( num_rows ) + ' ' + row_name + ' at ' + rows_s + ' rows/s'
+    summary = 'processed ' + HydrusData.ToHumanInt( num_rows ) + ' ' + row_name + ' at ' + rows_s + ' rows/s'
     
     HydrusData.Print( summary )
     
@@ -397,7 +397,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if time_took > 1:
                         
-                        HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                        HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                         
                     
                     p1 = stop_time is not None and HydrusData.TimeHasPassed( stop_time )
@@ -1758,7 +1758,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # removal of old branch, maintenance schedule, and orphan phashes
         
-        job_key.SetVariable( 'popup_text_2', HydrusData.ConvertIntToPrettyString( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch' )
+        job_key.SetVariable( 'popup_text_2', HydrusData.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch' )
         
         unbalanced_phash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
         
@@ -1831,7 +1831,7 @@ class DB( HydrusDB.HydrusDB ):
             
             all_nodes = self._c.execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
             
-            job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( len( all_nodes ) ) + ' leaves found, now regenerating' )
+            job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
             
             ( root_id, root_phash ) = self._CacheSimilarFilesPopBestRootNode( all_nodes ) #HydrusData.RandomPop( all_nodes )
             
@@ -1950,7 +1950,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if HG.db_report_mode:
                 
-                HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ConvertIntToPrettyString( num_cycles ) + ' cycles.' )
+                HydrusData.ShowText( 'Similar file search completed in ' + HydrusData.ToHumanInt( num_cycles ) + ' cycles.' )
                 
             
             select_statement = 'SELECT hash_id FROM shape_perceptual_hash_map WHERE phash_id IN %s;'
@@ -2505,7 +2505,7 @@ class DB( HydrusDB.HydrusDB ):
             num_errors = 0
             
             job_key.SetVariable( 'popup_title', prefix_string + 'running' )
-            job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+            job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
             
             db_names = [ name for ( index, name, path ) in self._c.execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp' ) ]
             
@@ -2518,7 +2518,7 @@ class DB( HydrusDB.HydrusDB ):
                     if should_quit:
                         
                         job_key.SetVariable( 'popup_title', prefix_string + 'cancelled' )
-                        job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+                        job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
                         
                         return
                         
@@ -2535,14 +2535,14 @@ class DB( HydrusDB.HydrusDB ):
                         num_errors += 1
                         
                     
-                    job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+                    job_key.SetVariable( 'popup_text_1', 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
                     
                 
             
         finally:
             
             job_key.SetVariable( 'popup_title', prefix_string + 'completed' )
-            job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ConvertIntToPrettyString( num_errors ) )
+            job_key.SetVariable( 'popup_text_1', 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
             
             HydrusData.Print( job_key.ToString() )
             
@@ -2643,11 +2643,11 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                final_text += HydrusData.ConvertIntToPrettyString( missing_count ) + ' files were missing!'
+                final_text += HydrusData.ToHumanInt( missing_count ) + ' files were missing!'
                 
                 if mode == 'thorough':
                     
-                    final_text += ' ' + HydrusData.ConvertIntToPrettyString( len( deletee_hash_ids ) - missing_count ) + ' files were incorrect and thus '
+                    final_text += ' ' + HydrusData.ToHumanInt( len( deletee_hash_ids ) - missing_count ) + ' files were incorrect and thus '
                     
                     if move_location is None:
                         
@@ -2719,7 +2719,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._CacheSimilarFilesDeleteFile( hash_id )
                     
                 
-                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ConvertIntToPrettyString( len( in_local_not_in_combined ) ) + ' local domain orphan file records.' )
+                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_local_not_in_combined ) ) + ' local domain orphan file records.' )
                 
             
             if job_key.IsCancelled():
@@ -2740,7 +2740,7 @@ class DB( HydrusDB.HydrusDB ):
                     self._CacheSimilarFilesDeleteFile( hash_id )
                     
                 
-                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ConvertIntToPrettyString( len( in_combined_not_in_local ) ) + ' combined domain orphan file records.' )
+                HydrusData.ShowText( 'Found and deleted ' + HydrusData.ToHumanInt( len( in_combined_not_in_local ) ) + ' combined domain orphan file records.' )
                 
             
             if len( in_local_not_in_combined ) == 0 and len( in_combined_not_in_local ) == 0:
@@ -5309,7 +5309,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
+            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) + ' (before this check).'
             
             return ( CC.STATUS_DELETED, hash, prefix + ': ' + note )
             
@@ -5320,7 +5320,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' before this check.'
+            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) + ' (before this check).'
             
             return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + ': ' + note )
             
@@ -6732,17 +6732,17 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                message += 'at most ' + HydrusData.ConvertIntToPrettyString( limit )
+                message += 'at most ' + HydrusData.ToHumanInt( limit )
                 
             
             message += ' trash files,'
             
             if minimum_age is not None:
                 
-                message += ' with minimum age ' + HydrusData.ConvertTimestampToPrettyAge( timestamp_cutoff ) + ','
+                message += ' with minimum age ' + HydrusData.TimestampToPrettyTimeDelta( timestamp_cutoff ) + ','
                 
             
-            message += ' I found ' + HydrusData.ConvertIntToPrettyString( len( hash_ids ) ) + '.'
+            message += ' I found ' + HydrusData.ToHumanInt( len( hash_ids ) ) + '.'
             
             HydrusData.ShowText( message )
             
@@ -7125,7 +7125,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if HydrusData.TimeHasPassed( next_stop_time_presentation ):
                                 
-                                HG.client_controller.pub( 'splash_set_status_subtext', HydrusData.ConvertTimestampToPrettyPending( stop_time, prefix = '' ) )
+                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time ) )
                                 
                                 if HydrusData.TimeHasPassed( stop_time ):
                                     
@@ -9799,8 +9799,8 @@ class DB( HydrusDB.HydrusDB ):
                         
                         message = 'While updating, hydrus counted a mismatch in your files. This likely means an orphan that can be cleaned up in a future version.'
                         message += os.linesep * 2
-                        message += 'You have ' + HydrusData.ConvertIntToPrettyString( num_in_local_not_in_combined ) + ' files in the local services but not in the combine service.'
-                        message += 'You have ' + HydrusData.ConvertIntToPrettyString( num_in_combined_not_in_local ) + ' files in the combined services but not in the local services.'
+                        message += 'You have ' + HydrusData.ToHumanInt( num_in_local_not_in_combined ) + ' files in the local services but not in the combine service.'
+                        message += 'You have ' + HydrusData.ToHumanInt( num_in_combined_not_in_local ) + ' files in the combined services but not in the local services.'
                         message += os.linesep * 2
                         message += 'Please let hydrus dev know these numbers.'
                         
@@ -10506,6 +10506,40 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 312:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLMatches( ( 'deviant art file page', 'deviant art file page (old format)' ) )
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'danbooru gallery page parser', 'deviant art file page parser' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11017,7 +11051,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             time_took = HydrusData.GetNowPrecise() - started
                             
-                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                            HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                             
                             names_done.append( name )
                             

@@ -187,6 +187,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
         
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_filesize' ] = 20
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_filesize' ] = 10
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_resolution' ] = 20
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 5
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_more_tags' ] = 8
+        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 5
+        
         #
         
         self._dictionary[ 'keys' ] = {}
@@ -356,6 +363,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
         self._dictionary[ 'frame_locations' ][ 'file_import_status' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'gallery_import_log' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'local_import_filename_tagging' ] = ( True, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'main_gui' ] = ( True, True, ( 800, 600 ), ( 20, 20 ), ( -1, -1 ), 'topleft', True, False )
         self._dictionary[ 'frame_locations' ][ 'manage_options_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )

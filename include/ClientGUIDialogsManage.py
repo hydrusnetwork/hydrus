@@ -1218,7 +1218,7 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         pretty_file_search_context = ', '.join( predicate.GetUnicode( with_count = False ) for predicate in file_search_context.GetPredicates() )
         
-        pretty_period = HydrusData.ConvertTimeDeltaToPrettyString( period )
+        pretty_period = HydrusData.TimeDeltaToPrettyTimeDelta( period )
         
         pretty_phrase = phrase
         
@@ -1405,8 +1405,9 @@ synchronise - try to export the files to the directory, overwriting if the files
 
 If you select synchronise, be careful!'''
         
-        st = wx.StaticText( self._type_box, label = text )
-        st.Wrap( 440 )
+        st = ClientGUICommon.BetterStaticText( self._type_box, label = text )
+        
+        st.SetWrapWidth( 440 )
         
         self._type_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._type_box.Add( self._type, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2317,7 +2318,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ( name, path, check_period ) = sort_tuple
         
-        pretty_check_period = HydrusData.ConvertTimeDeltaToPrettyString( check_period )
+        pretty_check_period = HydrusData.TimeDeltaToPrettyTimeDelta( check_period )
         
         display_tuple = ( name, path, pretty_check_period )
         
@@ -3082,7 +3083,7 @@ class DialogManageRatings( ClientGUIDialogs.Dialog ):
             my_position = 'topleft'
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files', position = my_position )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files', position = my_position )
         
         #
         
@@ -3389,7 +3390,7 @@ class DialogManageTagCensorship( ClientGUIDialogs.Dialog ):
         
         st = ClientGUICommon.BetterStaticText( self, intro )
         
-        st.Wrap( 350 )
+        st.SetWrapWidth( 350 )
         
         vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._tag_services, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -4335,7 +4336,7 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.SetLabelText( 'Files with a tag on the left will also be given the tag on the right.' + os.linesep + 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.' )
-                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ConvertIntToPrettyString( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
                 
                 self._child_input.Enable()
                 self._parent_input.Enable()
@@ -5248,7 +5249,7 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 self._status_st.SetLabelText( 'Tags on the left will be replaced by those on the right.' )
-                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ConvertIntToPrettyString( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
+                self._count_st.SetLabelText( 'Starting with ' + HydrusData.ToHumanInt( len( original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ] ) ) + ' pairs.' )
                 
                 self._old_input.Enable()
                 self._new_input.Enable()

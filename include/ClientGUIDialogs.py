@@ -719,7 +719,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        intro = 'Sharing ' + HydrusData.ConvertIntToPrettyString( len( self._hashes ) ) + ' files.'
+        intro = 'Sharing ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files.'
         intro += os.linesep + 'Title and text are optional.'
         
         if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
@@ -1092,7 +1092,7 @@ class FrameInputLocalFiles( wx.Frame ):
                     
                 else:
                     
-                    message = 'none of the ' + HydrusData.ConvertIntToPrettyString( total_paths ) + ' files parsed successfully'
+                    message = 'none of the ' + HydrusData.ToHumanInt( total_paths ) + ' files parsed successfully'
                     
                 
             else:
@@ -1115,17 +1115,17 @@ class FrameInputLocalFiles( wx.Frame ):
                 
                 if num_empty_files > 0:
                     
-                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_empty_files ) + ' were empty' )
+                    bad_comments.append( HydrusData.ToHumanInt( num_empty_files ) + ' were empty' )
                     
                 
                 if num_unimportable_mime_files > 0:
                     
-                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_unimportable_mime_files ) + ' had unsupported file types' )
+                    bad_comments.append( HydrusData.ToHumanInt( num_unimportable_mime_files ) + ' had unsupported file types' )
                     
                 
                 if num_occupied_files > 0:
                     
-                    bad_comments.append( HydrusData.ConvertIntToPrettyString( num_occupied_files ) + ' were probably already in use by another process' )
+                    bad_comments.append( HydrusData.ToHumanInt( num_occupied_files ) + ' were probably already in use by another process' )
                     
                 
                 message += ' and '.join( bad_comments )
@@ -1712,7 +1712,7 @@ class DialogModifyAccounts( Dialog ):
             
             subject_string = HydrusData.ToUnicode( response[ 'account_info' ] )
             
-        else: subject_string = 'modifying ' + HydrusData.ConvertIntToPrettyString( len( self._subject_identifiers ) ) + ' accounts'
+        else: subject_string = 'modifying ' + HydrusData.ToHumanInt( len( self._subject_identifiers ) ) + ' accounts'
         
         self._subject_text.SetLabelText( subject_string )
         
@@ -2337,7 +2337,7 @@ class DialogTextEntry( Dialog ):
         hbox.Add( self._cancel, CC.FLAGS_SMALL_INDENT )
         
         st_message = ClientGUICommon.BetterStaticText( self, message )
-        st_message.Wrap( 480 )
+        st_message.SetWrapWidth( 480 )
         
         vbox = wx.BoxSizer( wx.VERTICAL )
         
@@ -2436,7 +2436,7 @@ class DialogYesNo( Dialog ):
         
         text = ClientGUICommon.BetterStaticText( self, message )
         
-        text.Wrap( 480 )
+        text.SetWrapWidth( 480 )
         
         vbox.Add( text, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )
@@ -2496,7 +2496,7 @@ class DialogYesYesNo( Dialog ):
         
         text = ClientGUICommon.BetterStaticText( self, message )
         
-        text.Wrap( 480 )
+        text.SetWrapWidth( 480 )
         
         vbox.Add( text, CC.FLAGS_BIG_INDENT )
         vbox.Add( hbox, CC.FLAGS_BUTTON_SIZER )

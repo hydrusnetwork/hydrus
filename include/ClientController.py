@@ -426,7 +426,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
                             
-                            text = 'Is now a good time for the client to do up to ' + HydrusData.ConvertIntToPrettyString( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
+                            text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
                             
                             with ClientGUIDialogs.DialogYesNo( self._splash, text, title = 'Maintenance is due' ) as dlg_yn:
                                 
@@ -938,11 +938,6 @@ class Controller( HydrusController.HydrusController ):
             self._alive_page_keys.discard( page_key )
             self._closed_page_keys.discard( page_key )
             
-        
-    
-    def ResetIdleTimer( self ):
-        
-        self._timestamps[ 'last_user_action' ] = HydrusData.GetNow()
         
     
     def ResetPageChangeTimer( self ):

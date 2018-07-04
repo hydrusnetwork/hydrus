@@ -23,6 +23,7 @@ import ClientGUIParsing
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUIFileSeedCache
+import ClientGUIGallerySeedLog
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
@@ -1260,7 +1261,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if num_phashes_to_regen == 0:
             
-            self._num_phashes_to_regen.SetLabelText( 'All ' + HydrusData.ConvertIntToPrettyString( total_num_files ) + ' eligible files up to date!' )
+            self._num_phashes_to_regen.SetLabelText( 'All ' + HydrusData.ToHumanInt( total_num_files ) + ' eligible files up to date!' )
             
             self._phashes_button.Disable()
             
@@ -1281,7 +1282,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
         else:
             
-            self._num_branches_to_regen.SetLabelText( HydrusData.ConvertIntToPrettyString( num_branches_to_regen ) + ' search branches to rebalance.' )
+            self._num_branches_to_regen.SetLabelText( HydrusData.ToHumanInt( num_branches_to_regen ) + ' search branches to rebalance.' )
             
             self._branches_button.Enable()
             
@@ -1330,10 +1331,10 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         num_unknown = duplicate_types_to_count[ HC.DUPLICATE_UNKNOWN ]
         
-        self._num_unknown_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( num_unknown ) + ' potential pairs.' )
-        self._num_better_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs.' )
-        self._num_same_quality_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_SAME_QUALITY ] ) + ' same quality pairs.' )
-        self._num_alternate_duplicates.SetLabelText( HydrusData.ConvertIntToPrettyString( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs.' )
+        self._num_unknown_duplicates.SetLabelText( HydrusData.ToHumanInt( num_unknown ) + ' potential pairs.' )
+        self._num_better_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_BETTER ] ) + ' better/worse pairs.' )
+        self._num_same_quality_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_SAME_QUALITY ] ) + ' same quality pairs.' )
+        self._num_alternate_duplicates.SetLabelText( HydrusData.ToHumanInt( duplicate_types_to_count[ HC.DUPLICATE_ALTERNATE ] ) + ' alternate pairs.' )
         
         if num_unknown > 0:
             
@@ -1446,13 +1447,15 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel )
         
-        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
-        
         self._gallery_pause_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.pause )
         self._gallery_pause_button.Bind( wx.EVT_BUTTON, self.EventGalleryPause )
         
         self._gallery_cancel_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.stop )
         self._gallery_cancel_button.Bind( wx.EVT_BUTTON, self.EventGalleryCancel )
+        
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, self._controller, True, page_key = self._page_key )
+        
+        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
         
         self._pending_queries_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'pending queries' )
         
@@ -1493,6 +1496,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         hbox.Add( self._gallery_cancel_button, CC.FLAGS_VCENTER )
         
         self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -1549,6 +1553,10 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         
         self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
         
+        gallery_seed_log = self._gallery_import.GetGallerySeedLog()
+        
+        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
+        
         self._query_input.SetValue( search_value )
         
         self._file_limit.SetValue( file_limit )
@@ -1564,20 +1572,6 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
             
         
         self._UpdateStatus()
-        
-    
-    def _FileSeedCache( self ):
-        
-        file_seed_cache = self._gallery_import.GetFileSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def _UpdateStatus( self ):
@@ -1875,7 +1869,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'progress', 13 ), ( 'added', 10 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'items', 13 ), ( 'added', 10 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -2013,43 +2007,38 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             pretty_subject = '* ' + pretty_subject
             
         
-        status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
+        ( status, simple_status, ( num_done, num_total ) ) = watcher.GetFileSeedCache().GetStatus()
         
-        ( value, range ) = watcher.GetValueRange()
-        
-        progress = ( range, value )
-        
-        added = watcher.GetCreationTime()
-        
-        pretty_added = HydrusData.ConvertTimestampToHumanPrettyTime( added )
-        
-        subject = pretty_subject.lower()
-        
-        pretty_status = status
-        
-        if status == '':
+        if num_total > 0:
             
-            status = 'zzz' # to sort _after_ DEAD and other interesting statuses on ascending sort
-            
-        
-        if value == range:
-            
-            if value == 0:
-                
-                pretty_progress = 'no files'
-                
-            else:
-                
-                pretty_progress = HydrusData.ConvertIntToPrettyString( value )
-                
+            sort_float = float( num_done ) / num_total
             
         else:
             
-            pretty_progress = HydrusData.ConvertValueRangeToPrettyString( value, range )
+            sort_float = 0.0
             
         
-        display_tuple = ( pretty_subject, pretty_status, pretty_progress, pretty_added )
-        sort_tuple = ( subject, status, progress, added )
+        progress = ( sort_float, num_total, num_done )
+        
+        pretty_progress = simple_status
+        
+        added = watcher.GetCreationTime()
+        
+        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
+        
+        subject = pretty_subject.lower()
+        
+        watcher_status = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
+        
+        pretty_watcher_status = watcher_status
+        
+        if watcher_status == '':
+            
+            watcher_status = 'zzz' # to sort _after_ DEAD and other interesting statuses on ascending sort
+            
+        
+        display_tuple = ( pretty_subject, pretty_watcher_status, pretty_progress, pretty_added )
+        sort_tuple = ( subject, watcher_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2154,18 +2143,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             
         
-        message = 'Remove the ' + HydrusData.ConvertIntToPrettyString( len( removees ) ) + ' selected watchers?'
+        message = 'Remove the ' + HydrusData.ToHumanInt( len( removees ) ) + ' selected watchers?'
         
         if num_working > 0:
             
             message += os.linesep * 2
-            message += HydrusData.ConvertIntToPrettyString( num_working ) + ' are still working.'
+            message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
             
         
         if num_alive > 0:
             
             message += os.linesep * 2
-            message += HydrusData.ConvertIntToPrettyString( num_alive ) + ' are not yet DEAD.'
+            message += HydrusData.ToHumanInt( num_alive ) + ' are not yet DEAD.'
             
         
         if self._highlighted_watcher is not None and self._highlighted_watcher in removees:
@@ -2265,12 +2254,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                 else:
                     
-                    num_dead_text = HydrusData.ConvertIntToPrettyString( num_dead ) + ' DEAD - '
+                    num_dead_text = HydrusData.ToHumanInt( num_dead ) + ' DEAD - '
                     
                 
-                ( status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
+                ( status, simple_status, ( value, range ) ) = self._multiple_watcher_import.GetTotalStatus()
                 
-                text_top = HydrusData.ConvertIntToPrettyString( len( watcher_keys ) ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_top = HydrusData.ToHumanInt( len( watcher_keys ) ) + ' watchers - ' + num_dead_text + HydrusData.ConvertValueRangeToPrettyString( value, range )
                 text_bottom = status
                 
             
@@ -2313,7 +2302,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if num_working > 0:
             
-            raise HydrusExceptions.VetoException( HydrusData.ConvertIntToPrettyString( num_working ) + ' watchers are still importing.' )
+            raise HydrusExceptions.VetoException( HydrusData.ToHumanInt( num_working ) + ' watchers are still importing.' )
             
         
     
@@ -2362,35 +2351,39 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         #
         
-        self._pending_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'pending urls' )
+        #
         
-        self._pause_queue_button = wx.BitmapButton( self._pending_jobs_panel, bitmap = CC.GlobalBMPs.pause )
+        self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'simple parsing urls' )
+        
+        self._pause_queue_button = wx.BitmapButton( self._simple_parsing_jobs_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_queue_button.Bind( wx.EVT_BUTTON, self.EventPauseQueue )
         
-        self._parser_status = ClientGUICommon.BetterStaticText( self._pending_jobs_panel )
+        self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel )
         
-        self._page_download_control = ClientGUIControls.NetworkJobControl( self._pending_jobs_panel )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._simple_parsing_jobs_panel, self._controller, True, self._page_key )
         
-        self._pending_jobs_listbox = wx.ListBox( self._pending_jobs_panel, size = ( -1, 100 ) )
+        self._page_download_control = ClientGUIControls.NetworkJobControl( self._simple_parsing_jobs_panel )
         
-        self._advance_button = wx.Button( self._pending_jobs_panel, label = u'\u2191' )
+        self._pending_jobs_listbox = wx.ListBox( self._simple_parsing_jobs_panel, size = ( -1, 100 ) )
+        
+        self._advance_button = wx.Button( self._simple_parsing_jobs_panel, label = u'\u2191' )
         self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
         
-        self._delete_button = wx.Button( self._pending_jobs_panel, label = 'X' )
+        self._delete_button = wx.Button( self._simple_parsing_jobs_panel, label = 'X' )
         self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
         
-        self._delay_button = wx.Button( self._pending_jobs_panel, label = u'\u2193' )
+        self._delay_button = wx.Button( self._simple_parsing_jobs_panel, label = u'\u2193' )
         self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
         
-        self._page_url_input = ClientGUIControls.TextAndPasteCtrl( self._pending_jobs_panel, self._PendPageURLs )
+        self._page_url_input = ClientGUIControls.TextAndPasteCtrl( self._simple_parsing_jobs_panel, self._PendPageURLs )
         
-        self._formulae = ClientGUICommon.BetterChoice( self._pending_jobs_panel )
+        self._formulae = ClientGUICommon.BetterChoice( self._simple_parsing_jobs_panel )
         
         menu_items = []
         
         menu_items.append( ( 'normal', 'edit formulae', 'Edit these parsing formulae.', self._EditFormulae ) )
         
-        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._pending_jobs_panel, CC.GlobalBMPs.cog, menu_items )
+        self._formula_cog = ClientGUICommon.MenuBitmapButton( self._simple_parsing_jobs_panel, CC.GlobalBMPs.cog, menu_items )
         
         self._RefreshFormulae()
         
@@ -2430,16 +2423,17 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         hbox.Add( self._parser_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
         hbox.Add( self._pause_queue_button, CC.FLAGS_VCENTER )
         
-        self._pending_jobs_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_jobs_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_jobs_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_jobs_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pending_jobs_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_parsing_jobs_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_parsing_jobs_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_parsing_jobs_panel.Add( self._page_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_parsing_jobs_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self._simple_parsing_jobs_panel.Add( self._page_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_parsing_jobs_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         self._simple_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._simple_downloader_panel.Add( self._pending_jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._simple_downloader_panel.Add( self._simple_parsing_jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._simple_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -2463,6 +2457,10 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         file_seed_cache = self._simple_downloader_import.GetFileSeedCache()
         
         self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
+        
+        gallery_seed_log = self._simple_downloader_import.GetGallerySeedLog()
+        
+        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
         self._simple_downloader_import.SetDownloadControlFile( self._file_download_control )
         self._simple_downloader_import.SetDownloadControlPage( self._page_download_control )
@@ -2609,20 +2607,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             
             self._formulae.Select( to_select )
             
-        
-    
-    def _FileSeedCache( self ):
-        
-        file_seed_cache = self._simple_downloader_import.GetFileSeedCache()
-        
-        title = 'file import status'
-        frame_key = 'file_import_status'
-        
-        frame = ClientGUITopLevelWindows.FrameThatTakesScrollablePanel( self, title, frame_key )
-        
-        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, self._controller, file_seed_cache )
-        
-        frame.SetPanel( panel )
         
     
     def _UpdateStatus( self ):
@@ -2815,6 +2799,8 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         self._check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, self._controller, True, page_key = self._page_key )
+        
         self._checker_options_button = ClientGUICommon.BetterButton( checker_panel, 'edit check timings', self._EditCheckerOptions )
         
         self._checker_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
@@ -2853,6 +2839,7 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         gridbox.Add( self._check_now_button, CC.FLAGS_VCENTER )
         
         checker_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        checker_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2888,6 +2875,10 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         file_seed_cache = self._watcher_import.GetFileSeedCache()
         
         self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
+        
+        gallery_seed_log = self._watcher_import.GetGallerySeedLog()
+        
+        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
         self._watcher_import.SetDownloadControlFile( self._file_download_control )
         self._watcher_import.SetDownloadControlChecker( self._checker_download_control )
@@ -2980,9 +2971,16 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
             
         else:
             
-            if watcher_status == '':
+            if watcher_status == '' and next_check_time is not None:
                 
-                watcher_status = 'next check ' + HydrusData.ConvertTimestampToPrettyPending( next_check_time )
+                if HydrusData.TimeHasPassed( next_check_time ):
+                    
+                    watcher_status = 'checking imminently'
+                    
+                else:
+                    
+                    watcher_status = 'next check ' + HydrusData.TimestampToPrettyTimeDelta( next_check_time )
+                    
                 
             
             ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
@@ -3109,15 +3107,13 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._pause_button = wx.BitmapButton( self._url_panel, bitmap = CC.GlobalBMPs.pause )
         self._pause_button.Bind( wx.EVT_BUTTON, self.EventPause )
         
-        self._overall_status = ClientGUICommon.BetterStaticText( self._url_panel )
-        self._current_action = ClientGUICommon.BetterStaticText( self._url_panel )
         self._file_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
-        self._overall_gauge = ClientGUICommon.Gauge( self._url_panel )
         
         self._urls_import = self._management_controller.GetVariable( 'urls_import' )
         
-        # replace all this with a file_seed cache panel sometime
-        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._url_panel, self._controller, self._urls_import.GetFileSeedCache )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._url_panel, self._controller, page_key = self._page_key )
+        
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._url_panel, self._controller, True, page_key = self._page_key )
         
         self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
@@ -3128,10 +3124,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         #
         
         self._url_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
-        self._url_panel.Add( self._overall_status, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._current_action, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._overall_gauge, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._file_seed_cache_button, CC.FLAGS_LONE_BUTTON )
+        self._url_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3152,6 +3146,14 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
+        file_seed_cache = self._urls_import.GetFileSeedCache()
+        
+        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
+        
+        gallery_seed_log = self._urls_import.GetGallerySeedLog()
+        
+        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
+        
         self._urls_import.SetDownloadControlFile( self._file_download_control )
         
         self._UpdateStatus()
@@ -3170,36 +3172,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def _UpdateStatus( self ):
         
-        ( ( overall_status, ( overall_value, overall_range ) ), paused ) = self._urls_import.GetStatus()
-        
-        if self._overall_status.GetLabelText() != overall_status:
-            
-            self._overall_status.SetLabelText( overall_status )
-            
-        
-        self._overall_gauge.SetRange( overall_range )
-        self._overall_gauge.SetValue( overall_value )
-        
-        if overall_value < overall_range:
-            
-            if paused:
-                
-                current_action = 'paused at ' + HydrusData.ConvertValueRangeToPrettyString( overall_value + 1, overall_range )
-                
-            else:
-                
-                current_action = 'processing ' + HydrusData.ConvertValueRangeToPrettyString( overall_value + 1, overall_range )
-                
-            
-        else:
-            
-            current_action = ''
-            
-        
-        if self._current_action.GetLabelText() != current_action:
-            
-            self._current_action.SetLabelText( current_action )
-            
+        paused = self._urls_import.IsPaused()
         
         if paused:
             
@@ -3474,7 +3447,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
                 ( st, button ) = self._petition_types_to_controls[ petition_type ]
                 
-                st.SetLabelText( HydrusData.ConvertIntToPrettyString( count ) + ' petitions' )
+                st.SetLabelText( HydrusData.ToHumanInt( count ) + ' petitions' )
                 
                 if count > 0:
                     

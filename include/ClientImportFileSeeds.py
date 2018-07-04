@@ -19,7 +19,24 @@ import time
 import traceback
 import urlparse
 
-def GenerateFileSeedCacheStatus( statuses_to_counts ):
+def GenerateFileSeedCacheStatus( file_seed_cache ):
+    
+    statuses_to_counts = file_seed_cache.GetStatusesToCounts()
+    
+    return GenerateStatusesToCountsStatus( statuses_to_counts )
+    
+def GenerateFileSeedCachesStatus( file_seed_caches ):
+    
+    statuses_to_counts = collections.Counter()
+    
+    for file_seed_cache in file_seed_caches:
+        
+        statuses_to_counts.update( file_seed_cache.GetStatusesToCounts() )
+        
+    
+    return GenerateStatusesToCountsStatus( statuses_to_counts )
+    
+def GenerateStatusesToCountsStatus( statuses_to_counts ):
     
     num_successful_and_new = statuses_to_counts[ CC.STATUS_SUCCESSFUL_AND_NEW ]
     num_successful_but_redundant = statuses_to_counts[ CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ]
@@ -35,13 +52,13 @@ def GenerateFileSeedCacheStatus( statuses_to_counts ):
     
     if num_successful > 0:
         
-        s = HydrusData.ConvertIntToPrettyString( num_successful ) + ' successful'
+        s = HydrusData.ToHumanInt( num_successful ) + ' successful'
         
         if num_successful_and_new > 0:
             
             if num_successful_but_redundant > 0:
                 
-                s += ' (' + HydrusData.ConvertIntToPrettyString( num_successful_but_redundant ) + ' already in db)'
+                s += ' (' + HydrusData.ToHumanInt( num_successful_but_redundant ) + ' already in db)'
                 
             
         else:
@@ -54,31 +71,76 @@ def GenerateFileSeedCacheStatus( statuses_to_counts ):
     
     if num_ignored > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_ignored ) + ' ignored' )
+        status_strings.append( HydrusData.ToHumanInt( num_ignored ) + ' ignored' )
         
     
     if num_deleted > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_deleted ) + ' previously deleted' )
+        status_strings.append( HydrusData.ToHumanInt( num_deleted ) + ' previously deleted' )
         
     
     if num_failed > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_failed ) + ' failed' )
+        status_strings.append( HydrusData.ToHumanInt( num_failed ) + ' failed' )
         
     
     if num_skipped > 0:
         
-        status_strings.append( HydrusData.ConvertIntToPrettyString( num_skipped ) + ' skipped' )
+        status_strings.append( HydrusData.ToHumanInt( num_skipped ) + ' skipped' )
         
     
     status = ', '.join( status_strings )
+    
+    #
     
     total = sum( statuses_to_counts.values() )
     
     total_processed = total - num_unknown
     
-    return ( status, ( total_processed, total ) )
+    #
+    
+    simple_status = ''
+    
+    if total > 0:
+        
+        if num_unknown > 0:
+            
+            simple_status += HydrusData.ConvertValueRangeToPrettyString( total_processed, total )
+            
+        else:
+            
+            simple_status += HydrusData.ToHumanInt( total_processed )
+            
+        
+        simple_status_strings = []
+        
+        if num_ignored > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_ignored ) + 'I' )
+            
+        
+        if num_deleted > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_deleted ) + 'D' )
+            
+        
+        if num_failed > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_failed ) + 'F' )
+            
+        
+        if num_skipped > 0:
+            
+            simple_status_strings.append( HydrusData.ToHumanInt( num_skipped ) + 'S' )
+            
+        
+        if len( simple_status_strings ) > 0:
+            
+            simple_status += ' - ' + ''.join( simple_status_strings )
+            
+        
+    
+    return ( status, simple_status, ( total_processed, total ) )
     
 class FileImportJob( object ):
     
@@ -921,7 +983,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_NEW
-                        note = 'Found ' + HydrusData.ConvertIntToPrettyString( len( child_urls ) ) + ' new URLs.'
+                        note = 'Found ' + HydrusData.ToHumanInt( len( child_urls ) ) + ' new URLs.'
                         
                         self.SetStatus( status, note = note )
                         
@@ -1093,24 +1155,10 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def _GenerateStatus( self ):
         
-        statuses_to_counts = self._GetStatusesToCounts()
-        
-        self._status_cache = GenerateFileSeedCacheStatus( statuses_to_counts )
+        self._status_cache = GenerateStatusesToCountsStatus( self._GetStatusesToCounts() )
         self._status_cache_generation_time = HydrusData.GetNow()
         
         self._status_dirty = False
-        
-    
-    def _GetStatusesToCounts( self ):
-        
-        statuses_to_counts = collections.Counter()
-        
-        for file_seed in self._file_seeds:
-            
-            statuses_to_counts[ file_seed.status ] += 1
-            
-        
-        return statuses_to_counts
         
     
     def _GetFileSeeds( self, status = None ):
@@ -1146,6 +1194,18 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
         
         return source_timestamp
+        
+    
+    def _GetStatusesToCounts( self ):
+        
+        statuses_to_counts = collections.Counter()
+        
+        for file_seed in self._file_seeds:
+            
+            statuses_to_counts[ file_seed.status ] += 1
+            
+        
+        return statuses_to_counts
         
     
     def _HasFileSeed( self, file_seed ):
@@ -1702,7 +1762,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 self._GenerateStatus()
                 
             
-            ( status, ( total_processed, total ) ) = self._status_cache
+            ( status, simple_status, ( total_processed, total ) ) = self._status_cache
             
             return ( total_processed, total )
             
@@ -1840,7 +1900,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                 self._GenerateStatus()
                 
             
-            ( status, ( total_processed, total ) ) = self._status_cache
+            ( status, simple_status, ( total_processed, total ) ) = self._status_cache
             
             return total_processed < total
             

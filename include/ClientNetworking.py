@@ -78,6 +78,11 @@ class NetworkEngine( object ):
     
     def AddJob( self, job ):
         
+        if HG.network_report_mode:
+            
+            HydrusData.ShowText( 'Network Job: ' + job._method + ' ' + job._url )
+            
+        
         with self._lock:
             
             job.engine = self
@@ -277,6 +282,12 @@ class NetworkEngine( object ):
                 if self._pause_all_new_network_traffic:
                     
                     job.SetStatus( u'all new network traffic is paused\u2026' )
+                    
+                    return True
+                    
+                elif self.controller.JustWokeFromSleep():
+                    
+                    job.SetStatus( u'looks like computer just woke up, waiting a bit' )
                     
                     return True
                     

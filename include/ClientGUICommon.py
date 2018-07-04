@@ -653,21 +653,41 @@ class BetterStaticText( wx.StaticText ):
         
         wx.StaticText.__init__( self, parent, **kwargs )
         
+        self._last_set_text = '' # we want a separate copy since the one we'll send to the st will be wrapped and have additional '\n's
+        
+        self._wrap_width = None
+        
         if label is not None:
             
             # to escape mnemonic '&' swallowing
             self.SetLabelText( label )
             
         
-        # at some point, rewrite this to be a control that'll produce a custom geteffectiveminsize and use wx.lib.wordwrap to dc draw the text
-        # st.Wrap is a pain to deal with here, seems to sometimes/always not be able to increase after an initial non-zero call
+        # wx.lib.wordwrap mite be cool here to pre-calc the wrapped text, which may be more reliable in init than wrap, but it needs a dc
         
     
     def SetLabelText( self, text ):
         
-        if text != self.GetLabelText():
+        if text != self._last_set_text:
+            
+            self._last_set_text = text
             
             wx.StaticText.SetLabelText( self, text )
+            
+            if self._wrap_width is not None:
+                
+                self.Wrap( self._wrap_width )
+                
+            
+        
+    
+    def SetWrapWidth( self, wrap_width ):
+        
+        self._wrap_width = wrap_width
+        
+        if self._wrap_width is not None:
+            
+            self.Wrap( self._wrap_width )
             
         
     
@@ -1279,47 +1299,6 @@ class ExportPatternButton( BetterButton ):
         ClientGUIMenus.AppendMenuItem( self, menu, u'a particular tag, if the file has it - (\u2026)', u'copy "(\u2026)" to the clipboard', HG.client_controller.pub, 'clipboard', 'text', u'(\u2026)' )
         
         HG.client_controller.PopupMenu( self, menu )
-        
-    
-class FitResistantStaticText( wx.StaticText ):
-    
-    # this is a huge damn mess! I think I really need to be doing this inside or before the parent's fit, or something
-    
-    def __init__( self, *args, **kwargs ):
-        
-        wx.StaticText.__init__( self, *args, **kwargs )
-        
-        self._wrap = 380
-        
-        if 'label' in kwargs: self._last_label = kwargs[ 'label' ]
-        else: self._last_label = ''
-        
-    
-    def Wrap( self, width ):
-        
-        self._wrap = width
-        
-        wx.StaticText.Wrap( self, self._wrap )
-        
-        ( x, y ) = self.GetSize()
-        
-        if x > self._wrap: x = self._wrap
-        if x < 150: x = 150
-        
-        self.SetMinSize( ( x, y ) )
-        self.SetMaxSize( ( self._wrap, -1 ) )
-        
-    
-    def SetLabelText( self, label ):
-        
-        if label != self._last_label:
-            
-            self._last_label = label
-            
-            wx.StaticText.SetLabelText( self, label )
-            
-            self.Wrap( self._wrap )
-            
         
     
 class Gauge( wx.Gauge ):
@@ -3011,6 +2990,59 @@ class RadioBox( StaticBox ):
     def SetString( self, index, text ):
         
         self._indices_to_radio_buttons[ index ].SetLabelText( text )
+        
+    
+class TagFilterButton( BetterButton ):
+    
+    def __init__( self, parent, message, tag_filter, is_blacklist = False ):
+        
+        BetterButton.__init__( self, parent, 'tag filter', self._EditTagFilter )
+        
+        self._message = message
+        self._tag_filter = tag_filter
+        self._is_blacklist = is_blacklist
+        
+        self._UpdateLabel()
+        
+    
+    def _EditTagFilter( self ):
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag filter' ) as dlg:
+            
+            import ClientGUIScrolledPanelsEdit
+            
+            panel = ClientGUIScrolledPanelsEdit.EditTagFilterPanel( dlg, self._tag_filter, self._message )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                self._tag_filter = panel.GetValue()
+                
+                self._UpdateLabel()
+                
+            
+        
+    
+    def _UpdateLabel( self ):
+        
+        if self._is_blacklist:
+            
+            tt = self._tag_filter.ToBlacklistString()
+            
+        else:
+            
+            tt = self._tag_filter.ToPermittedString()
+            
+        
+        self.SetLabelText( tt[:32] )
+        
+        self.SetToolTipString( tt )
+        
+    
+    def GetValue( self ):
+        
+        return self._tag_filter
         
     
 class TextAndGauge( wx.Panel ):

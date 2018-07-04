@@ -1321,7 +1321,7 @@ class PagesNotebook( wx.Notebook ):
         
         if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and page.IsImporter() ):
             
-            num_string += HydrusData.ConvertIntToPrettyString( num_files )
+            num_string += HydrusData.ToHumanInt( num_files )
             
         
         if import_page_progress_display:
@@ -2056,14 +2056,14 @@ class PagesNotebook( wx.Notebook ):
         
         ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
         
-        num_string = HydrusData.ConvertIntToPrettyString( num_files )
+        num_string = HydrusData.ToHumanInt( num_files )
         
         if num_range > 0 and num_value != num_range:
             
             num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
             
         
-        return HydrusData.ConvertIntToPrettyString( self.GetPageCount() ) + ' pages, ' + num_string + ' files'
+        return HydrusData.ToHumanInt( self.GetPageCount() ) + ' pages, ' + num_string + ' files'
         
     
     def HasMediaPageName( self, page_name, only_my_level = False ):
@@ -2934,7 +2934,7 @@ class PagesNotebook( wx.Notebook ):
                     
                 else:
                     
-                    message = HydrusData.ConvertIntToPrettyString( c ) + ' pages say:' + reason
+                    message = HydrusData.ToHumanInt( c ) + ' pages say:' + reason
                     
                 
                 message += os.linesep

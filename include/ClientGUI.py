@@ -601,7 +601,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             it_took = HydrusData.GetNow() - started
             
-            HydrusData.ShowText( 'Server backup done in ' + HydrusData.ConvertTimeDeltaToPrettyString( it_took ) + '!' )
+            HydrusData.ShowText( 'Server backup done in ' + HydrusData.TimeDeltaToPrettyTimeDelta( it_took ) + '!' )
             
         
         message = 'This will tell the server to lock and copy its database files. It will probably take a few minutes to complete, during which time it will not be able to serve any requests.'
@@ -871,7 +871,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     break
                     
                 
-                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.ConvertTimeDeltaToPrettyString( 5 - i ) + '.' )
+                job_key.SetVariable( 'popup_text_1', 'Will auto-dismiss in ' + HydrusData.TimeDeltaToPrettyTimeDelta( 5 - i ) + '.' )
                 job_key.SetVariable( 'popup_gauge_1', ( i, 5 ) )
                 
                 time.sleep( 1 )
@@ -907,6 +907,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
             
+        
+        brother_classem_pinniped = '''++++What the fuck did you just fucking say about me, you worthless heretic? I'll have you know I graduated top of my aspirant tournament in the Heralds of Ultramar, and I've led an endless crusade of secret raids against the forces of The Great Enemy, and I have over 30 million confirmed purgings. I am trained in armored warfare and I'm the top brother in all the thousand Divine Chapters of the Adeptus Astartes. You are nothing to me but just another heretic. I will wipe you the fuck out with precision the likes of which has never been seen before in this universe, mark my fucking words. You think you can get away with saying that shit to me over the Warp? Think again, traitor. As we speak I am contacting my secret network of inquisitors across the galaxy and your malign powers are being traced right now so you better prepare for the holy storm, maggot. The storm that wipes out the pathetic little thing you call your soul. You're fucking dead, kid. I can warp anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bolter. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Departmento Munitorum and I will use it to its full extent to wipe your miserable ass off the face of the galaxy, you little shit. If only you could have known what holy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking impure tongue. But you couldn't, you didn't, and now you're paying the price, you Emperor-damned heretic.++++\n\n++++Better crippled in body than corrupt in mind++++\n\n++++The Emperor Protects++++'''
+        
+        HydrusData.ShowText( 'This is a very long message:  \n\n' + brother_classem_pinniped )
         
         #
         
@@ -1007,6 +1011,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     def _DebugShowScheduledJobs( self ):
         
         self._controller.DebugShowScheduledJobs()
+        
+    
+    def _DebugSimulateWakeFromSleepEvent( self ):
+        
+        self._controller.SimulateWakeFromSleepEvent()
         
     
     def _DeleteGUISession( self, name ):
@@ -1303,7 +1312,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 
                 ( total_active_page_count, total_closed_page_count ) = self.GetTotalPageCounts()
                 
-                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ConvertIntToPrettyString( total_active_page_count ) + ' pages open', 'You have this many pages open.' )
+                ClientGUIMenus.AppendMenuLabel( menu, HydrusData.ToHumanInt( total_active_page_count ) + ' pages open', 'You have this many pages open.' )
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
@@ -1617,12 +1626,12 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                     if num_pending > 0:
                         
-                        submessages.append( HydrusData.ConvertIntToPrettyString( num_pending ) + ' ' + pending_phrase )
+                        submessages.append( HydrusData.ToHumanInt( num_pending ) + ' ' + pending_phrase )
                         
                     
                     if num_petitioned > 0:
                         
-                        submessages.append( HydrusData.ConvertIntToPrettyString( num_petitioned ) + ' ' + petitioned_phrase )
+                        submessages.append( HydrusData.ToHumanInt( num_petitioned ) + ' ' + petitioned_phrase )
                         
                     
                     message = name + ': ' + ', '.join( submessages )
@@ -1635,7 +1644,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             show = total_num_pending > 0
             
-            return ( menu, '&pending (' + HydrusData.ConvertIntToPrettyString( total_num_pending ) + ')', show )
+            return ( menu, '&pending (' + HydrusData.ToHumanInt( total_num_pending ) + ')', show )
             
         
         def network():
@@ -1887,6 +1896,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
             ClientGUIMenus.AppendMenuCheckItem( self, debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
+            ClientGUIMenus.AppendMenuItem( self, debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._DebugSimulateWakeFromSleepEvent )
             
             ClientGUIMenus.AppendMenu( debug, debug_modes, 'debug modes' )
             
@@ -2075,7 +2085,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                     
                 else:
                     
-                    job_key.SetVariable( 'popup_text_1', 'Done with ' + HydrusData.ConvertIntToPrettyString( num_errors ) + ' errors (written to the log).' )
+                    job_key.SetVariable( 'popup_text_1', 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
                     
                 
             finally:

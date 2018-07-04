@@ -75,11 +75,11 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         source_time = file_seed.source_time
         note = file_seed.note
         
-        pretty_file_seed_index = HydrusData.ConvertIntToPrettyString( file_seed_index )
+        pretty_file_seed_index = HydrusData.ToHumanInt( file_seed_index )
         pretty_file_seed_data = HydrusData.ToUnicode( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ]
-        pretty_added = HydrusData.ConvertTimestampToPrettyAgo( added ) + ' ago'
-        pretty_modified = HydrusData.ConvertTimestampToPrettyAgo( modified ) + ' ago'
+        pretty_added = HydrusData.TimestampToPrettyTimeDelta( added )
+        pretty_modified = HydrusData.TimestampToPrettyTimeDelta( modified )
         
         if source_time is None:
             
@@ -87,7 +87,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_source_time = HydrusData.ConvertTimestampToHumanPrettyTime( source_time )
+            pretty_source_time = HydrusData.TimestampToPrettyTimeDelta( source_time )
             
         
         pretty_note = note.split( os.linesep )[0]
@@ -307,7 +307,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateText( self ):
         
-        ( status, ( total_processed, total ) ) = self._file_seed_cache.GetStatus()
+        ( status, simple_status, ( total_processed, total ) ) = self._file_seed_cache.GetStatus()
         
         self._text.SetLabelText( status )
         
@@ -540,34 +540,42 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         num_file_seeds = len( file_seed_cache )
         num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
-        num_deleted_and_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED ) + file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
+        num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
+        num_deleted_and_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED ) + num_vetoed
         num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
         num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
         
         if num_errors > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ConvertIntToPrettyString( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' error failures', 'Tell this cache to reattempt all its error failures.', self._RetryErrors )
             
+        
+        if num_vetoed > 0:
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
+            
+        
+        ClientGUIMenus.AppendSeparator( menu )
         
         if num_successful > 0:
             
             num_deletees = num_successful
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' successful file import items from the queue', 'Tell this cache to clear out successful files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) )
             
         
         if num_deleted_and_vetoed > 0:
             
             num_deletees = num_deleted_and_vetoed
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out processed files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' deleted/ignored file import items from the queue', 'Tell this cache to clear out deleted and ignored files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_DELETED, CC.STATUS_VETOED ) )
             
         
         if num_errors + num_skipped > 0:
             
             num_deletees = num_errors + num_skipped
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ConvertIntToPrettyString( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out all non-unknown files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'delete ' + HydrusData.ToHumanInt( num_deletees ) + ' error/skipped file import items from the queue', 'Tell this cache to clear out errored and skipped files, reducing the size of the queue.', self._ClearFileSeeds, ( CC.STATUS_ERROR, CC.STATUS_SKIPPED ) )
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -655,7 +663,7 @@ class FileSeedCacheStatusControl( wx.Panel ):
             
         else:
             
-            ( import_summary, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
+            ( import_summary, simple_status, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
             
             self._import_summary_st.SetLabelText( import_summary )
             
@@ -694,7 +702,7 @@ class FileSeedCacheStatusControl( wx.Panel ):
         
         if self._file_seed_cache is not None:
             
-            ( import_summary, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
+            ( import_summary, simple_status, ( num_done, num_to_do ) ) = self._file_seed_cache.GetStatus()
             
             ( old_num_done, old_num_to_do ) = self._progress_gauge.GetValueRange()
             

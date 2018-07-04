@@ -1335,6 +1335,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'regex favourites', 'regex favourites', self._RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'sort/collect', 'sort/collect', self._SortCollectPanel( self._listbook ) )
         self._listbook.AddPage( 'downloading', 'downloading', self._DownloadingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'duplicates', 'duplicates', self._DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'importing', 'importing', self._ImportingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', 'tag suggestions', self._TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag summaries', 'tag summaries', self._TagSummariesPanel( self._listbook, self._new_options ) )
@@ -1828,6 +1829,75 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _DuplicatesPanel( wx.Panel ):
+        
+        def __init__( self, parent, new_options ):
+            
+            wx.Panel.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            #
+            
+            weights_panel = ClientGUICommon.StaticBox( self, 'duplicate filter comparison score weights' )
+            
+            self._duplicate_comparison_score_higher_filesize = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_much_higher_filesize = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_higher_resolution = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_much_higher_resolution = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_more_tags = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            self._duplicate_comparison_score_older = wx.SpinCtrl( weights_panel, min = 0, max = 100 )
+            
+            #
+            self._duplicate_comparison_score_higher_filesize.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' ) )
+            self._duplicate_comparison_score_much_higher_filesize.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_filesize' ) )
+            self._duplicate_comparison_score_higher_resolution.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_higher_resolution' ) )
+            self._duplicate_comparison_score_much_higher_resolution.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' ) )
+            self._duplicate_comparison_score_more_tags.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_more_tags' ) )
+            self._duplicate_comparison_score_older.SetValue( self._new_options.GetInteger( 'duplicate_comparison_score_older' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Score for file with non-trivially higher filesize:', self._duplicate_comparison_score_higher_filesize ) )
+            rows.append( ( 'Score for file with more than double the filesize:', self._duplicate_comparison_score_much_higher_filesize ) )
+            rows.append( ( 'Score for file with higher resolution (as num pixels):', self._duplicate_comparison_score_higher_resolution ) )
+            rows.append( ( 'Score for file with more than double the resolution (as num pixels):', self._duplicate_comparison_score_much_higher_resolution ) )
+            rows.append( ( 'Score for file with more tags:', self._duplicate_comparison_score_more_tags ) )
+            rows.append( ( 'Score for file with non-trivially earlier import time:', self._duplicate_comparison_score_older ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( weights_panel, rows )
+            
+            label = 'When processing potential duplicate pairs in the duplicate filter, the client tries to present the \'best\' file first. It judges the two files on a variety of potential differences, each with a score. The file with the greatest total score is presented first. Here you can tinker with these scores.'
+            
+            st = ClientGUICommon.BetterStaticText( weights_panel, label )
+            
+            st.SetWrapWidth( 640 )
+            
+            weights_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            weights_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            vbox = wx.BoxSizer( wx.VERTICAL )
+            
+            vbox.Add( weights_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            self.SetSizer( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetInteger( 'duplicate_comparison_score_higher_filesize', self._duplicate_comparison_score_higher_filesize.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_filesize', self._duplicate_comparison_score_much_higher_filesize.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_higher_resolution', self._duplicate_comparison_score_higher_resolution.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_much_higher_resolution', self._duplicate_comparison_score_much_higher_resolution.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_more_tags', self._duplicate_comparison_score_more_tags.GetValue() )
+            self._new_options.SetInteger( 'duplicate_comparison_score_older', self._duplicate_comparison_score_older.GetValue() )
+            
+        
+    
     class _ImportingPanel( wx.Panel ):
         
         def __init__( self, parent, new_options ):
@@ -2125,9 +2195,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep * 2
             text += 'If the client believes the system is busy, it will generally not start jobs.'
             
-            st = wx.StaticText( self._jobs_panel, label = text )
+            st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
             
-            st.Wrap( 550 )
+            st.SetWrapWidth( 550 )
             
             self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -2372,7 +2442,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             st = ClientGUICommon.BetterStaticText( mime_panel, text )
             
-            st.Wrap( 800 )
+            st.SetWrapWidth( 800 )
             
             mime_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -2542,7 +2612,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._reverse_page_shift_drag_behaviour.SetToolTip( 'By default, holding down shift when you drop off a page tab means the client will not \'chase\' the page tab. This makes this behaviour default, with shift-drop meaning to chase.' )
             
             self._always_show_iso_time = wx.CheckBox( self )
-            tt = 'For recent timestamps, the client will sometimes replace a standard ISO string, like "2018-03-01 12:40:23", with "five minutes ago". If you prefer just to have the ISO all the time, check this.'
+            tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
             self._always_show_iso_time.SetToolTip( tt )
             
             self._always_embed_autocompletes = wx.CheckBox( self )
@@ -2677,7 +2747,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'Reverse page tab shift-drag behaviour: ', self._reverse_page_shift_drag_behaviour ) )
-            rows.append( ( 'Always show ISO time, never substitute \'human pretty\' time: ', self._always_show_iso_time ) )
+            rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
             rows.append( ( 'Always embed autocomplete dropdown results window: ', self._always_embed_autocompletes ) )
             rows.append( ( 'Hide the preview window: ', self._hide_preview ) )
             rows.append( ( 'Approximate max width of popup messages (in characters): ', self._popup_message_character_width ) )
@@ -3454,21 +3524,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_bytes_per_fullscreen = 3 * width * height
             
-            self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ConvertIntToPrettyString( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
+            self._estimated_number_fullscreens.SetLabelText( '(about ' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_fullscreen ) + '-' + HydrusData.ToHumanInt( ( self._fullscreen_cache_size.GetValue() * 1048576 ) / ( estimated_bytes_per_fullscreen / 4 ) ) + ' images)' )
             
         
         def EventThumbnailsUpdate( self, event ):
             
             estimated_bytes_per_thumb = 3 * self._thumbnail_height.GetValue() * self._thumbnail_width.GetValue()
             
-            self._estimated_number_thumbnails.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
+            self._estimated_number_thumbnails.SetLabelText( '(about ' + HydrusData.ToHumanInt( ( self._thumbnail_cache_size.GetValue() * 1048576 ) / estimated_bytes_per_thumb ) + ' thumbnails)' )
             
         
         def EventVideoBufferUpdate( self, event ):
             
             estimated_720p_frames = int( ( self._video_buffer_size_mb.GetValue() * 1024 * 1024 ) / ( 1280 * 720 * 3 ) )
             
-            self._estimated_number_video_frames.SetLabelText( '(about ' + HydrusData.ConvertIntToPrettyString( estimated_720p_frames ) + ' frames of 720p video)' )
+            self._estimated_number_video_frames.SetLabelText( '(about ' + HydrusData.ToHumanInt( estimated_720p_frames ) + ' frames of 720p video)' )
             
         
         def UpdateOptions( self ):
@@ -3551,8 +3621,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             render_panel = ClientGUICommon.StaticBox( self, 'tag rendering' )
             
-            render_st = wx.StaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
-            render_st.Wrap( 400 )
+            render_st = ClientGUICommon.BetterStaticText( render_panel, label = 'Namespaced tags are stored and directly edited in hydrus as "namespace:subtag", but most presentation windows can display them differently.' )
+            
+            render_st.SetWrapWidth( 400 )
             
             self._show_namespaces = wx.CheckBox( render_panel )
             self._namespace_connector = wx.TextCtrl( render_panel )
@@ -3564,7 +3635,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             desc = 'These tags will appear in your tag autocomplete results area, under the \'favourites\' tab.'
             
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
-            favourites_st.Wrap( 400 )
+            
+            favourites_st.SetWrapWidth( 400 )
             
             expand_parents = False
             
@@ -4394,7 +4466,7 @@ class ManageShortcutsPanel( ClientGUIScrolledPanels.ManagePanel ):
         name = shortcuts.GetName()
         size = len( shortcuts )
         
-        display_tuple = ( name, HydrusData.ConvertIntToPrettyString( size ) )
+        display_tuple = ( name, HydrusData.ToHumanInt( size ) )
         sort_tuple = ( name, size )
         
         return ( display_tuple, sort_tuple )
@@ -5590,16 +5662,16 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         [ ( tag, count ) ] = tag_counts
                         
-                        text = choice_text_prefix + ' "' + tag + '" for ' + HydrusData.ConvertIntToPrettyString( count ) + ' files'
+                        text = choice_text_prefix + ' "' + tag + '" for ' + HydrusData.ToHumanInt( count ) + ' files'
                         
                     else:
                         
-                        text = choice_text_prefix + ' ' + HydrusData.ConvertIntToPrettyString( len( tags ) ) + ' tags'
+                        text = choice_text_prefix + ' ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
                         
                     
                     data = ( choice_action, tags )
                     
-                    tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ConvertIntToPrettyString( count ) + ' files' for ( tag, count ) in tag_counts ) )
+                    tooltip = os.linesep.join( ( tag + ' - ' + HydrusData.ToHumanInt( count ) + ' files' for ( tag, count ) in tag_counts ) )
                     
                     bdc_choices.append( ( text, data, tooltip ) )
                     
@@ -5636,7 +5708,7 @@ class ManageTagsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     else:
                         
-                        tag_text = 'the ' + HydrusData.ConvertIntToPrettyString( len( tags ) ) + ' tags'
+                        tag_text = 'the ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
                         
                     
                     message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
@@ -6221,7 +6293,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         st = ClientGUICommon.BetterStaticText( self, text )
         
-        st.Wrap( 640 )
+        st.SetWrapWidth( 640 )
         
         self._locations = ClientGUIListCtrl.SaneListCtrl( self, 400, [ ( 'missing location', -1 ), ( 'expected subdirectory', 120 ), ( 'correct location', 240 ), ( 'now ok?', 120 ) ], activation_callback = self._SetLocations )
         

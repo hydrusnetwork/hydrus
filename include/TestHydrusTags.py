@@ -407,15 +407,15 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: since 1 year 2 months 3 days 4 hours ago' )
+        self.assertEqual( p.GetUnicode(), u'system:time imported: since 1 year 2 months ago' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( u'\u2248', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: around 1 year 2 months 3 days 4 hours ago' )
+        self.assertEqual( p.GetUnicode(), u'system:time imported: around 1 year 2 months ago' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 2, 3, 4 ) ) )
         
-        self.assertEqual( p.GetUnicode(), u'system:time imported: before 1 year 2 months 3 days 4 hours ago' )
+        self.assertEqual( p.GetUnicode(), u'system:time imported: before 1 year 2 months ago' )
         
         p = ClientSearch.Predicate( HC.PREDICATE_TYPE_SYSTEM_ARCHIVE, min_current_count = 1000 )
         

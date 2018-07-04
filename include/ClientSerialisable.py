@@ -205,7 +205,7 @@ def GetPayloadTypeString( payload_obj ):
         
     elif isinstance( payload_obj, HydrusSerialisable.SerialisableList ):
         
-        return 'A list of ' + HydrusData.ConvertIntToPrettyString( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
+        return 'A list of ' + HydrusData.ToHumanInt( len( payload_obj ) ) + ' ' + GetPayloadTypeString( payload_obj[0] )
         
     elif isinstance( payload_obj, HydrusSerialisable.SerialisableBase ):
         

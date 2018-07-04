@@ -388,6 +388,11 @@ class Controller( object ):
         return True
         
     
+    def JustWokeFromSleep( self ):
+        
+        return False
+        
+    
     def ModelIsShutdown( self ):
         
         return HG.model_shutdown

@@ -903,7 +903,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tags = self._GetTags( index, path )
             
-            pretty_index = HydrusData.ConvertIntToPrettyString( index + 1 )
+            pretty_index = HydrusData.ToHumanInt( index + 1 )
             
             pretty_path = path
             pretty_tags = ', '.join( tags )

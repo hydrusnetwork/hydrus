@@ -39,6 +39,17 @@ def FlattenMedia( media_list ):
     
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
+    new_options = HG.client_controller.new_options
+    
+    duplicate_comparison_score_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_higher_filesize' )
+    duplicate_comparison_score_much_higher_filesize = new_options.GetInteger( 'duplicate_comparison_score_much_higher_filesize' )
+    duplicate_comparison_score_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_higher_resolution' )
+    duplicate_comparison_score_much_higher_resolution = new_options.GetInteger( 'duplicate_comparison_score_much_higher_resolution' )
+    duplicate_comparison_score_more_tags = new_options.GetInteger( 'duplicate_comparison_score_more_tags' )
+    duplicate_comparison_score_older = new_options.GetInteger( 'duplicate_comparison_score_older' )
+    
+    #
+    
     statements = []
     score = 0
     
@@ -53,25 +64,25 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         statements.append( 'This has a much larger filesize.' )
         
-        score += 2
+        score += duplicate_comparison_score_much_higher_filesize
         
     elif size_ratio > 1.05:
         
         statements.append( 'This has a larger filesize.' )
         
-        score += 0.5
+        score += duplicate_comparison_score_higher_filesize
         
     elif size_ratio < 0.5:
         
         statements.append( 'This has a much smaller filesize.' )
         
-        score -= 2
+        score -= duplicate_comparison_score_more_tags
         
     elif size_ratio < 0.95:
         
         statements.append( 'This has a smaller filesize.' )
         
-        score -= 0.5
+        score -= duplicate_comparison_score_higher_filesize
         
     
     # higher/same res
@@ -97,25 +108,25 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             statements.append( 'This has much higher resolution.' )
             
-            score += 2
+            score += duplicate_comparison_score_much_higher_resolution
             
         elif resolution_ratio > 1.0:
             
             statements.append( 'This has higher resolution.' )
             
-            score += 1
+            score += duplicate_comparison_score_higher_resolution
             
         elif resolution_ratio < 0.5:
             
             statements.append( 'This has much lower resolution.' )
             
-            score -= 2
+            score -= duplicate_comparison_score_much_higher_resolution
             
         elif resolution_ratio < 1.0:
             
             statements.append( 'This has lower resolution.' )
             
-            score -= 1
+            score -= duplicate_comparison_score_higher_resolution
             
         
     
@@ -140,13 +151,13 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             statements.append( 'This has more tags.' )
             
-            score += 1
+            score += duplicate_comparison_score_more_tags
             
         elif s_num_tags < c_num_tags:
             
             statements.append( 'This has fewer tags.' )
             
-            score += 1
+            score += duplicate_comparison_score_more_tags
             
         
     elif s_num_tags > 0:
@@ -169,13 +180,13 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             statements.append( 'This is older.' )
             
-            score += 0.5
+            score += duplicate_comparison_score_older
             
         elif c_ts < s_ts - 86400 * 30:
             
             statements.append( 'This is newer.' )
             
-            score -= 0.5
+            score -= duplicate_comparison_score_older
             
         
     
@@ -1389,7 +1400,7 @@ class MediaCollection( MediaList, Media ):
         
         info_string = size + ' ' + mime
         
-        info_string += ' (' + HydrusData.ConvertIntToPrettyString( self.GetNumFiles() ) + ' files)'
+        info_string += ' (' + HydrusData.ToHumanInt( self.GetNumFiles() ) + ' files)'
         
         return [ info_string ]
         
@@ -1543,13 +1554,13 @@ class MediaSingleton( Media ):
         
         info_string = HydrusData.ConvertIntToBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
         
-        if width is not None and height is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( width ) + 'x' + HydrusData.ConvertIntToPrettyString( height ) + ')'
+        if width is not None and height is not None: info_string += ' (' + HydrusData.ToHumanInt( width ) + 'x' + HydrusData.ToHumanInt( height ) + ')'
         
         if duration is not None: info_string += ', ' + HydrusData.ConvertMillisecondsToPrettyTime( duration )
         
-        if num_frames is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( num_frames ) + ' frames)'
+        if num_frames is not None: info_string += ' (' + HydrusData.ToHumanInt( num_frames ) + ' frames)'
         
-        if num_words is not None: info_string += ' (' + HydrusData.ConvertIntToPrettyString( num_words ) + ' words)'
+        if num_words is not None: info_string += ' (' + HydrusData.ToHumanInt( num_words ) + ' words)'
         
         lines = [ info_string ]
         
@@ -1561,14 +1572,14 @@ class MediaSingleton( Media ):
             
             timestamp = locations_manager.GetTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( 'imported ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
+            lines.append( 'imported ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         if CC.TRASH_SERVICE_KEY in current_service_keys:
             
             timestamp = locations_manager.GetTimestamp( CC.TRASH_SERVICE_KEY )
             
-            lines.append( 'trashed ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
+            lines.append( 'trashed ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         for service_key in current_service_keys:
@@ -1593,7 +1604,7 @@ class MediaSingleton( Media ):
                 status = 'uploaded '
                 
             
-            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.ConvertTimestampToPrettyAgo( timestamp ) + ' ago' )
+            lines.append( status + 'to ' + service.GetName() + ' ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) )
             
         
         return lines

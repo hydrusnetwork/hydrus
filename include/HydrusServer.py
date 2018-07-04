@@ -40,7 +40,7 @@ class HydrusRequest( Request ):
             status_text = '200'
             
         
-        message = str( host.port ) + ' ' + HydrusData.ToUnicode( self.method ) + ' ' + HydrusData.ToUnicode( self.path ) + ' ' + status_text + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time.clock() - self.start_time )
+        message = str( host.port ) + ' ' + HydrusData.ToUnicode( self.method ) + ' ' + HydrusData.ToUnicode( self.path ) + ' ' + status_text + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time.clock() - self.start_time )
         
         HydrusData.Print( message )
         

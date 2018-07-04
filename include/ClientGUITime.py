@@ -228,7 +228,7 @@ class TimeDeltaButton( wx.Button ):
             
         else:
             
-            text = HydrusData.ConvertTimeDeltaToPrettyString( value )
+            text = HydrusData.TimeDeltaToPrettyTimeDelta( value )
             
         
         self.SetLabelText( text )

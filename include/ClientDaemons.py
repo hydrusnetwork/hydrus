@@ -93,7 +93,7 @@ def DAEMONDownloadFiles( controller ):
         
         for hash in hashes:
             
-            job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ConvertIntToPrettyString( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
+            job_key.SetVariable( 'popup_text_1', 'downloading ' + HydrusData.ToHumanInt( num_downloads - len( successful_hashes ) ) + ' files from repositories' )
             
             ( media_result, ) = controller.Read( 'media_results', ( hash, ) )
             
@@ -201,7 +201,7 @@ def DAEMONDownloadFiles( controller ):
         
         if len( successful_hashes ) > 0:
             
-            job_key.SetVariable( 'popup_text_1', HydrusData.ConvertIntToPrettyString( len( successful_hashes ) ) + ' files downloaded' )
+            job_key.SetVariable( 'popup_text_1', HydrusData.ToHumanInt( len( successful_hashes ) ) + ' files downloaded' )
             
         
         job_key.Delete()

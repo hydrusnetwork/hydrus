@@ -1354,7 +1354,7 @@ class BetterListCtrlPanel( wx.Panel ):
         
         import ClientGUIDialogs
         
-        message = 'Try to import the ' + HydrusData.ConvertIntToPrettyString( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
+        message = 'Try to import the ' + HydrusData.ToHumanInt( len( paths ) ) + ' dropped files to this list? I am expecting png files.'
         
         with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
             

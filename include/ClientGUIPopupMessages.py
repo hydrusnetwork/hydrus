@@ -68,7 +68,7 @@ class PopupDismissAll( PopupWindow ):
     
     def SetNumMessages( self, num_messages_pending ):
         
-        self._text.SetLabelText( HydrusData.ConvertIntToPrettyString( num_messages_pending ) + ' more messages' )
+        self._text.SetLabelText( HydrusData.ToHumanInt( num_messages_pending ) + ' more messages' )
         
     
 class PopupMessage( PopupWindow ):
@@ -94,12 +94,12 @@ class PopupMessage( PopupWindow ):
             self.SetMinClientSize( ( wrap_width, -1 ) )
             
         
-        self._title.Wrap( wrap_width )
+        self._title.SetWrapWidth( wrap_width )
         self._title.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._title.Hide()
         
         self._text_1 = ClientGUICommon.BetterStaticText( self )
-        self._text_1.Wrap( wrap_width )
+        self._text_1.SetWrapWidth( wrap_width )
         self._text_1.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_1.Hide()
         
@@ -108,7 +108,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_1.Hide()
         
         self._text_2 = ClientGUICommon.BetterStaticText( self )
-        self._text_2.Wrap( wrap_width )
+        self._text_2.SetWrapWidth( wrap_width )
         self._text_2.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_2.Hide()
         
@@ -117,7 +117,7 @@ class PopupMessage( PopupWindow ):
         self._gauge_2.Hide()
         
         self._text_yes_no = ClientGUICommon.BetterStaticText( self )
-        self._text_yes_no.Wrap( wrap_width )
+        self._text_yes_no.SetWrapWidth( wrap_width )
         self._text_yes_no.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._text_yes_no.Hide()
         
@@ -143,7 +143,7 @@ class PopupMessage( PopupWindow ):
         self._show_tb_button.Hide()
         
         self._tb_text = ClientGUICommon.BetterStaticText( self )
-        self._tb_text.Wrap( wrap_width )
+        self._tb_text.SetWrapWidth( wrap_width )
         self._tb_text.Bind( wx.EVT_RIGHT_DOWN, self.EventDismiss )
         self._tb_text.Hide()
         
@@ -286,6 +286,10 @@ class PopupMessage( PopupWindow ):
             
             self._show_tb_button.SetLabelText( 'hide traceback' )
             
+            popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+            
+            wrap_width = ClientGUICommon.ConvertTextToPixelWidth( self._title, popup_message_character_width )
+            
             self._tb_text.Show()
             
         
@@ -316,20 +320,19 @@ class PopupMessage( PopupWindow ):
     
     def Update( self ):
         
+        popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+        
+        wrap_width = ClientGUICommon.ConvertTextToPixelWidth( self._title, popup_message_character_width )
+        
         paused = self._job_key.IsPaused()
         
         title = self._job_key.GetIfHasVariable( 'popup_title' )
         
         if title is not None:
             
-            text = title
-            
-            if self._title.GetLabelText() != text:
-                
-                self._title.SetLabelText( text )
-                
-            
             self._title.Show()
+            
+            self._title.SetLabelText( title )
             
         else:
             
@@ -349,12 +352,9 @@ class PopupMessage( PopupWindow ):
                 text = popup_text_1
                 
             
-            if self._text_1.GetLabelText() != text:
-                
-                self._text_1.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
-                
-            
             self._text_1.Show()
+            
+            self._text_1.SetLabelText( text )
             
         else:
             
@@ -383,10 +383,7 @@ class PopupMessage( PopupWindow ):
             
             text = popup_text_2
             
-            if self._text_2.GetLabelText() != text:
-                
-                self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
-                
+            self._text_2.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
             
             self._text_2.Show()
             
@@ -417,14 +414,13 @@ class PopupMessage( PopupWindow ):
             
             text = popup_yes_no_question
             
-            # set and show text, yes, no buttons
-            
             if self._text_yes_no.GetLabelText() != text:
                 
                 self._text_yes_no.SetLabelText( self._ProcessText( HydrusData.ToUnicode( text ) ) )
                 
             
             self._text_yes_no.Show()
+            
             self._yes.Show()
             self._no.Show()
             
@@ -476,7 +472,7 @@ class PopupMessage( PopupWindow ):
             
             hashes = popup_files
             
-            text = popup_files_name + ' - show ' + HydrusData.ConvertIntToPrettyString( len( hashes ) ) + ' files'
+            text = popup_files_name + ' - show ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
             
             if self._show_files_button.GetLabelText() != text:
                 

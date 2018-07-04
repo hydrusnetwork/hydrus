@@ -150,7 +150,7 @@ def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_up
         s += ', '.join( locations ) + '->'
         
     
-    s += ', '.join( actions ) + extra_words + ' ' + HydrusData.ConvertIntToPrettyString( num_files ) + ' files'
+    s += ', '.join( actions ) + extra_words + ' ' + HydrusData.ToHumanInt( num_files ) + ' files'
     
     return s
     

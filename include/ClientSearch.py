@@ -1049,11 +1049,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if self._min_current_count > 0:
                 
-                number_text = HydrusData.ConvertIntToPrettyString( self._min_current_count )
+                number_text = HydrusData.ToHumanInt( self._min_current_count )
                 
                 if self._max_current_count is not None:
                     
-                    number_text += u'-' + HydrusData.ConvertIntToPrettyString( self._max_current_count )
+                    number_text += u'-' + HydrusData.ToHumanInt( self._max_current_count )
                     
                 
                 count_text += u' (' + number_text + u')'
@@ -1061,11 +1061,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if self._min_pending_count > 0:
                 
-                number_text = HydrusData.ConvertIntToPrettyString( self._min_pending_count )
+                number_text = HydrusData.ToHumanInt( self._min_pending_count )
                 
                 if self._max_pending_count is not None:
                     
-                    number_text += u'-' + HydrusData.ConvertIntToPrettyString( self._max_pending_count )
+                    number_text += u'-' + HydrusData.ToHumanInt( self._max_pending_count )
                     
                 
                 count_text += u' (+' + number_text + u')'
@@ -1092,7 +1092,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, value ) = self._value
                     
-                    base += u' ' + operator + u' ' + HydrusData.ConvertIntToPrettyString( value )
+                    base += u' ' + operator + u' ' + HydrusData.ToHumanInt( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DURATION:
@@ -1136,7 +1136,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     value = self._value
                     
-                    base += u' is ' + HydrusData.ConvertIntToPrettyString( value )
+                    base += u' is ' + HydrusData.ToHumanInt( value )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_AGE:
@@ -1175,7 +1175,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             pretty_operator = u'around '
                             
                         
-                        base += u': ' + pretty_operator + HydrusData.ConvertTimeDeltaToPrettyString( time_delta ) + u' ago'
+                        base += u': ' + pretty_operator + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta ) + u' ago'
                         
                     elif age_type == 'date':
                         
@@ -1411,7 +1411,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         o_text = ' more than '
                         
                     
-                    base = n_text + o_text + HydrusData.ConvertIntToPrettyString( num )
+                    base = n_text + o_text + HydrusData.ToHumanInt( num )
                     
                 
             elif self._predicate_type == HC.PREDICATE_TYPE_SYSTEM_DUPLICATE_RELATIONSHIPS:
@@ -1439,7 +1439,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         o_text = ' '
                         
                     
-                    base += u' - has' + o_text + HydrusData.ConvertIntToPrettyString( num_relationships ) + u' ' + HC.duplicate_type_string_lookup[ dupe_type ]
+                    base += u' - has' + o_text + HydrusData.ToHumanInt( num_relationships ) + u' ' + HC.duplicate_type_string_lookup[ dupe_type ]
                     
                 
             

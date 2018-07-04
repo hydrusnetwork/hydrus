@@ -901,7 +901,7 @@ class GalleryDeviantArt( Gallery ):
         
         artist = query
         
-        return 'http://' + artist + '.deviantart.com/gallery/?catpath=/&offset=' + str( page_index * 24 )
+        return 'http://deviantart.com/' + artist + '/gallery/?catpath=/&offset=' + str( page_index * 24 )
         
     
     def GetTags( self, url ):
@@ -1280,29 +1280,15 @@ class GalleryPixiv( Gallery ):
         
         soup = ClientParsing.GetSoup( html )
         
-        manga_links = soup.find_all( class_ = 'manga' )
         thumbnail_links = soup.find_all( class_ = 'work' )
         
-        manga_urls = { manga_link[ 'href' ] for manga_link in manga_links }
         thumbnail_urls = [ thumbnail_link[ 'href' ] for thumbnail_link in thumbnail_links ]
         
         for thumbnail_url in thumbnail_urls:
             
-            if thumbnail_url in manga_urls:
-                
-                # I think the best way to handle this is to wait until I have cbz support or whatever and sort it out in getfileandtags
-                # download each file in turn and write to a cbz on temp_path
-                # replace this with the mode=manga url so it is easily noticed at that stage
-                # but for now, just skip it
-                
-                pass
-                
-            else:
-                
-                url = urlparse.urljoin( url_base, thumbnail_url ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
-                
-                urls.append( url )
-                
+            url = urlparse.urljoin( url_base, thumbnail_url ) # http://www.pixiv.net/member_illust.php?mode=medium&illust_id=33500690
+            
+            urls.append( url )
             
         
         urls_and_tags = [ ( url, set() ) for url in urls ]
@@ -1397,7 +1383,7 @@ class GalleryPixivArtistID( GalleryPixiv ):
         
         artist_id = query
         
-        gallery_url = 'https://www.pixiv.net/member_illust.php?type=illust&id=' + str( artist_id )
+        gallery_url = 'https://www.pixiv.net/member_illust.php?type=all&id=' + str( artist_id )
         
         return gallery_url + '&p=' + str( page_index + 1 )
         

@@ -153,14 +153,14 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            message += HydrusData.ConvertIntToPrettyString( len( self._hashes ) )
+            message += HydrusData.ToHumanInt( len( self._hashes ) )
             
         
         message += ' files on ' + self._service_name
         
         title_st = ClientGUICommon.BetterStaticText( self, message )
         
-        title_st.Wrap( 540 )
+        title_st.SetWrapWidth( 540 )
         
         message = 'These advanced operations are powerful, so think before you click. They can lock up your client for a _long_ time, and are not undoable.'
         message += os.linesep * 2
@@ -168,7 +168,7 @@ class AdvancedContentUpdatePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         st = ClientGUICommon.BetterStaticText( self, message )
         
-        st.Wrap( 540 )
+        st.SetWrapWidth( 540 )
         
         vbox.Add( title_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1255,7 +1255,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             search_usage = ( search_usage_data, search_usage_requests )
             
-            pretty_search_usage = HydrusData.ConvertIntToBytes( search_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( search_usage_requests ) + ' requests'
+            pretty_search_usage = HydrusData.ConvertIntToBytes( search_usage_data ) + ' in ' + HydrusData.ToHumanInt( search_usage_requests ) + ' requests'
             
         
         pretty_network_context = network_context.ToUnicode()
@@ -1270,8 +1270,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_current_usage = HydrusData.ConvertIntToBytes( current_usage ) + '/s'
             
         
-        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( day_usage_requests ) + ' requests'
-        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage_data ) + ' in ' + HydrusData.ConvertIntToPrettyString( month_usage_requests ) + ' requests'
+        pretty_day_usage = HydrusData.ConvertIntToBytes( day_usage_data ) + ' in ' + HydrusData.ToHumanInt( day_usage_requests ) + ' requests'
+        pretty_month_usage = HydrusData.ConvertIntToBytes( month_usage_data ) + ' in ' + HydrusData.ToHumanInt( month_usage_requests ) + ' requests'
         
         if has_rules:
             
@@ -1548,7 +1548,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         mime = media.GetMime()
         path = self._GetPath( media )
         
-        pretty_number = HydrusData.ConvertIntToPrettyString( ordering_index + 1 )
+        pretty_number = HydrusData.ToHumanInt( ordering_index + 1 )
         pretty_mime = HC.mime_string_lookup[ mime ]
         pretty_path = path
         
@@ -1978,7 +1978,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
-            converter = HydrusData.ConvertIntToPrettyString
+            converter = HydrusData.ToHumanInt
             
         
         pretty_time_delta_usage = ': ' + converter( time_delta_usage )
@@ -2218,7 +2218,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_network_context = network_context.ToUnicode()
         
         number_of_cookies = len( session.cookies )
-        pretty_number_of_cookies = HydrusData.ConvertIntToPrettyString( number_of_cookies )
+        pretty_number_of_cookies = HydrusData.ToHumanInt( number_of_cookies )
         
         expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
         

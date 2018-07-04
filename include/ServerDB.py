@@ -255,7 +255,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if time_took > 1:
                 
-                HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.ConvertTimeDeltaToPrettyString( time_took ) )
+                HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_took ) )
                 
             
             if HydrusData.TimeHasPassed( stop_time ):
@@ -1581,7 +1581,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c.executemany( 'INSERT OR IGNORE INTO ' + update_table_name + ' ( master_hash_id ) VALUES ( ? );', ( ( master_hash_id, ) for master_hash_id in master_hash_ids ) )
             
         
-        HydrusData.Print( 'Update OK. ' + HydrusData.ConvertIntToPrettyString( total_definition_rows ) + ' definition rows and ' + HydrusData.ConvertIntToPrettyString( total_content_rows ) + ' content rows in ' + HydrusData.ConvertIntToPrettyString( len( updates ) ) + ' update files.' )
+        HydrusData.Print( 'Update OK. ' + HydrusData.ToHumanInt( total_definition_rows ) + ' definition rows and ' + HydrusData.ToHumanInt( total_content_rows ) + ' content rows in ' + HydrusData.ToHumanInt( len( updates ) ) + ' update files.' )
         
         return update_hashes
         

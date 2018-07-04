@@ -69,7 +69,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
-        pretty_time_delta = HydrusData.ConvertTimeDeltaToPrettyString( time_delta )
+        pretty_time_delta = HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
         
         if bandwidth_type == HC.BANDWIDTH_TYPE_DATA:
             
@@ -77,7 +77,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
-            pretty_max_allowed = HydrusData.ConvertIntToPrettyString( max_allowed ) + ' requests'
+            pretty_max_allowed = HydrusData.ToHumanInt( max_allowed ) + ' requests'
             
         
         sort_tuple = ( max_allowed, time_delta )

@@ -85,7 +85,7 @@ def ConvertIntToBytes( size ):
     
     if size < 1024:
         
-        return ConvertIntToPrettyString( size ) + 'B'
+        return ToHumanInt( size ) + 'B'
         
     
     suffixes = ( '', 'K', 'M', 'G', 'T', 'P' )
@@ -143,25 +143,7 @@ def ConvertIntToPrettyOrdinalString( num ):
         ordinal = 'th'
         
     
-    return ConvertIntToPrettyString( num ) + ordinal
-    
-def ConvertIntToPrettyString( num ):
-    
-    # don't feed this a unicode string u'%d'--locale can't handle it
-    text = locale.format( '%d', num, grouping = True )
-    
-    try:
-        
-        text = text.decode( locale.getpreferredencoding() )
-        
-        text = ToUnicode( text )
-        
-    except:
-        
-        text = ToUnicode( text )
-        
-    
-    return text
+    return ToHumanInt( num ) + ordinal
     
 def ConvertIntToUnit( unit ):
     
@@ -239,7 +221,7 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
 def ConvertResolutionToPrettyString( ( width, height ) ):
     
-    return ConvertIntToPrettyString( width ) + 'x' + ConvertIntToPrettyString( height )
+    return ToHumanInt( width ) + 'x' + ToHumanInt( height )
     
 def ConvertStatusToPrefix( status ):
     
@@ -248,131 +230,82 @@ def ConvertStatusToPrefix( status ):
     elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
     elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
     
-def ConvertTimeDeltaToPrettyString( seconds ):
+def TimeDeltaToPrettyTimeDelta( seconds ):
     
     if seconds is None:
         
         return 'per month'
         
     
+    if seconds < 0:
+        
+        seconds = abs( seconds )
+        
+    
     if seconds >= 60:
         
         seconds = int( seconds )
         
-        if seconds >= 86400:
+        MINUTE = 60
+        HOUR = 60 * MINUTE
+        DAY = 24 * HOUR
+        MONTH = 30 * DAY
+        YEAR = 12 * MONTH
+        
+        lines = []
+        
+        lines.append( ( 'year', YEAR ) )
+        lines.append( ( 'month', MONTH ) )
+        lines.append( ( 'day', DAY ) )
+        lines.append( ( 'hour', HOUR ) )
+        lines.append( ( 'minute', MINUTE ) )
+        lines.append( ( 'second', 1 ) )
+        
+        result_components = []
+        
+        for ( time_string, duration ) in lines:
             
-            DAY = 86400
-            MONTH = DAY * 30
-            YEAR = MONTH * 12
+            time_quantity = seconds // duration
             
-            years = seconds / YEAR
+            seconds %= duration
             
-            seconds %= YEAR
-            
-            months = seconds / MONTH
-            
-            seconds %= MONTH
-            
-            days = seconds / DAY
-            
-            seconds %= DAY
-            
-            hours = seconds / 3600
-            
-            result_components = []
-            
-            if years > 0:
+            if time_quantity > 0:
                 
-                if years == 1:
-                    
-                    result_components.append( '1 year' )
-                    
-                else:
-                    
-                    result_components.append( '%d' % years + ' years' )
-                    
+                s = ToHumanInt( time_quantity ) + ' ' + time_string
                 
-            
-            if months > 0:
-                
-                if months == 1:
+                if time_quantity > 1:
                     
-                    result_components.append( '1 month' )
-                    
-                else:
-                    
-                    result_components.append( '%d' % months + ' months' )
+                    s += 's'
                     
                 
-            
-            if days > 0:
+                result_components.append( s )
                 
-                if days == 1:
+                if len( result_components ) == 2: # we now have 1 month 2 days
                     
-                    result_components.append( '1 day' )
+                    break
                     
-                else:
-                    
-                    result_components.append( '%d' % days + ' days' )
-                    
-                
-            
-            if hours > 0:
-                
-                if hours == 1:
-                    
-                    result_components.append( '1 hour' )
-                    
-                else:
-                    
-                    result_components.append( '%d' % hours + ' hours' )
-                    
-                
-            
-            result = ' '.join( result_components )
-            
-        elif seconds >= 3600:
-            
-            hours = seconds / 3600
-            minutes = ( seconds % 3600 ) / 60
-            
-            if hours == 1:
-                
-                result = '1 hour'
                 
             else:
                 
-                result = '%d' % hours + ' hours'
+                if len( result_components ) > 0: # something like '1 year' -- in which case we do not care about the days and hours
+                    
+                    break
+                    
                 
             
-            if minutes > 0:
-                
-                result += ' %d' % minutes + ' minutes'
-                
-            
-        else:
-            
-            minutes = seconds / 60
-            seconds = seconds % 60
-            
-            if minutes == 1:
-                
-                result = '1 minute'
-                
-            else:
-                
-                result = '%d' % minutes + ' minutes'
-                
-            
-            if seconds > 0:
-                
-                result += ' %d' % seconds + ' seconds'
-                
-            
+        
+        result = ' '.join( result_components )
         
     elif seconds > 1:
         
-        result = '%.1f' % seconds + ' seconds'
+        if int( seconds ) == seconds:
+            
+            result = ToHumanInt( seconds ) + ' seconds'
+            
+        else:
+            
+            result = '%.1f' % seconds + ' seconds'
+            
         
     elif seconds == 1:
         
@@ -397,240 +330,27 @@ def ConvertTimeDeltaToPrettyString( seconds ):
     
     return result
     
-def ConvertTimestampToPrettyAge( timestamp ):
-    
-    if timestamp == 0 or timestamp is None: return 'unknown age'
-    
-    age = GetNow() - timestamp
-    
-    seconds = age % 60
-    if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
-    
-    age = age / 60
-    minutes = age % 60
-    if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
-    
-    age = age / 60
-    hours = age % 24
-    if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
-    
-    age = age / 24
-    days = age % 30
-    if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
-    
-    age = age / 30
-    months = age % 12
-    if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
-    
-    years = age / 12
-    if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
-    
-    if years > 0: return ' '.join( ( y, mo ) ) + ' old'
-    elif months > 0: return ' '.join( ( mo, d ) ) + ' old'
-    elif days > 0: return ' '.join( ( d, h ) ) + ' old'
-    elif hours > 0: return ' '.join( ( h, m ) ) + ' old'
-    else: return ' '.join( ( m, s ) ) + ' old'
-    
-def ConvertTimestampToPrettyAgo( timestamp ):
-    
-    if timestamp is None or timestamp == 0:
-        
-        return 'unknown time'
-        
-    
-    age = GetNow() - timestamp
-    
-    seconds = age % 60
-    if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
-    
-    age = age / 60
-    minutes = age % 60
-    if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
-    
-    age = age / 60
-    hours = age % 24
-    if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
-    
-    age = age / 24
-    days = age % 30
-    if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
-    
-    age = age / 30
-    months = age % 12
-    if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
-    
-    years = age / 12
-    if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
-    
-    if years > 0: return ' '.join( ( y, mo ) )
-    elif months > 0: return ' '.join( ( mo, d ) )
-    elif days > 0: return ' '.join( ( d, h ) )
-    elif hours > 0: return ' '.join( ( h, m ) )
-    else: return ' '.join( ( m, s ) )
-    
 def ConvertTimestampToPrettyExpires( timestamp ):
     
-    if timestamp is None: return 'does not expire'
-    if timestamp == 0: return 'unknown expiration'
-    
-    expires = GetNow() - timestamp
-    
-    if expires >= 0: already_happend = True
-    else:
+    if timestamp is None:
         
-        expires *= -1
-        
-        already_happend = False
+        return 'does not expire'
         
     
-    seconds = expires % 60
-    if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
-    
-    expires = expires / 60
-    minutes = expires % 60
-    if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
-    
-    expires = expires / 60
-    hours = expires % 24
-    if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
-    
-    expires = expires / 24
-    days = expires % 30
-    if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
-    
-    expires = expires / 30
-    months = expires % 12
-    if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
-    
-    years = expires / 12
-    if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
-    
-    if already_happend:
+    if timestamp == 0:
         
-        if years > 0: return 'expired ' + ' '.join( ( y, mo ) ) + ' ago'
-        elif months > 0: return 'expired ' + ' '.join( ( mo, d ) ) + ' ago'
-        elif days > 0: return 'expired ' + ' '.join( ( d, h ) ) + ' ago'
-        elif hours > 0: return 'expired ' + ' '.join( ( h, m ) ) + ' ago'
-        else: return 'expired ' + ' '.join( ( m, s ) ) + ' ago'
+        return 'unknown expiration'
+        
+    
+    time_delta_string = TimestampToPrettyTimeDelta( timestamp )
+    
+    if TimeHasPassed( timestamp ):
+        
+        return 'expired ' + time_delta_string
         
     else:
+        return 'expires ' + time_delta_string
         
-        if years > 0: return 'expires in ' + ' '.join( ( y, mo ) )
-        elif months > 0: return 'expires in ' + ' '.join( ( mo, d ) )
-        elif days > 0: return 'expires in ' + ' '.join( ( d, h ) )
-        elif hours > 0: return 'expires in ' + ' '.join( ( h, m ) )
-        else: return 'expires in ' + ' '.join( ( m, s ) )
-        
-    
-def ConvertTimestampToPrettyPending( timestamp, prefix = 'in' ):
-    
-    if timestamp is None: return ''
-    if timestamp == 0: return 'imminent'
-    
-    pending = GetTimeDeltaUntilTime( timestamp )
-    
-    if pending <= 0:
-        
-        return 'imminent'
-        
-    
-    seconds = pending % 60
-    if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
-    
-    pending = pending / 60
-    minutes = pending % 60
-    if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
-    
-    pending = pending / 60
-    hours = pending % 24
-    if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
-    
-    pending = pending / 24
-    days = pending % 30
-    if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
-    
-    pending = pending / 30
-    months = pending % 12
-    if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
-    
-    years = pending / 12
-    if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
-    
-    if prefix != '':
-        
-        prefix += ' '
-        
-    
-    if years > 0: return prefix + ' '.join( ( y, mo ) )
-    elif months > 0: return prefix + ' '.join( ( mo, d ) )
-    elif days > 0: return prefix + ' '.join( ( d, h ) )
-    elif hours > 0: return prefix + ' '.join( ( h, m ) )
-    elif minutes > 0: return prefix + ' '.join( ( m, s ) )
-    else: return prefix + s
-    
-def ConvertTimestampToPrettySync( timestamp ):
-    
-    if timestamp is None or timestamp == 0: return '(initial sync has not yet occured)'
-    
-    age = GetNow() - timestamp
-    
-    seconds = age % 60
-    if seconds == 1: s = '1 second'
-    else: s = str( seconds ) + ' seconds'
-    
-    age = age / 60
-    minutes = age % 60
-    if minutes == 1: m = '1 minute'
-    else: m = str( minutes ) + ' minutes'
-    
-    age = age / 60
-    hours = age % 24
-    if hours == 1: h = '1 hour'
-    else: h = str( hours ) + ' hours'
-    
-    age = age / 24
-    days = age % 30
-    if days == 1: d = '1 day'
-    else: d = str( days ) + ' days'
-    
-    age = age / 30
-    months = age % 12
-    if months == 1: mo = '1 month'
-    else: mo = str( months ) + ' months'
-    
-    years = age / 12
-    if years == 1: y = '1 year'
-    else: y = str( years ) + ' years'
-    
-    if years > 0: return ' '.join( ( y, mo ) ) + ' ago'
-    elif months > 0: return ' '.join( ( mo, d ) ) + ' ago'
-    elif days > 0: return ' '.join( ( d, h ) ) + ' ago'
-    elif hours > 0: return ' '.join( ( h, m ) ) + ' ago'
-    else: return ' '.join( ( m, s ) ) + ' ago'
     
 def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = True ):
     
@@ -656,28 +376,29 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
     
     return time.strftime( phrase, struct_time )
     
-def ConvertTimestampToHumanPrettyTime( timestamp ):
+def TimestampToPrettyTimeDelta( timestamp ):
     
     if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
         
         return ConvertTimestampToPrettyTime( timestamp )
         
     
-    now = GetNow()
+    time_delta = abs( timestamp - GetNow() )
     
-    difference = now - timestamp
+    if time_delta < 5:
+        
+        return 'now'
+        
     
-    if difference < 60:
+    time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta )
+    
+    if TimeHasPassed( timestamp ):
         
-        return 'just now'
-        
-    elif difference < 86400 * 7:
-        
-        return ConvertTimestampToPrettyAgo( timestamp ) + ' ago'
+        return time_delta_string + ' ago'
         
     else:
         
-        return ConvertTimestampToPrettyTime( timestamp )
+        return 'in ' + time_delta_string
         
     
 def ConvertUglyNamespaceToPrettyString( namespace ):
@@ -714,7 +435,7 @@ def ConvertValueRangeToBytes( value, range ):
     
 def ConvertValueRangeToPrettyString( value, range ):
     
-    return ConvertIntToPrettyString( value ) + '/' + ConvertIntToPrettyString( range )
+    return ToHumanInt( value ) + '/' + ToHumanInt( range )
     
 def DebugPrint( debug_info ):
     
@@ -722,6 +443,26 @@ def DebugPrint( debug_info ):
     
     sys.stdout.flush()
     sys.stderr.flush()
+    
+def DedupeList( xs ):
+    
+    xs_seen = set()
+    
+    xs_return = []
+    
+    for x in xs:
+        
+        if x in xs_seen:
+            
+            continue
+            
+        
+        xs_return.append( x )
+        
+        xs_seen.add( x )
+        
+    
+    return xs_return
     
 def EncodeBytes( encoding, data ):
     
@@ -757,6 +498,7 @@ def Get64BitHammingDistance( phash1, phash2 ):
     
     # convert to unsigned long long, then xor
     # then through the power of stackexchange magic, we get number of bits in record time
+    # Here it is: https://stackoverflow.com/questions/9829578/fast-way-of-counting-non-zero-bits-in-positive-integer/9830282#9830282
     
     n = struct.unpack( '!Q', phash1 )[0] ^ struct.unpack( '!Q', phash2 )[0]
     
@@ -765,7 +507,9 @@ def Get64BitHammingDistance( phash1, phash2 ):
     n = ( n & 0x0F0F0F0F0F0F0F0F ) + ( ( n & 0xF0F0F0F0F0F0F0F0 ) >> 4 ) # 11110000, 00001111
     n = ( n & 0x00FF00FF00FF00FF ) + ( ( n & 0xFF00FF00FF00FF00 ) >> 8 ) # etc...
     n = ( n & 0x0000FFFF0000FFFF ) + ( ( n & 0xFFFF0000FFFF0000 ) >> 16 )
-    n = ( n & 0x00000000FFFFFFFF ) + ( ( n & 0xFFFFFFFF00000000 ) >> 32 )
+    n = ( n & 0x00000000FFFFFFFF ) + ( n >> 32 )
+    
+    # you technically are going n & 0xFFFFFFFF00000000 at the end, but that's a no-op with the >> 32 afterwards, so can be omitted
     
     return n
     
@@ -860,6 +604,14 @@ def GetSiblingProcessPorts( db_path, instance ):
         
     
     return None
+    
+def GetTimeDeltaSinceTime( timestamp ):
+    
+    time_since = timestamp - GetNow()
+    
+    result = min( time_since, 0 )
+    
+    return - result
     
 def GetTimeDeltaUntilTime( timestamp ):
     
@@ -1129,7 +881,7 @@ def Profile( summary, code, g, l, min_duration_ms = 20 ):
         
     else:
         
-        summary += ' - It took ' + ConvertIntToPrettyString( time_took_ms ) + 'ms.'
+        summary += ' - It took ' + ToHumanInt( time_took_ms ) + 'ms.'
         
         details = ''
         
@@ -1299,6 +1051,24 @@ def ToByteString( text_producing_object ):
             
         
     
+def ToHumanInt( num ):
+    
+    # don't feed this a unicode string u'%d'--locale can't handle it
+    text = locale.format( '%d', num, grouping = True )
+    
+    try:
+        
+        text = text.decode( locale.getpreferredencoding() )
+        
+        text = ToUnicode( text )
+        
+    except:
+        
+        text = ToUnicode( text )
+        
+    
+    return text
+    
 def ToUnicode( text_producing_object ):
     
     if isinstance( text_producing_object, ( str, unicode, bs4.element.NavigableString ) ):
@@ -1362,7 +1132,7 @@ def WaitForProcessToFinish( p, timeout ):
             
             p.kill()
             
-            raise Exception( 'Process did not finish within ' + ConvertIntToPrettyString( timeout ) + ' seconds!' )
+            raise Exception( 'Process did not finish within ' + ToHumanInt( timeout ) + ' seconds!' )
             
         
         time.sleep( 2 )
@@ -1490,7 +1260,7 @@ class AccountType( HydrusYAMLBase ):
         ( max_num_bytes, max_num_requests ) = self._max_monthly_data
         
         if max_num_requests is None: max_num_requests_string = 'No limit'
-        else: max_num_requests_string = ConvertIntToPrettyString( max_num_requests )
+        else: max_num_requests_string = ToHumanInt( max_num_requests )
         
         return max_num_requests_string
         

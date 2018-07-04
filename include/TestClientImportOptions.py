@@ -503,7 +503,42 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         self.assertEqual( default_service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), set() )
         
     
-    def test_filtering( self ):
+    def test_get_all_filtering( self ):
+        
+        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = HydrusData.GenerateKey()
+        
+        #
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), some_tags )
+        
+        #
+        
+        only_namespaced = ClientTags.TagFilter()
+        
+        only_namespaced.SetRule( '', CC.FILTER_BLACKLIST )
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, get_all_filter = only_namespaced )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran', 'series:metroid' } )
+        
+        #
+        
+        only_samus = ClientTags.TagFilter()
+        
+        only_samus.SetRule( '', CC.FILTER_BLACKLIST )
+        only_samus.SetRule( ':', CC.FILTER_BLACKLIST )
+        only_samus.SetRule( 'character:samus aran', CC.FILTER_WHITELIST )
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, get_all_filter = only_samus )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'character:samus aran' } )
+        
+    
+    def test_namespace_filtering( self ):
         
         some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
         example_hash = HydrusData.GenerateKey()
@@ -586,5 +621,20 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, only_add_existing_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), existing_tags )
+        
+        #
+        
+        some_tags = { 'explicit', 'bodysuit', 'character:samus aran', 'series:metroid' }
+        existing_tags = { 'bodysuit' }
+        
+        only_unnamespaced = ClientTags.TagFilter()
+        
+        only_unnamespaced.SetRule( ':', CC.FILTER_BLACKLIST )
+        
+        HG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
+        
+        service_tag_import_options = ClientImportOptions.ServiceTagImportOptions( get_all = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, True, example_hash, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         
     

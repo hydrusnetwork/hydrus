@@ -28,7 +28,7 @@ def ConvertBandwidthRuleToString( rule ):
         
     elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
         
-        s = HydrusData.ConvertIntToPrettyString( max_allowed )
+        s = HydrusData.ToHumanInt( max_allowed )
         
     
     if time_delta is None:
@@ -37,7 +37,7 @@ def ConvertBandwidthRuleToString( rule ):
         
     else:
         
-        s += ' per ' + HydrusData.ConvertTimeDeltaToPrettyString( time_delta )
+        s += ' per ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
         
     
     return s
@@ -262,7 +262,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    s += ' in the past ' + HydrusData.ConvertTimeDeltaToPrettyString( time_delta )
+                    s += ' in the past ' + HydrusData.TimeDeltaToPrettyTimeDelta( time_delta )
                     
                 
                 rows.append( ( s, ( usage, max_allowed ) ) )
@@ -577,7 +577,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None, True )
             num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None, True )
             
-            return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ConvertIntToPrettyString( num_requests ) + ' requests this month'
+            return 'used ' + HydrusData.ConvertIntToBytes( num_bytes ) + ' in ' + HydrusData.ToHumanInt( num_requests ) + ' requests this month'
             
         
     

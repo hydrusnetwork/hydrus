@@ -200,7 +200,7 @@ def ImportFromHTA( parent, hta_path, tag_service_key, hashes ):
                 
             else:
                 
-                text += HydrusData.ConvertIntToPrettyString( len( hashes ) )
+                text += HydrusData.ToHumanInt( len( hashes ) )
                 
             
             text += ' files in \'' + file_service.GetName() + '\''
@@ -478,7 +478,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                text = 'censoring ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                text = 'all but ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) ) + ' allowed'
                 
             
             if len( whitelist ) > 0:
@@ -518,11 +518,13 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
             if set( blacklist ) == { '', ':' }:
                 
-                text = 'no tags'
-                
-                if len( whitelist ) > 0:
+                if len( whitelist ) == 0:
                     
-                    text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                    text = 'no tags'
+                    
+                else:
+                    
+                    text = 'only ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
                     
                 
             else:
@@ -535,8 +537,6 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-        
-        text += ' permitted'
         
         return text
         

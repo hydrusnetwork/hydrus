@@ -2608,10 +2608,10 @@ class ListBoxTagsSelection( ListBoxTags ):
         
         if self._include_counts:
             
-            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ConvertIntToPrettyString( self._current_tags_to_count[ tag ] ) + ')'
-            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ConvertIntToPrettyString( self._pending_tags_to_count[ tag ] ) + ')'
-            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ConvertIntToPrettyString( self._petitioned_tags_to_count[ tag ] ) + ')'
-            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ConvertIntToPrettyString( self._deleted_tags_to_count[ tag ] ) + ')'
+            if self._show_current and tag in self._current_tags_to_count: tag_string += ' (' + HydrusData.ToHumanInt( self._current_tags_to_count[ tag ] ) + ')'
+            if self._show_pending and tag in self._pending_tags_to_count: tag_string += ' (+' + HydrusData.ToHumanInt( self._pending_tags_to_count[ tag ] ) + ')'
+            if self._show_petitioned and tag in self._petitioned_tags_to_count: tag_string += ' (-' + HydrusData.ToHumanInt( self._petitioned_tags_to_count[ tag ] ) + ')'
+            if self._show_deleted and tag in self._deleted_tags_to_count: tag_string += ' (X' + HydrusData.ToHumanInt( self._deleted_tags_to_count[ tag ] ) + ')'
             
         else:
             

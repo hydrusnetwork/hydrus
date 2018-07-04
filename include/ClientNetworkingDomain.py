@@ -271,7 +271,23 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._RecalcCache()
         
     
-    def _GetDefaultTagImportOptionsForURLMatch( self, url_match, url ):
+    def _GetDefaultTagImportOptionsForURL( self, url ):
+        
+        url_match = self._GetURLMatch( url )
+        
+        if url_match is None or url_match.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
+            
+            return self._file_post_default_tag_import_options.DeriveTagImportOptionsFromSelf( [] )
+            
+        
+        try:
+            
+            ( url_match, url ) = self._GetNormalisedAPIURLMatchAndURL( url )
+            
+        except HydrusExceptions.URLMatchException:
+            
+            return self._file_post_default_tag_import_options.DeriveTagImportOptionsFromSelf( [] )
+            
         
         url_match_key = url_match.GetMatchKey()
         
@@ -288,7 +304,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                parser = self._GetParser( url_match, url )
+                ( url_to_fetch, parser ) = self._GetURLToFetchAndParser( url )
                 
                 namespaces = parser.GetNamespaces()
                 
@@ -344,7 +360,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    message = 'Could not find an API URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ConvertIntToPrettyString( loop_size ) + '!'
+                    message = 'Could not find an API URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ToHumanInt( loop_size ) + '!'
                     
                 
                 raise HydrusExceptions.URLMatchException( message )
@@ -358,21 +374,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return ( api_url_match, api_url )
         
     
-    def _GetParser( self, url_match, url ):
+    def _GetURLToFetchAndParser( self, url ):
         
-        parser_url_match = url_match
-        parser_url = url
-        
-        while parser_url_match.UsesAPIURL():
+        try:
             
-            parser_url = parser_url_match.GetAPIURL( parser_url )
+            ( parser_url_match, parser_url ) = self._GetNormalisedAPIURLMatchAndURL( url )
             
-            parser_url_match = self._GetURLMatch( parser_url )
+        except HydrusExceptions.URLMatchException as e:
             
-            if parser_url_match is None:
-                
-                raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + url_match.GetName() + ' URL Class!' )
-                
+            raise HydrusExceptions.URLMatchException( 'Could not find a parser for ' + url + '!' + os.linesep * 2 + HydrusData.ToUnicode( e ) )
             
         
         url_match_key = parser_url_match.GetMatchKey()
@@ -383,7 +393,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if parser_key is not None and parser_key in self._parser_keys_to_parsers:
                 
-                return self._parser_keys_to_parsers[ parser_key ]
+                return ( parser_url, self._parser_keys_to_parsers[ parser_key ] )
                 
             
         
@@ -482,8 +492,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         # also, put more 'precise' URL types above more typically permissive, in the order:
         # file
         # post
-        # gallery
-        # watchable
+        # gallery/watchable
         # sorting in reverse, so higher number means more precise
         
         def key( u_m ):
@@ -716,18 +725,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            url_match = self._GetURLMatch( url )
-            
-            if url_match is None or url_match.GetURLType() not in ( HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ):
-                
-                import ClientImportOptions
-                
-                return ClientImportOptions.TagImportOptions()
-                
-            
-            tag_import_options = self._GetDefaultTagImportOptionsForURLMatch( url_match, url )
-            
-            return tag_import_options
+            return self._GetDefaultTagImportOptionsForURL( url )
             
         
     
@@ -842,7 +840,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                parser = self._GetParser( url_match, url )
+                ( url_to_fetch, parser ) = self._GetURLToFetchAndParser( url )
                 
                 can_parse = True
                 
@@ -859,12 +857,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( url_match, fetch_url ) = self._GetNormalisedAPIURLMatchAndURL( url )
+            return self._GetURLToFetchAndParser( url )
             
-            parser = self._GetParser( url_match, url )
-            
-        
-        return ( fetch_url, parser )
         
     
     def Initialise( self ):

@@ -84,11 +84,6 @@ class NetworkJob( object ):
     
     def __init__( self, method, url, body = None, referral_url = None, temp_path = None ):
         
-        if HG.network_report_mode:
-            
-            HydrusData.ShowText( 'Network Job: ' + method + ' ' + url )
-            
-        
         self.engine = None
         
         self._lock = threading.Lock()
@@ -471,7 +466,7 @@ class NetworkJob( object ):
                         
                         prefix = 'overriding bandwidth '
                         
-                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( self._bandwidth_manual_override_delayed_timestamp )
+                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp )
                         
                     else:
                         
@@ -479,7 +474,7 @@ class NetworkJob( object ):
                         
                         prefix = 'bandwidth free '
                         
-                        waiting_str = HydrusData.ConvertTimestampToPrettyPending( HydrusData.GetNow() + waiting_duration )
+                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration )
                         
                     
                     if waiting_duration < 2:
