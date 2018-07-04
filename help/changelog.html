@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 313</h3></li>
+				<ul>
+					<li>?fleshed out the new gallery log and its constituent log entry objects</li>
+					<li>added gallery logs to gallery downloaders, subscriptions, url downloaders, simple downloaders and watchers</li>
+					<li>added very simple gallery log reporting to these downloaders</li>
+					<li>added first, read-only version of gallery log ui to these downloaders</li>
+					<li>fleshed out some new gallery/file-object pipeline stuff</li>
+					<li>wrote a simple danbooru gallery page parser and added it on update. it doesn't do anything yet, but if you are into the new parsing system, please check it out as an example</li>
+					<li>the url downloader now has a full file import status control with status text</li>
+					<li>fixed a url count issue on completely fresh gallery downloads that was stopping gallery searches one file (like 199 vs 200) before the file limit</li>
+					<li>the pixiv downloader now fetches 'type=all' gallery pages, which include specifically manga file pages (as opposed to merely multi-file 'illustrations')</li>
+					<li>added 'retry ignored' to the file import status button's right-click menu</li>
+					<li>fixed the deviant art url class and parser to use the new file page format. also added an '(old format)' class to match the old way for legacy purposes (this legacy class also uses an api conversion to connect to the new parser--we'll also figure out a way to convert all these over at the db level en masse later!)</li>
+					<li>updated some similar deviant art gallery stuff as well</li>
+					<li>tag import options now has a tag filter to go along with the 'get all tags' checkbox! ('get all tags' is now renamed to 'get all' as a result). this filter lets you make more complicated tag filtering decisions like 'get all tags except "species:" tags'.</li>
+					<li>the new 'only get tags if they already exist' checkbox now also has a filter, if you want to only apply this test to a subset of tags (like the unwashed mess of unnamespaced tags many boorus and sites provide)</li>
+					<li>generalised a 'tag filter' button class to make it simpler to edit tag filters across the program, and cleaned up some related status code</li>
+					<li>fixed a problem with deriving tag import options for specific url classes when that url class was part of an api-url-class chain</li>
+					<li>if the domain manager cannot now find a url match for a pending download, it now assigns the file post default tag import options to that import</li>
+					<li>added a new 'duplicates' options page that has a hacky way to edit the weighted scores used to determine which of the pair of files to present file in the duplicates filter</li>
+					<li>unifed how some file import status generation works, adding a new 'simple status' string to briefly summarise progress in multi-watcher and edit subscriptions columns</li>
+					<li>cleared out some old redundant status caching in the urls downloader</li>
+					<li>simplified how almost all timestamp strings are generated</li>
+					<li>simplified how time delta strings are generated</li>
+					<li>brushed up some simple common ways to present timestamps as 'human pretty' strings</li>
+					<li>all places where timestamps would be presented as a mix of '5 days ago' and complete datetime strings will now present as '5 days ago' unless you set the new options->gui 'always show iso' checkbox. going back to simple to clear up confusion in workflow and code. I may revisit this, as turning on ISO mode now spams it all over the place</li>
+					<li>cleaned up the 'looks like the computer just woke from sleep' check and reduced its grace period to fifteen seconds. foreground daemons (like the subscription daemon) and the network engine will now also obey it</li>
+					<li>added a 'simulate wake from sleep' debug action to better test the sleep-wake detection code</li>
+					<li>improved my custom statictext class to auto-wrap text without flickering</li>
+					<li>used this new autowrapping to improve wrapping and layout of popup message texts</li>
+					<li>replaced all other st wrapping with this new code</li>
+					<li>wrote a little helper function to better dedupe lists in future</li>
+					<li>did a bunch of refactoring to neaten some long common func names</li>
+					<li>deleted some old unused code</li>
+				</ul>
 				<li><h3>version 312</h3></li>
 				<ul>
 					<li>converted much of the increasingly complicated tag import options to a new sub-object that simplifies a lot of code and makes things easier to serialise and update in future</li>
