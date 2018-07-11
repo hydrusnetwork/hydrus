@@ -8,9 +8,47 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 314</h3></li>
+				<ul>
+					<li>tag import options can now be set to 'default', meaning 'use whatever the default is at the time of import', which will be an easier way of managing TIOs for many subs that you'd prefer all share the same TIO settings anyway</li>
+					<li>updated tag import options ui to enable this default setting where appropriate</li>
+					<li>updated the newer import pipeline to work with 'default'-set tag import options</li>
+					<li>new downloaders, subscriptions, watchers, and multi-watchers now start with 'default' tag import options</li>
+					<li>deleted the old default tag import options management code and put some text up on options->importing making notice about the impending shift. a popup message will also say this on update</li>
+					<li>tag import options buttons now have a right-click menu with copy/paste/default options for quick assignment and duplication!</li>
+					<li>added 'overwrite tag import options' to manage subscriptions--once you are comfortable with the new 'default' TIO mode, and after some small tests, you might want to switch all your subs over to 'default'</li>
+					<li>the 'urls' downloader now has a tag import options--it initialises as 'default'</li>
+					<li>added furry.booru.org to gelbooru 0.2.0 parser</li>
+					<li>wrote a hentai foundry file page parser</li>
+					<li>wrote a moebooru file page parser (this works for konachan, yande.re, and sakugabooru)</li>
+					<li>wrote a shimmie parser (this works for rule34.paheal, rule34hentai, and mishimmie)</li>
+					<li>wrote a newgrounds parser</li>
+					<li>integrated the user-created sankaku parser</li>
+					<li>wrote a tumblr parser that handles photo, photoset, and video posts, auto-converts to 'raw' urls for those post-2012 urls that can handle it, figures out a creator tag (reverting to the reblog root if it is a reblog post!), and cooks you breakfast</li>
+					<li>(hence all these above sites now support drag and drop!)</li>
+					<li>rolled out some new tumblr url classes to handle all this.</li>
+					<li>added sakugabooru url classes</li>
+					<li>fixed an issue where url classes were not normalising api urls in all cases, meaning some url classes would not api-link correctly in 'manage url class links' panel</li>
+					<li>fixed an issue with deviant art legacy gallery parser pulling some funky 'creator:' tags</li>
+					<li>some misc new downloader error handling improvements</li>
+					<li>the watcher now uses the new gallery object to parse and generate file import objects</li>
+					<li>the downloaders with gallery logs should now report non-success gallery fetches, along with error tracebacks (this will include some no-worry 404s the legacy downloader sometimes uses to terminate searches)</li>
+					<li>added image and thumbnail cache timeout time delta buttons to options->speed and memory</li>
+					<li>added a 'show the D on short file import summaries' checkbox to options->downloading--it defaults to off</li>
+					<li>the 'I' on short file import summaries is now 'Ig' to clear up 1/I confusion</li>
+					<li>added 'copy queries' to the edit subscription panel, which lets you copy all the selected queries' search texts to clipboard, newline separated</li>
+					<li>added a checbox to options->gui that commands 'last session' only be autosaved during idle time. this is useful if you usually have a huge (200k+ file) session and your client is always on</li>
+					<li>fixed file import status button right-click, which I messed up somehow last week with the 'retry ignored' add</li>
+					<li>shook up and collapsed the network menu into neater categories</li>
+					<li>tightened-up the rarely used pre-parsing conversion panel on the edit page parser panel to just a button with a bit of explaining text</li>
+					<li>if database errors include the word 'malformed', the client now throws a little extra error text pointing people to the help.txt in the db dir</li>
+					<li>cleared out some legacy download code</li>
+					<li>cleared out legacy hard drive import error handling, moving it all to the new file import object</li>
+					<li>misc refactoring and cleanup</li>
+				</ul>
 				<li><h3>version 313</h3></li>
 				<ul>
-					<li>?fleshed out the new gallery log and its constituent log entry objects</li>
+					<li>fleshed out the new gallery log and its constituent log entry objects</li>
 					<li>added gallery logs to gallery downloaders, subscriptions, url downloaders, simple downloaders and watchers</li>
 					<li>added very simple gallery log reporting to these downloaders</li>
 					<li>added first, read-only version of gallery log ui to these downloaders</li>
