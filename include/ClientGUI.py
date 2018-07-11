@@ -1660,71 +1660,81 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            #
             
-            ClientGUIMenus.AppendSeparator( menu )
+            submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'review bandwidth usage', 'See where you are consuming data.', self._ReviewBandwidth )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendSeparator( submenu )
             
-            # and transition this to 'manage logins'
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
-            # manage downloaders, or maybe just rename the parsing scripts stuff
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            #
             
-            ClientGUIMenus.AppendSeparator( menu )
+            submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            ClientGUIMenus.AppendSeparator( submenu )
             
             # this will be the easy-mode 'export ability to download from blahbooru' that'll bundle it all into a nice package with a neat png.
             # need a name for this that isn't 'downloader', or maybe it should be, and I should rename downloaders below to 'gallery query generator' or whatever.
             
-            ClientGUIMenus.AppendMenuLabel( menu, 'review and import/export download capability', 'Review where you can download from and import or export that data in order to share with other users.' )
+            ClientGUIMenus.AppendMenuLabel( submenu, 'UNDER CONSTRUCTION: review and import/export downloaders', 'Review where you can download from and import or export that data in order to share with other users.' )
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendSeparator( submenu )
             
-            ClientGUIMenus.AppendMenuLabel( menu, '(This section is under construction)' )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
             
-            # maybe put this in a submenu, or hide it all behind advanced mode
+            ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
-            ClientGUIMenus.AppendMenuLabel( menu, 'manage downloaders', 'Manage the client\' downloaders, which convert search terms into URLs.' )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage default tag import options', 'Change the default tag import options for each of your linked url matches.', self._ManageDefaultTagImportOptions )
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
+            #
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLMatches )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
+            ClientGUIMenus.AppendMenuLabel( submenu, 'UNDER CONSTRUCTION: manage searchers', 'Manage the client\'s searchers, which convert search terms into URLs.' )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: reset login' )
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLMatchLinks )
+            
+            ClientGUIMenus.AppendSeparator( submenu )
+            
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'LEGACY: manage boorus', 'Change the html parsing information for boorus to download from.', self._ManageBoorus )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage parsing scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'downloader definitions' )
+            
+            #
             
             submenu = wx.Menu()
             
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            ClientGUIMenus.AppendMenuItem( self, submenu, 'manage pixiv account', 'Set up your pixiv username and password.', self._ManagePixivAccount )
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'DEBUG: misc' )
+            reset_login_menu = wx.Menu()
             
-            ClientGUIMenus.AppendSeparator( menu )
+            ClientGUIMenus.AppendMenuItem( self, reset_login_menu, 'pixiv', 'Reset pixiv session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' ) )
+            ClientGUIMenus.AppendMenuItem( self, reset_login_menu, 'hentai foundry', 'Reset HF session.', self._controller.network_engine.session_manager.ClearSession, ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' ) )
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
+            ClientGUIMenus.AppendMenu( submenu, reset_login_menu, 'DEBUG: reset login' )
+            
+            debug_menu = wx.Menu()
+            
+            ClientGUIMenus.AppendMenuItem( self, debug_menu, 'do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+            
+            ClientGUIMenus.AppendMenu( submenu, debug_menu, 'DEBUG: misc' )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'logins' )
+            
+            #
             
             return ( menu, '&network', True )
             
@@ -4435,14 +4445,25 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def SaveLastSession( self ):
         
-        if HC.options[ 'default_gui_session' ] == 'last session':
+        only_save_last_session_during_idle = self._controller.new_options.GetBoolean( 'only_save_last_session_during_idle' )
+        
+        if only_save_last_session_during_idle and not self._controller.CurrentlyIdle():
             
-            self._notebook.SaveGUISession( 'last session' )
+            next_call_delay = 60
+            
+        else:
+            
+            if HC.options[ 'default_gui_session' ] == 'last session':
+                
+                self._notebook.SaveGUISession( 'last session' )
+                
+            
+            last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
+            
+            next_call_delay = last_session_save_period_minutes * 60
             
         
-        last_session_save_period_minutes = self._controller.new_options.GetInteger( 'last_session_save_period_minutes' )
-        
-        self._controller.CallLaterWXSafe( self, last_session_save_period_minutes * 60, self.SaveLastSession )
+        self._controller.CallLaterWXSafe( self, next_call_delay, self.SaveLastSession )
         
     
     def SetMediaFocus( self ):

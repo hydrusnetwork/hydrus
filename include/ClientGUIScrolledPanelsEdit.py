@@ -2221,6 +2221,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.SetListCtrl( self._queries )
         
         queries_panel.AddButton( 'add', self._AddQuery )
+        queries_panel.AddButton( 'copy queries', self._CopyQueries, enabled_only_on_selection = True )
         queries_panel.AddButton( 'paste queries', self._PasteQueries )
         queries_panel.AddButton( 'edit', self._EditQuery, enabled_only_on_selection = True )
         queries_panel.AddButton( 'delete', self._DeleteQuery, enabled_only_on_selection = True )
@@ -2265,7 +2266,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, namespaces, tag_import_options )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, namespaces, tag_import_options, allow_default_selection = True )
         
         #
         
@@ -2411,17 +2412,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        new_options = HG.client_controller.new_options
-        
-        tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
-        
-        if gallery_identifier == self._original_subscription.GetGalleryIdentifier():
-            
-            tag_import_options = self._original_subscription.GetTagImportOptions()
-            
-        
         self._tag_import_options.SetNamespaces( namespaces )
-        self._tag_import_options.SetValue( tag_import_options )
         
     
     def _ConvertQueryToListCtrlTuples( self, query ):
@@ -2500,6 +2491,23 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         sort_tuple = ( query_text, paused, status, last_new_file_time, last_check_time, next_check_time, file_velocity, delay, items )
         
         return ( display_tuple, sort_tuple )
+        
+    
+    def _CopyQueries( self ):
+        
+        query_texts = []
+        
+        for query in self._queries.GetData( only_selected = True ):
+            
+            query_texts.append( query.GetQueryText() )
+            
+        
+        clipboard_text = os.linesep.join( query_texts )
+        
+        if len( clipboard_text ) > 0:
+            
+            HG.client_controller.pub( 'clipboard', 'text', clipboard_text )
+            
         
     
     def _DeleteQuery( self ):
@@ -3035,6 +3043,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
         subscriptions_panel.AddButton( 'overwrite checker timings', self.SetCheckerOptions, enabled_only_on_selection = True )
+        subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
         
         #
         
@@ -3845,6 +3854,13 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def SetCheckerOptions( self ):
         
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
         checker_options = ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit check timings' ) as dlg:
@@ -3857,11 +3873,40 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 checker_options = panel.GetValue()
                 
-                subscriptions = self._subscriptions.GetData( only_selected = True )
-                
                 for subscription in subscriptions:
                     
                     subscription.SetCheckerOptions( checker_options )
+                    
+                
+                self._subscriptions.UpdateDatas( subscriptions )
+                
+            
+        
+    
+    def SetTagImportOptions( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForPosts()
+        
+        with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
+            
+            panel = EditTagImportOptionsPanel( dlg, [], tag_import_options, show_downloader_options = True, allow_default_selection = True )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                tag_import_options = panel.GetValue()
+                
+                for subscription in subscriptions:
+                    
+                    subscription.SetTagImportOptions( tag_import_options )
                     
                 
                 self._subscriptions.UpdateDatas( subscriptions )
@@ -4122,7 +4167,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, namespaces, tag_import_options, show_downloader_options = True ):
+    def __init__( self, parent, namespaces, tag_import_options, show_downloader_options = True, allow_default_selection = False ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -4133,7 +4178,29 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.GlobalBMPs.help, self._ShowHelp )
         help_button.SetToolTip( 'Show help regarding these tag options.' )
         
-        downloader_options_panel = ClientGUICommon.StaticBox( self, 'fetch options' )
+        #
+        
+        is_default_panel = ClientGUICommon.StaticBox( self, 'use default' )
+        
+        self._is_default = wx.CheckBox( is_default_panel )
+        
+        tt = '(This only works for the new download system! If you are not sure this context uses the new downloader, test it on a small scale first!)'
+        tt += os.linesep * 2
+        tt += 'If this is checked, the client will refer to the defaults (as set under "network->downloaders->manage default tag import options") for the appropriate tag import options at the time of import.'
+        tt += os.linesep * 2
+        tt += 'It is easier to manage tag import options by relying on the defaults, since any change in the single default location will update all the eventual import queues that refer to those defaults, whereas having specific options for every subscription or downloader means making an update to the blacklist or tag filter needs to be repeated dozens or hundreds of times.'
+        tt += os.linesep * 2
+        tt += 'But if you are doing a one-time import that has some unusual tag rules, uncheck this and set those specific rules here.'
+        
+        self._is_default.SetToolTip( tt )
+        
+        #
+        
+        self._specific_options_panel = wx.Panel( self )
+        
+        #
+        
+        downloader_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'fetch options' )
         
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = wx.CheckBox( downloader_options_panel )
@@ -4153,10 +4220,27 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._is_default.SetValue( tag_import_options.IsDefault() )
+        
         self._fetch_tags_even_if_url_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.SetValue( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         self._InitialiseServices( tag_import_options, namespaces, show_downloader_options )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'rely on the appropriate default tag import options at the time of import: ', self._is_default ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( is_default_panel, rows )
+        
+        is_default_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if not allow_default_selection:
+            
+            is_default_panel.Hide()
+            
         
         #
         
@@ -4175,13 +4259,30 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             downloader_options_panel.Hide()
             
         
+        #
+        
         vbox = wx.BoxSizer( wx.VERTICAL )
         
-        vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
         vbox.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( self._services_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
+        self._specific_options_panel.SetSizer( vbox )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( help_button, CC.FLAGS_LONE_BUTTON )
+        vbox.Add( is_default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.Add( self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
         self.SetSizer( vbox )
+        
+        #
+        
+        self._is_default.Bind( wx.EVT_CHECKBOX, self.EventIsDefault )
+        
+        self._UpdateIsDefault()
         
     
     def _InitialiseServices( self, tag_import_options, namespaces, show_downloader_options ):
@@ -4198,7 +4299,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
             
-            panel = EditServiceTagImportOptionsPanel( self, service_key, namespaces, service_tag_import_options, show_downloader_options = show_downloader_options )
+            panel = EditServiceTagImportOptionsPanel( self._specific_options_panel, service_key, namespaces, service_tag_import_options, show_downloader_options = show_downloader_options )
             
             self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
             
@@ -4220,21 +4321,44 @@ You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my
 
 ---
 
-Please note that you can set up 'default' values for these tag import options in the regular options panel, either globally and on a per-site basis. If you always want all the tags going to 'local tags', this is easy to set up, and you won't have to put it every time.'''
+Please note that you can set up the 'default' values for these tag import options under _network->downloaders->manage default tag import options_, both globally and on a per-parser basis. If you always want all the tags going to 'local tags', this is easy to set up there, and you won't have to put it in every time.'''
         
         wx.MessageBox( message )
         
     
+    def _UpdateIsDefault( self ):
+        
+        is_default = self._is_default.GetValue()
+        
+        show_specific_options = not is_default
+        
+        self._specific_options_panel.Enable( show_specific_options )
+        
+    
+    def EventIsDefault( self, event ):
+        
+        self._UpdateIsDefault()
+        
+    
     def GetValue( self ):
         
-        fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.GetValue()
-        fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.GetValue()
+        is_default = self._is_default.GetValue()
         
-        service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items() }
-        
-        tag_blacklist = self._tag_filter_button.GetValue()
-        
-        tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        if is_default:
+            
+            tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+            
+        else:
+            
+            fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.GetValue()
+            fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.GetValue()
+            
+            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items() }
+            
+            tag_blacklist = self._tag_filter_button.GetValue()
+            
+            tag_import_options = ClientImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+            
         
         return tag_import_options
         

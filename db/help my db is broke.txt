@@ -64,4 +64,4 @@ If the clone operation is successful, rename client.db to client_old.db and clie
 
 If the clone is unsuccessful or it still does not run correctly, contact me (Hydrus Dev) and I'll help you with the next steps. In the worst case, we will manually extract what you can to a new db.
 
-If you still get problems, please contact me. Check help/contact.html for ways to do that.
+If you recover ok but still get problems, please contact me. Check help/contact.html for ways to do this.

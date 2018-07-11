@@ -781,8 +781,6 @@ class GalleryDeviantArt( Gallery ):
         
         thumbs_container = soup.find( 'div', class_ = 'torpedo-container' )
         
-        artist = url_base.split( 'http://' )[1].split( '.deviantart.com' )[0]
-        
         thumbs = thumbs_container.find_all( 'span', class_ = 'thumb' )
         
         for thumb in thumbs:
@@ -790,20 +788,6 @@ class GalleryDeviantArt( Gallery ):
             url = thumb[ 'href' ] # something in the form of blah.da.com/art/blah-123456
             
             tags = []
-            
-            tags.append( 'creator:' + artist )
-            
-            title_tag = thumb.find( 'span', class_ = 'title' )
-            
-            if title_tag is not None:
-                
-                title = title_tag.string
-                
-                if title is not None and title != '':
-                    
-                    tags.append( 'title:' + title )
-                    
-                
             
             urls_and_tags.append( ( url, tags ) )
             
@@ -1464,7 +1448,7 @@ class GalleryTumblr( Gallery ):
             
             message = 'The tumblr downloader received an unexpected HTML page when it tried to download JSON post information. It is likely that you are an EU/EEA user and have been hit by a GDPR click-through issue.'
             message += os.linesep * 2
-            message += 'In order to get the hydrus client to \'click ok\' on that page, please hit _network->DEBUG: misc->do tumblr GDPR click-through_ and try this gallery search again.'
+            message += 'In order to get the hydrus client to \'click ok\' on that page, please hit _network->logins->DEBUG: misc->do tumblr GDPR click-through_ and try this gallery search again.'
             message += os.linesep * 2
             message += 'If you still have problems, please let hydrus dev know.'
             

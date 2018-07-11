@@ -3,6 +3,7 @@ import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIListBoxes
 import ClientGUIListCtrl
+import ClientGUIMenus
 import ClientGUIScrolledPanels
 import ClientGUIScrolledPanelsEdit
 import ClientGUITopLevelWindows
@@ -12,6 +13,7 @@ import collections
 import HydrusConstants as HC
 import HydrusData
 import HydrusGlobals as HG
+import HydrusSerialisable
 import HydrusTags
 import HydrusText
 import os
@@ -1040,7 +1042,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
-    def __init__( self, parent, namespaces, tag_import_options, update_callable = None, show_downloader_options = True ):
+    def __init__( self, parent, namespaces, tag_import_options, update_callable = None, show_downloader_options = True, allow_default_selection = False ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'tag import options', self._EditOptions )
         
@@ -1048,15 +1050,27 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
         self._tag_import_options = tag_import_options
         self._update_callable = update_callable
         self._show_downloader_options = show_downloader_options
+        self._allow_default_selection = allow_default_selection
         
         self._SetToolTip()
+        
+        #
+        
+        self.Bind( wx.EVT_RIGHT_DOWN, self.EventShowMenu )
+        
+    
+    def _Copy( self ):
+        
+        json_string = self._tag_import_options.DumpToString()
+        
+        HG.client_controller.pub( 'clipboard', 'text', json_string )
         
     
     def _EditOptions( self ):
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._namespaces, self._tag_import_options, show_downloader_options = self._show_downloader_options )
+            panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, self._namespaces, self._tag_import_options, show_downloader_options = self._show_downloader_options, allow_default_selection = self._allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -1069,9 +1083,34 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
         
     
+    def _Paste( self ):
+    
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
+            
+            self._tag_import_options = tag_import_options
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+            HydrusData.ShowException( e )
+            
+        
+    
+    def _SetDefault( self ):
+        
+        self._tag_import_options.SetDefault()
+        
+    
     def _SetToolTip( self ):
         
-        self.SetToolTip( self._tag_import_options.GetSummary( self._show_downloader_options ) )
+        summary = self._tag_import_options.GetSummary( self._show_downloader_options )
+        
+        self.SetToolTip( summary )
         
     
     def _SetValue( self, tag_import_options ):
@@ -1084,6 +1123,26 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
             
             self._update_callable( self._tag_import_options )
             
+        
+    
+    def EventShowMenu( self, event ):
+        
+        menu = wx.Menu()
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'copy to clipboard', 'Serialise this tag import options and copy it to clipboard.', self._Copy )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( self, menu, 'paste from clipboard', 'Try to import serialised tag import options from the clipboard.', self._Paste )
+        
+        if not self._tag_import_options.IsDefault():
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            ClientGUIMenus.AppendMenuItem( self, menu, 'set to default', 'Set this tag import options to defer to the defaults.', self._SetDefault )
+            
+        
+        HG.client_controller.PopupMenu( self, menu )
         
     
     def GetValue( self ):

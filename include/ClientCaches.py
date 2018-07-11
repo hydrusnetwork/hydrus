@@ -1786,8 +1786,9 @@ class RenderedImageCache( object ):
         self._controller = controller
         
         cache_size = self._controller.options[ 'fullscreen_cache_size' ]
+        cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
-        self._data_cache = DataCache( self._controller, cache_size, timeout = 600 )
+        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
         
     
     def Clear( self ):
@@ -1831,8 +1832,9 @@ class ThumbnailCache( object ):
         self._controller = controller
         
         cache_size = self._controller.options[ 'thumbnail_cache_size' ]
+        cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
         
-        self._data_cache = DataCache( self._controller, cache_size, timeout = 86400 )
+        self._data_cache = DataCache( self._controller, cache_size, timeout = cache_timeout )
         
         self._lock = threading.Lock()
         

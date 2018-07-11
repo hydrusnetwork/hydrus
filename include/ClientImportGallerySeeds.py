@@ -162,7 +162,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, gallery_seed_log, file_seed_cache, status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, max_new_urls_allowed = None, gallery_urls_seen_before = None ):
+    def WorkOnURL( self, gallery_seed_log, file_seed_cache, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, max_new_urls_allowed = None, gallery_urls_seen_before = None ):
         
         if gallery_urls_seen_before is None:
             
@@ -175,6 +175,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         num_urls_added = 0
         added_all_possible_urls = False
+        result_404 = False
         
         try:
             
@@ -182,12 +183,12 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
-                raise HydrusExceptions.VetoException( 'Did not recognise this URL!' )
+                raise HydrusExceptions.VetoException( 'Did not recognise this as a gallery or watchable URL!' )
                 
             
             if not can_parse:
                 
-                raise HydrusExceptions.VetoException( 'Did not have a parser for that URL!' )
+                raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
                 
             
             did_substantial_work = True
@@ -206,6 +207,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
             
             network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
+            
+            network_job.OverrideBandwidth()
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -226,6 +229,13 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             if len( all_parse_results ) == 0:
                 
                 raise HydrusExceptions.VetoException( 'Could not parse any data!' )
+                
+            
+            title = ClientParsing.GetTitleFromAllParseResults( all_parse_results )
+            
+            if title is not None:
+                
+                title_hook( title )
                 
             
             ( num_urls_added, num_urls_already_in, added_all_possible_urls ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.url, max_new_urls_allowed )
@@ -313,6 +323,8 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             time.sleep( 2 )
             
+            result_404 = True
+            
         except Exception as e:
             
             status = CC.STATUS_ERROR
@@ -323,8 +335,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             time.sleep( 3 )
             
+            if isinstance( e, HydrusExceptions.NetworkException ): # so the larger queue can set a delaywork or whatever
+                
+                raise
+                
+            
         
-        return ( num_urls_added, added_all_possible_urls )
+        gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
+        
+        return ( num_urls_added, added_all_possible_urls, result_404 )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed

@@ -116,10 +116,12 @@ def GenerateStatusesToCountsStatus( statuses_to_counts ):
         
         if num_ignored > 0:
             
-            simple_status_strings.append( HydrusData.ToHumanInt( num_ignored ) + 'I' )
+            simple_status_strings.append( HydrusData.ToHumanInt( num_ignored ) + 'Ig' )
             
         
-        if num_deleted > 0:
+        show_deleted_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
+        
+        if show_deleted_on_file_seed_short_summary and num_deleted > 0:
             
             simple_status_strings.append( HydrusData.ToHumanInt( num_deleted ) + 'D' )
             
@@ -373,6 +375,36 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return associable_urls
         
     
+    def _SetupTagImportOptions( self, given_tag_import_options ):
+        
+        if given_tag_import_options.IsDefault():
+            
+            if self.IsAPostURL():
+                
+                tio_lookup_url = self.file_seed_data
+                
+            else:
+                
+                if self._referral_url is not None:
+                    
+                    tio_lookup_url = self._referral_url
+                    
+                else:
+                    
+                    tio_lookup_url = self.file_seed_data
+                    
+                
+            
+            tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( tio_lookup_url )
+            
+        else:
+            
+            tag_import_options = given_tag_import_options
+            
+        
+        return tag_import_options
+        
+    
     def _UpdateModified( self ):
         
         self.modified = HydrusData.GetNow()
@@ -533,32 +565,64 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.SetHash( hash )
         
     
-    def ImportPath( self, file_import_options ):
-        
-        if self.file_seed_type != FILE_SEED_TYPE_HDD:
-            
-            raise Exception( 'Attempted to import as a path, but I do not think I am a path!' )
-            
-        
-        ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
+    def ImportPath( self, file_seed_cache, file_import_options, limited_mimes = None ):
         
         try:
             
+            if self.file_seed_type != FILE_SEED_TYPE_HDD:
+                
+                raise HydrusExceptions.VetoException( 'Attempted to import as a path, but I do not think I am a path!' )
+                
+            
             path = self.file_seed_data
             
-            copied = HydrusPaths.MirrorFile( path, temp_path )
-            
-            if not copied:
+            if not os.path.exists( path ):
                 
-                raise Exception( 'File failed to copy to temp path--see log for error.' )
+                raise HydrusExceptions.VetoException( 'Source file does not exist!' )
                 
             
-            self.Import( temp_path, file_import_options )
+            if limited_mimes is not None:
+                
+                mime = HydrusFileHandling.GetMime( path )
+                
+                if mime not in limited_mimes:
+                    
+                    raise HydrusExceptions.VetoException( 'Not in allowed mimes!' )
+                    
+                
             
-        finally:
+            ( os_file_handle, temp_path ) = ClientPaths.GetTempPath()
             
-            HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+            try:
+                
+                copied = HydrusPaths.MirrorFile( path, temp_path )
+                
+                if not copied:
+                    
+                    raise Exception( 'File failed to copy to temp path--see log for error.' )
+                    
+                
+                self.Import( temp_path, file_import_options )
+                
+            finally:
+                
+                HydrusPaths.CleanUpTempPath( os_file_handle, temp_path )
+                
             
+        except HydrusExceptions.MimeException as e:
+            
+            self.SetStatus( CC.STATUS_ERROR, exception = e )
+            
+        except HydrusExceptions.VetoException as e:
+            
+            self.SetStatus( CC.STATUS_VETOED, note = HydrusData.ToUnicode( e ) )
+            
+        except Exception as e:
+            
+            self.SetStatus( CC.STATUS_ERROR, exception = e )
+            
+        
+        file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
         
     
     def IsAPostURL( self ):
@@ -852,6 +916,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            tag_import_options = self._SetupTagImportOptions( tag_import_options )
+            
             status_hook( 'checking url status' )
             
             ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options )
@@ -991,20 +1057,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                if tag_import_options is None:
-                    
-                    if self._referral_url is not None:
-                        
-                        tio_lookup_url = self._referral_url
-                        
-                    else:
-                        
-                        tio_lookup_url = self.file_seed_data
-                        
-                    
-                    tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( tio_lookup_url )
-                    
-                
                 if should_download_file:
                     
                     did_substantial_work = True
@@ -1059,6 +1111,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             time.sleep( 3 )
             
+        
+        file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
         
         return did_substantial_work
         

@@ -2475,7 +2475,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_converter = parser.GetStringConverter()
         
-        self._string_converter = EditStringConverterPanel( conversion_panel, string_converter )
+        self._string_converter = StringConverterButton( conversion_panel, string_converter )
         
         #
         
@@ -2573,7 +2573,10 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        conversion_panel.Add( self._string_converter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        st = ClientGUICommon.BetterStaticText( conversion_panel, 'If the data this parser gets is wrapped in some quote marks or is otherwise encoded,\nyou can convert it to neat HTML/JSON first with this.' )
+        
+        conversion_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        conversion_panel.Add( self._string_converter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         example_urls_panel.Add( self._example_urls, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -2588,7 +2591,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         gridbox = ClientGUICommon.WrapInGrid( main_panel, rows )
         
         vbox.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        vbox.Add( conversion_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( conversion_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.Add( example_urls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         main_panel.SetSizer( vbox )

@@ -419,7 +419,7 @@ class GallerySeedLogButton( ClientGUICommon.BetterBitmapButton ):
         
         message = 'Would you like the URLs you are adding to be checked for just files, or would you like them to also follow subsequent gallery pages, like a regular search would?'
         
-        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a new search for every url added' ) as dlg:
+        with ClientGUIDialogs.DialogYesNo( self, message, yes_label = 'just check what I am adding', no_label = 'start a potential new search for every url added' ) as dlg:
             
             result = dlg.ShowModal()
             

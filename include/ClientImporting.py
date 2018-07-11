@@ -396,7 +396,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
         
-        self._tag_import_options = new_options.GetDefaultTagImportOptions( self._gallery_identifier )
+        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
         self._last_gallery_page_hit_timestamp = 0
         
@@ -442,20 +442,20 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_pending_gallery_stream_identifiers = [ pending_gallery_stream_identifier.GetSerialisableTuple() for pending_gallery_stream_identifier in self._pending_gallery_stream_identifiers ]
         
-        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
-        serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
+        serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
         serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
         
         serialisable_current_query_stuff = ( self._current_query, self._current_query_num_new_urls, serialisable_current_gallery_stream_identifier, self._current_gallery_stream_identifier_page_index, serialisable_current_gallery_stream_identifier_found_urls, serialisable_pending_gallery_stream_identifiers )
         
-        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_gallery_seed_log, serialisable_file_seed_cache )
+        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_options, serialisable_tag_options, serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
+        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, self._pending_queries, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
         
         ( self._current_query, self._current_query_num_new_urls, serialisable_current_gallery_stream_identifier, self._current_gallery_stream_identifier_page_index, serialisable_current_gallery_stream_identifier_found_urls, serialisable_pending_gallery_stream_identifier ) = serialisable_current_query_stuff
         
@@ -475,8 +475,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._current_gallery_stream_identifier_found_urls = set( serialisable_current_gallery_stream_identifier_found_urls )
         
         self._pending_gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pending_gallery_stream_identifier ) for serialisable_pending_gallery_stream_identifier in serialisable_pending_gallery_stream_identifier ]
-        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
@@ -526,22 +526,22 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, get_tags_if_url_recognised_and_file_redundant, file_limit, gallery_paused, files_paused, serialisable_file_options, serialisable_tag_options, serialisable_file_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, get_tags_if_url_recognised_and_file_redundant, file_limit, gallery_paused, files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_file_seed_cache ) = old_serialisable_info
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_options, serialisable_tag_options, serialisable_file_seed_cache )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_file_seed_cache )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_options, serialisable_tag_options, serialisable_file_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_file_seed_cache ) = old_serialisable_info
             
             gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
             
             serialisable_gallery_seed_log = gallery_seed_log.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_options, serialisable_tag_options, serialisable_gallery_seed_log, serialisable_file_seed_cache )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_current_query_stuff, pending_queries, file_limit, gallery_paused, files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache )
             
             return ( 3, new_serialisable_info )
             
@@ -832,9 +832,15 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            gallery_url = gallery.GetGalleryPageURL( query, page_index )
+            
+            # can_generate_more_pages = if recognised in the new system, I guess
+            
+            gallery_seed = ClientImportGallerySeeds.GallerySeed( gallery_url, can_generate_more_pages = False )
+            
+            self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+            
             try:
-                
-                gallery_url = gallery.GetGalleryPageURL( query, page_index )
                 
                 ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
                 
@@ -900,11 +906,8 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 status += ' (' + HydrusData.ToHumanInt( num_already_in_file_seed_cache ) + ' of last page already in queue)'
                 
             
-            gallery_seed = ClientImportGallerySeeds.GallerySeed( gallery_url, can_generate_more_pages = False )
-            
-            gallery_seed.SetStatus( CC.STATUS_SUCCESSFUL_AND_NEW, note = status )
-            
-            self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+            gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
+            gallery_seed_note = status
             
             if len( new_file_seeds ) > 0:
                 
@@ -917,9 +920,15 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 text = 'gallery 404'
                 
+                gallery_seed_status = CC.STATUS_VETOED
+                gallery_seed_note = text
+                
             else:
                 
                 text = HydrusData.ToUnicode( e )
+                
+                gallery_seed_status = CC.STATUS_ERROR
+                gallery_seed_note = text
                 
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
@@ -928,26 +937,30 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._current_gallery_stream_identifier = None
                 
-                self._SetGalleryStatus( text, 5 )
-                
             
-            time.sleep( 5 )
+            error_occured = True
             
         finally:
             
             wx.CallAfter( self._download_control_gallery_clear )
             
         
+        gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
+        
+        self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
+        
         with self._lock:
             
-            status = query + ': ' + HydrusData.ToHumanInt( len( new_file_seeds ) ) + ' new urls found'
+            status = gallery_seed_note
             
-            if num_already_in_file_seed_cache > 0:
+            if error_occured:
                 
-                status += ' (' + HydrusData.ToHumanInt( num_already_in_file_seed_cache ) + ' of last page already in queue)'
+                self._SetGalleryStatus( status, 5 )
                 
-            
-            self._SetGalleryStatus( status )
+            else:
+                
+                self._SetGalleryStatus( status )
+                
             
         
         return True
@@ -1353,93 +1366,67 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        try:
+        with self._lock:
             
-            if not os.path.exists( path ):
+            self._current_action = 'importing'
+            
+        
+        file_seed.ImportPath( self._file_seed_cache, self._file_import_options )
+        
+        did_substantial_work = True
+        
+        if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
+            
+            hash = file_seed.GetHash()
+            
+            service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+            
+            if len( service_keys_to_content_updates ) > 0:
                 
-                raise Exception( 'Source file does not exist!' )
+                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                
+                did_substantial_work = True
                 
             
-            with self._lock:
+            if file_seed.ShouldPresent( self._file_import_options ):
                 
-                self._current_action = 'importing'
+                file_seed.PresentToPage( page_key )
+                
+                did_substantial_work = True
                 
             
-            file_seed.ImportPath( self._file_import_options )
-            
-            did_substantial_work = True
-            
-            if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
+            if self._delete_after_success:
                 
-                hash = file_seed.GetHash()
-                
-                service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                
-                if len( service_keys_to_content_updates ) > 0:
+                try:
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    ClientPaths.DeletePath( path )
                     
-                    did_substantial_work = True
+                except Exception as e:
+                    
+                    HydrusData.ShowText( 'While attempting to delete ' + path + ', the following error occured:' )
+                    HydrusData.ShowException( e )
                     
                 
-                if file_seed.ShouldPresent( self._file_import_options ):
-                    
-                    file_seed.PresentToPage( page_key )
-                    
-                    did_substantial_work = True
-                    
+                txt_path = path + '.txt'
                 
-                if self._delete_after_success:
+                if os.path.exists( txt_path ):
                     
                     try:
                         
-                        ClientPaths.DeletePath( path )
+                        ClientPaths.DeletePath( txt_path )
                         
                     except Exception as e:
                         
-                        HydrusData.ShowText( 'While attempting to delete ' + path + ', the following error occured:' )
+                        HydrusData.ShowText( 'While attempting to delete ' + txt_path + ', the following error occured:' )
                         HydrusData.ShowException( e )
                         
                     
-                    txt_path = path + '.txt'
-                    
-                    if os.path.exists( txt_path ):
-                        
-                        try:
-                            
-                            ClientPaths.DeletePath( txt_path )
-                            
-                        except Exception as e:
-                            
-                            HydrusData.ShowText( 'While attempting to delete ' + txt_path + ', the following error occured:' )
-                            HydrusData.ShowException( e )
-                            
-                        
-                    
                 
             
-        except HydrusExceptions.VetoException as e:
+        
+        with self._lock:
             
-            status = CC.STATUS_VETOED
-            
-            note = HydrusData.ToUnicode( e )
-            
-            file_seed.SetStatus( status, note = note )
-            
-        except Exception as e:
-            
-            status = CC.STATUS_ERROR
-            
-            file_seed.SetStatus( status, exception = e )
-            
-        finally:
-            
-            self._file_seed_cache.NotifyFileSeedsUpdated( ( file_seed, ) )
-            
-            with self._lock:
-                
-                self._current_action = ''
-                
+            self._current_action = ''
             
         
         if did_substantial_work:
@@ -1581,7 +1568,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if tag_import_options is None:
             
-            tag_import_options = HG.client_controller.new_options.GetDefaultTagImportOptions( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT ) )
+            tag_import_options = ClientImportOptions.TagImportOptions()
             
         
         if tag_service_keys_to_filename_tagging_options is None:
@@ -1827,6 +1814,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 break
                 
             
+            did_work = True
+            
             if HydrusData.TimeHasPassed( time_to_save ):
                 
                 HG.client_controller.WriteSynchronous( 'serialisable', self )
@@ -1841,91 +1830,71 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             path = file_seed.file_seed_data
             
-            try:
+            file_seed.ImportPath( self._file_seed_cache, self._file_import_options, limited_mimes = self._mimes )
+            
+            if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                 
-                mime = HydrusFileHandling.GetMime( path )
+                hash = file_seed.GetHash()
                 
-                if mime in self._mimes:
+                downloaded_tags = []
+                
+                in_inbox = HG.client_controller.Read( 'in_inbox', hash )
+                
+                service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
+                
+                if len( service_keys_to_content_updates ) > 0:
                     
-                    file_seed.ImportPath( self._file_import_options )
-                    
-                    hash = file_seed.GetHash()
-                    
-                    if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
-                        
-                        downloaded_tags = []
-                        
-                        in_inbox = HG.client_controller.Read( 'in_inbox', hash )
-                        
-                        service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, in_inbox, hash, downloaded_tags ) # additional tags
-                        
-                        if len( service_keys_to_content_updates ) > 0:
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                            
-                        
-                        service_keys_to_tags = {}
-                        
-                        for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
-                            
-                            if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
-                                
-                                continue
-                                
-                            
-                            try:
-                                
-                                tags = filename_tagging_options.GetTags( tag_service_key, path )
-                                
-                                if len( tags ) > 0:
-                                    
-                                    service_keys_to_tags[ tag_service_key ] = tags
-                                    
-                                
-                            except Exception as e:
-                                
-                                HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
-                                
-                                HydrusData.ShowException( e )
-                                
-                            
-                        
-                        if len( service_keys_to_tags ) > 0:
-                            
-                            service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
-                            
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-                            
-                        
-                        num_files_imported += 1
-                        
-                        if hash not in presentation_hashes_fast:
-                            
-                            if file_seed.ShouldPresent( self._file_import_options ):
-                                
-                                presentation_hashes.append( hash )
-                                
-                                presentation_hashes_fast.add( hash )
-                                
-                            
-                        
-                    
-                else:
-                    
-                    file_seed.SetStatus( CC.STATUS_VETOED )
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
                     
                 
-            except Exception as e:
+                service_keys_to_tags = {}
                 
-                error_text = traceback.format_exc()
+                for ( tag_service_key, filename_tagging_options ) in self._tag_service_keys_to_filename_tagging_options.items():
+                    
+                    if not HG.client_controller.services_manager.ServiceExists( tag_service_key ):
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        tags = filename_tagging_options.GetTags( tag_service_key, path )
+                        
+                        if len( tags ) > 0:
+                            
+                            service_keys_to_tags[ tag_service_key ] = tags
+                            
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Trying to parse filename tags in the import folder "' + self._name + '" threw an error!' )
+                        
+                        HydrusData.ShowException( e )
+                        
+                    
+                
+                if len( service_keys_to_tags ) > 0:
+                    
+                    service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                    
+                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    
+                
+                num_files_imported += 1
+                
+                if hash not in presentation_hashes_fast:
+                    
+                    if file_seed.ShouldPresent( self._file_import_options ):
+                        
+                        presentation_hashes.append( hash )
+                        
+                        presentation_hashes_fast.add( hash )
+                        
+                    
+                
+            elif file_seed.status == CC.STATUS_ERROR:
                 
                 HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' + path )
-                
-                file_seed.SetStatus( CC.STATUS_ERROR, exception = e )
-                
-            finally:
-                
-                did_work = True
                 
             
             i += 1
@@ -2251,20 +2220,20 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
-        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
         
-        return ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, self._formula_name, self._queue_paused, self._files_paused )
+        return ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, self._formula_name, self._queue_paused, self._files_paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, self._formula_name, self._queue_paused, self._files_paused ) = serialisable_info
+        ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, self._formula_name, self._queue_paused, self._files_paused ) = serialisable_info
         
         self._pending_jobs = [ ( url, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_simple_downloader_formula ) ) for ( url, serialisable_simple_downloader_formula ) in serialisable_pending_jobs ]
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
-        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         
     
     def _PageNetworkJobPresentationContextFactory( self, network_job ):
@@ -2298,49 +2267,49 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_options, download_image_links, download_unlinked_images, paused ) = old_serialisable_info
+            ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_import_options, download_image_links, download_unlinked_images, paused ) = old_serialisable_info
             
             queue_paused = paused
             files_paused = paused
             
-            new_serialisable_info = ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_options, download_image_links, download_unlinked_images, queue_paused, files_paused )
+            new_serialisable_info = ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_import_options, download_image_links, download_unlinked_images, queue_paused, files_paused )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_options, download_image_links, download_unlinked_images, queue_paused, files_paused ) = old_serialisable_info
+            ( pending_page_urls, serialisable_file_seed_cache, serialisable_file_import_options, download_image_links, download_unlinked_images, queue_paused, files_paused ) = old_serialisable_info
             
             pending_jobs = []
             
-            new_serialisable_info = ( pending_jobs, serialisable_file_seed_cache, serialisable_file_options, queue_paused, files_paused )
+            new_serialisable_info = ( pending_jobs, serialisable_file_seed_cache, serialisable_file_import_options, queue_paused, files_paused )
             
             return ( 3, new_serialisable_info )
             
         
         if version == 3:
             
-            ( pending_jobs, serialisable_file_seed_cache, serialisable_file_options, queue_paused, files_paused ) = old_serialisable_info
+            ( pending_jobs, serialisable_file_seed_cache, serialisable_file_import_options, queue_paused, files_paused ) = old_serialisable_info
             
             pending_jobs = []
             
             formula_name = 'all files linked by images in page'
             
-            new_serialisable_info = ( pending_jobs, serialisable_file_seed_cache, serialisable_file_options, formula_name, queue_paused, files_paused )
+            new_serialisable_info = ( pending_jobs, serialisable_file_seed_cache, serialisable_file_import_options, formula_name, queue_paused, files_paused )
             
             return ( 4, new_serialisable_info )
             
         
         if version == 4:
             
-            ( pending_jobs, serialisable_file_seed_cache, serialisable_file_options, formula_name, queue_paused, files_paused ) = old_serialisable_info
+            ( pending_jobs, serialisable_file_seed_cache, serialisable_file_import_options, formula_name, queue_paused, files_paused ) = old_serialisable_info
             
             gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
             
             serialisable_gallery_seed_log = gallery_seed_log.GetSerialisableTuple()
             
-            new_serialisable_info = ( pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, formula_name, queue_paused, files_paused )
+            new_serialisable_info = ( pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, formula_name, queue_paused, files_paused )
             
             return ( 5, new_serialisable_info )
             
@@ -2357,45 +2326,28 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         
         did_substantial_work = False
         
-        file_url = file_seed.file_seed_data
-        
-        try:
-            
-            def status_hook( text ):
-                
-                with self._lock:
-                    
-                    self._current_action = text
-                    
-                
-            
-            tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( file_seed.file_seed_data )
-            
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, GenerateDownloaderNetworkJobFactory( page_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
-            
-            if file_seed.ShouldPresent( self._file_import_options ):
-                
-                file_seed.PresentToPage( page_key )
-                
-                did_substantial_work = True
-                
-            
-        except Exception as e:
-            
-            status = CC.STATUS_ERROR
-            
-            file_seed.SetStatus( status, exception = e )
-            
-            time.sleep( 3 )
-            
-        finally:
-            
-            self._file_seed_cache.NotifyFileSeedsUpdated( ( file_seed, ) )
+        def status_hook( text ):
             
             with self._lock:
                 
-                self._current_action = ''
+                self._current_action = text
                 
+            
+        
+        tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        
+        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, GenerateDownloaderNetworkJobFactory( page_key ), self._FileNetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
+        
+        if file_seed.ShouldPresent( self._file_import_options ):
+            
+            file_seed.PresentToPage( page_key )
+            
+            did_substantial_work = True
+            
+        
+        with self._lock:
+            
+            self._current_action = ''
             
         
         if did_substantial_work:
@@ -2418,6 +2370,10 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             error_occurred = False
             
             try:
+                
+                gallery_seed = ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = False )
+                
+                self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
                 
                 network_job = ClientNetworkingJobs.NetworkJobDownloader( page_key, 'GET', url )
                 
@@ -2476,17 +2432,18 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     parser_status += ' (' + HydrusData.ToHumanInt( num_already_in_file_seed_cache ) + ' already in queue)'
                     
                 
-                gallery_seed = ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = False )
-                
-                gallery_seed.SetStatus( CC.STATUS_SUCCESSFUL_AND_NEW, note = parser_status )
-                
-                self._gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+                gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
                 
             except HydrusExceptions.ShutdownException:
+                
+                gallery_seed_status = CC.STATUS_VETOED
+                parser_status = 'program is shutting down'
                 
                 return
                 
             except HydrusExceptions.NotFoundException:
+                
+                gallery_seed_status = CC.STATUS_VETOED
                 
                 error_occurred = True
                 
@@ -2494,9 +2451,19 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
             except Exception as e:
                 
+                gallery_seed_status = CC.STATUS_ERROR
+                
                 error_occurred = True
                 
                 parser_status = HydrusData.ToUnicode( e )
+                
+            finally:
+                
+                gallery_seed_note = parser_status
+                
+                gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
+                
+                self._gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
                 
             
             with self._lock:
@@ -2837,7 +2804,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         new_options = HG.client_controller.new_options
         
-        self._tag_import_options = new_options.GetDefaultTagImportOptions( self._gallery_identifier )
+        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
         self._last_gallery_page_hit_timestamp = 0
         
@@ -2908,22 +2875,22 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_gallery_stream_identifiers = [ gallery_stream_identifier.GetSerialisableTuple() for gallery_stream_identifier in self._gallery_stream_identifiers ]
         serialisable_queries = [ query.GetSerialisableTuple() for query in self._queries ]
         serialisable_checker_options = self._checker_options.GetSerialisableTuple()
-        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
-        serialisable_tag_options = self._tag_import_options.GetSerialisableTuple()
+        serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
+        return ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_options, serialisable_tag_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events ) = serialisable_info
+        ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, self._initial_file_limit, self._periodic_file_limit, self._paused, serialisable_file_import_options, serialisable_tag_import_options, self._no_work_until, self._no_work_until_reason, self._publish_files_to_popup_button, self._publish_files_to_page, self._merge_query_publish_events ) = serialisable_info
         
         self._gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
         self._gallery_stream_identifiers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_stream_identifier ) for serialisable_gallery_stream_identifier in serialisable_gallery_stream_identifiers ]
         self._queries = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query ) for serialisable_query in serialisable_queries ]
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
-        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
     def _NoDelays( self ):
@@ -2965,30 +2932,30 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if version == 1:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, last_error, serialisable_file_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, last_error, serialisable_file_seed_cache ) = old_serialisable_info
             
             check_now = False
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, serialisable_file_seed_cache )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, check_now, last_error, serialisable_file_seed_cache )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, serialisable_file_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, check_now, last_error, serialisable_file_seed_cache ) = old_serialisable_info
             
             no_work_until = 0
             no_work_until_reason = ''
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, no_work_until, no_work_until_reason, serialisable_file_seed_cache )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, check_now, last_error, no_work_until, no_work_until_reason, serialisable_file_seed_cache )
             
             return ( 3, new_serialisable_info )
             
         
         if version == 3:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, last_checked, check_now, last_error, no_work_until, no_work_until_reason, serialisable_file_seed_cache ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, query, period, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, last_checked, check_now, last_error, no_work_until, no_work_until_reason, serialisable_file_seed_cache ) = old_serialisable_info
             
             checker_options = ClientImportOptions.CheckerOptions( 5, period / 5, period * 10, ( 1, period * 10 ) )
             
@@ -3006,29 +2973,29 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             serialisable_queries = [ query.GetSerialisableTuple() for query in queries ]
             serialisable_checker_options = checker_options.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, no_work_until, no_work_until_reason )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason )
             
             return ( 4, new_serialisable_info )
             
         
         if version == 4:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, no_work_until, no_work_until_reason ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, get_tags_if_url_recognised_and_file_redundant, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason ) = old_serialisable_info
             
-            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, no_work_until, no_work_until_reason )
+            new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason )
             
             return ( 5, new_serialisable_info )
             
         
         if version == 5:
             
-            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, no_work_until, no_work_until_reason ) = old_serialisable_info
+            ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason ) = old_serialisable_info
             
             publish_files_to_popup_button = True
             publish_files_to_page = False
             merge_query_publish_events = True
             
-            new_serialisable_info = new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_options, serialisable_tag_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
+            new_serialisable_info = new_serialisable_info = ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
             
             return ( 6, new_serialisable_info )
             
@@ -3446,6 +3413,10 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     try:
                         
+                        gallery_url = gallery.GetGalleryPageURL( query_text, page_index )
+                        
+                        gallery_seed = ClientImportGallerySeeds.GallerySeed( gallery_url, can_generate_more_pages = False )
+                        
                         p1 = HC.options[ 'pause_subs_sync' ]
                         p2 = HG.view_shutdown
                         
@@ -3481,9 +3452,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         job_key.SetVariable( 'popup_text_1', prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls ) + ' new urls, checking next page' )
                         
+                        gallery_seed_log = query.GetGallerySeedLog()
+                        
+                        gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+                        
                         try:
-                            
-                            gallery_url = gallery.GetGalleryPageURL( query_text, page_index )
                             
                             ( page_of_file_seeds, definitely_no_more_pages ) = gallery.GetPage( gallery_url )
                             
@@ -3557,27 +3530,39 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             keep_checking = False
                             
                         
-                        status = 'checked OK - found ' + HydrusData.ToUnicode( new_urls_this_page ) + ' new urls'
-                        
-                        gallery_seed = ClientImportGallerySeeds.GallerySeed( gallery_url, can_generate_more_pages = False )
-                        
-                        gallery_seed.SetStatus( CC.STATUS_SUCCESSFUL_AND_NEW, note = status )
-                        
-                        gallery_seed_log = query.GetGallerySeedLog()
-                        
-                        gallery_seed_log.AddGallerySeeds( ( gallery_seed, ) )
+                        gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
+                        gallery_seed_note = 'checked OK - found ' + HydrusData.ToUnicode( new_urls_this_page ) + ' new urls'
                         
                     except HydrusExceptions.CancelledException as e:
                         
-                        self._DelayWork( 300, HydrusData.ToUnicode( e ) )
+                        gallery_seed_status = CC.STATUS_VETOED
+                        gallery_seed_note = HydrusData.ToUnicode( e )
+                        
+                        self._DelayWork( 300, gallery_seed_note )
                         
                         break
                         
                     except HydrusExceptions.NotFoundException:
                         
+                        gallery_seed_status = CC.STATUS_VETOED
+                        gallery_seed_note = '404'
+                        
                         # paheal now 404s when no results, so just naturally break
                         
                         break
+                        
+                    except Exception as e:
+                        
+                        gallery_seed_status = CC.STATUS_ERROR
+                        gallery_seed_note = HydrusData.ToUnicode( e )
+                        
+                        raise
+                        
+                    finally:
+                        
+                        gallery_seed.SetStatus( gallery_seed_status, note = gallery_seed_note )
+                        
+                        gallery_seed_log.NotifyGallerySeedsUpdated( ( gallery_seed, ) )
                         
                     
                 
@@ -3850,6 +3835,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._publish_files_to_popup_button = publish_files_to_popup_button
         self._publish_files_to_page = publish_files_to_page
         self._merge_query_publish_events = merge_query_publish_events
+        
+    
+    def SetTagImportOptions( self, tag_import_options ):
+        
+        self._tag_import_options = tag_import_options.Duplicate()
         
     
     def SetTuple( self, gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until ):
@@ -4242,17 +4232,16 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT
     SERIALISABLE_NAME = 'URL Import'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
-        
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()
-        self._file_import_options = file_import_options
+        self._file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( 'loud' )
+        self._tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         self._paused = False
         
         self._download_control_file_set = None
@@ -4269,18 +4258,20 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         serialisable_gallery_seed_log = self._gallery_seed_log.GetSerialisableTuple()
         serialisable_file_seed_cache = self._file_seed_cache.GetSerialisableTuple()
-        serialisable_file_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_file_import_options = self._file_import_options.GetSerialisableTuple()
+        serialisable_tag_import_options = self._tag_import_options.GetSerialisableTuple()
         
-        return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, self._paused )
+        return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, self._paused )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, self._paused ) = serialisable_info
+        ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, self._paused ) = serialisable_info
         
         self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
         self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
-        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_options )
+        self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
         
     
     def _NetworkJobPresentationContextFactory( self, network_job ):
@@ -4314,15 +4305,28 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         if version == 1:
             
-            ( serialisable_file_seed_cache, serialisable_file_options, paused ) = old_serialisable_info
+            ( serialisable_file_seed_cache, serialisable_file_import_options, paused ) = old_serialisable_info
             
             gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
             
             serialisable_gallery_seed_log = gallery_seed_log.GetSerialisableTuple()
             
-            new_serialisable_info = ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_options, paused )
+            new_serialisable_info = ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, paused )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, paused ) = old_serialisable_info
+            
+            tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+            
+            serialisable_tag_import_options = tag_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, paused )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -4360,9 +4364,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             if url_type in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                 
-                tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( url )
-                
-                did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, GenerateDownloaderNetworkJobFactory( page_key ), self._NetworkJobPresentationContextFactory, self._file_import_options, tag_import_options )
+                did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, GenerateDownloaderNetworkJobFactory( page_key ), self._NetworkJobPresentationContextFactory, self._file_import_options, self._tag_import_options )
                 
                 if file_seed.ShouldPresent( self._file_import_options ):
                     
@@ -4383,10 +4385,6 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             file_seed.SetStatus( status, exception = e )
             
             time.sleep( 3 )
-            
-        finally:
-            
-            self._file_seed_cache.NotifyFileSeedsUpdated( ( file_seed, ) )
             
         
         if did_substantial_work:
@@ -4419,7 +4417,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return self._file_import_options
+            return ( self._file_import_options, self._tag_import_options )
             
         
     
@@ -4496,6 +4494,14 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._file_import_options = file_import_options
+            
+        
+    
+    def SetTagImportOptions( self, tag_import_options ):
+        
+        with self._lock:
+            
+            self._tag_import_options = tag_import_options
             
         
     

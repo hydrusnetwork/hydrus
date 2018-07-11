@@ -1729,6 +1729,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            misc = ClientGUICommon.StaticBox( self, 'misc' )
+            
+            self._show_deleted_on_file_seed_short_summary = wx.CheckBox( misc )
+            
+            #
+            
             gallery_page_tt = 'Gallery page fetches are heavy requests with unusual fetch-time requirements. It is important they not wait too long, but it is also useful to throttle them:'
             gallery_page_tt += os.linesep * 2
             gallery_page_tt += '- So they do not compete with file downloads for bandwidth, leading to very unbalanced 20/4400-type queues.'
@@ -1758,6 +1764,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thread_watcher_dead_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_dead_page_string' ) )
             self._thread_watcher_paused_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_paused_page_string' ) )
             
+            self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
+            
             #
             
             rows = []
@@ -1783,7 +1791,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            
             rows = []
             
             rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
@@ -1799,11 +1806,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            rows = []
+            
+            rows.append( ( 'Show the \'D\' (for \'deleted\') count on short file import summaries:', self._show_deleted_on_file_seed_short_summary ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( misc, rows )
+            
+            misc.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( gallery_downloader, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( subscriptions, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.Add( watchers, CC.FLAGS_EXPAND_PERPENDICULAR )
+            vbox.Add( misc, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.SetSizer( vbox )
             
@@ -1826,6 +1844,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
+            
+            self._new_options.SetBoolean( 'show_deleted_on_file_seed_short_summary', self._show_deleted_on_file_seed_short_summary.GetValue() )
             
         
     
@@ -1927,9 +1947,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tag_import_options = wx.ListBox( default_tios )
             self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
             
-            self._add = wx.Button( default_tios, label = 'add' )
-            self._add.Bind( wx.EVT_BUTTON, self.EventAdd )
-            
             self._edit = wx.Button( default_tios, label = 'edit' )
             self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
             
@@ -1958,11 +1975,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            message = 'These options will be disappearing soon! Everything is moving over to the new downloader system! Default tag import options are now set under _network->downloaders->manage default tag import options_!'
+            
+            st = ClientGUICommon.BetterStaticText( default_tios, message )
+            
+            default_tios.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
             default_tios.Add( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             hbox = wx.BoxSizer( wx.HORIZONTAL )
             
-            hbox.Add( self._add, CC.FLAGS_VCENTER )
             hbox.Add( self._edit, CC.FLAGS_VCENTER )
             hbox.Add( self._delete, CC.FLAGS_VCENTER )
             
@@ -1976,67 +1997,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox.Add( default_tios, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
-            
-        
-        def EventAdd( self, event ):
-            
-            gallery_identifiers = []
-            
-            for site_type in [ HC.SITE_TYPE_DEFAULT, HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_HENTAI_FOUNDRY, HC.SITE_TYPE_NEWGROUNDS, HC.SITE_TYPE_PIXIV, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_WATCHER ]:
-                
-                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( site_type ) )
-                
-            
-            gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU ) )
-            
-            boorus = HG.client_controller.Read( 'remote_boorus' )
-            
-            for booru_name in boorus.keys():
-                
-                gallery_identifiers.append( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name ) )
-                
-            
-            list_of_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
-            
-            with ClientGUIDialogs.DialogSelectFromList( self, 'select tag domain', list_of_tuples ) as dlg:
-                
-                if dlg.ShowModal() == wx.ID_OK:
-                    
-                    gallery_identifier = dlg.GetChoice()
-                    
-                    name = gallery_identifier.ToString()
-                    
-                    for i in range( self._tag_import_options.GetCount() ):
-                        
-                        if name == self._tag_import_options.GetString( i ):
-                            
-                            wx.MessageBox( 'You already have default tag import options set up for that domain!' )
-                            
-                            return
-                            
-                        
-                    
-                    new_options = HG.client_controller.new_options
-                    
-                    tag_import_options = new_options.GetDefaultTagImportOptions( gallery_identifier )
-                    
-                    ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                    
-                    with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
-                        
-                        panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, namespaces, tag_import_options )
-                        
-                        dlg.SetPanel( panel )
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            tag_import_options = panel.GetValue()
-                            
-                            self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
-                            
-                        
-                    
-                
             
         
         def EventDelete( self, event ):
@@ -2089,13 +2049,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetDefaultFileImportOptions( 'quiet', self._quiet_fios.GetValue() )
             self._new_options.SetDefaultFileImportOptions( 'loud', self._loud_fios.GetValue() )
-            
-            self._new_options.ClearDefaultTagImportOptions()
-            
-            for ( gallery_identifier, tag_import_options ) in [ self._tag_import_options.GetClientData( i ) for i in range( self._tag_import_options.GetCount() ) ]:
-                
-                self._new_options.SetDefaultTagImportOptions( gallery_identifier, tag_import_options )
-                
             
         
     
@@ -2582,6 +2535,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._last_session_save_period_minutes = wx.SpinCtrl( self, min = 1, max = 1440 )
             
+            self._only_save_last_session_during_idle = wx.CheckBox( self )
+            
+            self._only_save_last_session_during_idle.SetToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
+            
             self._default_new_page_goes = ClientGUICommon.BetterChoice( self )
             
             for value in [ CC.NEW_PAGE_GOES_FAR_LEFT, CC.NEW_PAGE_GOES_LEFT_OF_CURRENT, CC.NEW_PAGE_GOES_RIGHT_OF_CURRENT, CC.NEW_PAGE_GOES_FAR_RIGHT ]:
@@ -2678,6 +2635,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._last_session_save_period_minutes.SetValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
             
+            self._only_save_last_session_during_idle.SetValue( self._new_options.GetBoolean( 'only_save_last_session_during_idle' ) )
+            
             self._default_new_page_goes.SelectClientData( self._new_options.GetInteger( 'default_new_page_goes' ) )
             
             self._notebook_tabs_on_left.SetValue( self._new_options.GetBoolean( 'notebook_tabs_on_left' ) )
@@ -2737,6 +2696,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Main gui title: ', self._main_gui_title ) )
             rows.append( ( 'Default session on startup: ', self._default_gui_session ) )
             rows.append( ( 'If \'last session\' above, autosave it how often (minutes)?', self._last_session_save_period_minutes ) )
+            rows.append( ( 'If \'last session\' above, only autosave during idle time?', self._only_save_last_session_during_idle ) )
             rows.append( ( 'By default, put page tabs on the left (requires restart): ', self._default_new_page_goes ) )
             rows.append( ( 'Put notebook tabs on the left: ', self._notebook_tabs_on_left ) )
             rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
@@ -2843,6 +2803,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetString( 'main_gui_title', title )
             
             self._new_options.SetInteger( 'last_session_save_period_minutes', self._last_session_save_period_minutes.GetValue() )
+            
+            self._new_options.SetBoolean( 'only_save_last_session_during_idle', self._only_save_last_session_during_idle.GetValue() )
             
             self._new_options.SetInteger( 'default_new_page_goes', self._default_new_page_goes.GetChoice() )
             
@@ -3294,6 +3256,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._estimated_number_fullscreens = wx.StaticText( media_panel, label = '' )
             
+            self._thumbnail_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
+            self._thumbnail_cache_timeout.SetToolTip( 'The amount of time after which a thumbnail in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
+            
+            self._image_cache_timeout = ClientGUITime.TimeDeltaButton( media_panel, min = 300, days = True, hours = True, minutes = True )
+            self._image_cache_timeout.SetToolTip( 'The amount of time after which a rendered image in the cache will naturally be removed, if it is not shunted out due to a new member exceeding the size limit. Requires restart to kick in.' )
+            
             #
             
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
@@ -3355,6 +3323,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._fullscreen_cache_size.SetValue( int( HC.options[ 'fullscreen_cache_size' ] / 1048576 ) )
             
+            self._thumbnail_cache_timeout.SetValue( self._new_options.GetInteger( 'thumbnail_cache_timeout' ) )
+            self._image_cache_timeout.SetValue( self._new_options.GetInteger( 'image_cache_timeout' ) )
+            
             self._video_buffer_size_mb.SetValue( self._new_options.GetInteger( 'video_buffer_size_mb' ) )
             
             self._num_autocomplete_chars.SetValue( HC.options[ 'num_autocomplete_chars' ] )
@@ -3409,7 +3380,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Thumbnail width: ', self._thumbnail_width ) )
             rows.append( ( 'Thumbnail height: ', self._thumbnail_height ) )
             rows.append( ( 'MB memory reserved for thumbnail cache: ', thumbnails_sizer ) )
-            rows.append( ( 'MB memory reserved for media viewer cache: ', fullscreens_sizer ) )
+            rows.append( ( 'MB memory reserved for image cache: ', fullscreens_sizer ) )
+            rows.append( ( 'Thumbnail cache timeout: ', self._thumbnail_cache_timeout ) )
+            rows.append( ( 'Image cache timeout: ', self._image_cache_timeout ) )
             
             gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
@@ -3564,6 +3537,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'thumbnail_cache_size' ] = self._thumbnail_cache_size.GetValue() * 1048576
             HC.options[ 'fullscreen_cache_size' ] = self._fullscreen_cache_size.GetValue() * 1048576
+            
+            self._new_options.SetInteger( 'thumbnail_cache_timeout', self._thumbnail_cache_timeout.GetValue() )
+            self._new_options.SetInteger( 'image_cache_timeout', self._image_cache_timeout.GetValue() )
             
             self._new_options.SetInteger( 'video_buffer_size_mb', self._video_buffer_size_mb.GetValue() )
             

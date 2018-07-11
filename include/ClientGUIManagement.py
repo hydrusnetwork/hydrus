@@ -1485,7 +1485,7 @@ class ManagementPanelImporterGallery( ManagementPanelImporter ):
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, self._gallery_import.SetTagImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, update_callable = self._gallery_import.SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -1895,7 +1895,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         namespaces = []
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watchers_panel, file_import_options, self._OptionsUpdated )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, namespaces, tag_import_options, self._OptionsUpdated )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watchers_panel, namespaces, tag_import_options, update_callable = self._OptionsUpdated, allow_default_selection = True )
         
         # suck up watchers from elsewhere in the program (presents a checklistboxdialog)
         
@@ -2814,7 +2814,7 @@ class ManagementPanelImporterWatcher( ManagementPanelImporter ):
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_WATCHER ) )
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watcher_panel, file_import_options, self._watcher_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watcher_panel, namespaces, tag_import_options, self._watcher_import.SetTagImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watcher_panel, namespaces, tag_import_options, update_callable = self._watcher_import.SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -3117,9 +3117,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
-        file_import_options = self._urls_import.GetOptions()
+        ( file_import_options, tag_import_options ) = self._urls_import.GetOptions()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._url_panel, file_import_options, self._urls_import.SetFileImportOptions )
+        
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._url_panel, [], tag_import_options, update_callable = self._urls_import.SetTagImportOptions, show_downloader_options = True, allow_default_selection = True )
         
         #
         
@@ -3129,6 +3131,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         

@@ -721,6 +721,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDefaultTagImportOptionsForPosts( self ):
+        
+        with self._lock:
+            
+            return self._file_post_default_tag_import_options.Duplicate()
+            
+        
+    
     def GetDefaultTagImportOptionsForURL( self, url ):
         
         with self._lock:
@@ -1514,6 +1522,8 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             url = self._example_url
             
+        
+        url = self.Normalise( url )
         
         return self._api_lookup_converter.Convert( url )
         

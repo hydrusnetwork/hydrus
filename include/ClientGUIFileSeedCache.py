@@ -483,6 +483,21 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
             
         
     
+    def _RetryIgnored( self ):
+        
+        message = 'Are you sure you want to retry all the files that were ignored/vetoed?'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                file_seed_cache = self._file_seed_cache_get_callable()
+                
+                file_seed_cache.RetryIgnored()
+                
+            
+        
+    
     def _ShowFileSeedCacheFrame( self ):
         
         file_seed_cache = self._file_seed_cache_get_callable()

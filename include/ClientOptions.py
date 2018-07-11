@@ -104,6 +104,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
         
+        self._dictionary[ 'booleans' ][ 'show_deleted_on_file_seed_short_summary' ] = False
+        
+        self._dictionary[ 'booleans' ][ 'only_save_last_session_during_idle' ] = False
+        
         #
         
         self._dictionary[ 'colours' ] = HydrusSerialisable.SerialisableDictionary()
@@ -193,6 +197,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 5
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_more_tags' ] = 8
         self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'thumbnail_cache_timeout' ] = 86400
+        self._dictionary[ 'integers' ][ 'image_cache_timeout' ] = 600
         
         #
         
