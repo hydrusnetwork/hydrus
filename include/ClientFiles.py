@@ -1,4 +1,5 @@
 import gc
+import HydrusData
 import HydrusExceptions
 import HydrusGlobals as HG
 import os
@@ -34,6 +35,8 @@ def GetAllPaths( raw_paths ):
         
         paths_to_process = next_paths_to_process
         
+    
+    HydrusData.HumanTextSort( file_paths )
     
     return file_paths
     

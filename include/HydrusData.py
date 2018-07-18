@@ -12,6 +12,7 @@ import os
 import pstats
 import psutil
 import random
+import re
 import shutil
 import sqlite3
 import struct
@@ -376,7 +377,7 @@ def ConvertTimestampToPrettyTime( timestamp, in_gmt = False, include_24h_time = 
     
     return time.strftime( phrase, struct_time )
     
-def TimestampToPrettyTimeDelta( timestamp ):
+def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3 ):
     
     if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
         
@@ -385,9 +386,9 @@ def TimestampToPrettyTimeDelta( timestamp ):
     
     time_delta = abs( timestamp - GetNow() )
     
-    if time_delta < 5:
+    if time_delta < just_now_threshold:
         
-        return 'now'
+        return just_now_string
         
     
     time_delta_string = TimeDeltaToPrettyTimeDelta( time_delta )
@@ -641,6 +642,16 @@ def GetTypeName( obj_type ):
         
         return repr( obj_type )
         
+    
+def HumanTextSort( texts ):
+    """Solves the 19, 20, 200, 21, 22 issue when sorting 'Page 21.jpg' type strings.
+    Breaks the string into groups of text and int."""
+    
+    convert = lambda text: int( text ) if text.isdigit() else text
+    
+    alphanum = lambda key: [ convert( c ) for c in re.split( '([0-9]+)', key ) ]
+    
+    texts.sort( key = alphanum ) 
     
 def IntelligentMassIntersect( sets_to_reduce ):
     

@@ -214,7 +214,7 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_locations = {}
         
-        self._bad_error_occured = False
+        self._bad_error_occurred = False
         self._missing_locations = set()
         
         self._Reinit()
@@ -625,7 +625,7 @@ class ClientFilesManager( object ):
             
             if len( self._missing_locations ) > 0:
                 
-                self._bad_error_occured = True
+                self._bad_error_occurred = True
                 
                 #
                 
@@ -1055,9 +1055,9 @@ class ClientFilesManager( object ):
                 
                 self._GenerateFullSizeThumbnail( hash, mime )
                 
-                if not self._bad_error_occured:
+                if not self._bad_error_occurred:
                     
-                    self._bad_error_occured = True
+                    self._bad_error_occurred = True
                     
                     HydrusData.ShowText( 'A thumbnail for a file, ' + hash.encode( 'hex' ) + ', was missing. It has been regenerated from the original file, but this event could indicate hard drive corruption. Please check everything is ok. This error may be occuring for many files, but this message will only display once per boot. If you are recovering from a fractured database, you may wish to run \'database->regenerate->all thumbnails\'.' )
                     
@@ -1093,9 +1093,9 @@ class ClientFilesManager( object ):
         
         try:
             
-            if self._bad_error_occured:
+            if self._bad_error_occurred:
                 
-                wx.MessageBox( 'A serious file error has previously occured during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
+                wx.MessageBox( 'A serious file error has previously occurred during this session, so further file moving will not be reattempted. Please restart the client before trying again.' )
                 
                 return
                 

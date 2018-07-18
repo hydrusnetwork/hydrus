@@ -1688,7 +1688,18 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
     
     def Parse( self, parsing_context, data ):
         
-        parsed_texts = self._formula.Parse( parsing_context, data )
+        try:
+            
+            parsed_texts = self._formula.Parse( parsing_context, data )
+            
+        except HydrusExceptions.ParseException as e:
+            
+            prefix = 'Content Parser ' + self._name + ': '
+            
+            e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
+            
+            raise e
+            
         
         if self._content_type == HC.CONTENT_TYPE_URLS:
             
@@ -1738,6 +1749,14 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         except HydrusExceptions.VetoException as e:
             
             results = [ 'veto: ' + HydrusData.ToUnicode( e ) ]
+            
+        except HydrusExceptions.ParseException as e:
+            
+            prefix = 'Content Parser ' + self._name + ': '
+            
+            e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
+            
+            raise e
             
         
         result_lines = [ '*** ' + HydrusData.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
@@ -1921,14 +1940,34 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             raise HydrusExceptions.ParseException( HydrusData.ToUnicode( e ) )
             
+        except HydrusExceptions.ParseException as e:
+            
+            prefix = 'Page Parser ' + self._name + ': '
+            
+            e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
+            
+            raise e
+            
+        
         
         #
         
         whole_page_parse_results = []
         
-        for content_parser in self._content_parsers:
+        try:
             
-            whole_page_parse_results.extend( content_parser.Parse( parsing_context, converted_page_data ) )
+            for content_parser in self._content_parsers:
+                
+                whole_page_parse_results.extend( content_parser.Parse( parsing_context, converted_page_data ) )
+                
+            
+        except HydrusExceptions.ParseException as e:
+            
+            prefix = 'Page Parser ' + self._name + ': '
+            
+            e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
+            
+            raise e
             
         
         #
@@ -1955,28 +1994,39 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             sub_page_parsers.sort( key = sort_key )
             
-            for ( formula, page_parser ) in self._sub_page_parsers:
+            try:
                 
-                posts = formula.Parse( parsing_context, converted_page_data )
+                for ( formula, page_parser ) in self._sub_page_parsers:
+                    
+                    posts = formula.Parse( parsing_context, converted_page_data )
+                    
+                    for post in posts:
+                        
+                        try:
+                            
+                            page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
+                            
+                        except HydrusExceptions.VetoException:
+                            
+                            continue
+                            
+                        
+                        for page_parser_parse_results in page_parser_all_parse_results:
+                            
+                            page_parser_parse_results.extend( whole_page_parse_results )
+                            
+                            all_parse_results.append( page_parser_parse_results )
+                            
+                        
+                    
                 
-                for post in posts:
-                    
-                    try:
-                        
-                        page_parser_all_parse_results = page_parser.Parse( parsing_context, post )
-                        
-                    except HydrusExceptions.VetoException:
-                        
-                        continue
-                        
-                    
-                    for page_parser_parse_results in page_parser_all_parse_results:
-                        
-                        page_parser_parse_results.extend( whole_page_parse_results )
-                        
-                        all_parse_results.append( page_parser_parse_results )
-                        
-                    
+            except HydrusExceptions.ParseException as e:
+                
+                prefix = 'Page Parser ' + self._name + ': '
+                
+                e = HydrusExceptions.ParseException( prefix + HydrusData.ToUnicode( e ) )
+                
+                raise e
                 
             
         

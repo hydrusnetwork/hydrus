@@ -704,6 +704,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             import_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
             
+            if import_folder.Paused():
+                
+                import_folder.PausePlay()
+                
+            
             import_folders = [ import_folder ]
             
         
@@ -767,6 +772,21 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             if dlg.ShowModal() == wx.ID_YES:
                 
                 self._controller.Write( 'clear_orphan_file_records' )
+                
+            
+        
+    
+    def _ClearOrphanTables( self ):
+        
+        text = 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a semi-recent backup before you run this.'
+        text += os.linesep * 2
+        text += 'It will create popups if it finds anything to delete.'
+        
+        with ClientGUIDialogs.DialogYesNo( self, text, yes_label = 'do it', no_label = 'forget it' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                self._controller.Write( 'clear_orphan_tables' )
                 
             
         
@@ -1079,7 +1099,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             
             if show:
                 
-                menu_index = self._menubar.FindMenu( label )
+                menu_index = self._FindMenuBarIndex( menu )
                 
                 self._menubar.EnableTop( menu_index, False )
                 
@@ -1117,6 +1137,19 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
                 wx.MessageBox( text + os.linesep * 2 + 'This has been written to the log.' )
                 
             
+        
+    
+    def _FindMenuBarIndex( self, menu ):
+        
+        for index in range( self._menubar.GetMenuCount() ):
+            
+            if self._menubar.GetMenu( index ) == menu:
+                
+                return index
+                
+            
+        
+        raise HydrusExceptions.DataMissing( 'Menu not found!' )
         
     
     def _ForceFitAllNonGUITLWs( self ):
@@ -1552,6 +1585,11 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             ClientGUIMenus.AppendMenuItem( self, submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
             ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+            
+            if self._controller.new_options.GetBoolean( 'advanced_mode' ):
+                
+                ClientGUIMenus.AppendMenuItem( self, submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+                
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintain' )
             
@@ -2832,7 +2870,7 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def _RegenerateACCache( self ):
         
-        message = 'This will delete and then recreate the entire autocomplete cache. This is useful if miscounting has somehow occured.'
+        message = 'This will delete and then recreate the entire autocomplete cache. This is useful if miscounting has somehow occurred.'
         message += os.linesep * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang.'
         message += os.linesep * 2
@@ -4291,7 +4329,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if old_show:
                 
-                old_menu_index = self._menubar.FindMenu( old_label )
+                old_menu_index = self._FindMenuBarIndex( old_menu )
                 
                 if show:
                     
@@ -4310,7 +4348,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     for temp_name in MENU_ORDER:
                         
-                        if temp_name == name: break
+                        if temp_name == name:
+                            
+                            break
+                            
                         
                         ( temp_menu, temp_label, temp_show ) = self._menus[ temp_name ]
                         

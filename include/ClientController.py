@@ -1254,7 +1254,7 @@ class Controller( HydrusController.HydrusController ):
             
         except Exception as e:
             
-            text = 'A serious error occured while trying to start the program. The error will be shown next in a window. More information may have been written to client.log.'
+            text = 'A serious error occurred while trying to start the program. The error will be shown next in a window. More information may have been written to client.log.'
             
             HydrusData.DebugPrint( 'If the db crashed, another error may be written just above ^.' )
             HydrusData.DebugPrint( text )

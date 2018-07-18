@@ -21,7 +21,7 @@ try:
     
     LZ4_OK = True
     
-except ImportError:
+except: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
     
     pass
     

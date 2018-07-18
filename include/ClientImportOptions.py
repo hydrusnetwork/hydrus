@@ -169,11 +169,6 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetRawCurrentVelocity( self, file_seed_cache, last_check_time ):
-        
-        return self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
-        
-    
     def GetPrettyCurrentVelocity( self, file_seed_cache, last_check_time, no_prefix = False ):
         
         if len( file_seed_cache ) == 0:
@@ -204,6 +199,36 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         
         return pretty_current_velocity
+        
+    
+    def GetRawCurrentVelocity( self, file_seed_cache, last_check_time ):
+        
+        return self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
+        
+    
+    def GetSummary( self ):
+        
+        if self._never_faster_than == self._never_slower_than:
+            
+            timing_statement = 'Checking every ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + '.'
+            
+        else:
+            
+            timing_statement = 'Trying to get ' + HydrusData.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusData.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
+            
+        
+        ( death_files_found, death_time_delta ) = self._death_file_velocity
+        
+        if death_files_found == 0:
+            
+            death_statement = 'Never stopping.'
+            
+        else:
+            
+            death_statement = 'Stopping if file velocity falls below ' + HydrusData.ToHumanInt( death_files_found ) + ' files per ' + HydrusData.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
+            
+        
+        return timing_statement + os.linesep * 2 + death_statement
         
     
     def IsDead( self, file_seed_cache, last_check_time ):

@@ -540,7 +540,7 @@ class NetworkJobControl( wx.Panel ):
         
         self._auto_override_bandwidth_rules = False
         
-        self._left_text = ClientGUICommon.BetterStaticText( self )
+        self._left_text = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         self._right_text = ClientGUICommon.BetterStaticText( self, style = wx.ALIGN_RIGHT )
         
         # 512/768KB - 200KB/s

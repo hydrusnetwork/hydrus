@@ -368,7 +368,21 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def _NormaliseAndFilterAssociableURLs( self, urls ):
         
-        normalised_urls = { HG.client_controller.network_engine.domain_manager.NormaliseURL( url ) for url in urls }
+        normalised_urls = set()
+        
+        for url in urls:
+            
+            try:
+                
+                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                
+            except HydrusExceptions.URLMatchException:
+                
+                continue # not a url--something like "file:///C:/Users/Tall%20Man/Downloads/maxresdefault.jpg" ha ha ha
+                
+            
+            normalised_urls.add( url )
+            
         
         associable_urls = { url for url in normalised_urls if HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
         
@@ -483,7 +497,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._CheckTagsBlacklist( self._tags, tag_import_options )
         
     
-    def DownloadAndImportRawFile( self, file_url, file_import_options, network_job_factory, network_job_presentation_context_factory ):
+    def DownloadAndImportRawFile( self, file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = False ):
         
         self.AddURL( file_url )
         
@@ -501,6 +515,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
             network_job = network_job_factory( 'GET', file_url, temp_path = temp_path, referral_url = referral_url )
+            
+            if override_bandwidth:
+                
+                network_job.OverrideBandwidth( 30 )
+                
             
             network_job.SetFileImportOptions( file_import_options )
             
@@ -996,7 +1015,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 status_hook( 'downloading file' )
                                 
-                                self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory )
+                                self.DownloadAndImportRawFile( file_url, file_import_options, network_job_factory, network_job_presentation_context_factory, override_bandwidth = True )
                                 
                             
                         elif url_type == HC.URL_TYPE_POST and can_parse:
@@ -1089,6 +1108,17 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 time.sleep( 2 )
                 
+            
+        except HydrusExceptions.ForbiddenException:
+            
+            status = CC.STATUS_VETOED
+            note = '403'
+            
+            self.SetStatus( status, note = note )
+            
+            status_hook( '403' )
+            
+            time.sleep( 2 )
             
         except HydrusExceptions.NotFoundException:
             

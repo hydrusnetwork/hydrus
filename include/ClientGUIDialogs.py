@@ -1151,7 +1151,7 @@ class FrameInputLocalFiles( wx.Frame ):
                         
                     
                 
-                unparsed_paths = []
+                unparsed_paths = collections.deque()
                 
                 cancel_event.clear()
                 pause_event.clear()
@@ -1789,7 +1789,7 @@ class DialogModifyAccounts( Dialog ):
     def _DoModification( self ):
         
         # change this to saveaccounts or whatever. the previous func changes the accounts, and then we push that change
-        # generate accounts, with the modification having occured
+        # generate accounts, with the modification having occurred
         
         self._service.Request( HC.POST, 'account', { 'accounts' : self._accounts } )
         

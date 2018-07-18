@@ -36,6 +36,8 @@ class LoginCredentials( object ):
         return self._credentials[ name ]
         
     
+PIXIV_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
+HENTAI_FOUNDRY_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
@@ -107,6 +109,34 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
+                domain = network_context.context_data
+                
+                if 'pixiv.net' in domain:
+                    
+                    if not LEGACY_LOGIN_OK:
+                        
+                        raise Exception( 'Legacy login broke last time--please either restart the client or contact hydrus dev!' )
+                        
+                    
+                    result = self.engine.controller.Read( 'serialisable_simple', 'pixiv_account' )
+                    
+                    if result is None:
+                        
+                        raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                        
+                    
+                    return
+                    
+                elif 'hentai-foundry.com' in domain:
+                    
+                    if not LEGACY_LOGIN_OK:
+                        
+                        raise Exception( 'Legacy login broke last time--please either restart the client or contact hydrus dev!' )
+                        
+                    
+                    return
+                    
+                
                 login_network_context = self._GetLoginNetworkContext( network_context )
                 
                 if login_network_context is None:
@@ -155,6 +185,17 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
+                domain = network_context.context_data
+                
+                if 'pixiv.net' in domain:
+                    
+                    return LoginProcessLegacy( self.engine, PIXIV_NETWORK_CONTEXT, 'pixiv' )
+                    
+                elif 'hentai-foundry.com' in domain:
+                    
+                    return LoginProcessLegacy( self.engine, HENTAI_FOUNDRY_NETWORK_CONTEXT, 'hentai foundry' )
+                    
+                
                 login_network_context = self._GetLoginNetworkContext( network_context )
                 
                 if login_network_context is None:
@@ -181,6 +222,21 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
                 
+                domain = network_context.context_data
+                
+                if 'pixiv.net' in domain:
+                    
+                    required_cookies = [ 'PHPSESSID' ]
+                    
+                    return not self._IsLoggedIn( PIXIV_NETWORK_CONTEXT, required_cookies )
+                    
+                elif 'hentai-foundry.com' in domain:
+                    
+                    required_cookies = [ 'PHPSESSID', 'YII_CSRF_TOKEN' ]
+                    
+                    return not self._IsLoggedIn( HENTAI_FOUNDRY_NETWORK_CONTEXT, required_cookies )
+                    
+                
                 login_network_context = self._GetLoginNetworkContext( network_context )
                 
                 if login_network_context is None:
@@ -190,7 +246,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 ( login_script, credentials ) = self._domains_to_login_scripts_and_credentials[ login_network_context.context_data ]
                 
-                return login_script.IsLoggedIn( self.engine, login_network_context )
+                return not login_script.IsLoggedIn( self.engine, login_network_context )
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
                 
@@ -248,13 +304,13 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             if name == 'hentai foundry':
                 
-                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
+                network_context = HENTAI_FOUNDRY_NETWORK_CONTEXT
                 
                 required_cookies = [ 'PHPSESSID', 'YII_CSRF_TOKEN' ]
                 
             elif name == 'pixiv':
                 
-                network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
+                network_context = PIXIV_NETWORK_CONTEXT
                 
                 required_cookies = [ 'PHPSESSID' ]
                 
@@ -353,7 +409,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
     
     # This updated login form is cobbled together from the example in PixivUtil2
-    # it is breddy shid because I'm not using mechanize or similar browser emulation (like requests's sessions) yet
+    # it is breddy shid but getting better
     # Pixiv 400s if cookies and referrers aren't passed correctly
     # I am leaving this as a mess with the hope the eventual login engine will replace it
     def LoginPixiv( self, network_context, pixiv_id, password ):
@@ -580,6 +636,162 @@ class LoginProcessHydrus( LoginProcess ):
         self.login_script.Start( self.engine, self.network_context )
         
     
+LEGACY_LOGIN_OK = True
+
+class LoginProcessLegacy( LoginProcess ):
+    
+    def _GetCookiesDict( self, network_context ):
+        
+        session = self.engine.session_manager.GetSession( network_context )
+        
+        cookies = session.cookies
+        
+        cookies.clear_expired_cookies()
+        
+        domains = cookies.list_domains()
+        
+        for domain in domains:
+            
+            if domain.endswith( network_context.context_data ):
+                
+                return cookies.get_dict( domain )
+                
+            
+        
+        return {}
+        
+    
+    def _Start( self ):
+        
+        try:
+            
+            name = self.login_script
+            
+            if name == 'hentai foundry':
+                
+                self.LoginHF( self.network_context )
+                
+            elif name == 'pixiv':
+                
+                result = self.engine.controller.Read( 'serialisable_simple', 'pixiv_account' )
+                
+                if result is None:
+                    
+                    raise HydrusExceptions.DataMissing( 'You need to set up your pixiv credentials in services->manage pixiv account.' )
+                    
+                
+                ( pixiv_id, password ) = result
+                
+                self.LoginPixiv( self.network_context, pixiv_id, password )
+                
+            
+        except:
+            
+            global LEGACY_LOGIN_OK
+            
+            LEGACY_LOGIN_OK = False
+            
+        
+    
+    def LoginHF( self, network_context ):
+        
+        session = self.engine.session_manager.GetSession( network_context )
+        
+        num_attempts = 0
+        
+        while True:
+            
+            try:
+                
+                response = session.get( 'https://www.hentai-foundry.com/', timeout = 10 )
+                
+                break
+                
+            except ( requests.exceptions.ConnectionError, requests.exceptions.ConnectTimeout ):
+                
+                if num_attempts < 3:
+                    
+                    num_attempts += 1
+                    
+                    time.sleep( 3 )
+                    
+                else:
+                    
+                    raise HydrusExceptions.ConnectionException( 'Could not connect to HF to log in!' )
+                    
+                
+            
+        
+        time.sleep( 1 )
+        
+        response = session.get( 'https://www.hentai-foundry.com/?enterAgree=1' )
+        
+        time.sleep( 1 )
+        
+        cookie_dict = self._GetCookiesDict( network_context )
+        
+        raw_csrf = cookie_dict[ 'YII_CSRF_TOKEN' ] # 19b05b536885ec60b8b37650a32f8deb11c08cd1s%3A40%3A%222917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32%22%3B
+        
+        processed_csrf = urllib.unquote( raw_csrf ) # 19b05b536885ec60b8b37650a32f8deb11c08cd1s:40:"2917dcfbfbf2eda2c1fbe43f4d4c4ec4b6902b32";
+        
+        csrf_token = processed_csrf.split( '"' )[1] # the 2917... bit
+        
+        hentai_foundry_form_info = ClientDefaults.GetDefaultHentaiFoundryInfo()
+        
+        hentai_foundry_form_info[ 'YII_CSRF_TOKEN' ] = csrf_token
+        
+        response = session.post( 'http://www.hentai-foundry.com/site/filters', data = hentai_foundry_form_info )
+        
+        time.sleep( 1 )
+        
+    
+    # This updated login form is cobbled together from the example in PixivUtil2
+    # it is breddy shid but getting better
+    # Pixiv 400s if cookies and referrers aren't passed correctly
+    # I am leaving this as a mess with the hope the eventual login engine will replace it
+    def LoginPixiv( self, network_context, pixiv_id, password ):
+        
+        session = self.engine.session_manager.GetSession( network_context )
+        
+        response = session.get( 'https://accounts.pixiv.net/login' )
+        
+        soup = ClientParsing.GetSoup( response.content )
+        
+        # some whocking 20kb bit of json tucked inside a hidden form input wew lad
+        i = soup.find( 'input', id = 'init-config' )
+        
+        raw_json = i['value']
+        
+        j = json.loads( raw_json )
+        
+        if 'pixivAccount.postKey' not in j:
+            
+            raise HydrusExceptions.ForbiddenException( 'When trying to log into Pixiv, I could not find the POST key! This is a problem with hydrus\'s pixiv parsing, not your login! Please contact hydrus dev!' )
+            
+        
+        post_key = j[ 'pixivAccount.postKey' ]
+        
+        form_fields = {}
+        
+        form_fields[ 'pixiv_id' ] = pixiv_id
+        form_fields[ 'password' ] = password
+        form_fields[ 'captcha' ] = ''
+        form_fields[ 'g_recaptcha_response' ] = ''
+        form_fields[ 'return_to' ] = 'https://www.pixiv.net'
+        form_fields[ 'lang' ] = 'en'
+        form_fields[ 'post_key' ] = post_key
+        form_fields[ 'source' ] = 'pc'
+        
+        headers = {}
+        
+        headers[ 'referer' ] = "https://accounts.pixiv.net/login?lang=en^source=pc&view_type=page&ref=wwwtop_accounts_index"
+        headers[ 'origin' ] = "https://accounts.pixiv.net"
+        
+        session.post( 'https://accounts.pixiv.net/api/login?lang=en', data = form_fields, headers = headers )
+        
+        time.sleep( 1 )
+        
+    
 class LoginScriptHydrus( object ):
     
     def _IsLoggedIn( self, session ):
@@ -653,7 +865,7 @@ class LoginScriptDomain( object ):
         self._validity = VALIDITY_UNTESTED
         self._error_reason = ''
         
-        self._expected_cookies_for_login = [] # [ name, stringmatch ]
+        self._expected_cookies_for_login = [] # [ name, stringmatch, minimum_expiry ]
         
     
     def _IsLoggedIn( self, network_context, session ):

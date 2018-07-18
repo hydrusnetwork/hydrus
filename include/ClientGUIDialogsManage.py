@@ -2220,16 +2220,15 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage import folders' )
         
-        self._import_folders = ClientGUIListCtrl.SaneListCtrlForSingleObject( self, 120, [ ( 'name', 120 ), ( 'path', -1 ), ( 'check period', 120 ) ], delete_key_callback = self.Delete, activation_callback = self.Edit )
+        import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._add_button = wx.Button( self, label = 'add' )
-        self._add_button.Bind( wx.EVT_BUTTON, self.EventAdd )
+        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ], self._ConvertImportFolderToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
-        self._edit_button = wx.Button( self, label = 'edit' )
-        self._edit_button.Bind( wx.EVT_BUTTON, self.EventEdit )
+        import_folders_panel.SetListCtrl( self._import_folders )
         
-        self._delete_button = wx.Button( self, label = 'delete' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
+        import_folders_panel.AddButton( 'add', self._Add )
+        import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        import_folders_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         
         self._ok = wx.Button( self, id = wx.ID_OK, label = 'ok' )
         self._ok.Bind( wx.EVT_BUTTON, self.EventOK )
@@ -2242,20 +2241,11 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         import_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
         
-        for import_folder in import_folders:
-            
-            ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
-            
-            self._import_folders.Append( display_tuple, sort_tuple, import_folder )
-            
+        self._import_folders.SetData( import_folders )
+        
+        self._import_folders.Sort()
         
         #
-        
-        file_buttons = wx.BoxSizer( wx.HORIZONTAL )
-        
-        file_buttons.Add( self._add_button, CC.FLAGS_VCENTER )
-        file_buttons.Add( self._edit_button, CC.FLAGS_VCENTER )
-        file_buttons.Add( self._delete_button, CC.FLAGS_VCENTER )
         
         buttons = wx.BoxSizer( wx.HORIZONTAL )
         
@@ -2275,8 +2265,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         warning_st.SetForegroundColour( ( 128, 0, 0 ) )
         
         vbox.Add( warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( self._import_folders, CC.FLAGS_EXPAND_BOTH_WAYS )
-        vbox.Add( file_buttons, CC.FLAGS_BUTTON_SIZER )
+        vbox.Add( import_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.Add( buttons, CC.FLAGS_BUTTON_SIZER )
         
         self.SetSizer( vbox )
@@ -2293,7 +2282,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         wx.CallAfter( self._ok.SetFocus )
         
     
-    def _AddImportFolder( self ):
+    def _Add( self ):
         
         import_folder = ClientImporting.ImportFolder( 'import folder' )
         
@@ -2303,81 +2292,87 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
                 
                 import_folder = dlg.GetInfo()
                 
-                self._import_folders.SetNonDupeName( import_folder )
+                import_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
+                self._import_folders.AddDatas( ( import_folder, ) )
                 
-                self._import_folders.Append( display_tuple, sort_tuple, import_folder )
+                self._import_folders.Sort()
                 
             
         
     
-    def _ConvertImportFolderToTuples( self, import_folder ):
+    def _ConvertImportFolderToListCtrlTuples( self, import_folder ):
         
-        sort_tuple = import_folder.ToListBoxTuple()
+        ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
         
-        ( name, path, check_period ) = sort_tuple
+        if paused:
+            
+            pretty_paused = 'yes'
+            
+        else:
+            
+            pretty_paused = ''
+            
         
-        pretty_check_period = HydrusData.TimeDeltaToPrettyTimeDelta( check_period )
+        if not check_regularly:
+            
+            pretty_check_period = 'not checking regularly'
+            
+        else:
+            
+            pretty_check_period = HydrusData.TimeDeltaToPrettyTimeDelta( check_period )
+            
         
-        display_tuple = ( name, path, pretty_check_period )
+        sort_tuple = ( name, path, paused, check_period )
+        display_tuple = ( name, path, pretty_paused, pretty_check_period )
         
         return ( display_tuple, sort_tuple )
         
     
-    def Delete( self ):
+    def _Delete( self ):
         
         with ClientGUIDialogs.DialogYesNo( self, 'Remove all selected?' ) as dlg:
             
             if dlg.ShowModal() == wx.ID_YES:
                 
-                self._import_folders.RemoveAllSelected()
+                import_folders = self._import_folders.GetData( only_selected = True )
+                
+                self._import_folders.DeleteDatas( import_folders )
                 
             
         
     
-    def Edit( self ):
+    def _Edit( self ):
         
-        indices = self._import_folders.GetAllSelected()
+        import_folders = self._import_folders.GetData( only_selected = True )
         
-        for index in indices:
-            
-            import_folder = self._import_folders.GetObject( index )
-            
-            original_name = import_folder.GetName()
+        for import_folder in import_folders:
             
             with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
                 
                 if dlg.ShowModal() == wx.ID_OK:
                     
-                    import_folder = dlg.GetInfo()
+                    self._import_folders.DeleteDatas( ( import_folder, ) )
                     
-                    if import_folder.GetName() != original_name:
-                        
-                        self._import_folders.SetNonDupeName( import_folder )
-                        
+                    edited_import_folder = dlg.GetInfo()
                     
-                    ( display_tuple, sort_tuple ) = self._ConvertImportFolderToTuples( import_folder )
+                    edited_import_folder.SetNonDupeName( self._GetExistingNames() )
                     
-                    self._import_folders.UpdateRow( index, display_tuple, sort_tuple, import_folder )
+                    self._import_folders.AddDatas( ( edited_import_folder, ) )
+                    
+                    self._import_folders.Sort()
                     
                 
             
         
     
-    def EventAdd( self, event ):
+    def _GetExistingNames( self ):
         
-        self._AddImportFolder()
+        import_folders = self._import_folders.GetData()
         
-    
-    def EventDelete( self, event ):
+        names = { import_folder.GetName() for import_folder in import_folders }
         
-        self.Delete()
-        
-    
-    def EventEdit( self, event ):
-        
-        self.Edit()
+        return names
         
     
     def EventOK( self, event ):
@@ -2386,7 +2381,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         good_names = set()
         
-        import_folders = self._import_folders.GetObjects()
+        import_folders = self._import_folders.GetData()
         
         for import_folder in import_folders:
             
@@ -2395,7 +2390,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
             HG.client_controller.Write( 'serialisable', import_folder )
             
         
-        names_to_delete = existing_db_names - good_names
+        names_to_delete = existing_db_names.difference( good_names )
         
         for name in names_to_delete:
             

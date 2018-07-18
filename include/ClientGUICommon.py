@@ -3037,7 +3037,7 @@ class TagFilterButton( BetterButton ):
         
         self.SetLabelText( tt[:32] )
         
-        self.SetToolTipString( tt )
+        self.SetToolTip( tt )
         
     
     def GetValue( self ):

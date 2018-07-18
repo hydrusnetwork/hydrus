@@ -7,6 +7,7 @@ import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
 import ClientGUIDialogs
+import ClientGUIImport
 import ClientGUIListBoxes
 import ClientGUIListCtrl
 import ClientGUIPredicates
@@ -1711,6 +1712,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._process_subs_in_random_order = wx.CheckBox( subscriptions )
             self._process_subs_in_random_order.SetToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
             
+            checker_options = self._new_options.GetDefaultSubscriptionCheckerOptions()
+            
+            self._subscription_checker_options = ClientGUIImport.CheckerOptionsButton( subscriptions, checker_options )
+            
             #
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
@@ -1725,7 +1730,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
             
-            self._watcher_checker_options = ClientGUITime.EditCheckerOptions( watchers, checker_options )
+            self._watcher_checker_options = ClientGUIImport.CheckerOptionsButton( watchers, checker_options )
             
             #
             
@@ -1788,6 +1793,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( subscriptions, rows )
             
             subscriptions.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            subscriptions.Add( self._subscription_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -1844,6 +1850,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
+            self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
             
             self._new_options.SetBoolean( 'show_deleted_on_file_seed_short_summary', self._show_deleted_on_file_seed_short_summary.GetValue() )
             
@@ -1942,28 +1949,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            default_tios = ClientGUICommon.StaticBox( self, 'default tag import options' )
-            
-            self._tag_import_options = wx.ListBox( default_tios )
-            self._tag_import_options.Bind( wx.EVT_LEFT_DCLICK, self.EventEdit )
-            
-            self._edit = wx.Button( default_tios, label = 'edit' )
-            self._edit.Bind( wx.EVT_BUTTON, self.EventEdit )
-            
-            self._delete = wx.Button( default_tios, label = 'delete' )
-            self._delete.Bind( wx.EVT_BUTTON, self.EventDelete )
-            
-            #
-            
-            for ( gallery_identifier, tag_import_options ) in self._new_options.GetDefaultTagImportOptions().items():
-                
-                name = gallery_identifier.ToString()
-                
-                self._tag_import_options.Append( name, ( gallery_identifier, tag_import_options ) )
-                
-            
-            #
-            
             rows = []
             
             rows.append( ( 'For \'quiet\' import contexts like import folders and subscriptions:', self._quiet_fios ) )
@@ -1975,74 +1960,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            message = 'These options will be disappearing soon! Everything is moving over to the new downloader system! Default tag import options are now set under _network->downloaders->manage default tag import options_!'
-            
-            st = ClientGUICommon.BetterStaticText( default_tios, message )
-            
-            default_tios.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            default_tios.Add( self._tag_import_options, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            hbox = wx.BoxSizer( wx.HORIZONTAL )
-            
-            hbox.Add( self._edit, CC.FLAGS_VCENTER )
-            hbox.Add( self._delete, CC.FLAGS_VCENTER )
-            
-            default_tios.Add( hbox, CC.FLAGS_BUTTON_SIZER )
-            
-            #
-            
             vbox = wx.BoxSizer( wx.VERTICAL )
             
             vbox.Add( default_fios, CC.FLAGS_EXPAND_PERPENDICULAR )
-            vbox.Add( default_tios, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             self.SetSizer( vbox )
-            
-        
-        def EventDelete( self, event ):
-            
-            selection = self._tag_import_options.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                name = self._tag_import_options.GetString( selection )
-                
-                with ClientGUIDialogs.DialogYesNo( self, 'Delete \'' + name + '\' entry?' ) as dlg:
-                    
-                    if dlg.ShowModal() == wx.ID_YES:
-                        
-                        self._tag_import_options.Delete( selection )
-                        
-                    
-                
-            
-        
-        def EventEdit( self, event ):
-            
-            selection = self._tag_import_options.GetSelection()
-            
-            if selection != wx.NOT_FOUND:
-                
-                name = self._tag_import_options.GetString( selection )
-                
-                ( gallery_identifier, tag_import_options ) = self._tag_import_options.GetClientData( selection )
-                
-                ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                
-                with ClientGUITopLevelWindows.DialogEdit( self, 'edit tag import options' ) as dlg:
-                    
-                    panel = ClientGUIScrolledPanelsEdit.EditTagImportOptionsPanel( dlg, namespaces, tag_import_options )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.ShowModal() == wx.ID_OK:
-                        
-                        tag_import_options = panel.GetValue()
-                        
-                        self._tag_import_options.SetClientData( selection, ( gallery_identifier, tag_import_options ) )
-                        
-                    
-                
             
         
         def UpdateOptions( self ):
@@ -2113,7 +2035,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows = []
             
             rows.append( ( 'Run maintenance jobs when the client is idle and the system is not otherwise busy: ', self._idle_normal ) )
-            rows.append( ( 'Assume the client is idle if no general browsing activity has occured in the past: ', self._idle_period ) )
+            rows.append( ( 'Assume the client is idle if no general browsing activity has occurred in the past: ', self._idle_period ) )
             rows.append( ( 'Assume the client is idle if the mouse has not been moved in the past: ', self._idle_mouse_period ) )
             rows.append( ( 'Assume the system is busy if any CPU core has recent average usage above: ', self._idle_cpu_max ) )
             

@@ -567,6 +567,20 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+            if gallery_seed.status == CC.STATUS_ERROR:
+                
+                # the [DEAD] stuff can override watcher status, so let's give a brief time for this to display the error
+                
+                with self._lock:
+                    
+                    self._checking_paused = True
+                    
+                    self._watcher_status = gallery_seed.note
+                    
+                
+                time.sleep( 5 )
+                
+            
         except HydrusExceptions.NetworkException as e:
             
             self._DelayWork( 4 * 3600, HydrusData.ToUnicode( e ) )
@@ -575,10 +589,35 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
         watcher_status = gallery_seed.note
-        error_occurred = gallery_seed.status == CC.STATUS_ERROR
         watcher_status_should_stick = gallery_seed.status != CC.STATUS_SUCCESSFUL_AND_NEW
         
-        self._FinishCheck( watcher_status, error_occurred, watcher_status_should_stick )
+        with self._lock:
+            
+            if self._check_now:
+                
+                self._check_now = False
+                
+            
+            self._watcher_status = watcher_status
+            
+            self._last_check_time = HydrusData.GetNow()
+            
+            self._UpdateFileVelocityStatus()
+            
+            self._UpdateNextCheckTime()
+            
+            self._PublishPageName()
+            
+        
+        if not watcher_status_should_stick:
+            
+            time.sleep( 5 )
+            
+            with self._lock:
+                
+                self._watcher_status = ''
+                
+            
         
     
     def _DelayWork( self, time_delta, reason ):
@@ -612,51 +651,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
         return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
-        
-    
-    def _FinishCheck( self, watcher_status, error_occurred, watcher_status_should_stick ):
-        
-        if error_occurred:
-            
-            # the [DEAD] stuff can override watcher status, so let's give a brief time for this to display the error
-            
-            with self._lock:
-                
-                self._checking_paused = True
-                
-                self._watcher_status = watcher_status
-                
-            
-            time.sleep( 5 )
-            
-        
-        with self._lock:
-            
-            if self._check_now:
-                
-                self._check_now = False
-                
-            
-            self._watcher_status = watcher_status
-            
-            self._last_check_time = HydrusData.GetNow()
-            
-            self._UpdateFileVelocityStatus()
-            
-            self._UpdateNextCheckTime()
-            
-            self._PublishPageName()
-            
-        
-        if not watcher_status_should_stick:
-            
-            time.sleep( 5 )
-            
-            with self._lock:
-                
-                self._watcher_status = ''
-                
-            
         
     
     def _GetSerialisableInfo( self ):
@@ -1274,10 +1268,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
-            work_to_do = self._file_seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( self._page_key ) )
+            work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+            no_delays = HydrusData.TimeHasPassed( self._no_work_until )
+            page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+            
+            ok_to_work = work_pending and no_delays and page_shown
             
         
-        while work_to_do:
+        while ok_to_work:
             
             try:
                 
@@ -1299,7 +1297,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     return
                     
                 
-                work_to_do = self._file_seed_cache.WorkToDo() and not ( self._files_paused or HG.client_controller.PageClosedButNotDestroyed( self._page_key ) )
+                work_pending = self._file_seed_cache.WorkToDo() and not self._files_paused
+                no_delays = HydrusData.TimeHasPassed( self._no_work_until )
+                page_shown = not HG.client_controller.PageClosedButNotDestroyed( self._page_key )
+                
+                ok_to_work = work_pending and no_delays and page_shown
                 
             
         

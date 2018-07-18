@@ -345,16 +345,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( info_panel )
         
-        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, 'db_migration_locations', 6, 36, [ ( 'location', -1 ), ( 'portable?', 12 ), ( 'free space', 12 ), ( 'weight', 10 ), ( 'ideal usage', 24 ), ( 'current usage', 24 ) ], self._ConvertLocationToListCtrlTuples )
+        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, 'db_migration_locations', 8, 36, [ ( 'location', -1 ), ( 'portable?', 11 ), ( 'free space', 12 ), ( 'file weight', 10 ), ( 'current usage', 24 ), ( 'ideal usage', 24 ) ], self._ConvertLocationToListCtrlTuples, style = wx.LC_SINGLE_SEL )
         
         self._current_media_locations_listctrl.Sort()
         
         current_media_locations_listctrl_panel.SetListCtrl( self._current_media_locations_listctrl )
         
-        current_media_locations_listctrl_panel.AddButton( 'add location', self._AddPath )
-        current_media_locations_listctrl_panel.AddButton( 'empty/remove location', self._RemovePaths, enabled_check_func = self._FileLocationSelected )
-        current_media_locations_listctrl_panel.AddButton( 'increase weight', self._IncreaseWeight, enabled_check_func = self._FileLocationSelected )
-        current_media_locations_listctrl_panel.AddButton( 'decrease weight', self._DecreaseWeight, enabled_check_func = self._FileLocationSelected )
+        current_media_locations_listctrl_panel.AddButton( 'add new location for files', self._SelectPathToAdd )
+        current_media_locations_listctrl_panel.AddButton( 'increase file weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
+        current_media_locations_listctrl_panel.AddButton( 'decrease file weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
         
         self._resized_thumbs_location = wx.TextCtrl( info_panel )
         self._resized_thumbs_location.Disable()
@@ -428,35 +427,27 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _AddPath( self ):
+    def _AddPath( self, path, starting_weight = 1 ):
         
         ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
         
-        with wx.DirDialog( self, 'Select the location' ) as dlg:
+        if path in locations_to_ideal_weights:
             
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                path = HydrusData.ToUnicode( dlg.GetPath() )
-                
-                if path in locations_to_ideal_weights:
-                    
-                    wx.MessageBox( 'You already have that location entered!' )
-                    
-                    return
-                    
-                
-                if path == resized_thumbnail_override or path == full_size_thumbnail_override:
-                    
-                    wx.MessageBox( 'That path is already used as a special thumbnail location--please choose another.' )
-                    
-                    return
-                    
-                
-                self._new_options.SetClientFilesLocation( path, 1 )
-                
-                self._Update()
-                
+            wx.MessageBox( 'You already have that location entered!' )
             
+            return
+            
+        
+        if path == resized_thumbnail_override or path == full_size_thumbnail_override:
+            
+            wx.MessageBox( 'That path is already used as a special thumbnail location--please choose another.' )
+            
+            return
+            
+        
+        self._new_options.SetClientFilesLocation( path, 1 )
+        
+        self._Update()
         
     
     def _AdjustWeight( self, amount ):
@@ -465,17 +456,13 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         adjustees = set()
         
-        for location in self._current_media_locations_listctrl.GetData( only_selected = True ):
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        if len( locations ) > 0:
+            
+            location = locations[0]
             
             if location in locations_to_ideal_weights:
-                
-                adjustees.add( location )
-                
-            
-        
-        if len( adjustees ) > 0:
-            
-            for location in adjustees:
                 
                 current_weight = locations_to_ideal_weights[ location ]
                 
@@ -485,10 +472,82 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     self._new_options.SetClientFilesLocation( location, new_amount )
                     
+                elif new_amount <= 0:
+                    
+                    self._RemovePath( location )
+                    
+                
+            else:
+                
+                if amount > 0:
+                    
+                    if location not in ( resized_thumbnail_override, full_size_thumbnail_override ):
+                        
+                        self._AddPath( location, starting_weight = amount )
+                        
+                    
+                
                 
             
             self._Update()
             
+        
+    
+    def _CanDecreaseWeight( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        if len( locations ) > 0:
+            
+            location = locations[0]
+            
+            if location in locations_to_ideal_weights:
+                
+                selection_includes_ideal_locations = True
+                
+                ideal_weight = locations_to_ideal_weights[ location ]
+                
+                is_big = ideal_weight > 1
+                others_can_take_slack = len( locations_to_ideal_weights ) > 1
+                
+                if is_big or others_can_take_slack:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+    def _CanIncreaseWeight( self ):
+        
+        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
+        
+        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
+        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        
+        if len( locations ) > 0:
+            
+            location = locations[0]
+            
+            if location in locations_to_ideal_weights:
+                
+                if len( locations_to_ideal_weights ) > 1:
+                    
+                    return True
+                    
+                
+            elif location in locations_to_file_weights:
+                
+                return True
+                
+            
+        
+        return False
         
     
     def _ClearFullsizeThumbnailLocation( self ):
@@ -606,7 +665,14 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             ideal_weight = 0
             
-            pretty_ideal_weight = 'n/a'
+            if location in locations_to_file_weights:
+                
+                pretty_ideal_weight = '0'
+                
+            else:
+                
+                pretty_ideal_weight = 'n/a'
+                
             
         
         if location in locations_to_ideal_weights:
@@ -687,8 +753,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_ideal_usage = 'nothing'
             
         
-        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_ideal_usage, pretty_current_usage )
-        sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
+        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_ideal_weight, pretty_current_usage, pretty_ideal_usage )
+        sort_tuple = ( location, portable, free_space, ideal_weight, current_usage, ideal_usage )
         
         return ( display_tuple, sort_tuple )
         
@@ -696,25 +762,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _DecreaseWeight( self ):
         
         self._AdjustWeight( -1 )
-        
-    
-    def _FileLocationSelected( self ):
-        
-        ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
-        
-        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
-        
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
-        
-        for location in locations:
-            
-            if location in locations_to_file_weights or location in locations_to_ideal_weights:
-                
-                return True
-                
-            
-        
-        return False
         
     
     def _GetLocationsToCurrentWeights( self ):
@@ -892,43 +939,56 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _RemovePaths( self ):
+    def _RemovePath( self, location ):
         
         ( locations_to_ideal_weights, resized_thumbnail_override, full_size_thumbnail_override ) = self._new_options.GetClientFilesLocationsToIdealWeights()
         
+        ( locations_to_file_weights, locations_to_fs_thumb_weights, locations_to_r_thumb_weights ) = self._GetLocationsToCurrentWeights()
+        
         removees = set()
         
-        for location in self._current_media_locations_listctrl.GetData( only_selected = True ):
+        if location not in locations_to_ideal_weights:
             
-            if location in locations_to_ideal_weights:
-                
-                removees.add( location )
-                
+            wx.MessageBox( 'Please select a location with weight.' )
+            
+            return
             
         
-        # eventually have a check and veto if not enough size on the destination partition
+        if len( locations_to_ideal_weights ) == 1:
+            
+            wx.MessageBox( 'You cannot empty every single current file location--please add a new place for the files to be moved to and then try again.' )
+            
         
-        if len( removees ) == 0:
+        if location in locations_to_file_weights:
             
-            wx.MessageBox( 'Please select some locations with weight.' )
-            
-        elif len( removees ) == len( locations_to_ideal_weights ):
-            
-            wx.MessageBox( 'You cannot empty every single location--please add a new place for the files to be moved to and then try again.' )
+            message = 'Are you sure you want to remove this location? This will schedule all of the files it is currently responsible for to be moved elsewhere.'
             
         else:
             
-            with ClientGUIDialogs.DialogYesNo( self, 'Are you sure? This will schedule all the selected locations to have all their current files removed.' ) as dlg:
+            message = 'Are you sure you want to remove this location? The files it would be responsible for will be shared amongst the other file locations.'
+            
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
                 
-                if dlg.ShowModal() == wx.ID_YES:
-                    
-                    for location in removees:
-                        
-                        self._new_options.RemoveClientFilesLocation( location )
-                        
-                    
-                    self._Update()
-                    
+                self._new_options.RemoveClientFilesLocation( location )
+                
+                self._Update()
+                
+            
+            
+        
+    
+    def _SelectPathToAdd( self ):
+        
+        with wx.DirDialog( self, 'Select the location' ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                path = HydrusData.ToUnicode( dlg.GetPath() )
+                
+                self._AddPath( path )
                 
             
         

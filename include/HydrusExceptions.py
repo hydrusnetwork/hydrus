@@ -1,32 +1,34 @@
 import os
+import traceback
 
-class CantRenderWithCVException( Exception ): pass
-class DataMissing( Exception ): pass
-
-class DBException( Exception ):
+class HydrusException( Exception ):
     
     def __str__( self ):
         
         return os.linesep.join( self.args )
         
+    
+class CantRenderWithCVException( HydrusException ): pass
+class DataMissing( HydrusException ): pass
 
-class DBAccessException( Exception ): pass
-class FileMissingException( Exception ): pass
-class NameException( Exception ): pass
-class ShutdownException( Exception ): pass
+class DBException( HydrusException ): pass
+class DBAccessException( HydrusException ): pass
+class FileMissingException( HydrusException ): pass
+class NameException( HydrusException ): pass
+class ShutdownException( HydrusException ): pass
 
-class VetoException( Exception ): pass
+class VetoException( HydrusException ): pass
 class CancelledException( VetoException ): pass
 class MimeException( VetoException ): pass
 class SizeException( VetoException ): pass
 class DecompressionBombException( SizeException ): pass
 
-class ParseException( Exception ): pass
+class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass
 class StringMatchException( ParseException ): pass
 class URLMatchException( ParseException ): pass
 
-class NetworkException( Exception ): pass
+class NetworkException( HydrusException ): pass
 
 class NetworkInfrastructureException( NetworkException ): pass
 class ConnectionException( NetworkInfrastructureException ): pass

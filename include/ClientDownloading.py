@@ -262,6 +262,11 @@ class Gallery( object ):
         
         network_job = self._network_job_factory( 'GET', url, referral_url = referral_url, temp_path = temp_path )
         
+        if temp_path is not None: # i.e. it is a file after a page fetch
+            
+            network_job.OverrideBandwidth( 30 )
+            
+        
         HG.client_controller.network_engine.AddJob( network_job )
         
         try:

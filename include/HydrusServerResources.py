@@ -218,14 +218,6 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
         
         ( size, mime, width, height, duration, num_frames, num_words ) = HydrusFileHandling.GetFileInfo( path, mime )
         
-    except HydrusExceptions.SizeException:
-        
-        raise HydrusExceptions.ForbiddenException( 'File is of zero length!' )
-        
-    except HydrusExceptions.MimeException:
-        
-        raise HydrusExceptions.ForbiddenException( 'Filetype is not permitted!' )
-        
     except Exception as e:
         
         raise HydrusExceptions.ForbiddenException( HydrusData.ToUnicode( e ) )

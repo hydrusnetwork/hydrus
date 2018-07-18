@@ -496,9 +496,18 @@ class SaneListCtrlPanel( wx.Panel ):
     
 class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
     
-    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, delete_key_callback = None, activation_callback = None ):
+    def __init__( self, parent, name, height_num_chars, sizing_column_initial_width_num_chars, columns, data_to_tuples_func, delete_key_callback = None, activation_callback = None, style = None ):
         
-        wx.ListCtrl.__init__( self, parent, style = wx.LC_REPORT )
+        if style is None:
+            
+            style = wx.LC_REPORT
+            
+        else:
+            
+            style = wx.LC_REPORT | style
+            
+        
+        wx.ListCtrl.__init__( self, parent, style = style )
         ListCtrlAutoWidthMixin.__init__( self )
         
         self._data_to_tuples_func = data_to_tuples_func
@@ -512,7 +521,7 @@ class BetterListCtrl( wx.ListCtrl, ListCtrlAutoWidthMixin ):
         self._indices_to_data_info = {}
         self._data_to_indices = {}
         
-        ( total_width, height ) = ClientGUICommon.ConvertTextToPixels( self, ( sizing_column_initial_width_num_chars, height_num_chars ) )
+        ( total_width, height ) = ClientGUICommon.ConvertTextToPixels( self, ( sizing_column_initial_width_num_chars, height_num_chars + 2 ) ) # +2 for the header
         
         resize_column = 1
         

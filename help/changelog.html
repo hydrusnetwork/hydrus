@@ -8,6 +8,41 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 315</h3></li>
+				<ul>
+					<li>got started on the big gallery update, but decided not to pull the trigger just yet. I hope to do it next week, switching the whole thing over to a two-object multi-watcher kind of deal</li>
+					<li>updated to wxPython 4.0.3 for all platforms</li>
+					<li>cleaned up some menubar replacement code, and the update to the new wxPython should also fix a "event for a menu without associated window" bug some gtk2 users were seeing on quick menubar changes</li>
+					<li>manage default tag import options panel now has copy/paste buttons that work on the listctrl</li>
+					<li>added some 'paste tag import options' safety code to make sure no one accidentally pastes a subscription or something in there, wew</li>
+					<li>added default checker options for subscriptions to options->downloading</li>
+					<li>unified how checker options are edited from their button, much like how file and tag import options work. it also has a summary tooltip on the button</li>
+					<li>the checker options under options->downloading are now these slimmer buttons</li>
+					<li>in the manual import dialog (which pops up when you drop a folder/files on the client), the files will now be added in 'human friendly' number sorting, so files of the sort 'Favourites - 10.jpg' will sort [10, 11, ..., 99, 100] rather than the purely lexicographic [10, 100, 11, ..., 99]</li>
+					<li>gave the migrate database dialog a pass--a bunch of misc presentation changes and a general simplification of workflow, now based more on just increase/decrease location weight</li>
+					<li>a bunch of texts on page management (left-hand) panels that share horizontal space with buttons should now ellipsize ("downlo...") when they get too long for the width instead of drawing in an ugly way over the buttonspace</li>
+					<li>moved the manage import folders dialog to the new listctrl and added a 'paused' and better 'check period' column</li>
+					<li>if a user tries to run a 'paused' import folder specifically from the menu, the import folder will now unpause (I will probably remove this old paused variable in the future--it isn't of much use any more)</li>
+					<li>tightened up some repository reset code that wasn't deleting all service tables and hence recovering from some service id malformation errors correctly</li>
+					<li>wrote a 'clear orphan tables' db maintenance routine that kills some spare tables some users who have previously deleted/reset repositories may have floating around</li>
+					<li>fixed an issue with parsing folders after hitting cancel button on the import files pre-dialog</li>
+					<li>if watchers encounter non-404 network errors during check, they should now just delay checking for four hours (before, they were also pausing checking completely)</li>
+					<li>if watchers are in 'delay' mode, they'll also not work on files.</li>
+					<li>file and gallery downloads that hit a 403 (Forbidden) will now present a simpler error status, like they do for 404</li>
+					<li>the new post downloader will no longer fail if one of the parsed source urls is not a url. the borked string will also not be associated as a url</li>
+					<li>regular gallery downloads now override bandwidth for the file download step, which is almost always the second half of a pair of post_url/file downloads, just to keep things in sync in edge cases</li>
+					<li>cleaned up some timestamp generation and 'overriding in x seconds' strings to be more human friendly</li>
+					<li>improved some serverside file parse error handling to propagate the actual error description up to the client a bit better</li>
+					<li>fixed typo causing incorrect num_ignored count in file import status button right-click menu</li>
+					<li>parseexceptions will now present more data about which page and content parser caused the problem. I am not totally happy about how this solution works and may revisit it</li>
+					<li>the lz4 import error catching is now more broad to catch some odd problem I discovered in new Linux build environment</li>
+					<li>the moebooru parser now fetches the original png of an image, if available</li>
+					<li>added a new tumblr parser that also gets post tags--it _shouldn't_ be the default</li>
+					<li>the new login pipeline now kicks in for the legacy logins--pixiv and hentai foundry--on a per-url basis, so adding pixiv/hf urls to the url downloader will trigger a login even if needed (previously, this was tied to legacy gallery initialisation, which explains some pixiv 'missing' login stuff some users and I were having trouble with)</li>
+					<li>if the legacy login system fails in the new pipeline, it now sets a flag and won't try again that client boot</li>
+					<li>the old 'default tag import options' panel is now completely removed from options->importing. please check 'network->downloaders->manage default tag import options' for the new url-based settings</li>
+					<li>misc fixes</li>
+				</ul>
 				<li><h3>version 314</h3></li>
 				<ul>
 					<li>tag import options can now be set to 'default', meaning 'use whatever the default is at the time of import', which will be an easier way of managing TIOs for many subs that you'd prefer all share the same TIO settings anyway</li>
@@ -37,7 +72,7 @@
 					<li>added a 'show the D on short file import summaries' checkbox to options->downloading--it defaults to off</li>
 					<li>the 'I' on short file import summaries is now 'Ig' to clear up 1/I confusion</li>
 					<li>added 'copy queries' to the edit subscription panel, which lets you copy all the selected queries' search texts to clipboard, newline separated</li>
-					<li>added a checbox to options->gui that commands 'last session' only be autosaved during idle time. this is useful if you usually have a huge (200k+ file) session and your client is always on</li>
+					<li>added a checkbox to options->gui that commands 'last session' only be autosaved during idle time. this is useful if you usually have a huge (200k+ file) session and your client is always on</li>
 					<li>fixed file import status button right-click, which I messed up somehow last week with the 'retry ignored' add</li>
 					<li>shook up and collapsed the network menu into neater categories</li>
 					<li>tightened-up the rarely used pre-parsing conversion panel on the edit page parser panel to just a button with a bit of explaining text</li>

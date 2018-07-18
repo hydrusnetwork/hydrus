@@ -2756,6 +2756,49 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _ClearOrphanTables( self ):
+        
+        service_ids = self._STL( self._c.execute( 'SELECT service_id FROM services;' ) )
+        
+        table_prefixes = []
+        
+        table_prefixes.append( 'repository_hash_id_map_' )
+        table_prefixes.append( 'repository_tag_id_map_' )
+        table_prefixes.append( 'repository_updates_' )
+        
+        good_table_names = set()
+        
+        for service_id in service_ids:
+            
+            suffix = str( service_id )
+            
+            for table_prefix in table_prefixes:
+                
+                good_table_names.add( table_prefix + suffix )
+                
+            
+        
+        existing_table_names = set()
+        
+        existing_table_names.update( self._STS( self._c.execute( 'SELECT name FROM sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
+        existing_table_names.update( self._STS( self._c.execute( 'SELECT name FROM external_master.sqlite_master WHERE type = ?;', ( 'table', ) ) ) )
+        
+        existing_table_names = { name for name in existing_table_names if True in ( name.startswith( table_prefix ) for table_prefix in table_prefixes ) }
+        
+        surplus_table_names = existing_table_names.difference( good_table_names )
+        
+        surplus_table_names = list( surplus_table_names )
+        
+        surplus_table_names.sort()
+        
+        for table_name in surplus_table_names:
+            
+            HydrusData.ShowText( 'Dropping ' + table_name )
+            
+            self._c.execute( 'DROP table ' + table_name + ';' )
+            
+        
+    
     def _CreateDB( self ):
         
         client_files_default = os.path.join( self._db_dir, 'client_files' )
@@ -3191,6 +3234,18 @@ class DB( HydrusDB.HydrusDB ):
         self._c.execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
         self._c.execute( 'DELETE FROM remote_thumbnails WHERE service_id = ?;', ( service_id, ) )
+        
+        if service_type in HC.REPOSITORIES:
+            
+            repository_updates_table_name = GenerateRepositoryRepositoryUpdatesTableName( service_id )
+            
+            self._c.execute( 'DROP TABLE ' + repository_updates_table_name + ';' )
+            
+            ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterCacheTableNames( service_id )
+            
+            self._c.execute( 'DROP TABLE ' + hash_id_map_table_name + ';' )
+            self._c.execute( 'DROP TABLE ' + tag_id_map_table_name + ';' )
+            
         
         if service_type in HC.TAG_SERVICES:
             
@@ -5309,7 +5364,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) + ' (before this check).'
+            note = 'Currently in trash. Sent there at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) + ' (before this check).'
             
             return ( CC.STATUS_DELETED, hash, prefix + ': ' + note )
             
@@ -5320,7 +5375,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( timestamp, ) = result
             
-            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp ) + ' (before this check).'
+            note = 'Imported at ' + HydrusData.ConvertTimestampToPrettyTime( timestamp ) + ', which was ' + HydrusData.TimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) + ' (before this check).'
             
             return ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, hash, prefix + ': ' + note )
             
@@ -6739,7 +6794,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if minimum_age is not None:
                 
-                message += ' with minimum age ' + HydrusData.TimestampToPrettyTimeDelta( timestamp_cutoff ) + ','
+                message += ' with minimum age ' + HydrusData.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
                 
             
             message += ' I found ' + HydrusData.ToHumanInt( len( hash_ids ) ) + '.'
@@ -7125,7 +7180,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if HydrusData.TimeHasPassed( next_stop_time_presentation ):
                                 
-                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time ) )
+                                HG.client_controller.pub( 'splash_set_status_subtext', 'cached ' + HydrusData.TimestampToPrettyTimeDelta( stop_time, just_now_string = 'ok', just_now_threshold = 1 ) )
                                 
                                 if HydrusData.TimeHasPassed( stop_time ):
                                     
@@ -10585,6 +10640,36 @@ class DB( HydrusDB.HydrusDB ):
             self.pub_initial_message( message )
             
         
+        if version == 314:
+            
+            try:
+                
+                domain_manager = self._GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( ( 'moebooru file page parser', 'tumblr api post page parser - with post tags' ) )
+                
+                #
+                
+                domain_manager.TryToLinkURLMatchesAndParsers()
+                
+                #
+                
+                self._SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some url classes and parsers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.pub( 'splash_set_title_text', 'updated db to v' + str( version + 1 ) )
         
         self._c.execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11150,6 +11235,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'associate_repository_update_hashes': result = self._AssociateRepositoryUpdateHashes( *args, **kwargs )
         elif action == 'backup': result = self._Backup( *args, **kwargs )
         elif action == 'clear_orphan_file_records': result = self._ClearOrphanFileRecords( *args, **kwargs )
+        elif action == 'clear_orphan_tables': result = self._ClearOrphanTables( *args, **kwargs )
         elif action == 'content_updates': result = self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'db_integrity': result = self._CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_hydrus_session_key': result = self._DeleteHydrusSessionKey( *args, **kwargs )

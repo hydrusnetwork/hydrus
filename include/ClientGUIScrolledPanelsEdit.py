@@ -340,6 +340,8 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
+        self._list_ctrl_panel.AddButton( 'copy', self._Copy, enabled_check_func = self._OnlyOneTIOSelected )
+        self._list_ctrl_panel.AddButton( 'paste', self._Paste, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
         self._list_ctrl_panel.AddButton( 'clear', self._Clear, enabled_only_on_selection = True )
         
@@ -417,6 +419,27 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _Copy( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            url_match = selected[0]
+            
+            url_match_key = url_match.GetMatchKey()
+            
+            if url_match_key in self._url_match_keys_to_tag_import_options:
+                
+                tag_import_options = self._url_match_keys_to_tag_import_options[ url_match_key ]
+                
+                json_string = tag_import_options.DumpToString()
+                
+                HG.client_controller.pub( 'clipboard', 'text', json_string )
+                
+            
+        
+    
     def _Edit( self ):
         
         url_matches_to_edit = self._list_ctrl.GetData( only_selected = True )
@@ -476,6 +499,55 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         return ( namespaces, tag_import_options )
+        
+    
+    def _OnlyOneTIOSelected( self ):
+        
+        selected = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            url_match = selected[0]
+            
+            url_match_key = url_match.GetMatchKey()
+            
+            if url_match_key in self._url_match_keys_to_tag_import_options:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _Paste( self ):
+        
+        raw_text = HG.client_controller.GetClipboardText()
+        
+        try:
+            
+            tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
+            
+            if not isinstance( tag_import_options, ClientImportOptions.TagImportOptions ):
+                
+                raise Exception( 'Not a Tag Import Options!' )
+                
+            
+            for url_match in self._list_ctrl.GetData( only_selected = True ):
+                
+                url_match_key = url_match.GetMatchKey()
+                
+                self._url_match_keys_to_tag_import_options[ url_match_key ] = tag_import_options.Duplicate()
+                
+            
+            self._list_ctrl.UpdateDatas()
+            
+        except Exception as e:
+            
+            wx.MessageBox( 'I could not understand what was in the clipboard' )
+            
+            HydrusData.ShowException( e )
+            
         
     
     def GetValue( self ):
@@ -2232,7 +2304,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
         
-        self._checker_options_button = ClientGUICommon.BetterButton( self._query_panel, 'edit check timings', self._EditCheckerOptions )
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
+        
+        self._checker_options = ClientGUIImport.CheckerOptionsButton( self._query_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
         #
         
@@ -2259,8 +2333,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._paused = wx.CheckBox( self._control_panel )
         
         #
-        
-        ( name, gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
@@ -2312,7 +2384,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._query_panel.Add( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._query_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -2388,6 +2460,16 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def _CheckerOptionsUpdated( self, checker_options ):
+        
+        for query in self._queries.GetData():
+            
+            query.UpdateNextCheckTime( checker_options )
+            
+        
+        self._queries.UpdateDatas()
+        
+    
     def _CheckNow( self ):
         
         selected_queries = self._queries.GetData( only_selected = True )
@@ -2447,7 +2529,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if last_check_time == 0 or last_check_time is None:
             
-            pretty_last_check_time = '(initial check has not yet occured)'
+            pretty_last_check_time = '(initial check has not yet occurred)'
             
         else:
             
@@ -2456,8 +2538,10 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_next_check_time = query.GetNextCheckStatusString()
         
-        file_velocity = self._checker_options.GetRawCurrentVelocity( query.GetFileSeedCache(), last_check_time )
-        pretty_file_velocity = self._checker_options.GetPrettyCurrentVelocity( query.GetFileSeedCache(), last_check_time, no_prefix = True )
+        checker_options = self._checker_options.GetValue()
+        
+        file_velocity = checker_options.GetRawCurrentVelocity( query.GetFileSeedCache(), last_check_time )
+        pretty_file_velocity = checker_options.GetPrettyCurrentVelocity( query.GetFileSeedCache(), last_check_time, no_prefix = True )
         
         estimate = self._original_subscription.GetBandwidthWaitingEstimate( query )
         
@@ -2517,28 +2601,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             if dlg.ShowModal() == wx.ID_YES:
                 
                 self._queries.DeleteSelected()
-                
-            
-        
-    
-    def _EditCheckerOptions( self ):
-        
-        with ClientGUITopLevelWindows.DialogEdit( self._checker_options_button, 'edit check timings' ) as dlg:
-            
-            panel = ClientGUITime.EditCheckerOptions( dlg, self._checker_options )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                self._checker_options = panel.GetValue()
-                
-                for query in self._queries.GetData():
-                    
-                    query.UpdateNextCheckTime( self._checker_options )
-                    
-                
-                self._queries.UpdateDatas()
                 
             
         
@@ -2823,7 +2885,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            status = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( self._no_work_until ) + ' because: ' + self._no_work_until_reason
+            status = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( self._no_work_until, just_now_threshold = 0 ) + ' because: ' + self._no_work_until_reason
             
         
         self._delay_st.SetLabelText( status )
@@ -2857,11 +2919,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         paused = self._paused.GetValue()
         
+        checker_options = self._checker_options.GetValue()
         file_import_options = self._file_import_options.GetValue()
-        
         tag_import_options = self._tag_import_options.GetValue()
         
-        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, self._checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        subscription.SetTuple( gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
         
         publish_files_to_popup_button = self._publish_files_to_popup_button.GetValue()
         publish_files_to_page = self._publish_files_to_page.GetValue()
@@ -3247,7 +3309,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_delay = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( no_work_until ) + ' - because: ' + no_work_until_reason
+            pretty_delay = 'delayed--retrying ' + HydrusData.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
             delay = HydrusData.GetTimeDeltaUntilTime( no_work_until )
             
         

@@ -466,7 +466,7 @@ class NetworkJob( object ):
                         
                         prefix = 'overriding bandwidth '
                         
-                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp )
+                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( self._bandwidth_manual_override_delayed_timestamp, just_now_string = 'imminently', just_now_threshold = 2 )
                         
                     else:
                         
@@ -474,12 +474,7 @@ class NetworkJob( object ):
                         
                         prefix = 'bandwidth free '
                         
-                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration )
-                        
-                    
-                    if waiting_duration < 2:
-                        
-                        waiting_str = 'imminently'
+                        waiting_str = HydrusData.TimestampToPrettyTimeDelta( HydrusData.GetNow() + waiting_duration, just_now_string = 'imminently', just_now_threshold = 2 )
                         
                     
                     self._status_text = prefix + waiting_str + u'\u2026'

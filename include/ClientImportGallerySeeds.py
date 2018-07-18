@@ -312,6 +312,19 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 time.sleep( 2 )
                 
             
+        except HydrusExceptions.ForbiddenException:
+            
+            status = CC.STATUS_VETOED
+            note = '403'
+            
+            self.SetStatus( status, note = note )
+            
+            status_hook( '403' )
+            
+            time.sleep( 2 )
+            
+            result_404 = True
+            
         except HydrusExceptions.NotFoundException:
             
             status = CC.STATUS_VETOED

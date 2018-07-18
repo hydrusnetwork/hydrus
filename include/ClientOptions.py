@@ -362,10 +362,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
-        
-        #
-        
         self._dictionary[ 'frame_locations' ] = {}
         
         # remember size, remember position, last_size, last_pos, default gravity, default position, maximised, fullscreen
@@ -444,6 +440,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'misc' ] = HydrusSerialisable.SerialisableDictionary()
         
         self._dictionary[ 'misc' ][ 'default_thread_watcher_options' ] = ClientDefaults.GetDefaultCheckerOptions( 'thread' )
+        self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = ClientDefaults.GetDefaultCheckerOptions( 'artist subscription' )
         
         #
         
@@ -465,7 +462,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         for ( key, value ) in loaded_dictionary.items():
             
-            if isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
+            if key in self._dictionary and isinstance( self._dictionary[ key ], dict ) and isinstance( value, dict ):
                 
                 self._dictionary[ key ].update( value )
                 
@@ -593,14 +590,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ClearDefaultTagImportOptions( self ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'default_import_tag_options' ] = HydrusSerialisable.SerialisableDictionary()
-            
-        
-    
     def FlipBoolean( self, name ):
         
         with self._lock:
@@ -672,76 +661,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultTagImportOptions( self, gallery_identifier = None ):
-        
-        with self._lock:
-            
-            default_tag_import_options = self._dictionary[ 'default_import_tag_options' ]
-            
-            if gallery_identifier is None:
-                
-                return default_tag_import_options
-                
-            else:
-                
-                if gallery_identifier in default_tag_import_options:
-                    
-                    tag_import_options = default_tag_import_options[ gallery_identifier ]
-                    
-                else:
-                    
-                    default_booru_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU )
-                    default_hentai_foundry_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY )
-                    default_pixiv_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV )
-                    default_gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEFAULT )
-                    
-                    guidance_tag_import_options = None
-                    
-                    site_type = gallery_identifier.GetSiteType()
-                    
-                    if site_type == HC.SITE_TYPE_WATCHER:
-                        
-                        import ClientImportOptions
-                        
-                        return ClientImportOptions.TagImportOptions() # if nothing set, do nothing in this special case
-                        
-                    
-                    if site_type == HC.SITE_TYPE_BOORU and default_booru_gallery_identifier in default_tag_import_options:
-                        
-                        guidance_tag_import_options = default_tag_import_options[ default_booru_gallery_identifier ]
-                        
-                    elif site_type in ( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) and default_hentai_foundry_gallery_identifier in default_tag_import_options:
-                        
-                        guidance_tag_import_options = default_tag_import_options[ default_hentai_foundry_gallery_identifier ]
-                        
-                    elif site_type in ( HC.SITE_TYPE_PIXIV_ARTIST_ID, HC.SITE_TYPE_PIXIV_TAG ) and default_pixiv_gallery_identifier in default_tag_import_options:
-                        
-                        guidance_tag_import_options = default_tag_import_options[ default_pixiv_gallery_identifier ]
-                        
-                    elif default_gallery_identifier in default_tag_import_options:
-                        
-                        guidance_tag_import_options = default_tag_import_options[ default_gallery_identifier ]
-                        
-                    
-                    if guidance_tag_import_options is None:
-                        
-                        import ClientImportOptions
-                        
-                        tag_import_options = ClientImportOptions.TagImportOptions()
-                        
-                    else:
-                        
-                        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-                        
-                        tag_import_options = guidance_tag_import_options.DeriveTagImportOptionsFromSelf( namespaces )
-                        
-                    
-                
-                return tag_import_options
-                
-            
-        
-    
     def GetDefaultWatcherCheckerOptions( self ):
         
         with self._lock:
@@ -755,6 +674,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'default_sort' ]
+            
+        
+    
+    def GetDefaultSubscriptionCheckerOptions( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ]
             
         
     
@@ -1021,14 +948,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultTagImportOptions( self, gallery_identifier, tag_import_options ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'default_import_tag_options' ][ gallery_identifier ] = tag_import_options
-            
-        
-    
     def SetDefaultWatcherCheckerOptions( self, checker_options ):
         
         with self._lock:
@@ -1042,6 +961,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'default_sort' ] = media_sort
+            
+        
+    
+    def SetDefaultSubscriptionCheckerOptions( self, checker_options ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'misc' ][ 'default_subscription_checker_options' ] = checker_options
             
         
     

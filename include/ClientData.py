@@ -410,7 +410,7 @@ def OrdIsNumber( o ):
     
 def ReportShutdownException():
     
-    text = 'A serious error occured while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
+    text = 'A serious error occurred while trying to exit the program. Its traceback may be shown next. It should have also been written to client.log. You may need to quit the program from task manager.'
     
     HydrusData.DebugPrint( text )
     

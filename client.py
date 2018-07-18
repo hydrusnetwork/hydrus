@@ -135,6 +135,6 @@ except Exception as e:
             f.write( traceback.format_exc() )
             
         
-        print( 'Critical error occured! Details written to crash.log!' )
+        print( 'Critical error occurred! Details written to crash.log!' )
         
     

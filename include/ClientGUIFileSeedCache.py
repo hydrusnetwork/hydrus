@@ -567,7 +567,7 @@ class FileSeedCacheButton( ClientGUICommon.BetterBitmapButton ):
         
         if num_vetoed > 0:
             
-            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_errors ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
+            ClientGUIMenus.AppendMenuItem( self, menu, 'retry ' + HydrusData.ToHumanInt( num_vetoed ) + ' ignored', 'Tell this cache to reattempt all its ignored/vetoed results.', self._RetryIgnored )
             
         
         ClientGUIMenus.AppendSeparator( menu )

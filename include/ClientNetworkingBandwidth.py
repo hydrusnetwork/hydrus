@@ -129,7 +129,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def CanDoWork( self, network_contexts, expected_requests = 3, expected_bytes = 1048576, threshold = 30 ):
+    def CanDoWork( self, network_contexts, expected_requests = 1, expected_bytes = 1048576, threshold = 30 ):
         
         with self._lock:
             
