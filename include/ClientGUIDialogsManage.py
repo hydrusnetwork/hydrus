@@ -20,6 +20,7 @@ import ClientGUIFileSeedCache
 import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
+import ClientImportLocal
 import ClientImportOptions
 import ClientMedia
 import ClientRatings
@@ -1122,7 +1123,9 @@ class DialogManageExportFolders( ClientGUIDialogs.Dialog ):
         
         ClientGUIDialogs.Dialog.__init__( self, parent, 'manage export folders' )
         
-        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ], self._ConvertExportFolderToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        columns = [ ( 'name', 20 ), ( 'path', -1 ), ( 'type', 12 ), ( 'query', 16 ), ( 'period', 10 ), ( 'phrase', 20 ) ]
+        
+        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self, 'export_folders', 6, 40, columns, self._ConvertExportFolderToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         export_folders = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_EXPORT_FOLDER )
         
@@ -2222,7 +2225,9 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ], self._ConvertImportFolderToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'name', 24 ), ( 'path', -1 ), ( 'paused', 8 ), ( 'check period', 24 ) ]
+        
+        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, 'import_folders', 8, 36, columns, self._ConvertImportFolderToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
@@ -2284,7 +2289,7 @@ class DialogManageImportFolders( ClientGUIDialogs.Dialog ):
     
     def _Add( self ):
         
-        import_folder = ClientImporting.ImportFolder( 'import folder' )
+        import_folder = ClientImportLocal.ImportFolder( 'import folder' )
         
         with DialogManageImportFoldersEdit( self, import_folder ) as dlg:
             
@@ -2476,7 +2481,9 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._tag_box )
         
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, [ ( 'filename tagging options services', -1 ) ], self._ConvertFilenameTaggingOptionsToListctrlTuple, delete_key_callback = self._DeleteFilenameTaggingOptions, activation_callback = self._EditFilenameTaggingOptions )
+        columns = [ ( 'filename tagging options services', -1 ) ]
+        
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, 'filename_tagging_options', 5, 25, columns, self._ConvertFilenameTaggingOptionsToListctrlTuple, delete_key_callback = self._DeleteFilenameTaggingOptions, activation_callback = self._EditFilenameTaggingOptions )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         
@@ -2552,8 +2559,8 @@ class DialogManageImportFoldersEdit( ClientGUIDialogs.Dialog ):
         rows.append( ( 'check period: ', self._period ) )
         rows.append( ( 'check on manage dialog ok: ', self._check_now ) )
         rows.append( ( 'show a popup while working: ', self._show_working_popup ) )
-        rows.append( ( 'if new files imported, publish them to a popup button: ', self._publish_files_to_popup_button ) )
-        rows.append( ( 'if new files imported, publish them to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
         rows.append( ( 'review currently cached import paths: ', self._file_seed_cache_button ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._folder_box, rows )
@@ -3659,7 +3666,9 @@ class DialogManageTagParents( ClientGUIDialogs.Dialog ):
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 30, 25, [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            columns = [ ( '', 4 ), ( 'child', 25 ), ( 'parent', -1 ) ]
+            
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_parents', 30, 25, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_parents )
             
@@ -4508,7 +4517,9 @@ class DialogManageTagSiblings( ClientGUIDialogs.Dialog ):
             
             listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 30, 40, [ ( '', 4 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ], self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
+            columns = [ ( '', 4 ), ( 'old', 25 ), ( 'new', 25 ), ( 'note', -1 ) ]
+            
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'tag_siblings', 30, 40, columns, self._ConvertPairToListCtrlTuples, delete_key_callback = self._ListCtrlActivated, activation_callback = self._ListCtrlActivated )
             
             listctrl_panel.SetListCtrl( self._tag_siblings )
             

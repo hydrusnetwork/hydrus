@@ -20,6 +20,7 @@ import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImportFileSeeds
 import ClientImportOptions
+import ClientImportSubscriptions
 import ClientNetworkingContexts
 import ClientNetworkingDomain
 import ClientParsing
@@ -336,7 +337,9 @@ class EditDefaultTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'default_tag_import_options', 15, 36, [ ( 'url class', -1 ), ( 'url type', 12 ), ( 'defaults set?', 15 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
+        columns = [ ( 'url class', -1 ), ( 'url type', 12 ), ( 'defaults set?', 15 ) ]
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'default_tag_import_options', 15, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -1695,7 +1698,9 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, [ ( 'context', 24 ), ( 'header', 30 ), ( 'approved?', 12 ), ( 'reason', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'context', 24 ), ( 'header', 30 ), ( 'approved?', 12 ), ( 'reason', -1 ) ]
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'network_contexts_custom_headers', 15, 40, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -2262,33 +2267,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        ( name, gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
+        
         self._query_panel = ClientGUICommon.StaticBox( self, 'site and queries' )
         
-        self._site_type = ClientGUICommon.BetterChoice( self._query_panel )
-        
-        site_types = []
-        site_types.append( HC.SITE_TYPE_BOORU )
-        site_types.append( HC.SITE_TYPE_DEVIANT_ART )
-        site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
-        site_types.append( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS )
-        site_types.append( HC.SITE_TYPE_NEWGROUNDS )
-        site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
-        #site_types.append( HC.SITE_TYPE_PIXIV_TAG )
-        site_types.append( HC.SITE_TYPE_TUMBLR )
-        
-        for site_type in site_types:
-            
-            self._site_type.Append( HC.site_type_string_lookup[ site_type ], site_type )
-            
-        
-        self._site_type.Bind( wx.EVT_CHOICE, self.EventSiteChanged )
-        
-        self._booru_selector = wx.ListBox( self._query_panel )
-        self._booru_selector.Bind( wx.EVT_LISTBOX, self.EventBooruSelected )
+        self._gallery_identifier = ClientGUIImport.GallerySelector( self._query_panel, gallery_identifier )
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ], self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
+        columns = [ ( 'query', 20 ), ( 'paused', 8 ), ( 'status', 8 ), ( 'last new file time', 20 ), ( 'last check time', 20 ), ( 'next check time', 20 ), ( 'file velocity', 20 ), ( 'recent delays', 20 ), ( 'items', 13 ) ]
+        
+        self._queries = ClientGUIListCtrl.BetterListCtrl( queries_panel, 'subscription_queries', 20, 20, columns, self._ConvertQueryToListCtrlTuples, delete_key_callback = self._DeleteQuery, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._queries )
         
@@ -2304,19 +2293,37 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset cache', self._ResetCache, enabled_check_func = self._ListCtrlCanResetCache )
         
-        ( name, gallery_identifier, gallery_stream_identifiers, queries, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until, self._no_work_until_reason ) = subscription.ToTuple()
-        
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._query_panel, checker_options, update_callable = self._CheckerOptionsUpdated )
         
         #
         
         self._options_panel = ClientGUICommon.StaticBox( self, 'options' )
         
-        self._initial_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
-        self._initial_file_limit.SetToolTip( 'If set, the first sync will add no more than this many files. Otherwise, it will get everything the gallery has.' )
+        message = '''****Subscriptions are not for large one-time syncs****
+
+tl;dr: Do not change the checker options or file limits until you really know what you are doing. The limits are now only 1000 anyway, but you should leave them at 100/50.
+
+A subscription will start at a site's newest files and keep searching further and further back into the past. It will stop naturally if it reaches the end of results or starts to see files it saw in a previous check (and so assumes it has 'caught up' to where it was before). It will stop 'artificially' if it finds enough new files to hit the file limits here.
+
+Unless you have a very special reason, it is important to keep these file limit numbers low. Being automated, subscriptions typically run when you are not looking at the client, and if they go wrong, it is good to have some brakes to stop them going very wrong.
+
+First of all, making sure you only get a few dozen or hundred on the first check means you do not spend twenty minutes fetching all the search's thousands of file URLs that you may well have previously downloaded, but it is even more important for regular checks, where the sub is trying to find where it got to before: if a site changes its URL format (say from artistname.deviantart.com to deviantart.com/artistname) or changes its markup or otherwise starts delivering unusual results, the subscription may not realise it is seeing the wrong urls and will keep syncing until it hits its regular limit. If the periodic limit is 50, this is no big deal--you'll likely get a popup message out of it and might need to update the respective downloader--but if it were 60000 (or infinite, and the site were somehow serving you random/full results!), you could run into a huge problem completely by accident.
+
+Subscription sync searches are somewhat 'fragile' (they cannot pause/resume the gallery pagewalk, only completely cancel), so it is best if they are short--say, no more than five pages. It is better for a sub to pick up a small number of new files every few weeks than trying to catch up in a giant rush once a year.
+
+If you are not experienced with subscriptions, I strongly suggest you set these to something like 100 for the first check and 50 thereafter, which is likely your default. This works great for typical artist and character queries.
+
+If you want to get all of an artist's files from a site, use the manual gallery download page first. A good routine is to check that you have the right search text and it all works correctly and that you know what tags you want, and then once that big queue is fully downloaded synced, start a new sub with the same settings to continue checking for anything posted in future.'''
         
-        self._periodic_file_limit = ClientGUICommon.NoneableSpinCtrl( self._options_panel, '', none_phrase = 'get everything', min = 1, max = 1000000 )
-        self._periodic_file_limit.SetToolTip( 'If set, normal syncs will add no more than this many files. Otherwise, they will get everything up until they find a file they have seen before.' )
+        help_button = ClientGUICommon.BetterBitmapButton( self._options_panel, CC.GlobalBMPs.help, wx.MessageBox, message )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self._options_panel, 'help about file limits -->', wx.Colour( 0, 0, 255 ) )
+        
+        self._initial_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = 1000 )
+        self._initial_file_limit.SetToolTip( 'The first sync will add no more than this many URLs.' )
+        
+        self._periodic_file_limit = wx.SpinCtrl( self._options_panel, min = 1, max = 1000 )
+        self._periodic_file_limit.SetToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
         
         self._publish_files_to_popup_button = wx.CheckBox( self._options_panel )
         self._publish_files_to_page = wx.CheckBox( self._options_panel )
@@ -2336,33 +2343,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_import_options = ClientGUIImport.FileImportOptionsButton( self, file_import_options )
         
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-        
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, namespaces, tag_import_options, allow_default_selection = True )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self, [], tag_import_options, allow_default_selection = True )
         
         #
         
         self._name.SetValue( name )
-        
-        site_type = gallery_identifier.GetSiteType()
-        
-        self._site_type.SelectClientData( site_type )
-        
-        self._PresentForSiteType()
-        
-        if site_type == HC.SITE_TYPE_BOORU:
-            
-            booru_name = gallery_identifier.GetAdditionalInfo()
-            
-            index = self._booru_selector.FindString( booru_name )
-            
-            if index != wx.NOT_FOUND:
-                
-                self._booru_selector.Select( index )
-                
-            
-        
-        # set gallery_stream_identifiers selection here--some kind of list of checkboxes or whatever
         
         self._queries.AddDatas( queries )
         
@@ -2381,8 +2366,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._query_panel.Add( self._site_type, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._query_panel.Add( self._booru_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._query_panel.Add( self._gallery_identifier, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._query_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -2392,13 +2376,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
         rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
-        rows.append( ( 'if new files imported, publish them to a popup button: ', self._publish_files_to_popup_button ) )
-        rows.append( ( 'if new files imported, publish them to a page: ', self._publish_files_to_page ) )
-        rows.append( ( 'publish all queries\' new files to the same page/popup button: ', self._merge_query_publish_events ) )
+        rows.append( ( 'publish new files to a popup button: ', self._publish_files_to_popup_button ) )
+        rows.append( ( 'publish new files to a page: ', self._publish_files_to_page ) )
+        rows.append( ( 'publish all queries to the same page/popup button: ', self._merge_query_publish_events ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
-        self._options_panel.Add( ClientGUICommon.BetterStaticText( self._options_panel, 'If you are new to subscriptions, do not set these too high! In general, subscriptions that are larger than a couple of thousand files are a headache if they go wrong!' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._options_panel.Add( help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -2430,11 +2414,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddQuery( self ):
         
-        gallery_identifier = self._GetGalleryIdentifier()
+        gallery_identifier = self._gallery_identifier.GetValue()
         
         ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
         
-        query = ClientImporting.SubscriptionQuery( search_value )
+        query = ClientImportSubscriptions.SubscriptionQuery( search_value )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription query' ) as dlg:
             
@@ -2488,15 +2472,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateDelayText()
         
     
-    def _ConfigureTagImportOptions( self ):
-        
-        gallery_identifier = self._GetGalleryIdentifier()
-        
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-        
-        self._tag_import_options.SetNamespaces( namespaces )
-        
-    
     def _ConvertQueryToListCtrlTuples( self, query ):
         
         ( query_text, check_now, last_check_time, next_check_time, paused, status ) = query.ToTuple()
@@ -2525,9 +2500,16 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         last_new_file_time = file_seed_cache.GetLatestAddedTime()
         
-        pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
+        if last_new_file_time is None or last_new_file_time == 0:
+            
+            pretty_last_new_file_time = 'n/a'
+            
+        else:
+            
+            pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
+            
         
-        if last_check_time == 0 or last_check_time is None:
+        if last_check_time is None or last_check_time == 0:
             
             pretty_last_check_time = '(initial check has not yet occurred)'
             
@@ -2656,24 +2638,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         return query_strings
         
     
-    def _GetGalleryIdentifier( self ):
-        
-        site_type = self._site_type.GetChoice()
-        
-        if site_type == HC.SITE_TYPE_BOORU:
-            
-            booru_name = self._booru_selector.GetStringSelection()
-            
-            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type, additional_info = booru_name )
-            
-        else:
-            
-            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
-            
-        
-        return gallery_identifier
-        
-    
     def _ListCtrlCanCheckNow( self ):
         
         for query in self._queries.GetData( only_selected = True ):
@@ -2773,7 +2737,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 wx.MessageBox( message )
                 
             
-            queries = [ ClientImporting.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
+            queries = [ ClientImportSubscriptions.SubscriptionQuery( query_text ) for query_text in new_query_texts ]
             
             self._queries.AddDatas( queries )
             
@@ -2793,40 +2757,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._queries.UpdateDatas( selected_queries )
-        
-    
-    def _PresentForSiteType( self ):
-        
-        site_type = self._site_type.GetChoice()
-        
-        if site_type == HC.SITE_TYPE_BOORU:
-            
-            if self._booru_selector.GetCount() == 0:
-                
-                boorus = HG.client_controller.Read( 'remote_boorus' )
-                
-                names_and_boorus = list( boorus.items() )
-                
-                names_and_boorus.sort()
-                
-                for ( name, booru ) in names_and_boorus:
-                    
-                    self._booru_selector.Append( name, booru )
-                    
-                
-                self._booru_selector.Select( 0 )
-                
-            
-            self._booru_selector.Show()
-            
-        else:
-            
-            self._booru_selector.Hide()
-            
-        
-        wx.CallAfter( self._ConfigureTagImportOptions )
-        
-        ClientGUITopLevelWindows.PostSizeChangedEvent( self )
         
     
     def _ResetCache( self ):
@@ -2891,23 +2821,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._delay_st.SetLabelText( status )
         
     
-    def EventBooruSelected( self, event ):
-        
-        self._ConfigureTagImportOptions()
-        
-    
-    def EventSiteChanged( self, event ):
-        
-        self._PresentForSiteType()
-        
-    
     def GetValue( self ):
         
         name = self._name.GetValue()
         
-        subscription = ClientImporting.Subscription( name )
+        subscription = ClientImportSubscriptions.Subscription( name )
         
-        gallery_identifier = self._GetGalleryIdentifier()
+        gallery_identifier = self._gallery_identifier.GetValue()
         
         # in future, this can be harvested from some checkboxes or whatever for stream selection
         gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
@@ -3056,7 +2976,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        columns = [ ( 'name', -1 ), ( 'site', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
+        columns = [ ( 'name', -1 ), ( 'source', 20 ), ( 'query status', 25 ), ( 'last new file time', 20 ), ( 'last checked', 20 ), ( 'recent error/delay?', 20 ), ( 'items', 13 ), ( 'paused', 8 ) ]
         
         self._subscriptions = ClientGUIListCtrl.BetterListCtrl( subscriptions_panel, 'subscriptions', 25, 20, columns, self._ConvertSubscriptionToListCtrlTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -3220,18 +3140,33 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         if len( queries ) > 0:
             
             last_new_file_time = max( ( query.GetLatestAddedTime() for query in queries ) )
-            pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
             
             last_checked = max( ( query.GetLastChecked() for query in queries ) )
-            pretty_last_checked = HydrusData.TimestampToPrettyTimeDelta( last_checked )
+            
             
         else:
             
             last_new_file_time = 0
-            pretty_last_new_file_time = 'n/a'
             
             last_checked = 0
+            
+        
+        if last_new_file_time is None or last_new_file_time == 0:
+            
+            pretty_last_new_file_time = 'n/a'
+            
+        else:
+            
+            pretty_last_new_file_time = HydrusData.TimestampToPrettyTimeDelta( last_new_file_time )
+            
+        
+        if last_checked is None or last_checked == 0:
+            
             pretty_last_checked = 'n/a'
+            
+        else:
+            
+            pretty_last_checked = HydrusData.TimestampToPrettyTimeDelta( last_checked )
             
         
         #
@@ -3388,7 +3323,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            if isinstance( obj, ClientImporting.Subscription ):
+            if isinstance( obj, ClientImportSubscriptions.Subscription ):
                 
                 subscription = obj
                 
@@ -3405,7 +3340,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Add( self ):
         
-        empty_subscription = ClientImporting.Subscription( 'new subscription' )
+        empty_subscription = ClientImportSubscriptions.Subscription( 'new subscription' )
         
         with ClientGUITopLevelWindows.DialogEdit( self, 'edit subscription' ) as dlg_edit:
             
@@ -4947,7 +4882,9 @@ class EditURLMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, 'url_match_path_components', 5, 45, [ ( 'key', 14 ), ( 'value', -1 ) ], self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        columns = [ ( 'key', 14 ), ( 'value', -1 ) ]
+        
+        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, 'url_match_path_components', 5, 45, columns, self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
         
         parameters_listctrl_panel.SetListCtrl( self._parameters )
         
@@ -5429,7 +5366,9 @@ class EditURLMatchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, [ ( 'name', 36 ), ( 'type', 20 ), ( 'example (normalised) url', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'name', 36 ), ( 'type', 20 ), ( 'example (normalised) url', -1 ) ]
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, 'url_matches', 15, 40, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -5637,7 +5576,9 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_keys_to_display', 15, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'display on media viewer?', 36 ) ], self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
+        columns = [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'display on media viewer?', 36 ) ]
+        
+        self._display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._display_list_ctrl_panel, 'url_match_keys_to_display', 15, 36, columns, self._ConvertDisplayDataToListCtrlTuples, activation_callback = self._EditDisplay )
         
         self._display_list_ctrl_panel.SetListCtrl( self._display_list_ctrl )
         
@@ -5645,13 +5586,17 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, 'url_match_api_pairs', 10, 36, [ ( 'url class', -1 ), ( 'api url class', 36 ) ], self._ConvertAPIPairDataToListCtrlTuples )
+        columns = [ ( 'url class', -1 ), ( 'api url class', 36 ) ]
+        
+        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, 'url_match_api_pairs', 10, 36, columns, self._ConvertAPIPairDataToListCtrlTuples )
         
         #
         
         self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 24, 36, [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ], self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
+        columns = [ ( 'url class', -1 ), ( 'url type', 20 ), ( 'parser', 36 ) ]
+        
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, 'url_match_keys_to_parser_keys', 24, 36, columns, self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
@@ -5697,11 +5642,6 @@ class EditURLMatchLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         for url_match in url_matches:
             
             if not url_match.IsParsable() or url_match in api_pair_unparsable_url_matches:
-                
-                continue
-                
-            
-            if not ( url_match.IsWatchableURL() or url_match.IsPostURL() ):
                 
                 continue
                 

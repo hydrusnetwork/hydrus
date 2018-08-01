@@ -494,9 +494,9 @@ class DialogThatTakesScrollablePanel( DialogThatResizes ):
         
         SetInitialTLWSizeAndPosition( self, self._frame_key )
         
-        self._panel.SetupScrolling() # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
+        self._panel.SetupScrolling( scrollIntoView = False ) # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
         
-        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherant virtual size
+        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherent virtual size
         
     
 class DialogThatTakesScrollablePanelClose( DialogThatTakesScrollablePanel ):
@@ -855,8 +855,8 @@ class FrameThatTakesScrollablePanel( FrameThatResizes ):
         
         self.Show( True )
         
-        self._panel.SetupScrolling()
+        self._panel.SetupScrolling( scrollIntoView = False ) # this changes geteffectiveminsize calc, so it needs to be below settlwsizeandpos
         
-        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherant virtual size
+        PostSizeChangedEvent( self ) # helps deal with some Linux/otherscrollbar weirdness where setupscrolling changes inherent virtual size
         
     

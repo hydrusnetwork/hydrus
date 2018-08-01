@@ -63,8 +63,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'add_parents_on_manage_tags' ] = True
         self._dictionary[ 'booleans' ][ 'replace_siblings_on_manage_tags' ] = True
         
-        self._dictionary[ 'booleans' ][ 'permit_watchers_to_name_their_pages' ] = True
-        
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = False
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
         self._dictionary[ 'booleans' ][ 'hide_message_manager_on_gui_iconise' ] = HC.PLATFORM_OSX
@@ -95,8 +93,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
         self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'use_multiple_watcher_for_drag_and_drops' ] = False
         
         self._dictionary[ 'booleans' ][ 'notebook_tabs_on_left' ] = False
         
@@ -239,9 +235,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
         self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
         self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_not_found_page_string' ] = '[404]'
-        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_dead_page_string' ] = '[DEAD]'
-        self._dictionary[ 'noneable_strings' ][ 'thread_watcher_paused_page_string' ] = u'\u23F8'
         self._dictionary[ 'noneable_strings' ][ 'temp_path_override' ] = None
         self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
         self._dictionary[ 'noneable_strings' ][ 'last_png_export_dir' ] = None

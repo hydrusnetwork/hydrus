@@ -935,6 +935,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
+            ( url_type, match_name, can_parse ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            
+            if url_type not in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
+                
+                raise HydrusExceptions.VetoException( 'Did not recognise this as a File or Post URL!' )
+                
+            
+            if url_type == HC.URL_TYPE_POST and not can_parse:
+                
+                raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
+                
+            
             tag_import_options = self._SetupTagImportOptions( tag_import_options )
             
             status_hook( 'checking url status' )

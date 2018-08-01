@@ -1,7 +1,10 @@
 import ClientConstants as CC
+import ClientDefaults
+import ClientDownloading
 import ClientGUIACDropdown
 import ClientGUICommon
 import ClientGUIControls
+import ClientGUIDialogs
 import ClientGUIFileSeedCache
 import ClientGUIGallerySeedLog
 import ClientGUIListBoxes
@@ -12,11 +15,14 @@ import ClientGUIScrolledPanelsEdit
 import ClientGUIShortcuts
 import ClientGUITime
 import ClientGUITopLevelWindows
+import ClientImportFileSeeds
+import ClientImportGallerySeeds
 import ClientImporting
 import ClientImportOptions
 import collections
 import HydrusConstants as HC
 import HydrusData
+import HydrusExceptions
 import HydrusGlobals as HG
 import HydrusSerialisable
 import HydrusTags
@@ -219,7 +225,9 @@ class FilenameTaggingOptionsPanel( wx.Panel ):
             
             self._quick_namespaces_panel = ClientGUICommon.StaticBox( self, 'quick namespaces' )
             
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, [ ( 'namespace', 12 ), ( 'regex', -1 ) ], self._ConvertQuickRegexDataToListCtrlTuples, delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
+            columns = [ ( 'namespace', 12 ), ( 'regex', -1 ) ]
+            
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( self._quick_namespaces_panel, 'quick_namespaces', 4, 20, columns, self._ConvertQuickRegexDataToListCtrlTuples, delete_key_callback = self.DeleteQuickNamespaces, activation_callback = self.EditQuickNamespaces )
             
             self._add_quick_namespace_button = wx.Button( self._quick_namespaces_panel, label = 'add' )
             self._add_quick_namespace_button.Bind( wx.EVT_BUTTON, self.EventAddQuickNamespace )
@@ -934,7 +942,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._service_key = service_key
             self._paths = paths
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 25, 40, [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ], self._ConvertDataToListCtrlTuples )
+            columns = [ ( '#', 4 ), ( 'path', 40 ), ( 'tags', -1 ) ]
+            
+            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, 'paths_to_tags', 25, 40, columns, self._ConvertDataToListCtrlTuples )
             
             self._paths_list.Bind( wx.EVT_LIST_ITEM_SELECTED, self.EventItemSelected )
             self._paths_list.Bind( wx.EVT_LIST_ITEM_DESELECTED, self.EventItemSelected )
@@ -1101,6 +1111,350 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._schedule_refresh_tags_job = HG.client_controller.CallLaterWXSafe( self, 0.5, self.RefreshTags )
         
     
+class GalleryImportPanel( ClientGUICommon.StaticBox ):
+    
+    def __init__( self, parent, page_key, name = 'gallery query' ):
+        
+        ClientGUICommon.StaticBox.__init__( self, parent, name )
+        
+        self._page_key = page_key
+        
+        self._gallery_import = None
+        
+        #
+        
+        self._query_text = wx.TextCtrl( self )
+        self._query_text.SetEditable( False )
+        
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'import queue' )
+        
+        self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
+        self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
+        
+        self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
+        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventFilesPause )
+        
+        self._gallery_panel = ClientGUICommon.StaticBox( self, 'gallery parser' )
+        
+        self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, style = wx.ST_ELLIPSIZE_END )
+        
+        self._gallery_pause_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.pause )
+        self._gallery_pause_button.Bind( wx.EVT_BUTTON, self.EventGalleryPause )
+        
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, True, page_key = self._page_key )
+        
+        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
+        
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self, 'stop after this many files', min = 1, none_phrase = 'no limit' )
+        self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
+        self._file_limit.SetToolTip( 'stop searching the gallery once this many files has been reached' )
+        
+        file_import_options = ClientImportOptions.FileImportOptions()
+        tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
+        
+        self._file_import_options = FileImportOptionsButton( self, file_import_options, self._SetFileImportOptions )
+        self._tag_import_options = TagImportOptionsButton( self, [], tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
+        
+        self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        hbox = wx.BoxSizer( wx.HORIZONTAL )
+        
+        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
+        
+        self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.Add( self._query_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._UpdateControlsForNewGalleryImport()
+        
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        
+    
+    def _SetFileImportOptions( self, file_import_options ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.SetFileImportOptions( file_import_options )
+            
+        
+    
+    def _SetTagImportOptions( self, tag_import_options ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.SetTagImportOptions( tag_import_options )
+            
+        
+    
+    def _UpdateControlsForNewGalleryImport( self ):
+        
+        if self._gallery_import is None:
+            
+            self._import_queue_panel.Disable()
+            self._gallery_panel.Disable()
+            
+            self._file_limit.Disable()
+            self._file_import_options.Disable()
+            self._tag_import_options.Disable()
+            
+            self._query_text.SetValue( '' )
+            
+            self._current_action.SetLabelText( '' )
+            
+            self._gallery_status.SetLabelText( '' )
+            
+            self._file_seed_cache_control.SetFileSeedCache( None )
+            
+            self._gallery_seed_log_control.SetGallerySeedLog( None )
+            
+            self._file_download_control.ClearNetworkJob()
+            self._gallery_download_control.ClearNetworkJob()
+            
+        else:
+            
+            self._import_queue_panel.Enable()
+            self._gallery_panel.Enable()
+            
+            self._file_limit.Enable()
+            self._file_import_options.Enable()
+            self._tag_import_options.Enable()
+            
+            query = self._gallery_import.GetQueryText()
+            
+            self._query_text.SetValue( query )
+            
+            file_limit = self._gallery_import.GetFileLimit()
+            
+            self._file_limit.SetValue( file_limit )
+            
+            file_import_options = self._gallery_import.GetFileImportOptions()
+            
+            self._file_import_options.SetValue( file_import_options )
+            
+            tag_import_options = self._gallery_import.GetTagImportOptions()
+            
+            self._tag_import_options.SetValue( tag_import_options )
+            
+            file_seed_cache = self._gallery_import.GetFileSeedCache()
+            
+            self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
+            
+            gallery_seed_log = self._gallery_import.GetGallerySeedLog()
+            
+            self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
+            
+        
+    
+    def _UpdateStatus( self ):
+        
+        if self._gallery_import is not None:
+            
+            ( gallery_status, current_action, files_paused, gallery_paused ) = self._gallery_import.GetStatus()
+            
+            if files_paused:
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
+                
+            else:
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
+                
+            
+            if gallery_paused:
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.play )
+                
+            else:
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.pause )
+                
+            
+            if gallery_paused:
+                
+                if gallery_status == '':
+                    
+                    gallery_status = 'paused'
+                    
+                else:
+                    
+                    gallery_status = 'paused - ' + gallery_status
+                    
+                
+            
+            self._gallery_status.SetLabelText( gallery_status )
+            
+            if files_paused:
+                
+                if current_action == '':
+                    
+                    current_action = 'paused'
+                    
+                else:
+                    
+                    current_action = 'pausing - ' + current_action
+                    
+                
+            
+            self._current_action.SetLabelText( current_action )
+            
+            ( file_network_job, gallery_network_job ) = self._gallery_import.GetNetworkJobs()
+            
+            self._file_download_control.SetNetworkJob( file_network_job )
+            
+            self._gallery_download_control.SetNetworkJob( gallery_network_job )
+            
+        
+    
+    def EventFileLimit( self, event ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.SetFileLimit( self._file_limit.GetValue() )
+            
+        
+        event.Skip()
+        
+    
+    def EventFilesPause( self, event ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.PausePlayFiles()
+            
+            self._UpdateStatus()
+            
+        
+    
+    def EventGalleryPause( self, event ):
+        
+        if self._gallery_import is not None:
+            
+            self._gallery_import.PausePlayGallery()
+            
+            self._UpdateStatus()
+            
+        
+    
+    def SetGalleryImport( self, gallery_import ):
+        
+        self._gallery_import = gallery_import
+        
+        self._UpdateControlsForNewGalleryImport()
+        
+    
+    def TIMERUIUpdate( self ):
+        
+        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+            
+            self._UpdateStatus()
+            
+        
+    
+class GallerySelector( ClientGUICommon.BetterButton ):
+    
+    def __init__( self, parent, gallery_identifier, update_callable = None ):
+        
+        ClientGUICommon.BetterButton.__init__( self, parent, 'gallery selector', self._Edit )
+        
+        self._gallery_identifier = gallery_identifier
+        self._update_callable = update_callable
+        
+        self._SetLabel()
+        
+    
+    def _Edit( self ):
+        
+        gallery_identifiers = []
+        
+        site_types = [ HC.SITE_TYPE_DEVIANT_ART, HC.SITE_TYPE_TUMBLR, HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST, HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ]
+        
+        result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
+        
+        if result is not None:
+            
+            site_types.append( HC.SITE_TYPE_PIXIV_ARTIST_ID )
+            
+        
+        for site_type in site_types:
+            
+            gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
+            
+            gallery_identifiers.append( gallery_identifier )
+            
+        
+        boorus = HG.client_controller.Read( 'remote_boorus' )
+        
+        for booru_name in boorus.keys():
+            
+            gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, additional_info = booru_name )
+            
+            gallery_identifiers.append( gallery_identifier )
+            
+        
+        choice_tuples = [ ( gallery_identifier.ToString(), gallery_identifier ) for gallery_identifier in gallery_identifiers ]
+        
+        choice_tuples.sort()
+        
+        with ClientGUIDialogs.DialogSelectFromList( self, 'select gallery', choice_tuples, value_to_select = self._gallery_identifier ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_OK:
+                
+                gallery_identifier = dlg.GetChoice()
+                
+                self._SetValue( gallery_identifier )
+                
+            
+        
+    
+    def _SetLabel( self ):
+        
+        self.SetLabelText( self._gallery_identifier.ToString() )
+        
+    
+    def _SetValue( self, gallery_identifier ):
+        
+        self._gallery_identifier = gallery_identifier
+        
+        self._SetLabel()
+        
+        if self._update_callable is not None:
+            
+            self._update_callable( self._gallery_identifier )
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._gallery_identifier
+        
+    
+    def SetValue( self, gallery_identifier ):
+        
+        self._SetValue( gallery_identifier )
+        
+    
 class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, namespaces, tag_import_options, update_callable = None, show_downloader_options = True, allow_default_selection = False ):
@@ -1228,17 +1582,17 @@ class TagImportOptionsButton( ClientGUICommon.BetterButton ):
     
 class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, page_key ):
+    def __init__( self, parent, page_key, name = 'watcher' ):
         
-        ClientGUICommon.StaticBox.__init__( self, parent, 'watcher' )
+        ClientGUICommon.StaticBox.__init__( self, parent, name )
         
         self._page_key = page_key
         self._watcher = None
         
         self._watcher_subject = ClientGUICommon.BetterStaticText( self, style = wx.ST_ELLIPSIZE_END )
         
-        self._url_input = wx.TextCtrl( self, style = wx.TE_PROCESS_ENTER )
-        self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
+        self._watcher_url = wx.TextCtrl( self )
+        self._watcher_url.SetEditable( False )
         
         self._options_panel = wx.Panel( self )
         
@@ -1250,7 +1604,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
         
         self._current_action = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, self._controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
         self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
         
         #
@@ -1260,14 +1614,14 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
         
         self._checking_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
-        self._checking_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecker )
+        self._checking_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecking )
         
         self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
         
         self._check_now_button = wx.Button( checker_panel, label = 'check now' )
         self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, self._controller, True, page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, HG.client_controller, True, page_key = self._page_key )
         
         checker_options = ClientImportOptions.CheckerOptions()
         
@@ -1280,8 +1634,8 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         file_import_options = ClientImportOptions.FileImportOptions()
         tag_import_options = ClientImportOptions.TagImportOptions( is_default = True )
         
-        self._file_import_options = FileImportOptionsButton( self._watcher_panel, file_import_options, self._SetFileImportOptions )
-        self._tag_import_options = TagImportOptionsButton( self._watcher_panel, namespaces, tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
+        self._file_import_options = FileImportOptionsButton( self, file_import_options, self._SetFileImportOptions )
+        self._tag_import_options = TagImportOptionsButton( self, namespaces, tag_import_options, update_callable = self._SetTagImportOptions, allow_default_selection = True )
         
         #
         
@@ -1296,16 +1650,18 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        gridbox = wx.FlexGridSizer( 2 )
+        hbox_1 = wx.BoxSizer( wx.HORIZONTAL )
         
-        gridbox.AddGrowableCol( 0, 1 )
+        hbox_1.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox_1.Add( self._checking_pause_button, CC.FLAGS_VCENTER )
         
-        gridbox.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._checking_pause_button, CC.FLAGS_LONE_BUTTON )
-        gridbox.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._check_now_button, CC.FLAGS_VCENTER )
+        hbox_2 = wx.BoxSizer( wx.HORIZONTAL )
         
-        checker_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        hbox_2.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
+        hbox_2.Add( self._check_now_button, CC.FLAGS_VCENTER )
+        
+        checker_panel.Add( hbox_1, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        checker_panel.Add( hbox_2, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         checker_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1317,36 +1673,24 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._options_panel.SetSizer( vbox )
         
-        self._watcher_panel.Add( self._watcher_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._watcher_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._watcher_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._watcher_url, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        vbox = wx.BoxSizer( wx.VERTICAL )
+        self._UpdateControlsForNewWatcher()
         
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._collect_by.Hide()
-        
-        vbox.Add( self._watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        self._UpdateStatus()
+        HG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _SetCheckerOptions( self, checker_options ):
         
         if self._watcher is not None:
             
-            self._watcher_import.SetCheckerOptions( checker_options )
+            self._watcher.SetCheckerOptions( checker_options )
             
         
     
@@ -1370,203 +1714,189 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         if self._watcher is None:
             
-            pass # clear and disable everything
+            self._options_panel.Disable()
+            
+            self._file_import_options.Disable()
+            self._tag_import_options.Disable()
+            
+            self._watcher_subject.SetLabelText( '' )
+            
+            self._watcher_url.SetValue( '' )
+            
+            self._current_action.SetLabelText( '' )
+            
+            self._file_velocity_status.SetLabelText( '' )
+            
+            self._watcher_status.SetLabelText( '' )
+            
+            self._file_seed_cache_control.SetFileSeedCache( None )
+            
+            self._gallery_seed_log_control.SetGallerySeedLog( None )
+            
+            self._file_download_control.ClearNetworkJob()
+            self._checker_download_control.ClearNetworkJob()
             
         else:
             
-            # fetch url
-            url = 'blah'
+            self._options_panel.Enable()
             
-            if url is None or url == '':
+            self._file_import_options.Enable()
+            self._tag_import_options.Enable()
+            
+            if self._watcher.HasURL():
                 
-                pass # set up as a new url input, ready to init thread watcher
+                url = self._watcher.GetURL()
+                
+                self._watcher_url.SetValue( url )
                 
             else:
                 
-                pass # present everything else
+                self._watcher_url.SetValue( '' )
                 
             
-            # update CO button with value
-            # update FIO button with value
-            # update TIO button with value
+            checker_options = self._watcher.GetCheckerOptions()
             
-            file_seed_cache = self._watcher_import.GetFileSeedCache()
+            self._checker_options_button.SetValue( checker_options )
+            
+            file_import_options = self._watcher.GetFileImportOptions()
+            
+            self._file_import_options.SetValue( file_import_options )
+            
+            tag_import_options = self._watcher.GetTagImportOptions()
+            
+            self._tag_import_options.SetValue( tag_import_options )
+            
+            file_seed_cache = self._watcher.GetFileSeedCache()
             
             self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
             
-            gallery_seed_log = self._watcher_import.GetGallerySeedLog()
+            gallery_seed_log = self._watcher.GetGallerySeedLog()
             
             self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
-            
-            self._watcher_import.SetDownloadControlFile( self._file_download_control )
-            self._watcher_import.SetDownloadControlChecker( self._checker_download_control )
-            
-            self._url_input.SetValue( url )
             
         
     
     def _UpdateStatus( self ):
         
-        if self._watcher_import.HasURL():
+        if self._watcher is not None:
             
-            self._url_input.SetEditable( False )
+            ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher.GetStatus()
             
-            if not self._options_panel.IsShown():
+            if files_paused:
                 
-                self._watcher_subject.Show()
-                
-                self._options_panel.Show()
-                
-                self.Layout()
-                
-            
-        else:
-            
-            if self._options_panel.IsShown():
-                
-                self._watcher_subject.Hide()
-                
-                self._options_panel.Hide()
-                
-                self.Layout()
-                
-            
-        
-        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher_import.GetStatus()
-        
-        if files_paused:
-            
-            if current_action == '':
-                
-                current_action = 'paused'
-                
-            else:
-                
-                current_action = 'pausing, ' + current_action
-                
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
-            
-        
-        self._current_action.SetLabelText( current_action )
-        
-        self._file_velocity_status.SetLabelText( file_velocity_status )
-        
-        if checking_paused:
-            
-            if watcher_status == '':
-                
-                watcher_status = 'paused'
-                
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            if watcher_status == '' and next_check_time is not None:
-                
-                if HydrusData.TimeHasPassed( next_check_time ):
+                if current_action == '':
                     
-                    watcher_status = 'checking imminently'
+                    current_action = 'paused'
                     
                 else:
                     
-                    watcher_status = 'next check ' + HydrusData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
+                    current_action = 'pausing, ' + current_action
                     
                 
+                ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
+                
+            else:
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
+                
             
-            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
+            self._current_action.SetLabelText( current_action )
             
-        
-        self._watcher_status.SetLabelText( watcher_status )
-        
-        if checking_status == ClientImporting.CHECKER_STATUS_404:
+            self._file_velocity_status.SetLabelText( file_velocity_status )
             
-            self._checking_pause_button.Disable()
+            if checking_paused:
+                
+                if watcher_status == '':
+                    
+                    watcher_status = 'paused'
+                    
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.play )
+                
+            else:
+                
+                if watcher_status == '' and next_check_time is not None:
+                    
+                    if HydrusData.TimeHasPassed( next_check_time ):
+                        
+                        watcher_status = 'checking imminently'
+                        
+                    else:
+                        
+                        watcher_status = 'next check ' + HydrusData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
+                        
+                    
+                
+                ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
+                
             
-        elif checking_status == ClientImporting.CHECKER_STATUS_DEAD:
+            self._watcher_status.SetLabelText( watcher_status )
             
-            self._checking_pause_button.Disable()
+            if checking_status == ClientImporting.CHECKER_STATUS_404:
+                
+                self._checking_pause_button.Disable()
+                
+            elif checking_status == ClientImporting.CHECKER_STATUS_DEAD:
+                
+                self._checking_pause_button.Disable()
+                
+            else:
+                
+                self._checking_pause_button.Enable()
+                
             
-        else:
+            if subject in ( '', 'unknown subject' ):
+                
+                subject = 'no subject'
+                
             
-            self._checking_pause_button.Enable()
+            self._watcher_subject.SetLabelText( subject )
             
-        
-        if subject in ( '', 'unknown subject' ):
+            if check_now:
+                
+                self._check_now_button.Disable()
+                
+            else:
+                
+                self._check_now_button.Enable()
+                
             
-            subject = 'no subject'
+            ( file_network_job, checker_network_job ) = self._watcher.GetNetworkJobs()
             
-        
-        self._watcher_subject.SetLabelText( subject )
-        
-        if check_now:
+            self._file_download_control.SetNetworkJob( file_network_job )
             
-            self._check_now_button.Disable()
-            
-        else:
-            
-            self._check_now_button.Enable()
+            self._checker_download_control.SetNetworkJob( checker_network_job )
             
         
     
     def EventCheckNow( self, event ):
         
-        self._watcher_import.CheckNow()
-        
-        self._UpdateStatus()
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
+        if self._watcher is not None:
             
-            url = self._url_input.GetValue()
+            self._watcher.CheckNow()
             
-            if url == '':
-                
-                return
-                
-            
-            self._url_input.SetEditable( False )
-            
-            self._watcher.SetURL( url )
-            
-            publish_to_page = True
-            
-            self._watcher.Start( self._page_key, publish_to_page )
-            
-            self._UpdateControlsForNewWatcher()
-            
-        else:
-            
-            event.Skip()
+            self._UpdateStatus()
             
         
     
     def EventPauseFiles( self, event ):
         
-        self._watcher_import.PausePlayFiles()
-        
-        self._UpdateStatus()
-        
-    
-    def EventPauseChecker( self, event ):
-        
-        self._watcher_import.PausePlayChecker()
-        
-        self._UpdateStatus()
+        if self._watcher is not None:
+            
+            self._watcher.PausePlayFiles()
+            
+            self._UpdateStatus()
+            
         
     
-    def SetSearchFocus( self ):
+    def EventPauseChecking( self, event ):
         
-        wx.CallAfter( self._url_input.SetFocus )
+        if self._watcher is not None:
+            
+            self._watcher.PausePlayChecking()
+            
+            self._UpdateStatus()
+            
         
     
     def SetWatcher( self, watcher ):
@@ -1576,7 +1906,11 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._UpdateControlsForNewWatcher()
         
     
-    def UpdateStatus( self ):
+    def TIMERUIUpdate( self ):
         
-        self._UpdateStatus()
+        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+            
+            self._UpdateStatus()
+            
         
+    

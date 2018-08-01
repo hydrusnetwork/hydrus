@@ -8,6 +8,64 @@
 		<div class="content">
 			<h3>changelog</h3>
 			<ul>
+				<li><h3>version 316</h3></li>
+				<ul>
+					<li>gallery:</li>
+					<li>gallery url classes can now be linked to parsers!</li>
+					<li>if parsers are linked, gallery pagewalk can now work on the new parsing system. gallery import pipeline has been significantly updated to reflect this</li>
+					<li>gallery import objects are now 'multiple' gallery imports, much like the multi-watcher, with each separate query having its own entry in a list (they also run in parallel!)</li>
+					<li>the multi-gallery list will show file/gallery pause status in slender columns, and will show a 'stop' character when gallery parsing is done</li>
+					<li>wrote a 'gallery selector' button and added it to the new multi-gallery page, so you can spawn queries for ~different sites~ on the same import page! it always defaults to 'deviant art' for now, but when the next 'searcher' overhaul step is done, this will be customisable</li>
+					<li>the new page selector and related 'pages' menu is now simpler--with the new selector, you just select 'gallery'</li>
+					<li>added 'new_gallery_downloader_page' shortcut action to the 'main gui' set to allow quick opening of this new page type</li>
+					<li>wrote a 'gallery import panel', which reviews a single gallery import stream, and added it to the multi-gallery page to show the current highlighted query</li>
+					<li>as all gallery imports now run in parallel and work on the new system, the now almost-useless 'cancel' gallery pagewalk button is now removed</li>
+					<li>with the wider availability of the new gallery log for file count and error reports, shifted around and smoothed out some gallery status text presentation</li>
+					<li>improved the auto url_class->parser linking 'try to fill in gaps' logic to work with gallery urls (this was surprisingly complicated)</li>
+					<li>fixed a misc stupid waste of time in auto url_class->parser linking</li>
+					<li>many misc updates to gallery pipeline</li>
+					<li>.</li>
+					<li>subscriptions:</li>
+					<li>wrote a new gallery pagewalk pipeline for subscriptions, which still does oldest-to-newest url addition and obeys file limits and so on</li>
+					<li>numerous subscription pipeline and error handling tweaks and improvements, particularly in regards to the new code</li>
+					<li>subscriptions now have max initial and periodic file limits of 1000. existing subs with >1000 or infinite will be cut to 1000. there is a help button on the edit sub panel to explain why you should do large syncs with the manual downloader and not subs</li>
+					<li>the ugly and dangerous-if-you-scroll-in-the-wrong-place gallery selector mismash control in the edit subscription panel is now replaced with the new gallery selector button</li>
+					<li>fixed an issue where the edit subs panels could sometimes say '48 years ago' (i.e. displaying a literal time delta since 0, 1970) on initial timestamps</li>
+					<li>juggled some 'periodic limit' reporting logic to skip an unusual false positive that affect hentai foundry subs for now and more in future</li>
+					<li>.</li>
+					<li>urls:</li>
+					<li>the url downloader now accepts gallery urls and will receive drag-and-dropped gallery urls. at the moment, it only parses the one page (i.e. it doesn't start a new 'searching' pagewalk) and sends the parsed links to its file queue</li>
+					<li>.</li>
+					<li>watcher:</li>
+					<li>finished 'watcher panel', which reviews a watcher, and added it to the multi-watcher page to show the current highlighted watcher</li>
+					<li>the single watcher page is completely removed--it is only the multiple watcher now. all singles will be converted to multiples on update</li>
+					<li>some single-watcher options (like watchers naming their own page tabs and the [404]-style page name prefixes) are removed</li>
+					<li>multiple watcher panel now lists file/checking pause status and has separate buttons to control these paused statuses</li>
+					<li>fixed some misc watcher highlight code--highlighted watchers should correctly publish to the page from the start of session load now</li>
+					<li>improved some 'repage' logic in how highlighted threads get removed</li>
+					<li>.</li>
+					<li>misc:</li>
+					<li>discovered a scroll-setup parameter that stops janky scroll-to-click-focus behaviour on all the new scrolling panels, thank the LORD</li>
+					<li>improved some 'can't parse' error handling for post url parsing</li>
+					<li>reworked how all importers present their network jobs to the ui, including fast response if the switch happens during a job</li>
+					<li>in prep for searcher switchover where all downloader sources will be harmonised into one system, booru identifiers now present in several ui locations as 'name', not 'booru: name'</li>
+					<li>updated the danbooru parser to deal with the new 'next page' markup they use</li>
+					<li>wrote a gelbooru gallery parser that works with 0.2.0 and 0.2.5 gelb sites--an ancillary issue where gelb-related downloaders could sometimes not accurately figure out the magic '42' next-page offset is hence now fixed</li>
+					<li>wrote an e621 gallery page parser</li>
+					<li>these sites hence now support single-page gallery drag-and-drop</li>
+					<li>added url classes for artstation gallery url and its api counterpart, but didn't go further yet--we aren't quite there with api pagewalking just yet</li>
+					<li>updated deviant art gallery url classes</li>
+					<li>added an e621 'search initialisation' gallery url class to improve some future drag-and-drop stuff</li>
+					<li>url normalisation no longer cuts off 'www.'-style prefixes</li>
+					<li>url comparison is more careful to test 'www.'-style prefixes, so a file import cache should recognise that 'http://www.blah.com/blah' is the same as 'https://blah.com/blah'</li>
+					<li>did a bunch of refactoring to further split up the bloated ClientImporting.py</li>
+					<li>fixed some misc downloader layout that may have been hiding some texts previously</li>
+					<li>some multi-watcher and multi-gallery events like add/pause query should be a bit snappier</li>
+					<li>in the parsing ui, url and title priorities are now 50 by default</li>
+					<li>prepped a little subscription unit test code for when searcher object is done</li>
+					<li>misc downloader layout improvements</li>
+					<li>misc listctrl refactoring</li>
+				</ul>
 				<li><h3>version 315</h3></li>
 				<ul>
 					<li>got started on the big gallery update, but decided not to pull the trigger just yet. I hope to do it next week, switching the whole thing over to a two-object multi-watcher kind of deal</li>

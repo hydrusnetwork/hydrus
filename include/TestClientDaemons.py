@@ -1,5 +1,6 @@
 import ClientDaemons
 import ClientImporting
+import ClientImportLocal
 import ClientPaths
 import collections
 import HydrusConstants as HC
@@ -47,7 +48,7 @@ class TestDaemons( unittest.TestCase ):
             actions[ CC.STATUS_DELETED ] = CC.IMPORT_FOLDER_DELETE
             actions[ CC.STATUS_ERROR ] = CC.IMPORT_FOLDER_IGNORE
             
-            import_folder = ClientImporting.ImportFolder( 'imp', path = test_dir, actions = actions )
+            import_folder = ClientImportLocal.ImportFolder( 'imp', path = test_dir, actions = actions )
             
             HG.test_controller.SetRead( 'serialisable_names', [ 'imp' ] )
             HG.test_controller.SetRead( 'serialisable_named', import_folder )

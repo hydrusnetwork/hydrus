@@ -7,6 +7,7 @@ import ClientDuplicates
 import ClientGUIShortcuts
 import ClientImporting
 import ClientImportOptions
+import ClientImportSubscriptions
 import ClientMedia
 import ClientRatings
 import ClientSearch
@@ -485,13 +486,13 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( obj._no_work_until, dupe_obj._no_work_until )
             
         
-        sub = ClientImporting.Subscription( 'test sub' )
+        sub = ClientImportSubscriptions.Subscription( 'test sub' )
         
         self._dump_and_load_and_test( sub, test )
         
         gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_BOORU, 'gelbooru' )
         gallery_stream_identifiers = ClientDownloading.GetGalleryStreamIdentifiers( gallery_identifier )
-        queries = [ ClientImporting.SubscriptionQuery( 'test query' ), ClientImporting.SubscriptionQuery( 'test query 2' ) ]
+        queries = [ ClientImportSubscriptions.SubscriptionQuery( 'test query' ), ClientImportSubscriptions.SubscriptionQuery( 'test query 2' ) ]
         checker_options = ClientImportOptions.CheckerOptions()
         initial_file_limit = 100
         periodic_file_limit = 50

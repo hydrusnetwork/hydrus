@@ -231,7 +231,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
             
             booru_name = self._additional_info
             
-            text = HC.site_type_string_lookup[ self._site_type ] + ': ' + booru_name
+            text = booru_name
             
         
         return text

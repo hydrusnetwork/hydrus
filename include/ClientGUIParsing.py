@@ -1475,6 +1475,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._url_type.Append( 'next gallery page', HC.URL_TYPE_NEXT )
         
         self._file_priority = wx.SpinCtrl( self._urls_panel, min = 0, max = 100 )
+        self._file_priority.SetValue( 50 )
         
         self._mappings_panel = wx.Panel( self._content_panel )
         
@@ -1498,6 +1499,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         self._title_panel = wx.Panel( self._content_panel )
         
         self._title_priority = wx.SpinCtrl( self._title_panel, min = 0, max = 100 )
+        self._title_priority.SetValue( 50 )
         
         self._veto_panel = wx.Panel( self._content_panel )
         
@@ -1786,7 +1788,9 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._content_parsers = ClientGUIListCtrl.BetterListCtrl( content_parsers_panel, 'content_parsers', 10, 24, [ ( 'name', -1 ), ( 'produces', 40 ) ], self._ConvertContentParserToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'name', -1 ), ( 'produces', 40 ) ]
+        
+        self._content_parsers = ClientGUIListCtrl.BetterListCtrl( content_parsers_panel, 'content_parsers', 10, 24, columns, self._ConvertContentParserToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         content_parsers_panel.SetListCtrl( self._content_parsers )
         
@@ -2499,7 +2503,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
         
-        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrl( sub_page_parsers_panel, 'sub_page_parsers', 4, 36, [ ( 'name', 24 ), ( '\'post\' separation formula', 24 ), ( 'produces', -1 ) ], self._ConvertSubPageParserToListCtrlTuple, delete_key_callback = self._DeleteSubPageParser, activation_callback = self._EditSubPageParser )
+        columns = [ ( 'name', 24 ), ( '\'post\' separation formula', 24 ), ( 'produces', -1 ) ]
+        
+        self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrl( sub_page_parsers_panel, 'sub_page_parsers', 4, 36, columns, self._ConvertSubPageParserToListCtrlTuple, delete_key_callback = self._DeleteSubPageParser, activation_callback = self._EditSubPageParser )
         
         sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
         
@@ -2897,7 +2903,9 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._parsers = ClientGUIListCtrl.BetterListCtrl( parsers_panel, 'parsers', 20, 24, [ ( 'name', -1 ), ( 'example urls', 40 ), ( 'produces', 40 ) ], self._ConvertParserToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'name', -1 ), ( 'example urls', 40 ), ( 'produces', 40 ) ]
+        
+        self._parsers = ClientGUIListCtrl.BetterListCtrl( parsers_panel, 'parsers', 20, 24, columns, self._ConvertParserToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         parsers_panel.SetListCtrl( self._parsers )
         
@@ -3354,7 +3362,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         transformations_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._transformations = ClientGUIListCtrl.BetterListCtrl( transformations_panel, 'string_converter_transformations', 7, 35, [ ( '#', 3 ), ( 'transformation', 30 ), ( 'result', -1 ) ], self._ConvertTransformationToListCtrlTuple, delete_key_callback = self._DeleteTransformation, activation_callback = self._EditTransformation )
+        columns = [ ( '#', 3 ), ( 'transformation', 30 ), ( 'result', -1 ) ]
+        
+        self._transformations = ClientGUIListCtrl.BetterListCtrl( transformations_panel, 'string_converter_transformations', 7, 35, columns, self._ConvertTransformationToListCtrlTuple, delete_key_callback = self._DeleteTransformation, activation_callback = self._EditTransformation )
         
         transformations_panel.SetListCtrl( self._transformations )
         

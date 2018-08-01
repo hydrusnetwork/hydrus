@@ -117,7 +117,28 @@ class ReviewPanel( ResizingScrolledPanel ):
     
     pass
     
-
+class ReviewSinglePanelPanel( ReviewPanel ):
+    
+    def __init__( self, parent ):
+        
+        ReviewPanel.__init__( self, parent )
+        
+        self._panel = None
+        
+        #
+        
+        self._vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        self.SetSizer( self._vbox )
+        
+    
+    def SetPanel( self, panel ):
+        
+        self._panel = panel
+        
+        self._vbox.Add( panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
 class ReviewPanelVetoable( ResizingScrolledPanel ):
     
     def TryToClose( self ):

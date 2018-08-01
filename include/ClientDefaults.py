@@ -37,7 +37,7 @@ def GetClientDefaultOptions():
     options[ 'remove_trashed_files' ] = False
     options[ 'remove_filtered_files' ] = False
     options[ 'external_host' ] = None
-    options[ 'gallery_file_limit' ] = 200
+    options[ 'gallery_file_limit' ] = 2000
     options[ 'always_embed_autocompletes' ] = HC.PLATFORM_LINUX or HC.PLATFORM_OSX
     options[ 'confirm_trash' ] = True
     options[ 'confirm_archive' ] = True

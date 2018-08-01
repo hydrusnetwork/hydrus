@@ -24,14 +24,15 @@ from include import HydrusThreading
 from include import TestClientConstants
 from include import TestClientDaemons
 from include import TestClientData
+from include import TestClientImageHandling
 from include import TestClientImportOptions
+from include import TestClientImportSubscriptions
 from include import TestClientListBoxes
 from include import TestClientNetworking
 from include import TestConstants
 from include import TestDialogs
 from include import TestDB
 from include import TestFunctions
-from include import TestClientImageHandling
 from include import TestHydrusNATPunch
 from include import TestHydrusNetworking
 from include import TestHydrusSerialisable
@@ -473,6 +474,10 @@ class Controller( object ):
             
             suites.append( unittest.TestLoader().loadTestsFromModule( TestClientNetworking ) )
             suites.append( unittest.TestLoader().loadTestsFromModule( TestHydrusNetworking ) )
+            
+        if run_all or only_run == 'import':
+            
+            suites.append( unittest.TestLoader().loadTestsFromModule( TestClientImportSubscriptions ) )
             
         if run_all or only_run == 'image':
             

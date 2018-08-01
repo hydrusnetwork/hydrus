@@ -68,9 +68,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def _AddWatcher( self, watcher ):
         
-        publish_to_page = False
-        
-        watcher.Repage( self._page_key, publish_to_page )
+        watcher.PublishToPage( False )
+        watcher.Repage( self._page_key )
         
         self._watchers.append( watcher )
         
@@ -146,9 +145,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         watcher = self._watcher_keys_to_watchers[ watcher_key ]
         
-        publish_to_page = False
-        
-        watcher.Repage( 'dead page key', publish_to_page )
+        watcher.PublishToPage( False )
+        watcher.Repage( 'dead page key' )
         
         self._watchers.remove( watcher )
         
@@ -254,8 +252,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-            
-            self._highlighted_watcher_url = None
+                self._highlighted_watcher_url = None
+                
             
             return None
             
@@ -388,6 +386,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._highlighted_watcher_url = highlighted_watcher.GetURL()
                 
+                highlighted_watcher.PublishToPage( True )
+                
             
         
     
@@ -411,9 +411,14 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         # set a 2s period so the page value/range is breddy snappy
         self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
         
-        publish_to_page = False
-        
         for watcher in self._watchers:
+            
+            publish_to_page = False
+            
+            if self._highlighted_watcher_url is not None and watcher.GetURL() == self._highlighted_watcher_url:
+                
+                publish_to_page = True
+                
             
             watcher.Start( page_key, publish_to_page )
             
@@ -498,10 +503,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._next_check_time = None
         
-        self._download_control_file_set = None
-        self._download_control_file_clear = None
-        self._download_control_checker_set = None
-        self._download_control_checker_clear = None
+        self._file_network_job = None
+        self._checker_network_job = None
         
         self._check_now = False
         self._files_paused = False
@@ -528,6 +531,27 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         HG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
     
+    def _CheckerNetworkJobPresentationContextFactory( self, network_job ):
+        
+        def enter_call():
+            
+            with self._lock:
+                
+                self._checker_network_job = network_job
+                
+            
+        
+        def exit_call():
+            
+            with self._lock:
+                
+                self._checker_network_job = None
+                
+            
+        
+        return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
+        
+    
     def _CheckWatchableURL( self ):
         
         def status_hook( text ):
@@ -552,7 +576,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( num_urls_added, added_all_possible_urls, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 ) = gallery_seed.WorkOnURL( self._gallery_seed_log, self._file_seed_cache, status_hook, title_hook, ClientImporting.GenerateWatcherNetworkJobFactory( self._watcher_key ), self._CheckerNetworkJobPresentationContextFactory, self._file_import_options )
             
             if num_urls_added > 0:
                 
@@ -606,8 +630,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._UpdateNextCheckTime()
             
-            self._PublishPageName()
-            
         
         if not watcher_status_should_stick:
             
@@ -632,10 +654,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                if self._download_control_file_set is not None:
-                    
-                    wx.CallAfter( self._download_control_file_set, network_job )
-                    
+                self._file_network_job = network_job
                 
             
         
@@ -643,10 +662,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                if self._download_control_file_clear is not None:
-                    
-                    wx.CallAfter( self._download_control_file_clear )
-                    
+                self._file_network_job = None
                 
             
         
@@ -680,92 +696,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
         self._file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
         self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
-        
-    
-    def _PublishPageName( self ):
-        
-        new_options = HG.client_controller.new_options
-        
-        cannot_rename = not new_options.GetBoolean( 'permit_watchers_to_name_their_pages' )
-        
-        if cannot_rename:
-            
-            page_name = 'watcher'
-            
-        elif self._subject in ( '', 'unknown subject' ):
-            
-            page_name = 'watcher'
-            
-        else:
-            
-            page_name = self._subject
-            
-        
-        if self._checking_status == ClientImporting.CHECKER_STATUS_404:
-            
-            thread_watcher_not_found_page_string = new_options.GetNoneableString( 'thread_watcher_not_found_page_string' )
-            
-            if thread_watcher_not_found_page_string is not None:
-                
-                page_name = thread_watcher_not_found_page_string + ' ' + page_name
-                
-            
-        elif self._checking_status == ClientImporting.CHECKER_STATUS_DEAD:
-            
-            thread_watcher_dead_page_string = new_options.GetNoneableString( 'thread_watcher_dead_page_string' )
-            
-            if thread_watcher_dead_page_string is not None:
-                
-                page_name = thread_watcher_dead_page_string + ' ' + page_name
-                
-            
-        elif self._checking_paused:
-            
-            thread_watcher_paused_page_string = new_options.GetNoneableString( 'thread_watcher_paused_page_string' )
-            
-            if thread_watcher_paused_page_string is not None:
-                
-                page_name = thread_watcher_paused_page_string + ' ' + page_name
-                
-            
-        
-        if page_name != self._last_pubbed_page_name:
-            
-            self._last_pubbed_page_name = page_name
-            
-            if self._publish_to_page:
-                
-                HG.client_controller.pub( 'rename_page', self._page_key, page_name )
-                
-            
-        
-        
-    
-    def _CheckerNetworkJobPresentationContextFactory( self, network_job ):
-        
-        def enter_call():
-            
-            with self._lock:
-                
-                if self._download_control_checker_set is not None:
-                    
-                    wx.CallAfter( self._download_control_checker_set, network_job )
-                    
-                
-            
-        
-        def exit_call():
-            
-            with self._lock:
-                
-                if self._download_control_checker_clear is not None:
-                    
-                    wx.CallAfter( self._download_control_checker_clear )
-                    
-                
-            
-        
-        return ClientImporting.NetworkJobPresentationContext( enter_call, exit_call )
         
     
     def _UpdateFileVelocityStatus( self ):
@@ -917,6 +847,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def CheckingPaused( self ):
+        
+        with self._lock:
+            
+            return self._checking_paused
+            
+        
+    
     def CheckNow( self ):
         
         with self._lock:
@@ -954,6 +892,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def FilesPaused( self ):
+        
+        with self._lock:
+            
+            return self._files_paused
+            
+        
+    
     def GetCheckerOptions( self ):
         
         with self._lock:
@@ -970,6 +916,38 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFileImportOptions( self ):
+        
+        with self._lock:
+            
+            return self._file_import_options
+            
+        
+    
+    def GetFileSeedCache( self ):
+        
+        with self._lock:
+            
+            return self._file_seed_cache
+            
+        
+    
+    def GetGallerySeedLog( self ):
+        
+        with self._lock:
+            
+            return self._gallery_seed_log
+            
+        
+    
+    def GetNetworkJobs( self ):
+        
+        with self._lock:
+            
+            return ( self._file_network_job, self._checker_network_job )
+            
+        
+    
     def GetOptions( self ):
         
         with self._lock:
@@ -980,17 +958,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def GetPresentedHashes( self ):
         
-        return self._file_seed_cache.GetPresentedHashes( self._file_import_options )
-        
-    
-    def GetFileSeedCache( self ):
-        
-        return self._file_seed_cache
-        
-    
-    def GetGallerySeedLog( self ):
-        
-        return self._gallery_seed_log
+        with self._lock:
+            
+            return self._file_seed_cache.GetPresentedHashes( self._file_import_options )
+            
         
     
     def GetSimpleStatus( self ):
@@ -1004,10 +975,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             elif self._checking_status == ClientImporting.CHECKER_STATUS_DEAD:
                 
                 return 'DEAD'
-                
-            elif self._checking_paused or self._files_paused:
-                
-                return 'paused'
                 
             else:
                 
@@ -1053,6 +1020,14 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 return self._subject
                 
+            
+        
+    
+    def GetTagImportOptions( self ):
+        
+        with self._lock:
+            
+            return self._tag_import_options
             
         
     
@@ -1109,7 +1084,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PausePlayChecker( self ):
+    def PausePlayChecking( self ):
         
         with self._lock:
             
@@ -1136,39 +1111,19 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PausePlay( self ):
+    def PublishToPage( self, publish_to_page ):
         
         with self._lock:
             
-            if self._checking_paused:
-                
-                if self._IsDead(): # can't unpause checker until a checknow event
-                    
-                    self._files_paused = not self._files_paused
-                    
-                else:
-                    
-                    self._checking_paused = False
-                    self._files_paused = False
-                    
-                
-                ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
-                ClientImporting.WakeRepeatingJob( self._files_repeating_job )
-                
-            else:
-                
-                self._checking_paused = True
-                self._files_paused = True
-                
+            self._publish_to_page = publish_to_page
             
         
     
-    def Repage( self, page_key, publish_to_page ):
+    def Repage( self, page_key ):
         
         with self._lock:
             
             self._page_key = page_key
-            self._publish_to_page = publish_to_page
             
         
     
@@ -1185,24 +1140,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             self._UpdateFileVelocityStatus()
             
             ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
-            
-        
-    
-    def SetDownloadControlChecker( self, download_control ):
-        
-        with self._lock:
-            
-            self._download_control_checker_set = download_control.SetNetworkJob
-            self._download_control_checker_clear = download_control.ClearNetworkJob
-            
-        
-    
-    def SetDownloadControlFile( self, download_control ):
-        
-        with self._lock:
-            
-            self._download_control_file_set = download_control.SetNetworkJob
-            self._download_control_file_clear = download_control.ClearNetworkJob
             
         
     
@@ -1248,8 +1185,6 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._publish_to_page = publish_to_page
         
         self._UpdateNextCheckTime()
-        
-        self._PublishPageName()
         
         self._UpdateFileVelocityStatus()
         

@@ -29,7 +29,9 @@ import ClientGUITime
 import ClientGUITopLevelWindows
 import ClientImporting
 import ClientImportGallery
+import ClientImportLocal
 import ClientImportOptions
+import ClientImportSimpleURLs
 import ClientImportWatchers
 import ClientMedia
 import ClientParsing
@@ -58,10 +60,10 @@ ID_TIMER_CAPTCHA = wx.NewId()
 ID_TIMER_DUMP = wx.NewId()
 
 MANAGEMENT_TYPE_DUMPER = 0
-MANAGEMENT_TYPE_IMPORT_GALLERY = 1
+MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY = 1
 MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER = 2
 MANAGEMENT_TYPE_IMPORT_HDD = 3
-MANAGEMENT_TYPE_IMPORT_WATCHER = 4
+MANAGEMENT_TYPE_IMPORT_WATCHER = 4 # defunct
 MANAGEMENT_TYPE_PETITIONS = 5
 MANAGEMENT_TYPE_QUERY = 6
 MANAGEMENT_TYPE_IMPORT_URLS = 7
@@ -95,13 +97,13 @@ def CreateManagementControllerDuplicateFilter():
     
     return management_controller
     
-def CreateManagementControllerImportGallery( gallery_identifier ):
+def CreateManagementControllerImportGallery():
     
-    page_name = gallery_identifier.ToString()
+    page_name = 'gallery'
     
-    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_GALLERY )
+    management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY )
     
-    multiple_gallery_import = ClientImportGallery.MultipleGalleryImport( gallery_identifier = gallery_identifier )
+    multiple_gallery_import = ClientImportGallery.MultipleGalleryImport()
     
     management_controller.SetVariable( 'multiple_gallery_import', multiple_gallery_import )
     
@@ -111,7 +113,7 @@ def CreateManagementControllerImportSimpleDownloader():
     
     management_controller = CreateManagementController( 'simple downloader', MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER )
     
-    simple_downloader_import = ClientImporting.SimpleDownloaderImport()
+    simple_downloader_import = ClientImportSimpleURLs.SimpleDownloaderImport()
     
     formula_name = HG.client_controller.new_options.GetString( 'favourite_simple_downloader_formula' )
     
@@ -125,7 +127,7 @@ def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_ta
     
     management_controller = CreateManagementController( 'import', MANAGEMENT_TYPE_IMPORT_HDD )
     
-    hdd_import = ClientImporting.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+    hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
     
     management_controller.SetVariable( 'hdd_import', hdd_import )
     
@@ -133,7 +135,7 @@ def CreateManagementControllerImportHDD( paths, file_import_options, paths_to_ta
     
 def CreateManagementControllerImportMultipleWatcher( url = None ):
     
-    management_controller = CreateManagementController( 'multiple watcher', MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
+    management_controller = CreateManagementController( 'watcher', MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER )
     
     multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport( url = url )
     
@@ -141,28 +143,11 @@ def CreateManagementControllerImportMultipleWatcher( url = None ):
     
     return management_controller
     
-def CreateManagementControllerImportWatcher( url = None ):
-    
-    if url is None:
-        
-        url = ''
-        
-    
-    management_controller = CreateManagementController( 'watcher', MANAGEMENT_TYPE_IMPORT_WATCHER )
-    
-    watcher_import = ClientImportWatchers.WatcherImport()
-    
-    watcher_import.SetURL( url )
-    
-    management_controller.SetVariable( 'watcher_import', watcher_import )
-    
-    return management_controller
-    
 def CreateManagementControllerImportURLs():
     
     management_controller = CreateManagementController( 'url import', MANAGEMENT_TYPE_IMPORT_URLS )
     
-    urls_import = ClientImporting.URLsImport()
+    urls_import = ClientImportSimpleURLs.URLsImport()
     
     management_controller.SetVariable( 'urls_import', urls_import )
     
@@ -562,7 +547,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self, page_name = 'page' ):
         
@@ -656,7 +641,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 paths_to_tags = { path : { service_key.decode( 'hex' ) : tags for ( service_key, tags ) in service_keys_to_tags } for ( path, service_keys_to_tags ) in paths_to_tags.items() }
                 
-                hdd_import = ClientImporting.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
+                hdd_import = ClientImportLocal.HDDImport( paths = paths, file_import_options = file_import_options, paths_to_tags = paths_to_tags, delete_after_success = delete_after_success )
                 
                 serialisable_serialisables[ 'hdd_import' ] = hdd_import.GetSerialisableTuple()
                 
@@ -730,6 +715,32 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             return ( 6, new_serialisable_info )
             
         
+        if version == 6:
+            
+            ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables ) = old_serialisable_info
+            
+            if 'watcher_import' in serialisable_serialisables:
+                
+                watcher = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_serialisables[ 'watcher_import' ] )
+                
+                management_type = MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER
+                
+                multiple_watcher_import = ClientImportWatchers.MultipleWatcherImport()
+                
+                multiple_watcher_import.AddWatcher( watcher )
+                
+                serialisable_multiple_watcher_import = multiple_watcher_import.GetSerialisableTuple()
+                
+                serialisable_serialisables[ 'multiple_watcher_import' ] = serialisable_multiple_watcher_import
+                
+                del serialisable_serialisables[ 'watcher_import' ]
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_keys, serialisable_simples, serialisable_serialisables )
+            
+            return ( 7, new_serialisable_info )
+            
+        
     
     def GetKey( self, name ):
         
@@ -750,13 +761,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            if self._management_type == MANAGEMENT_TYPE_IMPORT_GALLERY:
-                
-                multiple_gallery_import = self._serialisables[ 'multiple_gallery_import' ]
-                
-                return multiple_gallery_import.GetValueRange()
-                
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
+            if self._management_type == MANAGEMENT_TYPE_IMPORT_HDD:
                 
                 hdd_import = self._serialisables[ 'hdd_import' ]
                 
@@ -768,17 +773,17 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 return simple_downloader_import.GetValueRange()
                 
+            elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY:
+                
+                multiple_gallery_import = self._serialisables[ 'multiple_gallery_import' ]
+                
+                return multiple_gallery_import.GetValueRange()
+                
             elif self._management_type == MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER:
                 
                 multiple_watcher_import = self._serialisables[ 'multiple_watcher_import' ]
                 
                 return multiple_watcher_import.GetValueRange()
-                
-            elif self._management_type == MANAGEMENT_TYPE_IMPORT_WATCHER:
-                
-                watcher_import = self._serialisables[ 'watcher_import' ]
-                
-                return watcher_import.GetValueRange()
                 
             elif self._management_type == MANAGEMENT_TYPE_IMPORT_URLS:
                 
@@ -812,21 +817,9 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         return name in self._simples or name in self._serialisables
         
     
-    def IsDeadWatcher( self ):
-        
-        if self._management_type == MANAGEMENT_TYPE_IMPORT_WATCHER:
-            
-            watcher_import = self.GetVariable( 'watcher_import' )
-            
-            return watcher_import.IsDead()
-            
-        
-        return False
-        
-    
     def IsImporter( self ):
         
-        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_GALLERY, MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_WATCHER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
+        return self._management_type in ( MANAGEMENT_TYPE_IMPORT_HDD, MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER, MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY, MANAGEMENT_TYPE_IMPORT_MULTIPLE_WATCHER, MANAGEMENT_TYPE_IMPORT_URLS )
         
     
     def SetKey( self, name, key ):
@@ -866,7 +859,7 @@ class ManagementPanel( wx.lib.scrolledpanel.ScrolledPanel ):
         
         wx.lib.scrolledpanel.ScrolledPanel.__init__( self, parent, style = wx.BORDER_NONE | wx.VSCROLL )
         
-        self.SetupScrolling()
+        self.SetupScrolling( scrollIntoView = False )
         
         self.SetBackgroundColour( wx.SystemSettings.GetColour( wx.SYS_COLOUR_FRAMEBK ) )
         
@@ -1441,325 +1434,6 @@ class ManagementPanelImporter( ManagementPanel ):
         self._UpdateStatus()
         
     
-class ManagementPanelImporterGallery( ManagementPanelImporter ):
-    
-    def __init__( self, parent, page, controller, management_controller ):
-        
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
-        
-        self._multiple_gallery_import = self._management_controller.GetVariable( 'multiple_gallery_import' )
-        
-        self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
-        
-        self._import_queue_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'imports' )
-        
-        self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, style = wx.ST_ELLIPSIZE_END )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
-        self._file_download_control = ClientGUIControls.NetworkJobControl( self._import_queue_panel )
-        
-        self._files_pause_button = wx.BitmapButton( self._import_queue_panel, bitmap = CC.GlobalBMPs.pause )
-        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventFilesPause )
-        
-        self._gallery_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'gallery parser' )
-        
-        self._gallery_status = ClientGUICommon.BetterStaticText( self._gallery_panel, style = wx.ST_ELLIPSIZE_END )
-        
-        self._gallery_pause_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.pause )
-        self._gallery_pause_button.Bind( wx.EVT_BUTTON, self.EventGalleryPause )
-        
-        self._gallery_cancel_button = wx.BitmapButton( self._gallery_panel, bitmap = CC.GlobalBMPs.stop )
-        self._gallery_cancel_button.Bind( wx.EVT_BUTTON, self.EventGalleryCancel )
-        
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, self._controller, True, page_key = self._page_key )
-        
-        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._gallery_panel )
-        
-        self._pending_queries_panel = ClientGUICommon.StaticBox( self._gallery_downloader_panel, 'pending queries' )
-        
-        self._pending_queries_listbox = wx.ListBox( self._pending_queries_panel, size = ( -1, 100 ), style = wx.LB_EXTENDED )
-        
-        self._advance_button = wx.Button( self._pending_queries_panel, label = u'\u2191' )
-        self._advance_button.Bind( wx.EVT_BUTTON, self.EventAdvance )
-        
-        self._delete_button = wx.Button( self._pending_queries_panel, label = 'X' )
-        self._delete_button.Bind( wx.EVT_BUTTON, self.EventDelete )
-        
-        self._delay_button = wx.Button( self._pending_queries_panel, label = u'\u2193' )
-        self._delay_button.Bind( wx.EVT_BUTTON, self.EventDelay )
-        
-        self._query_input = ClientGUIControls.TextAndPasteCtrl( self._pending_queries_panel, self._PendQueries )
-        
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
-        self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
-        self._file_limit.SetToolTip( 'per query, stop searching the gallery once this many files has been reached' )
-        
-        self._multiple_gallery_import.SetDownloadControls( self._file_download_control, self._gallery_download_control )
-        
-        ( file_import_options, tag_import_options, file_limit ) = self._multiple_gallery_import.GetOptions()
-        
-        gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
-        
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
-        
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._multiple_gallery_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._gallery_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._gallery_pause_button, CC.FLAGS_VCENTER )
-        hbox.Add( self._gallery_cancel_button, CC.FLAGS_VCENTER )
-        
-        self._gallery_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        queue_buttons_vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        queue_buttons_vbox.Add( self._advance_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.Add( self._delete_button, CC.FLAGS_VCENTER )
-        queue_buttons_vbox.Add( self._delay_button, CC.FLAGS_VCENTER )
-        
-        queue_hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        queue_hbox.Add( self._pending_queries_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        queue_hbox.Add( queue_buttons_vbox, CC.FLAGS_VCENTER )
-        
-        self._pending_queries_panel.Add( queue_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._pending_queries_panel.Add( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
-        
-        self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._gallery_downloader_panel.Add( self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._gallery_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._pending_queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._collect_by.Hide()
-        
-        vbox.Add( self._gallery_downloader_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        file_seed_cache = self._multiple_gallery_import.GetFileSeedCache()
-        
-        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
-        
-        gallery_seed_log = self._multiple_gallery_import.GetGallerySeedLog()
-        
-        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
-        
-        self._query_input.SetValue( search_value )
-        
-        self._file_limit.SetValue( file_limit )
-        
-        self._UpdateStatus()
-        
-    
-    def _PendQueries( self, queries ):
-        
-        for query in queries:
-            
-            self._multiple_gallery_import.PendQuery( query )
-            
-        
-        self._UpdateStatus()
-        
-    
-    def _UpdateStatus( self ):
-        
-        ( pending_queries, gallery_status, current_action, files_paused, gallery_paused, gallery_cancellable ) = self._multiple_gallery_import.GetStatus()
-        
-        if self._pending_queries_listbox.GetStrings() != pending_queries:
-            
-            selected_indices = self._pending_queries_listbox.GetSelections()
-            
-            selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
-            
-            self._pending_queries_listbox.SetItems( pending_queries )
-            
-            for selected_string in selected_strings:
-                
-                selection_index = self._pending_queries_listbox.FindString( selected_string )
-                
-                if selection_index != wx.NOT_FOUND:
-                    
-                    self._pending_queries_listbox.Select( selection_index )
-                    
-                
-            
-        
-        if files_paused:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
-            
-        
-        if gallery_paused:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._gallery_pause_button, CC.GlobalBMPs.pause )
-            
-        
-        if gallery_cancellable:
-            
-            self._gallery_cancel_button.Enable()
-            
-        else:
-            
-            self._gallery_cancel_button.Disable()
-            
-        
-        if gallery_paused:
-            
-            if gallery_status == '':
-                
-                gallery_status = 'paused'
-                
-            else:
-                
-                gallery_status = 'paused - ' + gallery_status
-                
-            
-        
-        self._gallery_status.SetLabelText( gallery_status )
-        
-        if files_paused:
-            
-            if current_action == '':
-                
-                current_action = 'paused'
-                
-            else:
-                
-                current_action = 'pausing - ' + current_action
-                
-            
-        
-        self._current_action.SetLabelText( current_action )
-        
-    
-    def CheckAbleToClose( self ):
-        
-        if self._multiple_gallery_import.CurrentlyWorking():
-            
-            raise HydrusExceptions.VetoException( 'This page is still importing.' )
-            
-        
-    
-    def EventAdvance( self, event ):
-        
-        selected_indices = self._pending_queries_listbox.GetSelections()
-        
-        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
-        
-        if len( selected_strings ) > 0:
-            
-            self._multiple_gallery_import.AdvanceQueries( selected_strings )
-            
-            self._UpdateStatus()
-            
-        
-    
-    def EventDelay( self, event ):
-        
-        selected_indices = self._pending_queries_listbox.GetSelections()
-        
-        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
-        
-        if len( selected_strings ) > 0:
-            
-            self._multiple_gallery_import.DelayQueries( selected_strings )
-            
-            self._UpdateStatus()
-            
-        
-    
-    def EventDelete( self, event ):
-        
-        selected_indices = self._pending_queries_listbox.GetSelections()
-        
-        selected_strings = [ self._pending_queries_listbox.GetString( i ) for i in selected_indices ]
-        
-        if len( selected_strings ) > 0:
-            
-            self._multiple_gallery_import.DeleteQueries( selected_strings )
-            
-            self._UpdateStatus()
-            
-        
-    
-    def EventFileLimit( self, event ):
-        
-        self._multiple_gallery_import.SetFileLimit( self._file_limit.GetValue() )
-        
-        event.Skip()
-        
-    
-    def EventFilesPause( self, event ):
-        
-        self._multiple_gallery_import.PausePlayFiles()
-        
-        self._UpdateStatus()
-        
-    
-    def EventGalleryCancel( self, event ):
-        
-        self._multiple_gallery_import.FinishCurrentQuery()
-        
-        self._UpdateStatus()
-        
-    
-    def EventGalleryPause( self, event ):
-        
-        self._multiple_gallery_import.PausePlayGallery()
-        
-        self._UpdateStatus()
-        
-    
-    def SetSearchFocus( self ):
-        
-        wx.CallAfter( self._query_input.SetFocus )
-        
-    
-    def Start( self ):
-        
-        self._multiple_gallery_import.Start( self._page_key )
-        
-    
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_GALLERY ] = ManagementPanelImporterGallery
-
 class ManagementPanelImporterHDD( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -1858,6 +1532,506 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_HDD ] = ManagementPanelImporterHDD
 
+class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
+    
+    def __init__( self, parent, page, controller, management_controller ):
+        
+        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
+        
+        self._last_gallery_import_keys = set()
+        self._next_update_time = 0
+        
+        self._multiple_gallery_import = self._management_controller.GetVariable( 'multiple_gallery_import' )
+        
+        self._highlighted_gallery_import = self._multiple_gallery_import.GetHighlightedGalleryImport()
+        
+        #
+        
+        self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
+        
+        #
+        
+        
+        self._gallery_importers_status_st_top = ClientGUICommon.BetterStaticText( self._gallery_downloader_panel )
+        self._gallery_importers_status_st_bottom = ClientGUICommon.BetterStaticText( self._gallery_downloader_panel )
+        
+        self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
+        
+        columns = [ ( 'query', -1 ), ( 'source', 11 ), ( 'f', 3 ), ( 's', 3 ), ( 'status', 8 ), ( 'items', 9 ) ]
+        
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, 'gallery_importers', 24, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightGalleryImport )
+        
+        self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
+        
+        self._gallery_importers_listctrl_panel.AddButton( 'clear highlight', self._ClearExistingHighlightAndPanel, enabled_check_func = self._CanClearHighlight )
+        self._gallery_importers_listctrl_panel.AddButton( 'highlight', self._HighlightGalleryImport, enabled_check_func = self._CanHighlight )
+        
+        self._gallery_importers_listctrl_panel.NewButtonRow()
+        
+        self._gallery_importers_listctrl_panel.AddButton( 'pause/play files', self._PausePlayFiles, enabled_only_on_selection = True )
+        self._gallery_importers_listctrl_panel.AddButton( 'pause/play search', self._PausePlayGallery, enabled_only_on_selection = True )
+        
+        self._gallery_importers_listctrl_panel.NewButtonRow()
+        
+        self._gallery_importers_listctrl_panel.AddButton( 'remove', self._RemoveGalleryImports, enabled_only_on_selection = True )
+        
+        self._gallery_importers_listctrl_panel.NewButtonRow()
+        
+        self._gallery_importers_listctrl_panel.AddButton( 'set options to queries', self._SetOptionsToGalleryImports, enabled_only_on_selection = True )
+        
+        self._gallery_importers_listctrl.Sort( 0 )
+        
+        #
+        
+        self._query_input = ClientGUIControls.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
+        
+        self._gallery_selector = ClientGUIImport.GallerySelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGalleryIdentifier(), update_callable = self._SetGalleryIdentifier )
+        
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
+        self._file_limit.Bind( wx.EVT_SPINCTRL, self.EventFileLimit )
+        self._file_limit.SetToolTip( 'per query, stop searching the gallery once this many files has been reached' )
+        
+        file_import_options = self._multiple_gallery_import.GetFileImportOptions()
+        tag_import_options = self._multiple_gallery_import.GetTagImportOptions()
+        file_limit = self._multiple_gallery_import.GetFileLimit()
+        
+        gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
+        
+        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+        
+        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._gallery_downloader_panel, file_import_options, self._multiple_gallery_import.SetFileImportOptions )
+        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._gallery_downloader_panel, namespaces, tag_import_options, update_callable = self._multiple_gallery_import.SetTagImportOptions, allow_default_selection = True )
+        
+        #
+        
+        self._gallery_downloader_panel.Add( self._gallery_importers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._gallery_importers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._gallery_importers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._gallery_downloader_panel.Add( self._query_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._gallery_selector, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        self._highlighted_gallery_import_panel = ClientGUIImport.GalleryImportPanel( self, self._page_key, name = 'highlighted query' )
+        
+        self._highlighted_gallery_import_panel.SetGalleryImport( self._highlighted_gallery_import )
+        
+        #
+        
+        vbox = wx.BoxSizer( wx.VERTICAL )
+        
+        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._collect_by.Hide()
+        
+        vbox.Add( self._gallery_downloader_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._highlighted_gallery_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._MakeCurrentSelectionTagsBox( vbox )
+        
+        self.SetSizer( vbox )
+        
+        #
+        
+        self._query_input.SetValue( search_value )
+        
+        self._file_limit.SetValue( file_limit )
+        
+        self._UpdateStatus()
+        
+    
+    def _CanClearHighlight( self ):
+        
+        return self._highlighted_gallery_import is not None
+        
+    
+    def _CanHighlight( self ):
+        
+        selected = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( selected ) != 1:
+            
+            return False
+            
+        
+        gallery_import = selected[0]
+        
+        return gallery_import != self._highlighted_gallery_import
+        
+    
+    def _ClearExistingHighlight( self ):
+        
+        if self._highlighted_gallery_import is not None:
+            
+            self._highlighted_gallery_import.PublishToPage( False )
+            
+            self._highlighted_gallery_import = None
+            
+            self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
+            
+            self._gallery_importers_listctrl_panel.UpdateButtons()
+            
+            self._highlighted_gallery_import_panel.SetGalleryImport( None )
+            
+        
+    
+    def _ClearExistingHighlightAndPanel( self ):
+        
+        if self._highlighted_gallery_import is None:
+            
+            return
+            
+        
+        self._ClearExistingHighlight()
+        
+        media_results = []
+        
+        panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, media_results )
+        
+        self._page.SwapMediaPanel( panel )
+        
+        self._gallery_importers_listctrl.UpdateDatas()
+        
+    
+    def _ConvertDataToListCtrlTuples( self, gallery_import ):
+        
+        query_text = gallery_import.GetQueryText()
+        
+        pretty_query_text = query_text
+        
+        if gallery_import == self._highlighted_gallery_import:
+            
+            pretty_query_text = '* ' + pretty_query_text
+            
+        
+        source = gallery_import.GetGalleryIdentifier()
+        
+        pretty_source = source.ToString()
+        
+        files_paused = gallery_import.FilesPaused()
+        
+        if files_paused:
+            
+            pretty_files_paused = u'\u23F8'
+            
+        else:
+            
+            pretty_files_paused = ''
+            
+        
+        gallery_finished = gallery_import.GalleryFinished()
+        gallery_paused = gallery_import.GalleryPaused()
+        
+        if gallery_finished:
+            
+            pretty_gallery_paused = u'\u23F9'
+            
+        elif gallery_paused:
+            
+            pretty_gallery_paused = u'\u23F8'
+            
+        else:
+            
+            pretty_gallery_paused = ''
+            
+        
+        status = gallery_import.GetCurrentAction()
+        
+        if status == '':
+            
+            status = gallery_import.GetGalleryStatus()
+            
+        
+        pretty_status = status
+        
+        ( file_seed_cache_status, file_seed_cache_simple_status, ( num_done, num_total ) ) = gallery_import.GetFileSeedCache().GetStatus()
+        
+        if num_total > 0:
+            
+            sort_float = float( num_done ) / num_total
+            
+        else:
+            
+            sort_float = 0.0
+            
+        
+        progress = ( sort_float, num_total, num_done )
+        
+        pretty_progress = file_seed_cache_simple_status
+        
+        display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress )
+        sort_tuple = ( query_text, pretty_source, files_paused, gallery_paused, status, progress )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _HighlightGalleryImport( self ):
+        
+        selected = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( selected ) == 1:
+            
+            new_highlight = selected[0]
+            
+            if new_highlight == self._highlighted_gallery_import:
+                
+                self._ClearExistingHighlightAndPanel()
+                
+            else:
+                
+                self._ClearExistingHighlight()
+                
+                self._highlighted_gallery_import = new_highlight
+                
+                self._multiple_gallery_import.SetHighlightedGalleryImport( self._highlighted_gallery_import )
+                
+                hashes = self._highlighted_gallery_import.GetPresentedHashes()
+                
+                media_results = HG.client_controller.Read( 'media_results', hashes )
+                
+                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
+                
+                sorted_media_results = [ hashes_to_media_results[ hash ] for hash in hashes ]
+                
+                panel = ClientGUIMedia.MediaPanelThumbnails( self._page, self._page_key, CC.LOCAL_FILE_SERVICE_KEY, sorted_media_results )
+                
+                self._page.SwapMediaPanel( panel )
+                
+                self._gallery_importers_listctrl_panel.UpdateButtons()
+                
+                self._gallery_importers_listctrl.UpdateDatas()
+                
+                self._highlighted_gallery_import_panel.SetGalleryImport( self._highlighted_gallery_import )
+                
+            
+        
+    
+    def _PausePlayFiles( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            gallery_import.PausePlayFiles()
+            
+        
+        self._gallery_importers_listctrl.UpdateDatas()
+        
+    
+    def _PausePlayGallery( self ):
+        
+        for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
+            
+            gallery_import.PausePlayGallery()
+            
+        
+        self._gallery_importers_listctrl.UpdateDatas()
+        
+    
+    def _PendQueries( self, queries ):
+        
+        for query in queries:
+            
+            self._multiple_gallery_import.PendQuery( query )
+            
+        
+        self._UpdateStatus()
+        
+    
+    def _RemoveGalleryImports( self ):
+        
+        removees = list( self._gallery_importers_listctrl.GetData( only_selected = True ) )
+        
+        if len( removees ) == 0:
+            
+            return
+            
+        
+        num_working = 0
+        
+        for gallery_import in removees:
+            
+            if gallery_import.CurrentlyWorking():
+                
+                num_working += 1
+                
+            
+        
+        message = 'Remove the ' + HydrusData.ToHumanInt( len( removees ) ) + ' selected queries?'
+        
+        if num_working > 0:
+            
+            message += os.linesep * 2
+            message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
+            
+        
+        if self._highlighted_gallery_import is not None and self._highlighted_gallery_import in removees:
+            
+            message += os.linesep * 2
+            message += 'The currently highlighted query will be removed, and the media panel cleared.'
+            
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                highlight_was_included = False
+                
+                for gallery_import in removees:
+                    
+                    if self._highlighted_gallery_import is not None and gallery_import == self._highlighted_gallery_import:
+                        
+                        highlight_was_included = True
+                        
+                    
+                    self._multiple_gallery_import.RemoveGalleryImport( gallery_import.GetGalleryImportKey() )
+                    
+                
+                if highlight_was_included:
+                    
+                    self._ClearExistingHighlightAndPanel()
+                    
+                
+            
+        
+        self._UpdateStatus()
+        
+    
+    def _SetGalleryIdentifier( self, gallery_identifier ):
+        
+        current_gallery_identifier = self._multiple_gallery_import.GetGalleryIdentifier()
+        
+        ( current_namespaces, current_search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( current_gallery_identifier )
+        
+        current_input_value = self._query_input.GetValue()
+        
+        if current_input_value in ( current_search_value, '' ):
+            
+            ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( gallery_identifier )
+            
+            self._query_input.SetValue( search_value )
+            
+        
+        self._multiple_gallery_import.SetGalleryIdentifier( gallery_identifier )
+        
+    
+    def _SetOptionsToGalleryImports( self ):
+        
+        gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        if len( gallery_imports ) == 0:
+            
+            return
+            
+        
+        message = 'Set the current file limit, file import, and tag import options to all the selected queries? (by default, these options are only applied to new queries)'
+        
+        with ClientGUIDialogs.DialogYesNo( self, message ) as dlg:
+            
+            if dlg.ShowModal() == wx.ID_YES:
+                
+                file_limit = self._file_limit.GetValue()
+                file_import_options = self._file_import_options.GetValue()
+                tag_import_options = self._tag_import_options.GetValue()
+                
+                for gallery_import in gallery_imports:
+                    
+                    gallery_import.SetFileLimit( file_limit )
+                    gallery_import.SetFileImportOptions( file_import_options )
+                    gallery_import.SetTagImportOptions( tag_import_options )
+                    
+                
+            
+        
+    
+    def _UpdateStatus( self ):
+        
+        if HydrusData.TimeHasPassed( self._next_update_time ):
+            
+            self._next_update_time = HydrusData.GetNow() + 1
+            
+            #
+            
+            gallery_import_keys = self._multiple_gallery_import.GetGalleryImportKeys()
+            
+            #
+            
+            if len( gallery_import_keys ) == 0:
+                
+                text_top = 'waiting for new queries'
+                text_bottom = ''
+                
+            else:
+                
+                ( status, simple_status, ( value, range ) ) = self._multiple_gallery_import.GetTotalStatus()
+                
+                text_top = HydrusData.ToHumanInt( len( gallery_import_keys ) ) + ' queries - ' + HydrusData.ConvertValueRangeToPrettyString( value, range )
+                text_bottom = status
+                
+            
+            self._gallery_importers_status_st_top.SetLabelText( text_top )
+            self._gallery_importers_status_st_bottom.SetLabelText( text_bottom )
+            
+            #
+            
+            if self._last_gallery_import_keys == gallery_import_keys:
+                
+                sort_data_has_changed = self._gallery_importers_listctrl.UpdateDatas()
+                
+                if sort_data_has_changed:
+                    
+                    self._gallery_importers_listctrl.Sort()
+                    
+                
+            else:
+                
+                self._last_gallery_import_keys = gallery_import_keys
+                
+                gallery_imports = self._multiple_gallery_import.GetGalleryImports()
+                
+                self._gallery_importers_listctrl.SetData( gallery_imports )
+                
+            
+        
+    
+    def CheckAbleToClose( self ):
+        
+        num_working = 0
+        
+        for gallery_import in self._multiple_gallery_import.GetGalleryImports():
+            
+            if gallery_import.CurrentlyWorking():
+                
+                num_working += 1
+                
+            
+        
+        if num_working > 0:
+            
+            raise HydrusExceptions.VetoException( HydrusData.ToHumanInt( num_working ) + ' queries are still importing.' )
+            
+        
+    
+    def EventFileLimit( self, event ):
+        
+        self._multiple_gallery_import.SetFileLimit( self._file_limit.GetValue() )
+        
+        event.Skip()
+        
+    
+    def SetSearchFocus( self ):
+        
+        wx.CallAfter( self._query_input.SetFocus )
+        
+    
+    def Start( self ):
+        
+        self._multiple_gallery_import.Start( self._page_key )
+        
+    
+management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_MULTIPLE_GALLERY ] = ManagementPanelImporterMultipleGallery
+
 class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -1877,16 +2051,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
         
-        self._highlighted_watcher_url = wx.TextCtrl( self._watchers_panel )
-        
-        self._highlighted_watcher_url.SetEditable( False )
-        
         self._watchers_status_st_top = ClientGUICommon.BetterStaticText( self._watchers_panel )
         self._watchers_status_st_bottom = ClientGUICommon.BetterStaticText( self._watchers_panel )
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 12, [ ( 'subject', -1 ), ( 'status', 8 ), ( 'items', 13 ), ( 'added', 10 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
+        columns = [ ( 'subject', -1 ), ( 'f', 3 ), ( 'c', 3 ), ( 'status', 8 ), ( 'items', 9 ), ( 'added', 8 ) ]
+        
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, 'watchers', 24, 8, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -1895,15 +2067,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel.NewButtonRow()
         
-        self._watchers_listctrl_panel.AddButton( 'pause/play', self._PausePlay, enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddButton( 'pause/play files', self._PausePlayFiles, enabled_only_on_selection = True )
+        self._watchers_listctrl_panel.AddButton( 'pause/play checking', self._PausePlayChecking, enabled_only_on_selection = True )
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
+        
+        self._watchers_listctrl_panel.NewButtonRow()
+        
         self._watchers_listctrl_panel.AddButton( 'remove', self._RemoveWatchers, enabled_only_on_selection = True )
         
         self._watchers_listctrl_panel.NewButtonRow()
         
         self._watchers_listctrl_panel.AddButton( 'set options to watchers', self._SetOptionsToWatchers, enabled_only_on_selection = True )
         
-        self._watchers_listctrl.Sort( 1 )
+        self._watchers_listctrl.Sort( 3 )
         
         self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
@@ -1917,7 +2093,12 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         #
         
-        self._watchers_panel.Add( self._highlighted_watcher_url, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._highlighted_watcher_panel = ClientGUIImport.WatcherReviewPanel( self, self._page_key, name = 'highlighted watcher' )
+        
+        self._highlighted_watcher_panel.SetWatcher( self._highlighted_watcher )
+        
+        #
+        
         self._watchers_panel.Add( self._watchers_status_st_top, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._watchers_status_st_bottom, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1935,14 +2116,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._collect_by.Hide()
         
         vbox.Add( self._watchers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.Add( self._highlighted_watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
         self.SetSizer( vbox )
         
         #
-        
-        self._UpdateHighlightedWatcherURL()
         
         self._UpdateStatus()
         
@@ -1957,6 +2137,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             self._multiple_watcher_import.AddURL( url )
             
         
+        self._UpdateStatus()
+        
     
     def _CanClearHighlight( self ):
         
@@ -1965,9 +2147,16 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _CanHighlight( self ):
         
-        num_selected = len( self._watchers_listctrl.GetData( only_selected = True ) )
+        selected = self._watchers_listctrl.GetData( only_selected = True )
         
-        return num_selected == 1
+        if len( selected ) != 1:
+            
+            return False
+            
+        
+        watcher = selected[0]
+        
+        return watcher != self._highlighted_watcher
         
     
     def _CheckNow( self ):
@@ -1982,15 +2171,15 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if self._highlighted_watcher is not None:
             
-            publish_to_page = False
-            
-            self._highlighted_watcher.Repage( self._page_key, publish_to_page )
+            self._highlighted_watcher.PublishToPage( False )
             
             self._highlighted_watcher = None
             
             self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
             
             self._watchers_listctrl_panel.UpdateButtons()
+            
+            self._highlighted_watcher_panel.SetWatcher( None )
             
         
     
@@ -2011,8 +2200,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl.UpdateDatas()
         
-        self._UpdateHighlightedWatcherURL()
-        
     
     def _ConvertDataToListCtrlTuples( self, watcher ):
         
@@ -2021,6 +2208,28 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         if watcher == self._highlighted_watcher:
             
             pretty_subject = '* ' + pretty_subject
+            
+        
+        files_paused = watcher.FilesPaused()
+        
+        if files_paused:
+            
+            pretty_files_paused = u'\u23F8'
+            
+        else:
+            
+            pretty_files_paused = ''
+            
+        
+        checking_paused = watcher.CheckingPaused()
+        
+        if checking_paused:
+            
+            pretty_checking_paused = u'\u23F8'
+            
+        else:
+            
+            pretty_checking_paused = ''
             
         
         ( status, simple_status, ( num_done, num_total ) ) = watcher.GetFileSeedCache().GetStatus()
@@ -2053,8 +2262,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             watcher_status = 'zzz' # to sort _after_ DEAD and other interesting statuses on ascending sort
             
         
-        display_tuple = ( pretty_subject, pretty_watcher_status, pretty_progress, pretty_added )
-        sort_tuple = ( subject, watcher_status, progress, added )
+        display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
+        sort_tuple = ( subject, files_paused, checking_paused, watcher_status, progress, added )
         
         return ( display_tuple, sort_tuple )
         
@@ -2075,9 +2284,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 self._ClearExistingHighlight()
                 
-                self._highlighted_watcher = selected[0]
-                
-                self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
+                self._highlighted_watcher = new_highlight
                 
                 hashes = self._highlighted_watcher.GetPresentedHashes()
                 
@@ -2091,15 +2298,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 self._page.SwapMediaPanel( panel )
                 
-                publish_to_page = True
-                
-                self._highlighted_watcher.Repage( self._page_key, publish_to_page )
+                self._multiple_watcher_import.SetHighlightedWatcher( self._highlighted_watcher )
                 
                 self._watchers_listctrl_panel.UpdateButtons()
                 
                 self._watchers_listctrl.UpdateDatas()
                 
-                self._UpdateHighlightedWatcherURL()
+                self._highlighted_watcher_panel.SetWatcher( self._highlighted_watcher )
                 
             
         
@@ -2109,12 +2314,24 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._multiple_watcher_import.SetOptions( self._checker_options.GetValue(), self._file_import_options.GetValue(), self._tag_import_options.GetValue() )
         
     
-    def _PausePlay( self ):
+    def _PausePlayChecking( self ):
         
         for watcher in self._watchers_listctrl.GetData( only_selected = True ):
             
-            watcher.PausePlay()
+            watcher.PausePlayChecking()
             
+        
+        self._watchers_listctrl.UpdateDatas()
+        
+    
+    def _PausePlayFiles( self ):
+        
+        for watcher in self._watchers_listctrl.GetData( only_selected = True ):
+            
+            watcher.PausePlayFiles()
+            
+        
+        self._watchers_listctrl.UpdateDatas()
         
     
     def _RemoveWatchers( self ):
@@ -2212,18 +2429,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     watcher.SetTagImportOptions( tag_import_options )
                     
                 
-            
-        
-    
-    def _UpdateHighlightedWatcherURL( self ):
-        
-        if self._highlighted_watcher is None:
-            
-            self._highlighted_watcher_url.SetValue( '' )
-            
-        else:
-            
-            self._highlighted_watcher_url.SetValue( self._highlighted_watcher.GetURL() )
             
         
     
@@ -2462,9 +2667,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
-        self._simple_downloader_import.SetDownloadControlFile( self._file_download_control )
-        self._simple_downloader_import.SetDownloadControlPage( self._page_download_control )
-        
         self._UpdateStatus()
         
     
@@ -2670,6 +2872,12 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
             ClientGUICommon.SetBitmapButtonBitmap( self._pause_files_button, CC.GlobalBMPs.pause )
             
         
+        ( file_network_job, page_network_job ) = self._simple_downloader_import.GetNetworkJobs()
+        
+        self._file_download_control.SetNetworkJob( file_network_job )
+        
+        self._page_download_control.SetNetworkJob( page_network_job )
+        
     
     def CheckAbleToClose( self ):
         
@@ -2759,322 +2967,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_SIMPLE_DOWNLOADER ] = ManagementPanelImporterSimpleDownloader
 
-class ManagementPanelImporterWatcher( ManagementPanelImporter ):
-    
-    def __init__( self, parent, page, controller, management_controller ):
-        
-        ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
-        
-        self._watcher_panel = ClientGUICommon.StaticBox( self, 'watcher' )
-        
-        self._watcher_subject = ClientGUICommon.BetterStaticText( self._watcher_panel )
-        
-        self._url_input = wx.TextCtrl( self._watcher_panel, style = wx.TE_PROCESS_ENTER )
-        self._url_input.Bind( wx.EVT_KEY_DOWN, self.EventKeyDown )
-        
-        self._options_panel = wx.Panel( self._watcher_panel )
-        
-        #
-        
-        imports_panel = ClientGUICommon.StaticBox( self._options_panel, 'file imports' )
-        
-        self._files_pause_button = wx.BitmapButton( imports_panel, bitmap = CC.GlobalBMPs.pause )
-        self._files_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseFiles )
-        
-        self._current_action = ClientGUICommon.BetterStaticText( imports_panel, style = wx.ST_ELLIPSIZE_END )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, self._controller, self._page_key )
-        self._file_download_control = ClientGUIControls.NetworkJobControl( imports_panel )
-        
-        #
-        
-        checker_panel = ClientGUICommon.StaticBox( self._options_panel, 'checker' )
-        
-        self._file_velocity_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
-        
-        self._checking_pause_button = wx.BitmapButton( checker_panel, bitmap = CC.GlobalBMPs.pause )
-        self._checking_pause_button.Bind( wx.EVT_BUTTON, self.EventPauseChecker )
-        
-        self._watcher_status = ClientGUICommon.BetterStaticText( checker_panel, style = wx.ST_ELLIPSIZE_END )
-        
-        self._check_now_button = wx.Button( checker_panel, label = 'check now' )
-        self._check_now_button.Bind( wx.EVT_BUTTON, self.EventCheckNow )
-        
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, self._controller, True, page_key = self._page_key )
-        
-        self._watcher_import = self._management_controller.GetVariable( 'watcher_import' )
-        
-        checker_options = self._watcher_import.GetCheckerOptions()
-        
-        self._checker_options = ClientGUIImport.CheckerOptionsButton( checker_panel, checker_options, self._watcher_import.SetCheckerOptions )
-        
-        self._checker_download_control = ClientGUIControls.NetworkJobControl( checker_panel )
-        
-        #
-        
-        ( url, file_import_options, tag_import_options ) = self._watcher_import.GetOptions()
-        
-        ( namespaces, search_value ) = ClientDefaults.GetDefaultNamespacesAndSearchValue( ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_WATCHER ) )
-        
-        self._file_import_options = ClientGUIImport.FileImportOptionsButton( self._watcher_panel, file_import_options, self._watcher_import.SetFileImportOptions )
-        self._tag_import_options = ClientGUIImport.TagImportOptionsButton( self._watcher_panel, namespaces, tag_import_options, update_callable = self._watcher_import.SetTagImportOptions, allow_default_selection = True )
-        
-        #
-        
-        hbox = wx.BoxSizer( wx.HORIZONTAL )
-        
-        hbox.Add( self._current_action, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        hbox.Add( self._files_pause_button, CC.FLAGS_VCENTER )
-        
-        imports_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        imports_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        imports_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        gridbox = wx.FlexGridSizer( 2 )
-        
-        gridbox.AddGrowableCol( 0, 1 )
-        
-        gridbox.Add( self._file_velocity_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._checking_pause_button, CC.FLAGS_LONE_BUTTON )
-        gridbox.Add( self._watcher_status, CC.FLAGS_VCENTER_EXPAND_DEPTH_ONLY )
-        gridbox.Add( self._check_now_button, CC.FLAGS_VCENTER )
-        
-        checker_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        checker_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        checker_panel.Add( self._checker_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( imports_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.Add( checker_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._options_panel.SetSizer( vbox )
-        
-        self._watcher_panel.Add( self._watcher_subject, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._options_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        self._watcher_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watcher_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        vbox = wx.BoxSizer( wx.VERTICAL )
-        
-        vbox.Add( self._sort_by, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self._collect_by.Hide()
-        
-        vbox.Add( self._watcher_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        self._MakeCurrentSelectionTagsBox( vbox )
-        
-        self.SetSizer( vbox )
-        
-        #
-        
-        file_seed_cache = self._watcher_import.GetFileSeedCache()
-        
-        self._file_seed_cache_control.SetFileSeedCache( file_seed_cache )
-        
-        gallery_seed_log = self._watcher_import.GetGallerySeedLog()
-        
-        self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
-        
-        self._watcher_import.SetDownloadControlFile( self._file_download_control )
-        self._watcher_import.SetDownloadControlChecker( self._checker_download_control )
-        
-        self._url_input.SetValue( url )
-        
-        self._UpdateStatus()
-        
-    
-    def _UpdateStatus( self ):
-        
-        if self._watcher_import.HasURL():
-            
-            self._url_input.SetEditable( False )
-            
-            if not self._options_panel.IsShown():
-                
-                self._watcher_subject.Show()
-                
-                self._options_panel.Show()
-                
-                self.Layout()
-                
-            
-        else:
-            
-            if self._options_panel.IsShown():
-                
-                self._watcher_subject.Hide()
-                
-                self._options_panel.Hide()
-                
-                self.Layout()
-                
-            
-        
-        ( current_action, files_paused, file_velocity_status, next_check_time, watcher_status, subject, checking_status, check_now, checking_paused ) = self._watcher_import.GetStatus()
-        
-        if files_paused:
-            
-            if current_action == '':
-                
-                current_action = 'paused'
-                
-            else:
-                
-                current_action = 'pausing, ' + current_action
-                
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._files_pause_button, CC.GlobalBMPs.pause )
-            
-        
-        self._current_action.SetLabelText( current_action )
-        
-        self._file_velocity_status.SetLabelText( file_velocity_status )
-        
-        if checking_paused:
-            
-            if watcher_status == '':
-                
-                watcher_status = 'paused'
-                
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.play )
-            
-        else:
-            
-            if watcher_status == '' and next_check_time is not None:
-                
-                if HydrusData.TimeHasPassed( next_check_time ):
-                    
-                    watcher_status = 'checking imminently'
-                    
-                else:
-                    
-                    watcher_status = 'next check ' + HydrusData.TimestampToPrettyTimeDelta( next_check_time, just_now_threshold = 0 )
-                    
-                
-            
-            ClientGUICommon.SetBitmapButtonBitmap( self._checking_pause_button, CC.GlobalBMPs.pause )
-            
-        
-        self._watcher_status.SetLabelText( watcher_status )
-        
-        if checking_status == ClientImporting.CHECKER_STATUS_404:
-            
-            self._checking_pause_button.Disable()
-            
-        elif checking_status == ClientImporting.CHECKER_STATUS_DEAD:
-            
-            self._checking_pause_button.Disable()
-            
-        else:
-            
-            self._checking_pause_button.Enable()
-            
-        
-        if subject in ( '', 'unknown subject' ):
-            
-            subject = 'no subject'
-            
-        
-        self._watcher_subject.SetLabelText( subject )
-        
-        if check_now:
-            
-            self._check_now_button.Disable()
-            
-        else:
-            
-            self._check_now_button.Enable()
-            
-        
-    
-    def CheckAbleToClose( self ):
-        
-        if self._watcher_import.HasURL():
-            
-            if self._watcher_import.CurrentlyWorking():
-                
-                raise HydrusExceptions.VetoException( 'This page is still importing.' )
-                
-            
-        
-    
-    def EventCheckNow( self, event ):
-        
-        self._watcher_import.CheckNow()
-        
-        self._UpdateStatus()
-        
-    
-    def EventPauseFiles( self, event ):
-        
-        self._watcher_import.PausePlayFiles()
-        
-        self._UpdateStatus()
-        
-    
-    def EventPauseChecker( self, event ):
-        
-        self._watcher_import.PausePlayChecker()
-        
-        self._UpdateStatus()
-        
-    
-    def EventKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ( wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER ):
-            
-            url = self._url_input.GetValue()
-            
-            if url == '':
-                
-                return
-                
-            
-            self._url_input.SetEditable( False )
-            
-            self._watcher_import.SetURL( url )
-            
-            publish_to_page = True
-            
-            self._watcher_import.Start( self._page_key, publish_to_page )
-            
-        else:
-            
-            event.Skip()
-            
-        
-    
-    def SetSearchFocus( self ):
-        
-        wx.CallAfter( self._url_input.SetFocus )
-        
-    
-    def Start( self ):
-        
-        if self._watcher_import.HasURL():
-            
-            publish_to_page = True
-            
-            self._watcher_import.Start( self._page_key, publish_to_page )
-            
-        
-    
-management_panel_types_to_classes[ MANAGEMENT_TYPE_IMPORT_WATCHER ] = ManagementPanelImporterWatcher
-
 class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
     def __init__( self, parent, page, controller, management_controller ):
@@ -3094,6 +2986,8 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._url_panel, self._controller, page_key = self._page_key )
         
+        self._gallery_download_control = ClientGUIControls.NetworkJobControl( self._url_panel )
+        
         self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._url_panel, self._controller, True, page_key = self._page_key )
         
         self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
@@ -3108,8 +3002,9 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._url_panel.Add( self._pause_button, CC.FLAGS_LONE_BUTTON )
         self._url_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._url_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._gallery_seed_log_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._url_panel.Add( self._gallery_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._file_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._url_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3138,8 +3033,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._gallery_seed_log_control.SetGallerySeedLog( gallery_seed_log )
         
-        self._urls_import.SetDownloadControlFile( self._file_download_control )
-        
         self._UpdateStatus()
         
         HG.client_controller.sub( self, 'PendURL', 'pend_url' )
@@ -3166,6 +3059,12 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
             ClientGUICommon.SetBitmapButtonBitmap( self._pause_button, CC.GlobalBMPs.pause )
             
+        
+        ( file_network_job, gallery_network_job ) = self._urls_import.GetNetworkJobs()
+        
+        self._file_download_control.SetNetworkJob( file_network_job )
+        
+        self._gallery_download_control.SetNetworkJob( gallery_network_job )
         
     
     def CheckAbleToClose( self ):

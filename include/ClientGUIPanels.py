@@ -1165,7 +1165,9 @@ class ReviewServicePanel( wx.Panel ):
             
             booru_search_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ], self._ConvertDataToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
+            columns = [ ( 'name', -1 ), ( 'info', 36 ), ( 'expires', 12 ), ( 'files', 12 ) ]
+            
+            self._booru_shares = ClientGUIListCtrl.BetterListCtrl( booru_search_panel, 'local_booru_shares', 10, 36, columns, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Delete, activation_callback = self._Edit )
             
             booru_search_panel.SetListCtrl( self._booru_shares )
             

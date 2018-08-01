@@ -251,7 +251,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'manage_services', 25, 20, [ ( 'type', 20 ), ( 'name', -1 ), ( 'deletable', 12 ) ], self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
+        columns = [ ( 'type', 20 ), ( 'name', -1 ), ( 'deletable', 12 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, 'manage_services', 25, 20, columns, self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
         menu_items = []
         
@@ -1720,14 +1722,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             watchers = ClientGUICommon.StaticBox( self, 'watchers' )
             
-            self._permit_watchers_to_name_their_pages = wx.CheckBox( watchers )
-            
-            self._use_multiple_watcher_for_drag_and_drops = wx.CheckBox( watchers )
-            
-            self._thread_watcher_not_found_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
-            self._thread_watcher_dead_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
-            self._thread_watcher_paused_page_string = ClientGUICommon.NoneableTextCtrl( watchers, none_phrase = 'do not show' )
-            
             checker_options = self._new_options.GetDefaultWatcherCheckerOptions()
             
             self._watcher_checker_options = ClientGUIImport.CheckerOptionsButton( watchers, checker_options )
@@ -1761,14 +1755,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_simultaneous_subscriptions.SetValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             self._process_subs_in_random_order.SetValue( self._new_options.GetBoolean( 'process_subs_in_random_order' ) )
             
-            self._permit_watchers_to_name_their_pages.SetValue( self._new_options.GetBoolean( 'permit_watchers_to_name_their_pages' ) )
-            
-            self._use_multiple_watcher_for_drag_and_drops.SetValue( self._new_options.GetBoolean( 'use_multiple_watcher_for_drag_and_drops' ) )
-            
-            self._thread_watcher_not_found_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_not_found_page_string' ) )
-            self._thread_watcher_dead_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_dead_page_string' ) )
-            self._thread_watcher_paused_page_string.SetValue( self._new_options.GetNoneableString( 'thread_watcher_paused_page_string' ) )
-            
             self._show_deleted_on_file_seed_short_summary.SetValue( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
             #
@@ -1797,17 +1783,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            rows = []
-            
-            rows.append( ( 'Permit thread checkers to name their own pages:', self._permit_watchers_to_name_their_pages ) )
-            rows.append( ( 'When drag-and-dropping, use the Multiple Watcher:', self._use_multiple_watcher_for_drag_and_drops ) )
-            rows.append( ( 'Prepend 404 thread checker page names with this:', self._thread_watcher_not_found_page_string ) )
-            rows.append( ( 'Prepend dead thread checker page names with this:', self._thread_watcher_dead_page_string ) )
-            rows.append( ( 'Prepend paused thread checker page names with this:', self._thread_watcher_paused_page_string ) )
-            
-            gridbox = ClientGUICommon.WrapInGrid( watchers, rows )
-            
-            watchers.Add( gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             watchers.Add( self._watcher_checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -1840,14 +1815,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetInteger( 'gallery_page_wait_period_subscriptions', self._gallery_page_wait_period_subscriptions.GetValue() )
             self._new_options.SetInteger( 'max_simultaneous_subscriptions', self._max_simultaneous_subscriptions.GetValue() )
             self._new_options.SetBoolean( 'process_subs_in_random_order', self._process_subs_in_random_order.GetValue() )
-            
-            self._new_options.SetBoolean( 'permit_watchers_to_name_their_pages', self._permit_watchers_to_name_their_pages.GetValue() )
-            
-            self._new_options.SetBoolean( 'use_multiple_watcher_for_drag_and_drops', self._use_multiple_watcher_for_drag_and_drops.GetValue() )
-            
-            self._new_options.SetNoneableString( 'thread_watcher_not_found_page_string', self._thread_watcher_not_found_page_string.GetValue() )
-            self._new_options.SetNoneableString( 'thread_watcher_dead_page_string', self._thread_watcher_dead_page_string.GetValue() )
-            self._new_options.SetNoneableString( 'thread_watcher_paused_page_string', self._thread_watcher_paused_page_string.GetValue() )
             
             self._new_options.SetDefaultWatcherCheckerOptions( self._watcher_checker_options.GetValue() )
             self._new_options.SetDefaultSubscriptionCheckerOptions( self._subscription_checker_options.GetValue() )
@@ -2248,7 +2215,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._web_browser_path = wx.TextCtrl( mime_panel )
             
-            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, [ ( 'mime', 20 ), ( 'launch path', -1 ) ], self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
+            columns = [ ( 'mime', 20 ), ( 'launch path', -1 ) ]
+            
+            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, 'mime_launch', 15, 30, columns, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
             
             #
             

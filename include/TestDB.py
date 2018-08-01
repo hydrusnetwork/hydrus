@@ -8,6 +8,7 @@ import ClientFiles
 import ClientGUIManagement
 import ClientGUIPages
 import ClientImporting
+import ClientImportLocal
 import ClientImportOptions
 import ClientImportFileSeeds
 import ClientRatings
@@ -636,7 +637,15 @@ class TestClientDB( unittest.TestCase ):
             
             gallery_identifier = ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST )
             
-            management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
+            management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
+            
+            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
+            
+            session.AddPage( page )
+            
+            #
+            
+            management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher()
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
@@ -649,14 +658,6 @@ class TestClientDB( unittest.TestCase ):
             management_controller = ClientGUIManagement.CreateManagementControllerImportHDD( [ 'some', 'paths' ], ClientImportOptions.FileImportOptions(), { 'paths' : service_keys_to_tags }, True )
             
             management_controller.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
-            
-            page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
-            
-            session.AddPage( page )
-            
-            #
-            
-            management_controller = ClientGUIManagement.CreateManagementControllerImportWatcher()
             
             page = ClientGUIPages.Page( test_frame, HG.test_controller, management_controller, [] )
             
@@ -746,7 +747,7 @@ class TestClientDB( unittest.TestCase ):
                     
                 
             
-            self.assertEqual( page_names, [ u'hentai foundry artist', u'import', u'watcher', u'simple downloader', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
+            self.assertEqual( page_names, [ u'gallery', u'watcher', u'import', u'simple downloader', u'example tag repo petitions', u'search', u'search', u'files', u'wew lad', u'files' ] )
             
         finally:
             
@@ -838,8 +839,8 @@ class TestClientDB( unittest.TestCase ):
     
     def test_import_folders( self ):
         
-        import_folder_1 = ClientImporting.ImportFolder( 'imp 1', path = TestConstants.DB_DIR, mimes = HC.VIDEO, publish_files_to_popup_button = False )
-        import_folder_2 = ClientImporting.ImportFolder( 'imp 2', path = TestConstants.DB_DIR, mimes = HC.IMAGES, period = 1200, publish_files_to_popup_button = False )
+        import_folder_1 = ClientImportLocal.ImportFolder( 'imp 1', path = TestConstants.DB_DIR, mimes = HC.VIDEO, publish_files_to_popup_button = False )
+        import_folder_2 = ClientImportLocal.ImportFolder( 'imp 2', path = TestConstants.DB_DIR, mimes = HC.IMAGES, period = 1200, publish_files_to_popup_button = False )
         
         #
         
@@ -856,7 +857,7 @@ class TestClientDB( unittest.TestCase ):
         
         for item in result:
             
-            self.assertEqual( type( item ), ClientImporting.ImportFolder )
+            self.assertEqual( type( item ), ClientImportLocal.ImportFolder )
             
         
         #

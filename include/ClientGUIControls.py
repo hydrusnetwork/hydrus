@@ -25,7 +25,9 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, [ ( 'max allowed', 14 ), ( 'every', 16 ) ], self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'max allowed', 14 ), ( 'every', 16 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'bandwidth_rules', 8, 10, columns, self._ConvertRuleToListctrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -415,7 +417,9 @@ class EditStringToStringDictControl( wx.Panel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, [ ( 'key', 20 ), ( 'value', -1 ) ], self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        columns = [ ( 'key', 20 ), ( 'value', -1 ) ]
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, 'key_to_value', 10, 36, columns, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -705,14 +709,7 @@ class NetworkJobControl( wx.Panel ):
     
     def ClearNetworkJob( self ):
         
-        if self and self._network_job is not None:
-            
-            self._network_job = None
-            
-            self._Update()
-            
-            HG.client_controller.gui.UnregisterUIUpdateWindow( self )
-            
+        self.SetNetworkJob( None )
         
     
     def CurrentJobOverridesBandwidth( self ):
@@ -742,12 +739,26 @@ class NetworkJobControl( wx.Panel ):
     
     def SetNetworkJob( self, network_job ):
         
-        if self and self._network_job != network_job:
+        if network_job is None:
             
-            self._network_job = network_job
-            self._download_started = False
+            if self._network_job is not None:
+                
+                self._network_job = None
+                
+                self._Update()
+                
+                HG.client_controller.gui.UnregisterUIUpdateWindow( self )
+                
             
-            HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        else:
+            
+            if self._network_job != network_job:
+                
+                self._network_job = network_job
+                self._download_started = False
+                
+                HG.client_controller.gui.RegisterUIUpdateWindow( self )
+                
             
         
     

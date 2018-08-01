@@ -107,25 +107,13 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             button.SetLabelText( name )
             
-        elif entry_type == 'page_import_booru':
-            
-            button.SetLabelText( 'booru' )
-            
         elif entry_type == 'page_import_gallery':
             
-            site_type = obj
-            
-            text = HC.site_type_string_lookup[ site_type ]
-            
-            button.SetLabelText( text )
+            button.SetLabelText( 'gallery' )
             
         elif entry_type == 'page_import_simple_downloader':
             
             button.SetLabelText( 'simple downloader' )
-            
-        elif entry_type == 'page_import_multiple_watcher':
-            
-            button.SetLabelText( 'multiple watcher' )
             
         elif entry_type == 'page_import_watcher':
             
@@ -180,43 +168,17 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                     
                     self._result = ( 'pages', None )
                     
-                elif entry_type == 'page_import_booru':
-                    
-                    with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
-                        
-                        if dlg.ShowModal() == wx.ID_OK:
-                            
-                            gallery_identifier = dlg.GetGalleryIdentifier()
-                            
-                            self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier ) )
-                            
-                        else:
-                            
-                            self.EndModal( wx.ID_CANCEL )
-                            
-                            return
-                            
-                        
-                    
                 elif entry_type == 'page_import_gallery':
                     
-                    site_type = obj
-                    
-                    gallery_identifier = ClientDownloading.GalleryIdentifier( site_type )
-                    
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier ) )
+                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportGallery() )
                     
                 elif entry_type == 'page_import_simple_downloader':
                     
                     self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportSimpleDownloader() )
                     
-                elif entry_type == 'page_import_multiple_watcher':
-                    
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportMultipleWatcher() )
-                    
                 elif entry_type == 'page_import_watcher':
                     
-                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportWatcher() )
+                    self._result = ( 'page', ClientGUIManagement.CreateManagementControllerImportMultipleWatcher() )
                     
                 elif entry_type == 'page_import_urls':
                     
@@ -270,35 +232,8 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
             entries.append( ( 'page_import_urls', None ) )
             entries.append( ( 'page_import_watcher', None ) )
-            entries.append( ( 'menu', 'gallery' ) )
+            entries.append( ( 'page_import_gallery', None ) )
             entries.append( ( 'page_import_simple_downloader', None ) )
-            
-        elif menu_keyword == 'gallery':
-            
-            entries.append( ( 'page_import_booru', None ) )
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_DEVIANT_ART ) )
-            entries.append( ( 'menu', 'hentai foundry' ) )
-            #entries.append( ( 'page_import_gallery', HC.SITE_TYPE_NEWGROUNDS ) )
-            
-            result = HG.client_controller.Read( 'serialisable_simple', 'pixiv_account' )
-            
-            if result is not None:
-                
-                entries.append( ( 'menu', 'pixiv' ) )
-                
-            
-            
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_TUMBLR ) )
-            
-        elif menu_keyword == 'hentai foundry':
-            
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ) )
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ) )
-            
-        elif menu_keyword == 'pixiv':
-            
-            entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_ARTIST_ID ) )
-            #entries.append( ( 'page_import_gallery', HC.SITE_TYPE_PIXIV_TAG ) )
             
         elif menu_keyword == 'petitions':
             
@@ -307,7 +242,6 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         elif menu_keyword == 'special':
             
             entries.append( ( 'pages_notebook', None ) )
-            entries.append( ( 'page_import_multiple_watcher', None ) )
             entries.append( ( 'page_duplicate_filter', None ) )
             
         
@@ -340,7 +274,10 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         unused_buttons = potential_buttons
         
-        for button in unused_buttons: button.Hide()
+        for button in unused_buttons:
+            
+            button.Hide()
+            
         
     
     def EventButton( self, event ):
@@ -1029,15 +966,6 @@ class PagesNotebook( wx.Notebook ):
             
         
     
-    def _GatherDeadWatchers( self, insertion_page ):
-        
-        top_notebook = self._GetTopNotebook()
-        
-        gathered_pages = top_notebook.GetGatherPages( 'dead_watchers' )
-        
-        self._MovePages( gathered_pages, insertion_page )
-        
-    
     def _GetDefaultPageInsertionIndex( self ):
         
         new_options = self._controller.new_options
@@ -1516,17 +1444,6 @@ class PagesNotebook( wx.Notebook ):
                 
             
         
-        if click_over_page_of_pages:
-            
-            ClientGUIMenus.AppendSeparator( menu )
-            
-            submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, submenu, 'dead watchers', 'Find all currently open dead watchers and move them to this page of pages.', self._GatherDeadWatchers, page )
-            
-            ClientGUIMenus.AppendMenu( menu, submenu, 'gather on this page of pages' )
-            
-        
         if len( existing_session_names ) > 0 or click_over_page_of_pages:
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -1894,35 +1811,6 @@ class PagesNotebook( wx.Notebook ):
             
             return self._name
             
-        
-    
-    def GetGatherPages( self, gather_type ):
-        
-        if gather_type == 'dead_watchers':
-            
-            def test( page ):
-                
-                management_controller = page.GetManagementController()
-                
-                return management_controller.IsDeadWatcher()
-                
-            
-        else:
-            
-            raise NotImplementedError()
-            
-        
-        gathered_pages = []
-        
-        for page in self.GetMediaPages():
-            
-            if test( page ):
-                
-                gathered_pages.append( page )
-                
-            
-        
-        return gathered_pages
         
     
     def GetMediaPages( self, only_my_level = False ):
@@ -2372,22 +2260,9 @@ class PagesNotebook( wx.Notebook ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
     
-    def NewPageImportBooru( self, on_deepest_notebook = False ):
+    def NewPageImportGallery( self, on_deepest_notebook = False ):
         
-        with ClientGUIDialogs.DialogSelectBooru( self ) as dlg:
-            
-            if dlg.ShowModal() == wx.ID_OK:
-                
-                gallery_identifier = dlg.GetGalleryIdentifier()
-                
-                return self.NewPageImportGallery( gallery_identifier, on_deepest_notebook = on_deepest_notebook )
-                
-            
-        
-    
-    def NewPageImportGallery( self, gallery_identifier, on_deepest_notebook = False ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery( gallery_identifier )
+        management_controller = ClientGUIManagement.CreateManagementControllerImportGallery()
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         
@@ -2402,13 +2277,6 @@ class PagesNotebook( wx.Notebook ):
     def NewPageImportMultipleWatcher( self, url = None, on_deepest_notebook = False ):
         
         management_controller = ClientGUIManagement.CreateManagementControllerImportMultipleWatcher( url )
-        
-        return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
-        
-    
-    def NewPageImportWatcher( self, url = None, on_deepest_notebook = False ):
-        
-        management_controller = ClientGUIManagement.CreateManagementControllerImportWatcher( url )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook )
         

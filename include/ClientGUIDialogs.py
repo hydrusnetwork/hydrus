@@ -2155,7 +2155,7 @@ class DialogCheckFromList( Dialog ):
     
 class DialogSelectFromList( Dialog ):
     
-    def __init__( self, parent, title, list_of_tuples ):
+    def __init__( self, parent, title, list_of_tuples, value_to_select = None ):
         
         Dialog.__init__( self, parent, title )
         
@@ -2169,14 +2169,26 @@ class DialogSelectFromList( Dialog ):
         
         #
         
+        selected_a_value = False
+        
         list_of_tuples.sort()
         
-        for ( label, value ) in list_of_tuples:
+        for ( i, ( label, value ) ) in enumerate( list_of_tuples ):
             
             self._list.Append( label, value )
             
+            if value_to_select is not None and value_to_select == value:
+                
+                self._list.Select( i )
+                
+                selected_a_value = True
+                
+            
         
-        self._list.Select( 0 )
+        if not selected_a_value:
+            
+            self._list.Select( 0 )
+            
         
         #
         

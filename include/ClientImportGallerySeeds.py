@@ -169,12 +169,15 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             gallery_urls_seen_before = set()
             
         
+        gallery_urls_seen_before.add( self.url )
+        
         # maybe something like 'append urls' vs 'reverse-prepend' for subs or something
         
         # should also take--and populate--a set of urls we have seen this 'run', so we can bomb out if next_gallery_url ends up in some loop
         
         num_urls_added = 0
-        added_all_possible_urls = False
+        num_urls_already_in_file_seed_cache = 0
+        num_urls_total = 0
         result_404 = False
         
         try:
@@ -191,8 +194,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Did not have a parser for this URL!' )
                 
             
-            did_substantial_work = True
-            
             ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
             
             status_hook( 'downloading page' )
@@ -208,7 +209,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             network_job = network_job_factory( 'GET', url_to_check, referral_url = referral_url )
             
-            network_job.OverrideBandwidth()
+            network_job.OverrideBandwidth( 30 )
             
             HG.client_controller.network_engine.AddJob( network_job )
             
@@ -238,21 +239,37 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 title_hook( title )
                 
             
-            ( num_urls_added, num_urls_already_in, added_all_possible_urls ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.url, max_new_urls_allowed )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total ) = ClientImporting.UpdateFileSeedCacheWithAllParseResults( file_seed_cache, all_parse_results, self.url, max_new_urls_allowed )
             
-            # harvest file_seeds based on all_parse_results, append them to file_seed cache
+            if max_new_urls_allowed is None:
+                
+                can_add_more_file_urls = True
+                
+            else:
+                
+                can_add_more_file_urls = num_urls_added < max_new_urls_allowed
+                
             
             status = CC.STATUS_SUCCESSFUL_AND_NEW
-            note = 'checked OK - ' + HydrusData.ToHumanInt( num_urls_added ) + ' new urls'
             
-            if num_urls_already_in > 0:
+            note = HydrusData.ToHumanInt( num_urls_added ) + ' new urls found'
+            
+            if num_urls_already_in_file_seed_cache > 0:
                 
-                note += ' (' + HydrusData.ToHumanInt( num_urls_already_in ) + ' already in)'
+                note += ' (' + HydrusData.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
                 
             
-            if self._can_generate_more_pages:
+            if not can_add_more_file_urls:
                 
-                flattened_results = list( itertools.chain( all_parse_results ) )
+                note += ' - hit file limit'
+                
+            
+            # only keep searching if we found any files, otherwise this could be a blank results page with another stub page
+            can_add_more_gallery_urls = num_urls_total > 0 and can_add_more_file_urls
+            
+            if self._can_generate_more_pages and can_add_more_gallery_urls:
+                
+                flattened_results = list( itertools.chain.from_iterable( all_parse_results ) )
                 
                 next_page_urls = ClientParsing.GetURLsFromParseResults( flattened_results, ( HC.URL_TYPE_NEXT, ), only_get_top_priority = True )
                 
@@ -262,31 +279,31 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     new_next_page_urls = [ next_page_url for next_page_url in next_page_urls if next_page_url not in gallery_urls_seen_before ]
                     
-                    if len( new_next_page_urls ) > 0:
-                        
-                        gallery_urls_seen_before.update( new_next_page_urls )
+                    duplicate_next_page_urls = gallery_urls_seen_before.intersection( new_next_page_urls )
+                    
+                    num_new_next_page_urls = len( new_next_page_urls )
+                    num_dupe_next_page_urls = len( duplicate_next_page_urls )
+                    
+                    if num_new_next_page_urls > 0:
                         
                         next_gallery_seeds = [ GallerySeed( next_page_url ) for next_page_url in new_next_page_urls ]
                         
                         gallery_seed_log.AddGallerySeeds( next_gallery_seeds )
                         
-                        num_total = len( next_page_urls )
-                        num_new = len( new_next_page_urls )
+                        gallery_urls_seen_before.update( new_next_page_urls )
                         
-                        if num_new < num_total:
+                        if num_dupe_next_page_urls == 0:
                             
-                            num_dupes = num_total - num_new
-                            
-                            note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found, but ' + HydrusData.ToHumanInt( num_dupes ) + ' had already been visited this run and were not added'
+                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + ' next gallery pages found'
                             
                         else:
                             
-                            note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found'
+                            note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + ' next gallery pages found, but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
                             
                         
                     else:
                         
-                        note += ' - ' + HydrusData.ToHumanInt( num_new ) + ' next gallery pages found, but they had already been visited this run and were not added'
+                        note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' next gallery pages found, but they had already been visited this run and were not added'
                         
                     
                 
@@ -356,7 +373,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
         
-        return ( num_urls_added, added_all_possible_urls, result_404 )
+        return ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404 )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED ] = GallerySeed
@@ -711,7 +728,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
                 self._GenerateStatus()
                 
             
-            ( status, simple_status, ( total_processed, total ) ) = self._status_cache
+            ( status, ( total_processed, total ) ) = self._status_cache
             
             return total_processed < total
             

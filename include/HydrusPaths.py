@@ -435,6 +435,11 @@ def LaunchFile( path, launch_path = None ):
                 cmd = shlex.split( cmd )
                 
             
+            if HG.callto_report_mode:
+                
+                message = 'Attempting to launch ' + path + ' using command ' + repr( cmd ) + '.'
+                
+            
             try:
                 
                 process = subprocess.Popen( cmd, preexec_fn = preexec_fn, startupinfo = HydrusData.GetHideTerminalSubprocessStartupInfo() )
@@ -444,8 +449,6 @@ def LaunchFile( path, launch_path = None ):
                 ( stdout, stderr ) = process.communicate()
                 
                 if HG.callto_report_mode:
-                    
-                    message = 'Attempted to launch ' + path + ' using command ' + repr( cmd ) + '.'
                     
                     HydrusData.ShowText( message )
                     

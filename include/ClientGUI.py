@@ -1477,38 +1477,10 @@ class FrameGUI( ClientGUITopLevelWindows.FrameThatResizes ):
             download_menu = wx.Menu()
             
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_url_downloader_page' ) )
-            ClientGUIMenus.AppendMenuItem( self, download_menu, 'watcher', 'Open a new tab to watch a thread or other single changing location.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_watcher_downloader_page' ) )
+            ClientGUIMenus.AppendMenuItem( self, download_menu, 'gallery', 'Open a new tab to download from gallery sites.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_gallery_downloader_page' ) )
             ClientGUIMenus.AppendMenuItem( self, download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.',  self.ProcessApplicationCommand, ClientData.ApplicationCommand( CC.APPLICATION_COMMAND_TYPE_SIMPLE, 'new_simple_downloader_page' ) )
             
-            gallery_menu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'booru', 'Open a new tab to download files from a booru.', self._notebook.NewPageImportBooru, on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'deviant art', 'Open a new tab to download files from Deviant Art.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_DEVIANT_ART ), on_deepest_notebook = True )
-            
-            hf_submenu = wx.Menu()
-            
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by artist', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST ), on_deepest_notebook = True )
-            ClientGUIMenus.AppendMenuItem( self, hf_submenu, 'by tags', 'Open a new tab to download files from Hentai Foundry.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS ), on_deepest_notebook = True )
-            
-            ClientGUIMenus.AppendMenu( gallery_menu, hf_submenu, 'hentai foundry' )
-            
-            #ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'newgrounds', 'Open a new tab to download files from Newgrounds.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_NEWGROUNDS ), on_deepest_notebook = True )
-            
-            result = self._controller.Read( 'serialisable_simple', 'pixiv_account' )
-            
-            if result is not None:
-                
-                pixiv_submenu = wx.Menu()
-                
-                ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by artist id', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_ARTIST_ID ), on_deepest_notebook = True )
-                #ClientGUIMenus.AppendMenuItem( self, pixiv_submenu, 'by tag', 'Open a new tab to download files from Pixiv.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_PIXIV_TAG ), on_deepest_notebook = True )
-                
-                ClientGUIMenus.AppendMenu( gallery_menu, pixiv_submenu, 'pixiv' )
-                
-            
-            ClientGUIMenus.AppendMenuItem( self, gallery_menu, 'tumblr', 'Open a new tab to download files from tumblr.', self._notebook.NewPageImportGallery, ClientDownloading.GalleryIdentifier( HC.SITE_TYPE_TUMBLR ), on_deepest_notebook = True )
-            
-            ClientGUIMenus.AppendMenu( download_menu, gallery_menu, 'gallery' )
             ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
             
             #
@@ -3997,9 +3969,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ImportURL( self, url ):
         
-        domain_manager = self._controller.network_engine.domain_manager
-        
-        ( url_type, match_name, can_parse ) = domain_manager.GetURLParseCapability( url )
+        ( url_type, match_name, can_parse ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
         
         if url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and not can_parse:
             
@@ -4012,7 +3982,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             return
             
         
-        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
+        if url_type in ( HC.URL_TYPE_UNKNOWN, HC.URL_TYPE_FILE, HC.URL_TYPE_POST, HC.URL_TYPE_GALLERY ):
             
             page = self._notebook.GetOrMakeURLImportPage()
             
@@ -4033,22 +4003,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             if url_type == HC.URL_TYPE_WATCHABLE:
                 
-                if self._new_options.GetBoolean( 'use_multiple_watcher_for_drag_and_drops' ):
+                page = self._notebook.GetOrMakeMultipleWatcherPage()
+                
+                if page is not None:
                     
-                    page = self._notebook.GetOrMakeMultipleWatcherPage()
+                    self._notebook.ShowPage( page )
                     
-                    if page is not None:
-                        
-                        self._notebook.ShowPage( page )
-                        
-                        page_key = page.GetPageKey()
-                        
-                        HG.client_controller.pub( 'pend_url', page_key, url )
-                        
+                    page_key = page.GetPageKey()
                     
-                else:
-                    
-                    self._notebook.NewPageImportWatcher( url, on_deepest_notebook = True )
+                    HG.client_controller.pub( 'pend_url', page_key, url )
                     
                 
             
@@ -4227,6 +4190,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 self._notebook.NewPageDuplicateFilter( on_deepest_notebook = True )
                 
+            elif action == 'new_gallery_downloader_page':
+                
+                self._notebook.NewPageImportGallery( on_deepest_notebook = True )
+                
             elif action == 'new_simple_downloader_page':
                 
                 self._notebook.NewPageImportSimpleDownloader( on_deepest_notebook = True )
@@ -4237,7 +4204,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             elif action == 'new_watcher_downloader_page':
                 
-                self._notebook.NewPageImportWatcher( on_deepest_notebook = True )
+                self._notebook.NewPageImportMultipleWatcher( on_deepest_notebook = True )
                 
             elif action == 'close_page':
                 

@@ -222,6 +222,38 @@ def GetSearchURLs( url ):
             
         
     
+    for url in list( search_urls ):
+        
+        p = urlparse.urlparse( url )
+        
+        scheme = p.scheme
+        netloc = p.netloc
+        path = p.path
+        params = ''
+        query = p.query
+        fragment = ''
+        
+        if netloc.startswith( 'www' ):
+            
+            try:
+                
+                netloc = ConvertDomainIntoSecondLevelDomain( netloc )
+                
+            except HydrusExceptions.URLMatchException:
+                
+                continue
+                
+            
+        else:
+            
+            netloc = 'www.' + netloc
+            
+        
+        r = urlparse.ParseResult( scheme, netloc, path, params, query, fragment )
+        
+        search_urls.add( r.geturl() )
+        
+    
     return search_urls
     
 VALID_DENIED = 0
@@ -484,42 +516,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             self._domains_to_url_matches[ domain ].append( url_match )
             
         
-        # we now sort them in descending complexity so that
-        # post url/manga subpage
-        # is before
-        # post url
-        
-        # also, put more 'precise' URL types above more typically permissive, in the order:
-        # file
-        # post
-        # gallery/watchable
-        # sorting in reverse, so higher number means more precise
-        
-        def key( u_m ):
-            
-            u_t = u_m.GetURLType()
-            
-            if u_t == HC.URL_TYPE_FILE:
-                
-                u_t_precision_value = 2
-                
-            elif u_t == HC.URL_TYPE_POST:
-                
-                u_t_precision_value = 1
-                
-            else:
-                
-                u_t_precision_value = 0
-                
-            
-            u_e = u_m.GetExampleURL()
-            
-            return ( u_t_precision_value, u_e.count( '/' ), u_e.count( '=' ) )
-            
-        
         for url_matches in self._domains_to_url_matches.values():
             
-            url_matches.sort( key = key, reverse = True )
+            NetworkDomainManager.STATICSortURLMatchesDescendingComplexity( url_matches )
             
         
         self._parser_keys_to_parsers = {}
@@ -1183,62 +1182,133 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     @staticmethod
     def STATICLinkURLMatchesAndParsers( url_matches, parsers, existing_url_match_keys_to_parser_keys ):
         
+        url_matches = list( url_matches )
+        
+        NetworkDomainManager.STATICSortURLMatchesDescendingComplexity( url_matches )
+        
         parsers = list( parsers )
         
         parsers.sort( key = lambda p: p.GetName() )
         
         new_url_match_keys_to_parser_keys = {}
         
-        for url_match in url_matches:
+        api_pairs = ConvertURLMatchesIntoAPIPairs( url_matches )
+        
+        # anything that goes to an api url will be parsed by that api's parser--it can't have its own
+        api_pair_unparsable_url_matches = set()
+        
+        for ( a, b ) in api_pairs:
             
-            api_pairs = ConvertURLMatchesIntoAPIPairs( url_matches )
+            api_pair_unparsable_url_matches.add( a )
             
-            # anything that goes to an api url will be parsed by that api's parser--it can't have its own
-            api_pair_unparsable_url_matches = set()
+        
+        #
+        
+        # I have to do this backwards, going through parsers and then url_matches, so I can do a proper url match lookup like the real domain manager does it
+        # otherwise, if we iterate through url matches looking for parsers to match them, we have gallery url matches thinking they match parser post urls
+        # e.g.
+        # The page parser might say it supports https://danbooru.donmai.us/posts/3198277
+        # But the gallery url class might think it recognises that as https://danbooru.donmai.us/posts
+        # 
+        # So we have to do the normal lookup in the proper descending complexity order, not searching any further than the first, correct match
+        
+        for parser in parsers:
             
-            for ( a, b ) in api_pairs:
-                
-                api_pair_unparsable_url_matches.add( a )
-                
+            example_urls = parser.GetExampleURLs()
             
-            #
-            
-            listctrl_data = []
-            
-            for url_match in url_matches:
+            for example_url in example_urls:
                 
-                if not url_match.IsParsable() or url_match in api_pair_unparsable_url_matches:
+                for url_match in url_matches:
                     
-                    continue
-                    
-                
-                if not ( url_match.IsWatchableURL() or url_match.IsPostURL() ):
-                    
-                    continue
-                    
-                
-                url_match_key = url_match.GetMatchKey()
-                
-                if url_match_key in existing_url_match_keys_to_parser_keys:
-                    
-                    continue
-                    
-                
-                for parser in parsers:
-                    
-                    example_urls = parser.GetExampleURLs()
-                    
-                    if True in ( url_match.Matches( example_url ) for example_url in example_urls ):
+                    if url_match.Matches( example_url ):
                         
-                        new_url_match_keys_to_parser_keys[ url_match_key ] = parser.GetParserKey()
+                        # we have a match. this is the 'correct' match for this example url, and we should not search any more, so we break below
+                        
+                        url_match_key = url_match.GetMatchKey()
+                        
+                        parsable = url_match.IsParsable()
+                        linkable = url_match_key not in existing_url_match_keys_to_parser_keys and url_match_key not in new_url_match_keys_to_parser_keys
+                        
+                        if parsable and linkable:
+                            
+                            new_url_match_keys_to_parser_keys[ url_match_key ] = parser.GetParserKey()
+                            
                         
                         break
                         
                     
                 
             
+        '''
+        #
         
+        for url_match in url_matches:
+            
+            if not url_match.IsParsable() or url_match in api_pair_unparsable_url_matches:
+                
+                continue
+                
+            
+            url_match_key = url_match.GetMatchKey()
+            
+            if url_match_key in existing_url_match_keys_to_parser_keys:
+                
+                continue
+                
+            
+            for parser in parsers:
+                
+                example_urls = parser.GetExampleURLs()
+                
+                if True in ( url_match.Matches( example_url ) for example_url in example_urls ):
+                    
+                    new_url_match_keys_to_parser_keys[ url_match_key ] = parser.GetParserKey()
+                    
+                    break
+                    
+                
+            
+        '''
         return new_url_match_keys_to_parser_keys
+        
+    
+    @staticmethod
+    def STATICSortURLMatchesDescendingComplexity( url_matches ):
+        
+        # we sort them in descending complexity so that
+        # post url/manga subpage
+        # is before
+        # post url
+        
+        # also, put more 'precise' URL types above more typically permissive, in the order:
+        # file
+        # post
+        # gallery/watchable
+        # sorting in reverse, so higher number means more precise
+        
+        def key( u_m ):
+            
+            u_t = u_m.GetURLType()
+            
+            if u_t == HC.URL_TYPE_FILE:
+                
+                u_t_precision_value = 2
+                
+            elif u_t == HC.URL_TYPE_POST:
+                
+                u_t_precision_value = 1
+                
+            else:
+                
+                u_t_precision_value = 0
+                
+            
+            u_e = u_m.GetExampleURL()
+            
+            return ( u_t_precision_value, u_e.count( '/' ), u_e.count( '=' ) )
+            
+        
+        url_matches.sort( key = key, reverse = True )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
@@ -1386,7 +1456,10 @@ class URLMatch( HydrusSerialisable.SerialisableBaseNamed ):
             
             # for domains like mediaserver4.website.com, where multiple subdomains serve the same content as the larger site
             
-            netloc = self._netloc
+            if not DomainEqualsAnotherForgivingWWW( netloc, self._netloc ):
+                
+                netloc = self._netloc
+                
             
         
         return netloc
